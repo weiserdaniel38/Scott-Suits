@@ -272,6 +272,11 @@
     <p class="sub">Grab a tape measure (a patient friend helps). Everything is in centimeters.</p>
   </div>
 
+  <!-- "See your suit before you order": filled in by
+       updateDesignPreviewPanel() in main.js, only once the generate-suit-image
+       function answers that it's set up. -->
+  <div class="suit-preview design-preview" id="designPreview" hidden></div>
+
   <!-- Only shown once there's already at least one other suit in this order
        (see updateSamePreviousMeasurementsBanner() in main.js) -- the fields
        below always start blank for a new suit, since different suits in one
@@ -660,7 +665,7 @@
 <script src="./config.js?v=20261006c"></script>
 <script src="./catalog.js?v=20261006c"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261006g"></script>
+<script src="./main.js?v=20261006h"></script>
 
 </body>
 </html>

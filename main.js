@@ -353,6 +353,7 @@ function goToStep(hideEl, showEl) {
     hideEl.classList.remove("active");
     showEl.classList.add("active");
     if (showEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+    if (showEl === measurementsSection) setTimeout(updateDesignPreviewPanel, 0);
     if (showEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
     scrollToStepTop(showEl);
     saveDraft();
@@ -3885,6 +3886,8 @@ function commitCurrentSuitToCart() {
     liningPhoto: jacketDesigner.getLiningPhoto(),
     // Typed answers such as the monogram: { jacket: { monogram }, pants: { monogram } }.
     texts: { jacket: jacketDesigner.getTexts(), pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getTexts() },
+    // A "Generate My Suit" picture of exactly this design, if one was drawn.
+    previewId: currentDesignPreviewId(),
   };
   if (pendingCommitIndex !== null && pendingCommitIndex === cartItems.length - 1) {
     cartItems[pendingCommitIndex] = item;
@@ -4095,13 +4098,20 @@ async function uploadLiningPhotos(orderId) {
 // still produces one row per physical garment set for whoever's cutting
 // fabric, while order_id ties them back together as one order.
 // ---------------------------------------------------------------------------
-// "Generate My Suit" on the confirmation page -- asks the generate-suit-image
-// Supabase function (supabase/functions/) to draw a picture sheet of each
-// suit just ordered, then checks back until it's ready. The section only
-// appears if that function answers that it's set up, so nothing shows on
-// the live site until the Supabase side is configured.
+// "Generate My Suit" -- asks the generate-suit-image Supabase function
+// (supabase/functions/) to draw a picture sheet of the suit: front, back,
+// trousers and close-ups, in the fabric, lining, buttons and thread chosen.
+//  * Right after designing (top of the Measurements step, before the order
+//    form): draws the suit being designed. Kept on the cart item as
+//    previewId so the finished order gets the same picture, not a redraw.
+//  * On the confirmation page: shows each ordered suit's picture, or offers
+//    to draw it if they skipped it earlier.
+// Everything stays hidden until the function answers that it's set up, so
+// nothing shows on the live site before the Supabase side is configured.
 // ---------------------------------------------------------------------------
 let visualSpecSaved = false;
+let designPreview = null; // { spec, id, status: "pending" | "done" | "failed", url }
+let suitImagesReadyPromise = null;
 const SUIT_IMAGE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/generate-suit-image" : "";
 
 function callSuitImageFn(payload) {
@@ -4112,84 +4122,203 @@ function callSuitImageFn(payload) {
   }).then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, status: res.status, data })));
 }
 
-async function renderSuitPreview(suits) {
-  const box = document.getElementById("suitPreview");
-  if (!box || !SUIT_IMAGE_FN_URL || !suits.length) return;
-  box.hidden = true;
-  box.innerHTML = "";
-  try {
-    const ping = await callSuitImageFn({ ping: true });
-    if (!ping.ok || !ping.data || !ping.data.ready) return;
-  } catch (e) {
-    return;
+function suitImagesReady() {
+  if (!SUIT_IMAGE_FN_URL) return Promise.resolve(false);
+  if (!suitImagesReadyPromise) {
+    suitImagesReadyPromise = callSuitImageFn({ ping: true })
+      .then((r) => !!(r.ok && r.data && r.data.ready))
+      .catch(() => false);
   }
-  const head = document.createElement("div");
-  head.className = "suit-preview-head";
-  head.innerHTML = "<h3>See your finished suit</h3><p>We can draw a picture of your suit with the fabric, buttons, lining and thread you chose. It takes about a minute.</p>";
-  box.appendChild(head);
-  suits.forEach((suit) => {
-    const card = document.createElement("div");
-    card.className = "suit-preview-card";
-    const label = document.createElement("p");
-    label.className = "suit-preview-label";
-    label.textContent = suit.label;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn-primary suit-preview-btn";
-    btn.textContent = "Generate My Suit";
-    const status = document.createElement("p");
-    status.className = "suit-preview-status";
-    status.setAttribute("aria-live", "polite");
-    const media = document.createElement("div");
-    media.className = "suit-preview-media";
-    card.append(label, btn, status, media);
-    box.appendChild(card);
-    btn.addEventListener("click", () => generateSuitPicture(suit, btn, status, media));
-  });
-  box.hidden = false;
+  return suitImagesReadyPromise;
 }
 
-async function generateSuitPicture(suit, btn, status, media) {
-  const ids = { order_id: suit.orderId, suit_number: suit.suitNumber };
-  const showImage = (url) => {
-    status.textContent = "";
-    btn.hidden = true;
-    media.innerHTML = "";
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener";
-    const img = document.createElement("img");
-    img.className = "suit-preview-img";
-    img.alt = "Your finished suit";
-    img.src = url;
-    link.appendChild(img);
-    media.appendChild(link);
+// Checks back every 5 seconds until the picture is done or failed.
+async function pollSuitImage(checkPayload, isStillWanted) {
+  const deadline = Date.now() + 4 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 5000));
+    if (isStillWanted && !isStillWanted()) return { status: "abandoned" };
+    const check = await callSuitImageFn(checkPayload);
+    const st = check.data && check.data.status;
+    if (st === "done" && check.data.image_url) return { status: "done", url: check.data.image_url };
+    if (st === "failed") return { status: "failed" };
+  }
+  return { status: "timeout" };
+}
+
+const SUIT_IMAGE_MESSAGES = {
+  failed: "Sorry, something went wrong drawing your suit.",
+  timeout: "This is taking longer than usual.",
+  limit: "You've reached today's limit for suit pictures. Please try again tomorrow.",
+  start: "Sorry, we couldn't start the picture right now.",
+  network: "Sorry, we couldn't reach the picture service.",
+};
+
+function buildSuitImageCard(labelText) {
+  const card = document.createElement("div");
+  card.className = "suit-preview-card";
+  if (labelText) {
+    const label = document.createElement("p");
+    label.className = "suit-preview-label";
+    label.textContent = labelText;
+    card.appendChild(label);
+  }
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn-primary suit-preview-btn";
+  btn.textContent = "Generate My Suit";
+  const status = document.createElement("p");
+  status.className = "suit-preview-status";
+  status.setAttribute("aria-live", "polite");
+  const media = document.createElement("div");
+  media.className = "suit-preview-media";
+  card.append(btn, status, media);
+  const ui = {
+    card,
+    btn,
+    working() {
+      btn.hidden = false;
+      btn.disabled = true;
+      btn.textContent = "Drawing your suit...";
+      status.textContent = "This usually takes about a minute.";
+      media.innerHTML = "";
+    },
+    showImage(url) {
+      status.textContent = "";
+      btn.hidden = true;
+      media.innerHTML = "";
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      const img = document.createElement("img");
+      img.className = "suit-preview-img";
+      img.alt = "Your finished suit";
+      img.src = url;
+      link.appendChild(img);
+      media.appendChild(link);
+    },
+    fail(msg, canRetry) {
+      status.textContent = msg;
+      btn.hidden = !canRetry;
+      btn.disabled = false;
+      btn.textContent = "Try Again";
+    },
   };
-  const fail = (msg) => {
-    status.textContent = msg;
-    btn.disabled = false;
-    btn.textContent = "Try Again";
-  };
-  btn.disabled = true;
-  btn.textContent = "Drawing your suit...";
-  status.textContent = "This usually takes about a minute. You can stay on this page.";
+  return ui;
+}
+
+function currentDesignSpec() {
   try {
-    const start = await callSuitImageFn(ids);
-    if (start.data && start.data.status === "done" && start.data.image_url) return showImage(start.data.image_url);
-    if (!start.ok && start.status !== 202) return fail("Sorry, we couldn't start the picture right now.");
-    const deadline = Date.now() + 4 * 60 * 1000;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 5000));
-      const check = await callSuitImageFn(Object.assign({ check: true }, ids));
-      const st = check.data && check.data.status;
-      if (st === "done" && check.data.image_url) return showImage(check.data.image_url);
-      if (st === "failed") return fail("Sorry, something went wrong drawing your suit.");
-    }
-    fail("This is taking longer than usual.");
+    return buildVisualSpecText({
+      type: currentSuitType,
+      jacket: jacketDesigner.getSelections(),
+      pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getSelections(),
+    });
   } catch (e) {
-    console.error(e);
-    fail("Sorry, we couldn't reach the picture service.");
+    return "";
+  }
+}
+
+// Top of the Measurements step: "See your suit before you order".
+async function updateDesignPreviewPanel() {
+  const box = document.getElementById("designPreview");
+  if (!box) return;
+  if (!(await suitImagesReady())) {
+    box.hidden = true;
+    return;
+  }
+  const spec = currentDesignSpec();
+  if (!/^Fabric: /m.test(spec)) {
+    box.hidden = true;
+    return;
+  }
+  box.innerHTML = "";
+  const head = document.createElement("div");
+  head.className = "suit-preview-head";
+  head.innerHTML = "<h3>See your suit before you order</h3><p>We can draw a picture of this suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep filling in your measurements while it draws.</p>";
+  box.appendChild(head);
+  const ui = buildSuitImageCard("");
+  box.appendChild(ui.card);
+  box.hidden = false;
+
+  const watch = (preview) => {
+    ui.working();
+    pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
+      if (designPreview !== preview) return;
+      preview.status = r.status === "done" ? "done" : "failed";
+      if (r.status === "done") preview.url = r.url;
+      if (box.contains(ui.card)) {
+        if (r.status === "done") ui.showImage(r.url);
+        else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
+      }
+    });
+  };
+
+  if (designPreview && designPreview.spec === spec) {
+    if (designPreview.status === "done") ui.showImage(designPreview.url);
+    else if (designPreview.status === "pending") watch(designPreview);
+  }
+
+  ui.btn.addEventListener("click", async () => {
+    ui.working();
+    try {
+      const start = await callSuitImageFn({ preview: true, visual_spec: spec });
+      if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
+      if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
+      designPreview = { spec, id: start.data.preview_id, status: "pending", url: null };
+      watch(designPreview);
+    } catch (e) {
+      console.error(e);
+      ui.fail(SUIT_IMAGE_MESSAGES.network, true);
+    }
+  });
+}
+
+// The finished preview for the suit being committed to the cart, if the
+// customer drew one and hasn't changed the design since.
+function currentDesignPreviewId() {
+  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() ? designPreview.id : null;
+}
+
+// Confirmation page.
+async function renderSuitPreview(suits) {
+  const box = document.getElementById("suitPreview");
+  if (!box || !suits.length) return;
+  box.hidden = true;
+  box.innerHTML = "";
+  if (!(await suitImagesReady())) return;
+  const head = document.createElement("div");
+  head.className = "suit-preview-head";
+  head.innerHTML = "<h3>Your finished suit</h3><p>A picture of your suit with the fabric, buttons, lining and thread you chose.</p>";
+  box.appendChild(head);
+  box.hidden = false;
+  for (const suit of suits) {
+    const ids = { order_id: suit.orderId, suit_number: suit.suitNumber };
+    const ui = buildSuitImageCard(suit.label);
+    box.appendChild(ui.card);
+    ui.btn.addEventListener("click", async () => {
+      ui.working();
+      try {
+        const start = await callSuitImageFn(ids);
+        if (start.data && start.data.status === "done" && start.data.image_url) return ui.showImage(start.data.image_url);
+        if (!start.ok && start.status !== 202) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
+        const r = await pollSuitImage(Object.assign({ check: true }, ids));
+        if (r.status === "done") ui.showImage(r.url);
+        else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
+      } catch (e) {
+        console.error(e);
+        ui.fail(SUIT_IMAGE_MESSAGES.network, true);
+      }
+    });
+    // A picture drawn before ordering is copied onto the order, no redraw.
+    try {
+      if (suit.previewId) await callSuitImageFn(Object.assign({ attach: suit.previewId }, ids));
+      const check = await callSuitImageFn(Object.assign({ check: true }, ids));
+      if (check.data && check.data.status === "done" && check.data.image_url) ui.showImage(check.data.image_url);
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 
@@ -4321,7 +4450,7 @@ async function finalizeOrder(input) {
   if (currentUser) loadOrderHistory();
   if (visualSpecSaved) {
     renderSuitPreview(
-      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
     );
   }
   orderSubmitted = true;
@@ -5066,6 +5195,7 @@ function qaJumpToStep(stepId) {
     stepEl.classList.add("active");
     scrollToStepTop(stepEl);
     saveDraft();
+    if (stepEl === measurementsSection) setTimeout(updateDesignPreviewPanel, 0);
   };
   // Same "scroll up before hiding" order as goToStep -- see its comment.
   const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
@@ -5177,3 +5307,7 @@ if (qaSkipPaymentBtn) {
   if (startRaw) setRaw(true);
 })();
 // ==================== END TEMP QA NAV BAR ====================
+
+// A reload that lands back on the Measurements step (see restoreDraft)
+// gets the "See your suit" panel too.
+if (measurementsSection.classList.contains("active")) setTimeout(updateDesignPreviewPanel, 0);

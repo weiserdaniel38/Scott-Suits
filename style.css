@@ -740,6 +740,8 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .confirmation h2{color:var(--brass);}
 .suit-preview{margin:40px auto 0;max-width:900px;border-top:1px solid var(--line);padding-top:32px;}
 .suit-preview[hidden]{display:none;}
+.suit-preview.design-preview{margin:0 0 28px;padding:24px 20px 4px;border:1px solid var(--line);border-radius:8px;text-align:center;}
+.design-preview .suit-preview-head h3{font-size:20px;}
 .suit-preview-head h3{margin:0 0 8px;font-size:22px;}
 .suit-preview-head p{margin:0 auto 20px;max-width:520px;opacity:0.8;}
 .suit-preview-card{margin:0 0 28px;}
