@@ -1252,3 +1252,83 @@ nav{position:sticky;top:0;}
 
 /* LIVE SITE: internal QA bar hidden */
 .qa-nav,#qaNavBar{display:none !important;}
+
+/* === START OVER, START DESIGNING + SUIT-TYPE CARDS: matched to the step-by-step look ===
+   Rounded cards (14px), soft white card fill, brass on hover/selection, pill buttons. */
+
+/* Start Designing: pill buttons (hero, nav, How It Works) */
+#heroStartDesigningBtn,.how-it-works-cta{border-radius:999px;padding:16px 32px;transition:background .15s ease,transform .15s ease;}
+#heroStartDesigningBtn:hover,.how-it-works-cta:hover{background:var(--brass);color:#161310;}
+#heroStartDesigningBtn span{transition:transform .15s ease;}
+#heroStartDesigningBtn:hover span{transform:translateX(3px);}
+.nav-cta{border-radius:999px;border:1.5px solid var(--brass);background:rgba(255,255,255,0.45);text-transform:none;font-size:13px;letter-spacing:.3px;padding:11px 22px;transition:background .15s ease,color .15s ease;}
+.nav-cta:hover{background:var(--brass);color:#fff;}
+
+/* Start Over: quiet pill with a reset icon instead of underlined text */
+.nav-startover-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:8px 15px 8px 12px;background:rgba(255,255,255,0.45);color:var(--ivory);font:500 12px 'Inter',sans-serif;letter-spacing:.3px;text-decoration:none;transition:border-color .15s ease,color .15s ease;}
+.nav-startover-btn[hidden]{display:none;}
+.nav-startover-btn:hover{border-color:var(--brass);color:var(--ivory);}
+.nav-startover-icon{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+@media(max-width:900px){
+  .nav-startover-btn{padding:6px 11px 6px 9px;font-size:11px;gap:5px;}
+  .nav-startover-icon{width:12px;height:12px;}
+}
+@media(max-width:380px){
+  .nav-startover-btn{padding:6px 9px;font-size:10px;}
+  .nav-startover-icon{display:none;}
+}
+
+/* Start Over confirmation: same card as the Review sheet (bottom sheet on phones) */
+.confirm-overlay{background:rgba(20,17,13,0.5);z-index:150;}
+.confirm-panel{max-width:420px;border:none;border-radius:20px;padding:30px 28px 26px;text-align:center;box-shadow:0 24px 60px rgba(20,17,13,0.25);}
+.confirm-icon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:rgba(176,141,87,0.14);color:var(--brass);margin-bottom:14px;}
+.confirm-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.confirm-panel h3{font-family:inherit;font-size:26px;font-weight:500;margin:0 0 10px;}
+.confirm-panel p{font-size:14.5px;line-height:1.55;}
+.confirm-actions{display:flex;gap:10px;margin-top:24px;}
+.confirm-actions .btn-primary,.confirm-actions .btn-ghost{flex:1 1 0;justify-content:center;border-radius:999px;padding:14px 18px;font-size:14px;font-weight:600;}
+.confirm-actions .btn-ghost{border:1px solid var(--line);background:none;color:var(--ivory);}
+.confirm-actions .btn-ghost:hover{border-color:var(--brass);}
+.confirm-actions .btn-primary:hover{background:#33291f;}
+@media(max-width:600px){
+  .confirm-overlay{align-items:flex-end;padding:0;}
+  .confirm-panel{max-width:none;border-radius:20px 20px 0 0;padding:26px 22px calc(22px + env(safe-area-inset-bottom,0px));}
+  .confirm-actions{flex-direction:column;gap:8px;}
+  .confirm-actions .btn-primary,.confirm-actions .btn-ghost{flex:none;width:100%;}
+}
+
+/* "What are we building?" — rounded picture cards like the designer's option cards */
+#suitTypeSection .designer-head{display:flex;flex-direction:column;align-items:center;}
+.suit-type-eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brass);font-weight:600;margin-bottom:10px;}
+#suitTypeSection .designer-head h2{font-weight:500;font-size:40px;line-height:1.15;}
+#suitTypeSection .designer-head p{font-size:15px;margin-top:10px;}
+#suitTypeSection .suit-type-grid{max-width:760px;gap:24px;margin-top:32px;}
+#suitTypeSection .suit-type-card{aspect-ratio:auto;min-height:0;padding:0;gap:0;justify-content:flex-start;align-items:stretch;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.45);text-align:center;transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease;}
+#suitTypeSection .suit-type-card:hover{border-color:var(--brass);transform:translateY(-3px);box-shadow:0 14px 34px rgba(34,30,25,0.10);}
+#suitTypeSection .suit-type-card:focus-visible{outline:2px solid var(--brass);outline-offset:3px;}
+#suitTypeSection .suit-type-icon{justify-content:center;align-items:center;background:#fff;padding:34px 20px;border-bottom:1px solid var(--line);}
+#suitTypeSection .suit-type-icon img{width:170px;height:170px;}
+.suit-type-body{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 18px 24px;}
+#suitTypeSection .suit-type-name{font-family:inherit;font-size:28px;font-weight:500;margin:0;}
+#suitTypeSection .suit-type-desc{font-size:12px;letter-spacing:1.6px;}
+#suitTypeSection .suit-type-price{font-family:inherit;font-size:24px;font-weight:600;color:var(--ivory);margin-top:6px;}
+.suit-type-go{display:inline-flex;align-items:center;gap:6px;margin-top:12px;border:1.5px solid var(--brass);border-radius:999px;padding:9px 22px;font-size:13.5px;font-weight:600;color:var(--ivory);transition:background .15s ease,color .15s ease;}
+.suit-type-go span{transition:transform .15s ease;}
+#suitTypeSection .suit-type-card:hover .suit-type-go{background:var(--brass);color:#fff;}
+#suitTypeSection .suit-type-card:hover .suit-type-go span{transform:translateX(3px);}
+.suit-type-note{font-size:12.5px;color:var(--ivory-dim);text-align:center;margin-top:20px;}
+@media(max-width:600px){
+  #suitTypeSection .designer-head h2{font-size:28px;}
+  #suitTypeSection .designer-head p{font-size:13px;}
+  .suit-type-eyebrow{font-size:10px;margin-bottom:6px;}
+  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%;gap:12px;margin-top:22px;}
+  #suitTypeSection .suit-type-card:hover{transform:none;box-shadow:none;}
+  #suitTypeSection .suit-type-icon{padding:18px 10px;}
+  #suitTypeSection .suit-type-icon img{width:88px;height:88px;}
+  .suit-type-body{padding:14px 8px 16px;gap:3px;}
+  #suitTypeSection .suit-type-name{font-size:19px;}
+  #suitTypeSection .suit-type-desc{font-size:9.5px;letter-spacing:1.2px;}
+  #suitTypeSection .suit-type-price{font-size:19px;margin-top:4px;}
+  .suit-type-go{margin-top:8px;padding:7px 16px;font-size:12px;}
+  .suit-type-note{font-size:11.5px;margin-top:16px;}
+}
