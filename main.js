@@ -4138,6 +4138,10 @@ async function uploadLiningPhotos(orderId) {
 let visualSpecSaved = false;
 let designPreview = null; // { spec, id, status: "pending" | "done" | "failed", url }
 let suitImagesReadyPromise = null;
+// Pause switch: true = "Generate My Suit" shows the loading screen but never
+// asks the server to draw (no pictures, no image costs). Set back to false
+// to turn picture drawing on again.
+const SUIT_IMAGES_PAUSED = true;
 const SUIT_IMAGE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/generate-suit-image" : "";
 
 function callSuitImageFn(payload) {
@@ -4328,6 +4332,7 @@ async function updateDesignPreviewPanel() {
 
   ui.btn.addEventListener("click", async () => {
     ui.working();
+    if (SUIT_IMAGES_PAUSED) return;
     try {
       const start = await callSuitImageFn({ preview: true, visual_spec: spec });
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
@@ -4365,6 +4370,7 @@ async function renderSuitPreview(suits) {
     box.appendChild(ui.card);
     ui.btn.addEventListener("click", async () => {
       ui.working();
+      if (SUIT_IMAGES_PAUSED) return;
       try {
         const start = await callSuitImageFn(ids);
         if (start.data && start.data.status === "done" && start.data.image_url) return ui.showImage(start.data.image_url);
