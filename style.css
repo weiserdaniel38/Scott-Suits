@@ -1334,10 +1334,8 @@ nav{position:sticky;top:0;}
 }
 
 /* === HOW IT WORKS: redesigned nav button + page (2026-10) === */
-.hiw-nav-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(176,141,87,0.55);border-radius:999px;padding:7px 14px 7px 7px;color:var(--ivory);background:rgba(176,141,87,0.06);transition:background .15s ease,border-color .15s ease;}
+.hiw-nav-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(176,141,87,0.55);border-radius:999px;padding:8px 16px;color:var(--ivory);background:rgba(176,141,87,0.06);transition:background .15s ease,border-color .15s ease;}
 .hiw-nav-btn:hover{background:rgba(176,141,87,0.16);border-color:var(--brass);color:var(--ivory);}
-.navlinks .hiw-nav-q{display:block;}
-.hiw-nav-q{width:20px;height:20px;border-radius:50%;background:var(--brass);color:#fff;font-size:12px;font-weight:700;line-height:20px;text-align:center;flex-shrink:0;}
 
 #howItWorksOverlay{background:rgba(20,17,14,0.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:48px 24px;}
 #howItWorksOverlay .how-it-works-panel{max-width:620px;border:none;border-radius:20px;padding:44px 44px 32px;box-shadow:0 24px 60px rgba(0,0,0,0.28);}
@@ -1365,12 +1363,10 @@ nav{position:sticky;top:0;}
 #howItWorksOverlay .how-it-works-cta{margin-top:0;}
 
 @media(max-width:600px){
-  .hiw-nav-btn{gap:5px;padding:4px 9px 4px 4px;}
-  .navlinks .hiw-nav-btn{border:1px solid rgba(176,141,87,0.55);border-radius:999px;padding:4px 9px 4px 4px;font-size:9.5px;}
-  .hiw-nav-q{width:16px;height:16px;font-size:10px;line-height:16px;}
-  #howItWorksOverlay{padding:0;align-items:flex-start;}
-  .navlinks .hiw-nav-q{display:block;}
-  #howItWorksOverlay .how-it-works-panel{border-radius:20px 20px 0 0;padding:40px 20px 0;min-height:calc(100% - 24px);margin-top:24px;}
+  .hiw-nav-btn{padding:5px 10px;}
+  .navlinks .hiw-nav-btn{border:1px solid rgba(176,141,87,0.55);border-radius:999px;padding:5px 10px;font-size:9.5px;}
+    #howItWorksOverlay{padding:0;align-items:flex-start;}
+    #howItWorksOverlay .how-it-works-panel{border-radius:20px 20px 0 0;padding:40px 20px 0;min-height:calc(100% - 24px);margin-top:24px;}
   #howItWorksOverlay .how-it-works-close{top:12px;right:12px;width:36px;height:36px;font-size:22px;}
   #howItWorksOverlay h2{font-size:28px;}
   .hiw-head{margin-bottom:24px;}
@@ -1385,6 +1381,6 @@ nav{position:sticky;top:0;}
   #howItWorksOverlay .how-it-works-cta{width:100%;justify-content:center;}
 }
 @media(max-width:380px){
-  .navlinks .hiw-nav-btn{padding:4px 7px 4px 4px;}
+  .navlinks .hiw-nav-btn{padding:5px 8px;}
 }
 .navlinks{align-items:center;}
