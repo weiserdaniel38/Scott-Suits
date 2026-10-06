@@ -738,6 +738,18 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .confirmation{text-align:center;}
 .confirmation .designer-head{max-width:520px;margin:0 auto;}
 .confirmation h2{color:var(--brass);}
+.suit-preview{margin:40px auto 0;max-width:900px;border-top:1px solid var(--line);padding-top:32px;}
+.suit-preview[hidden]{display:none;}
+.suit-preview.design-preview{margin:0 0 28px;padding:24px 20px 4px;border:1px solid var(--line);border-radius:8px;text-align:center;}
+.design-preview .suit-preview-head h3{font-size:20px;}
+.suit-preview-head h3{margin:0 0 8px;font-size:22px;}
+.suit-preview-head p{margin:0 auto 20px;max-width:520px;opacity:0.8;}
+.suit-preview-card{margin:0 0 28px;}
+.suit-preview-label{margin:0 0 10px;font-weight:600;}
+.suit-preview-btn{justify-content:center;}
+.suit-preview-btn[hidden]{display:none;}
+.suit-preview-status{margin:10px 0 0;font-size:14px;opacity:0.8;min-height:1em;}
+.suit-preview-img{display:block;width:100%;height:auto;margin-top:12px;border:1px solid var(--line);border-radius:6px;background:#fff;}
 .customer-name-field{margin-bottom:28px;max-width:360px;}
 .address-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;}
 .address-grid .address-field-full{grid-column:1 / -1;}

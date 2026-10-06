@@ -22,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg">
-<link rel="stylesheet" href="./style.css?v=20261006h">
+<link rel="stylesheet" href="./style.css?v=20261006i">
 </head>
 <body>
 
@@ -272,6 +272,11 @@
     <p class="sub">Grab a tape measure (a patient friend helps). Everything is in centimeters.</p>
   </div>
 
+  <!-- "See your suit before you order": filled in by
+       updateDesignPreviewPanel() in main.js, only once the generate-suit-image
+       function answers that it's set up. -->
+  <div class="suit-preview design-preview" id="designPreview" hidden></div>
+
   <!-- Only shown once there's already at least one other suit in this order
        (see updateSamePreviousMeasurementsBanner() in main.js) -- the fields
        below always start blank for a new suit, since different suits in one
@@ -446,6 +451,9 @@
     <h2>Order received</h2>
     <p id="confirmationText"></p>
   </div>
+  <!-- "See your finished suit": filled in by renderSuitPreview() in main.js,
+       only once the generate-suit-image function answers that it's set up. -->
+  <div class="suit-preview" id="suitPreview" hidden></div>
   <!-- The "Client Form" (garment spec + shipping address, in the same plain-
        text format sent to production) is intentionally NOT shown here --
        customers only ever see this friendly confirmation message. Daniel
@@ -657,7 +665,7 @@
 <script src="./config.js?v=20261006c"></script>
 <script src="./catalog.js?v=20261006c"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261006g"></script>
+<script src="./main.js?v=20261006i"></script>
 
 </body>
 </html>
