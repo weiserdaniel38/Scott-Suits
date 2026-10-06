@@ -22,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg">
-<link rel="stylesheet" href="./style.css?v=20261006m">
+<link rel="stylesheet" href="./style.css?v=20261006n">
 </head>
 <body>
 
@@ -545,11 +545,19 @@
      orders, nothing more. -->
 <div class="how-it-works-overlay account-overlay" id="accountOverlay" role="dialog" aria-modal="true" aria-labelledby="accountOverlayTitle">
   <div class="how-it-works-panel account-panel">
-    <button class="lightbox-close how-it-works-close" id="accountOverlayClose" aria-label="Close account">Close ✕</button>
-    <h2 id="accountOverlayTitle">My Account</h2>
+    <button class="lightbox-close how-it-works-close" id="accountOverlayClose" aria-label="Close account">&times;</button>
+    <div class="acc-head">
+      <div class="hiw-eyebrow">Scott Suits</div>
+      <h2 id="accountOverlayTitle">My Account</h2>
+    </div>
 
     <div id="accountLoggedOutView">
-      <p class="account-intro">Create a free profile to save your measurements and revisit your past orders next time you visit.</p>
+      <p class="account-intro">Save your measurements once and see your past orders any time.</p>
+      <ul class="hiw-perks acc-perks">
+        <li>Measurements saved</li>
+        <li>Order history</li>
+        <li>Free</li>
+      </ul>
 
       <!-- Google sign-in works the same whether this is someone's first visit
            or their tenth -- Supabase creates the account automatically the
@@ -600,6 +608,7 @@
       </form>
 
       <p class="account-status-msg" id="accountStatusMsg" hidden></p>
+      <p class="acc-guest-note">An account is optional. You can always order as a guest.</p>
     </div>
 
     <div id="accountLoggedInView" hidden>
