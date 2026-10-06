@@ -1275,9 +1275,13 @@ nav{position:sticky;top:0;}
 
 /* Start Designing: pill buttons (hero, nav, How It Works) */
 #heroStartDesigningBtn,.how-it-works-cta{border-radius:999px;padding:16px 32px;transition:background .15s ease,transform .15s ease;}
-#heroStartDesigningBtn:hover,.how-it-works-cta:hover{background:var(--brass);color:#161310;}
+/* Hover only on devices that really hover: on phones a tap leaves :hover
+   stuck, so the button stayed gold after coming back to the home page. */
+@media(hover:hover){
+  #heroStartDesigningBtn:hover,.how-it-works-cta:hover{background:var(--brass);color:#161310;}
+  #heroStartDesigningBtn:hover span{transform:translateX(3px);}
+}
 #heroStartDesigningBtn span{transition:transform .15s ease;}
-#heroStartDesigningBtn:hover span{transform:translateX(3px);}
 .nav-cta{border-radius:999px;border:1.5px solid var(--brass);background:rgba(255,255,255,0.45);text-transform:none;font-size:13px;letter-spacing:.3px;padding:11px 22px;transition:background .15s ease,color .15s ease;}
 .nav-cta:hover{background:var(--brass);color:#fff;}
 
@@ -1506,3 +1510,7 @@ nav{position:sticky;top:0;}
   .hero p.lead{font-size:15px;line-height:1.55;}
   .hero-cta{margin-top:20px;}
 }
+
+/* === HOME: the suit-type choice ("What are we building?") stays hidden until
+   Start Designing is tapped, which adds body.designing (markDesignStarted). === */
+body:not(.designing) #suitTypeSection{display:none;}
