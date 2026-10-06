@@ -1,6 +1,6 @@
 // Scott Suits -- draws a picture sheet of a customer's finished suit.
 //
-// The sheet follows the layout of assets/suit-layout-outline.jpg:
+// The sheet has five panels, described to the model in words only:
 // full suit front, full suit back, trousers front, a sleeve-cuff close-up and
 // a trouser-waistband close-up (jacket-only orders get jacket views instead).
 //
@@ -38,8 +38,9 @@
 //   IMAGE_MODEL        optional, default gpt-image-2
 //   IMAGE_QUALITY      optional, low | medium | high | auto (default medium)
 //   IMAGE_SIZE         optional, default 1536x1024 (landscape sheet)
-//   USE_LAYOUT_REFERENCE optional, set to "false" to stop showing the model
-//                      the example sheet
+//   USE_LAYOUT_REFERENCE optional, set to "true" to also show the model the
+//                      gray outline sheet (off by default: the panels are
+//                      described in words only)
 //   SITE_URL           optional, default https://scottssuits.com
 //   PREVIEW_PER_VISITOR_PER_DAY optional, default 6
 //   PREVIEW_PER_DAY    optional, default 150 (all visitors together)
@@ -128,7 +129,54 @@ Left side, three tall panels side by side: (1) the jacket front view on an invis
 Right side, two square close-up panels stacked: (4) a close-up of the sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the lining visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
-Right side, two square close-up panels stacked: (4) a close-up of the jacket sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the trouser waistband and fly, partly open, showing the waistband extension, closure, belt loops and front pocket, with the trouser hem visible below.`;
+Right side, two square close-up panels stacked: (4) a close-up of the jacket sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the trouser waistband and fly, partly open, showing the waistband extension tab (its exact shape is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+}
+
+// Always added to the end of the final image prompt, whoever wrote the rest,
+// to correct mistakes the image model tends to make.
+function fixedRules(spec: string): string {
+  const rules = ["Strict accuracy rules:"];
+  if (!/^Suit type: Jacket only/m.test(spec)) {
+    const ext = (spec.match(/^Waistband Extension Style: (.+)$/m) || [])[1] || "";
+    const hook = (spec.match(/^Hook And Eye Style: (.+)$/m) || [])[1] || "";
+    const noButton = /no button|no waistband/i.test(ext);
+    rules.push(
+      "- No exposed metal anywhere on the trousers: no visible metal clasps, hooks, bars or buckles on the waistband or fly. A hook-and-eye, if any, is hidden inside the waistband and must not be visible." +
+        (noButton ? "" : " The waistband closes with a button."),
+    );
+    const shape = /arrow/i.test(ext) || (!ext && /arrow/i.test(hook))
+      ? "a POINTED, arrow-shaped tab that tapers to a point like an arrowhead at its end (not square, not rounded)"
+      : /square/i.test(ext)
+      ? "a square-cornered, straight-ended tab (not pointed, not rounded)"
+      : /round/i.test(ext)
+      ? "a tab with a rounded end (not pointed, not square)"
+      : "";
+    if (shape) {
+      rules.push(
+        "- The waistband extension (the tab of waistband that overlaps at the top of the fly) is " + shape + "; show this shape clearly in the waistband close-up" +
+          (noButton ? ", with no visible button or buttonhole on the tab." : ", fastened with one button."),
+      );
+    }
+    if (/^Bottom Style: .*\bhem\b/im.test(spec) && !/^Bottom Style: .*cuff/im.test(spec)) {
+      rules.push("- Trouser bottoms are plain hems with no turn-ups or cuffs.");
+    }
+  }
+  const front = (spec.match(/^Front Button: (.+)$/m) || [])[1] || "";
+  const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, six: 6 };
+  const m = front.toLowerCase().match(/\b(one|two|three|four|six|\d)\b[\s-]*button/);
+  const n = m ? words[m[1]] || Number(m[1]) : 0;
+  if (n) {
+    rules.push(
+      "- The jacket front closure has exactly " + n + " button" + (n === 1 ? "" : "s") +
+        " (" + front + "). Draw exactly that many front buttons, no more and no fewer, in the front view.",
+    );
+  }
+  const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+  const c = cuff.toLowerCase().match(/\b(one|two|three|four|five|\d)\b/);
+  const cw: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+  const cn = c ? cw[c[1]] || Number(c[1]) : 0;
+  if (cn) rules.push("- Each sleeve cuff has exactly " + cn + " button" + (cn === 1 ? "" : "s") + ".");
+  return rules.join("\n");
 }
 
 function refsNote(refs: { label: string }[], withLayout: boolean): string {
@@ -296,7 +344,7 @@ async function claim(id: string, force: boolean) {
 async function drawSheet(raw: string, folder: string, name: string): Promise<{ url: string; prompt: string }> {
   const { text: spec, swatches } = parseSpec(raw);
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
-  const useLayout = env("USE_LAYOUT_REFERENCE", "true").toLowerCase() !== "false";
+  const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
   const loaded = (await Promise.all(swatches.slice(0, 5).map(loadRef))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
@@ -306,7 +354,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
 
   const layout = layoutFor(jacketOnly);
   const notes = refsNote(loaded, !!layoutImg);
-  const prompt = await writePrompt(layout, notes, spec);
+  const prompt = (await writePrompt(layout, notes, spec)) + "\n\n" + fixedRules(spec);
   const jpeg = await drawImage(prompt, images);
 
   const path = folder + "/" + name + "-" + Date.now() + ".jpg";
