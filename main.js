@@ -3543,9 +3543,16 @@ function visualSpecOptionDetail(cat, rawValue) {
   return { opt, text: shown + (parts.length ? " (" + parts.join(", ") + ")" : ""), matchesFabric: false };
 }
 
-function buildVisualSpecText(item) {
+function buildVisualSpecText(item, opts) {
   const isJacketOnly = item.type === "jacketOnly";
   const lines = [];
+  // Swatch photos the picture generator is shown alongside the text, so the
+  // fabric, lining and buttons in the picture match the real ones. Site
+  // paths (./assets/...) or the customer's own uploaded lining photo.
+  const swatches = [];
+  const addSwatch = (label, src) => {
+    if (src && !swatches.some((s) => s.endsWith(" " + src))) swatches.push("Swatch " + label + ": " + src);
+  };
   lines.push("Suit type: " + (isJacketOnly ? "Jacket only (no pants)" : "Full suit (jacket + pants)"));
   const sections = [["JACKET", JACKET_CATALOG, item.jacket || {}]];
   if (!isJacketOnly) sections.push(["PANTS", PANTS_CATALOG, item.pants || {}]);
@@ -3564,8 +3571,19 @@ function buildVisualSpecText(item) {
         text = "matched to the fabric color" + (fabricHex ? " (approx. color " + fabricHex + ")" : "");
       }
       lines.push(cat.label + ": " + text);
+      if (!d.opt || d.matchesFabric || d.opt.uploadPhoto) return;
+      const part = title === "PANTS" ? "pants " : "";
+      if (key === "fabric") addSwatch(part + "fabric", d.opt.img);
+      else if (key === "lining") addSwatch("lining", (typeof LINING_ZOOM_MAP !== "undefined" && LINING_ZOOM_MAP[d.opt.name]) || d.opt.img);
+      else if (key === "buttoncolor") addSwatch("button", d.opt.img);
     });
   });
+  if (opts && opts.liningPhotoUrl) addSwatch("lining (customer's own photo)", opts.liningPhotoUrl);
+  if (swatches.length) {
+    lines.push("");
+    lines.push("REFERENCE SWATCHES");
+    swatches.forEach((s) => lines.push(s));
+  }
   return lines.join("\n");
 }
 
@@ -4076,6 +4094,105 @@ async function uploadLiningPhotos(orderId) {
 // the same order_id and contact/shipping details, so a multi-suit order
 // still produces one row per physical garment set for whoever's cutting
 // fabric, while order_id ties them back together as one order.
+// ---------------------------------------------------------------------------
+// "Generate My Suit" on the confirmation page -- asks the generate-suit-image
+// Supabase function (supabase/functions/) to draw a picture sheet of each
+// suit just ordered, then checks back until it's ready. The section only
+// appears if that function answers that it's set up, so nothing shows on
+// the live site until the Supabase side is configured.
+// ---------------------------------------------------------------------------
+let visualSpecSaved = false;
+const SUIT_IMAGE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/generate-suit-image" : "";
+
+function callSuitImageFn(payload) {
+  return fetch(SUIT_IMAGE_FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, status: res.status, data })));
+}
+
+async function renderSuitPreview(suits) {
+  const box = document.getElementById("suitPreview");
+  if (!box || !SUIT_IMAGE_FN_URL || !suits.length) return;
+  box.hidden = true;
+  box.innerHTML = "";
+  try {
+    const ping = await callSuitImageFn({ ping: true });
+    if (!ping.ok || !ping.data || !ping.data.ready) return;
+  } catch (e) {
+    return;
+  }
+  const head = document.createElement("div");
+  head.className = "suit-preview-head";
+  head.innerHTML = "<h3>See your finished suit</h3><p>We can draw a picture of your suit with the fabric, buttons, lining and thread you chose. It takes about a minute.</p>";
+  box.appendChild(head);
+  suits.forEach((suit) => {
+    const card = document.createElement("div");
+    card.className = "suit-preview-card";
+    const label = document.createElement("p");
+    label.className = "suit-preview-label";
+    label.textContent = suit.label;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-primary suit-preview-btn";
+    btn.textContent = "Generate My Suit";
+    const status = document.createElement("p");
+    status.className = "suit-preview-status";
+    status.setAttribute("aria-live", "polite");
+    const media = document.createElement("div");
+    media.className = "suit-preview-media";
+    card.append(label, btn, status, media);
+    box.appendChild(card);
+    btn.addEventListener("click", () => generateSuitPicture(suit, btn, status, media));
+  });
+  box.hidden = false;
+}
+
+async function generateSuitPicture(suit, btn, status, media) {
+  const ids = { order_id: suit.orderId, suit_number: suit.suitNumber };
+  const showImage = (url) => {
+    status.textContent = "";
+    btn.hidden = true;
+    media.innerHTML = "";
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    const img = document.createElement("img");
+    img.className = "suit-preview-img";
+    img.alt = "Your finished suit";
+    img.src = url;
+    link.appendChild(img);
+    media.appendChild(link);
+  };
+  const fail = (msg) => {
+    status.textContent = msg;
+    btn.disabled = false;
+    btn.textContent = "Try Again";
+  };
+  btn.disabled = true;
+  btn.textContent = "Drawing your suit...";
+  status.textContent = "This usually takes about a minute. You can stay on this page.";
+  try {
+    const start = await callSuitImageFn(ids);
+    if (start.data && start.data.status === "done" && start.data.image_url) return showImage(start.data.image_url);
+    if (!start.ok && start.status !== 202) return fail("Sorry, we couldn't start the picture right now.");
+    const deadline = Date.now() + 4 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const check = await callSuitImageFn(Object.assign({ check: true }, ids));
+      const st = check.data && check.data.status;
+      if (st === "done" && check.data.image_url) return showImage(check.data.image_url);
+      if (st === "failed") return fail("Sorry, something went wrong drawing your suit.");
+    }
+    fail("This is taking longer than usual.");
+  } catch (e) {
+    console.error(e);
+    fail("Sorry, we couldn't reach the picture service.");
+  }
+}
+
 async function finalizeOrder(input) {
   const { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country } = input;
 
@@ -4120,7 +4237,7 @@ async function finalizeOrder(input) {
     // Plain-English, personal-data-free description of the suit -- read by
     // the AI that writes the "finished suit" image prompt once the shop marks
     // this order completed (see add_order_status_and_suit_image_migration.sql).
-    row.visual_spec = buildVisualSpecText(item);
+    row.visual_spec = buildVisualSpecText(item, { liningPhotoUrl: liningPhotoUrls[i] });
     return row;
   });
 
@@ -4135,12 +4252,14 @@ async function finalizeOrder(input) {
 
   try {
     const client = getSupabase();
+    visualSpecSaved = true;
     let { error } = await client.from("orders").insert(rows);
     // If the image-feature migration hasn't been run yet, the database
     // doesn't know the visual_spec column -- never lose a real order over
     // that: retry once without it (the order is otherwise identical).
     if (error && /visual_spec/i.test(error.message || "")) {
       console.warn("visual_spec column missing; saving order without it. Run add_order_status_and_suit_image_migration.sql.");
+      visualSpecSaved = false;
       const stripped = rows.map((r) => {
         const copy = Object.assign({}, r);
         delete copy.visual_spec;
@@ -4200,6 +4319,11 @@ async function finalizeOrder(input) {
   // So this order shows up right away in "Past Orders" if a signed-in
   // customer checks their account immediately after ordering.
   if (currentUser) loadOrderHistory();
+  if (visualSpecSaved) {
+    renderSuitPreview(
+      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+    );
+  }
   orderSubmitted = true;
   updateProcessBar();
   goToStep(personalInfoSection, confirmationSection);

@@ -9,8 +9,8 @@
 --   * orders.image_*     -- the picture's link, the prompt used, and whether
 --     it is pending / done / failed (with the error message if it failed).
 --   * a public `suit-images` storage bucket the pictures are saved in.
--- Part 2 (2_suit_image_trigger.sql) connects "status = completed" to the
--- image function, after the function and its secrets are set up.
+-- Part 2 (2_suit_image_trigger.sql, optional) also draws a picture when you
+-- mark an order completed.
 
 alter table public.orders
   add column if not exists visual_spec text,

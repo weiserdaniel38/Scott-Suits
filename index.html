@@ -446,6 +446,9 @@
     <h2>Order received</h2>
     <p id="confirmationText"></p>
   </div>
+  <!-- "See your finished suit": filled in by renderSuitPreview() in main.js,
+       only once the generate-suit-image function answers that it's set up. -->
+  <div class="suit-preview" id="suitPreview" hidden></div>
   <!-- The "Client Form" (garment spec + shipping address, in the same plain-
        text format sent to production) is intentionally NOT shown here --
        customers only ever see this friendly confirmation message. Daniel

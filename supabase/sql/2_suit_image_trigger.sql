@@ -1,6 +1,8 @@
 -- Run this once in the Supabase Dashboard: SQL Editor > New query > paste > Run.
 --
--- Finished-suit picture feature, part 2 of 2 (safe to re-run).
+-- Finished-suit picture feature, part 2 of 2: OPTIONAL (safe to re-run).
+-- Customers already get a "Generate My Suit" button after ordering; this
+-- adds a picture automatically when you mark an order completed.
 -- Run it AFTER the generate-suit-image function is deployed and its
 -- WEBHOOK_SECRET is saved under Edge Functions > Secrets.
 --
