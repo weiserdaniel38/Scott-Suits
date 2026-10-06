@@ -4220,13 +4220,13 @@ function buildSuitImageCard(labelText) {
       // Daniel's button-stitching clip, looped until the picture arrives.
       const video = document.createElement("video");
       video.className = "suit-preview-loading";
-      [["./assets/suit-loading-buttons.mp4", "video/mp4"], ["./assets/suit-loading-buttons.webm", "video/webm"]].forEach(([src, type]) => {
+      [["./assets/suit-loading-thread.mp4", "video/mp4"], ["./assets/suit-loading-thread.webm", "video/webm"]].forEach(([src, type]) => {
         const source = document.createElement("source");
         source.src = src;
         source.type = type;
         video.appendChild(source);
       });
-      video.poster = "./assets/suit-loading-buttons.jpg";
+      video.poster = "./assets/suit-loading-thread.jpg";
       video.autoplay = true;
       video.loop = true;
       video.muted = true;
