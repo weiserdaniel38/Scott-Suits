@@ -277,12 +277,7 @@ const STEP_FOCUS_SELECTOR = {
   // nav/process bar, half-covered rather than either skipped past cleanly or
   // shown in full. A function here (instead of a plain selector string) picks
   // whichever is actually topmost right now, so it lands fully in view.
-  // Phones skip the heading so the picture card sits right under the step
-  // bar; desktop has room for both.
-  previewSection: () =>
-    window.innerWidth <= MOBILE_BREAKPOINT
-      ? document.getElementById("previewCardAnchor")
-      : document.querySelector("#previewSection .designer-head"),
+  previewSection: ".designer-head",
   measurementsSection: () =>
     document.querySelector("#samePreviousMeasurementsBanner:not([hidden])") ||
     document.querySelector("#savedMeasurementsBanner:not([hidden])") ||
