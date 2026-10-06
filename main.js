@@ -3544,6 +3544,11 @@ function visualSpecOptionDetail(cat, rawValue) {
   return { opt, text: shown + (parts.length ? " (" + parts.join(", ") + ")" : ""), matchesFabric: false };
 }
 
+// Options whose catalog line drawing is also sent to the picture generator,
+// because words alone don't pin down their shape (slanted or overlapping
+// cuff buttons, the waistband tab, double-breasted stances...).
+const VISUAL_SPEC_STYLE_DRAWINGS = ["collar", "frontbutton", "sleevecuffstyle", "cuffbuttons", "waistbandExtension", "waistbandStyle", "bottomStyle"];
+
 function buildVisualSpecText(item, opts) {
   const isJacketOnly = item.type === "jacketOnly";
   const lines = [];
@@ -3577,6 +3582,7 @@ function buildVisualSpecText(item, opts) {
       if (key === "fabric") addSwatch(part + "fabric", d.opt.img);
       else if (key === "lining") addSwatch("lining", (typeof LINING_ZOOM_MAP !== "undefined" && LINING_ZOOM_MAP[d.opt.name]) || d.opt.img);
       else if (key === "buttoncolor") addSwatch("button", d.opt.img);
+      else if (VISUAL_SPEC_STYLE_DRAWINGS.includes(key)) addSwatch("style " + cat.label, d.opt.img);
     });
   });
   if (opts && opts.liningPhotoUrl) addSwatch("lining (customer's own photo)", opts.liningPhotoUrl);

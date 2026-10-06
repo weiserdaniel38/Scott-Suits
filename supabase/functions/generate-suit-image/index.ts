@@ -160,6 +160,14 @@ function fixedRules(spec: string): string {
     if (/^Bottom Style: .*\bhem\b/im.test(spec) && !/^Bottom Style: .*cuff/im.test(spec)) {
       rules.push("- Trouser bottoms are plain hems with no turn-ups or cuffs.");
     }
+    const bottom = (spec.match(/^Bottom Style: (.+)$/m) || [])[1] || "";
+    const cuffHeights: [RegExp, string][] = [
+      [/thin|3\.5/i, "a THIN turn-up only about 3.5 cm (1⅜ in) tall, noticeably narrower than a standard trouser cuff"],
+      [/classic|4\.0/i, "a classic turn-up about 4 cm (1½ in) tall"],
+      [/tall|5\.0/i, "a tall turn-up about 5 cm (2 in) tall"],
+    ];
+    const height = cuffHeights.find(([re]) => re.test(bottom));
+    if (height && /cuff/i.test(bottom)) rules.push("- Trouser bottoms have " + height[1] + ", in every view.");
   }
   const front = (spec.match(/^Front Button: (.+)$/m) || [])[1] || "";
   const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, six: 6 };
@@ -176,17 +184,31 @@ function fixedRules(spec: string): string {
   const cw: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
   const cn = c ? cw[c[1]] || Number(c[1]) : 0;
   if (cn) rules.push("- Each sleeve cuff has exactly " + cn + " button" + (cn === 1 ? "" : "s") + ".");
+  const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
+  if (/overlap/i.test(cuff)) {
+    rules.push("- The cuff buttons OVERLAP: each button sits so close that its edge overlaps the next one (\"kissing\" buttons), with no gap between them.");
+  }
+  if (/slant/i.test(cuff) || /slant/i.test(cuffStyle)) {
+    rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle, not horizontal.");
+  }
   return rules.join("\n");
 }
 
-function refsNote(refs: { label: string }[], withLayout: boolean): string {
+function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): string {
   const lines: string[] = [];
   let n = 1;
   if (withLayout) {
     lines.push(`Image ${n++} is a LAYOUT EXAMPLE only: copy its panel arrangement, camera angles, lighting and white background, but NOT its garment (its color, fabric, cuffs or styling).`);
   }
   for (const r of refs) {
-    lines.push(`Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
+    if (r.label.startsWith("style ")) {
+      const name = r.label.slice(6);
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const value = (spec.match(new RegExp("^" + esc + ": (.+)$", "m")) || [])[1] || "";
+      lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.`);
+    } else {
+      lines.push(`Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
+    }
   }
   return lines.join("\n");
 }
@@ -346,14 +368,16 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
-  const loaded = (await Promise.all(swatches.slice(0, 5).map(loadRef))).filter(
+  const isDrawing = (r: Ref) => r.label.startsWith("style ");
+  const refs = swatches.filter((r) => !isDrawing(r)).slice(0, 5).concat(swatches.filter(isDrawing).slice(0, 8));
+  const loaded = (await Promise.all(refs.map(loadRef))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
   );
   const layoutImg = useLayout ? await loadRef({ label: "layout example", src: LAYOUT_REFERENCE }) : null;
   const images = (layoutImg ? [layoutImg] : []).concat(loaded);
 
   const layout = layoutFor(jacketOnly);
-  const notes = refsNote(loaded, !!layoutImg);
+  const notes = refsNote(loaded, !!layoutImg, spec);
   const prompt = (await writePrompt(layout, notes, spec)) + "\n\n" + fixedRules(spec);
   const jpeg = await drawImage(prompt, images);
 
