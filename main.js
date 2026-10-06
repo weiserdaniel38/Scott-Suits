@@ -3679,15 +3679,15 @@ function renderCartBar() {
     // "Suit 1 -- Charcoal Gray" for a full suit with no hint of what's
     // actually in it -- now both cases say so, so the cart list reads the
     // same way (suit type, then fabric) no matter which was ordered.
-    const typeTag = item.type === "jacketOnly" ? " (Jacket Only)" : " (Full Suit)";
-    const label = "Suit " + (i + 1) + typeTag + (fabric ? " -- " + fabric : "");
+    const typeTag = item.type === "jacketOnly" ? "Jacket Only" : "Full Suit";
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML =
-      '<span class="cart-item-label"></span>' +
+      '<div class="cart-item-info"><span class="cart-item-type"></span><span class="cart-item-label"></span></div>' +
       '<span class="cart-item-price">$' + itemPriceUsd(item) + "</span>" +
       '<button type="button" class="cart-item-remove" aria-label="Remove this suit">&times;</button>';
-    row.querySelector(".cart-item-label").textContent = label;
+    row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + typeTag;
+    row.querySelector(".cart-item-label").textContent = fabric || typeTag;
     row.querySelector(".cart-item-remove").addEventListener("click", (e) => {
       // Without this, the click event -- after removeCartItem's synchronous
       // renderCartBar() rebuilds this list and detaches this very button --
