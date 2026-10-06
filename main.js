@@ -4180,6 +4180,16 @@ const SUIT_IMAGE_MESSAGES = {
   network: "Sorry, we couldn't reach the picture service.",
 };
 
+// Cycled in bold under the loading video while a picture is drawn.
+const SUIT_LOADING_STEPS = [
+  "Cutting your fabric...",
+  "Stitching the lining...",
+  "Shaping the lapels...",
+  "Sewing on your buttons...",
+  "Pressing the trousers...",
+  "Adding the finishing touches...",
+];
+
 function buildSuitImageCard(labelText) {
   const card = document.createElement("div");
   card.className = "suit-preview-card";
@@ -4203,11 +4213,39 @@ function buildSuitImageCard(labelText) {
     card,
     btn,
     working() {
-      btn.hidden = false;
+      btn.hidden = true;
       btn.disabled = true;
-      btn.textContent = "Drawing your suit...";
-      status.textContent = "This usually takes about a minute.";
+      status.textContent = "";
       media.innerHTML = "";
+      // Daniel's button-stitching clip, looped until the picture arrives.
+      const video = document.createElement("video");
+      video.className = "suit-preview-loading";
+      [["./assets/suit-loading-buttons.mp4", "video/mp4"], ["./assets/suit-loading-buttons.webm", "video/webm"]].forEach(([src, type]) => {
+        const source = document.createElement("source");
+        source.src = src;
+        source.type = type;
+        video.appendChild(source);
+      });
+      video.poster = "./assets/suit-loading-buttons.jpg";
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("aria-hidden", "true");
+      const caption = document.createElement("p");
+      caption.className = "suit-preview-loading-text";
+      caption.innerHTML = "<strong></strong><span>This usually takes about a minute.</span>";
+      const line = caption.querySelector("strong");
+      let step = 0;
+      line.textContent = SUIT_LOADING_STEPS[0];
+      const timer = setInterval(() => {
+        if (!caption.isConnected) return clearInterval(timer);
+        step = (step + 1) % SUIT_LOADING_STEPS.length;
+        line.textContent = SUIT_LOADING_STEPS[step];
+      }, 3500);
+      media.append(video, caption);
+      video.play().catch(() => {});
     },
     showImage(url) {
       status.textContent = "";
@@ -4225,6 +4263,7 @@ function buildSuitImageCard(labelText) {
       media.appendChild(link);
     },
     fail(msg, canRetry) {
+      media.innerHTML = "";
       status.textContent = msg;
       btn.hidden = !canRetry;
       btn.disabled = false;
