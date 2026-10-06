@@ -4180,6 +4180,16 @@ const SUIT_IMAGE_MESSAGES = {
   network: "Sorry, we couldn't reach the picture service.",
 };
 
+// Cycled in bold under the loading video while a picture is drawn.
+const SUIT_LOADING_STEPS = [
+  "Cutting your fabric...",
+  "Stitching the lining...",
+  "Shaping the lapels...",
+  "Sewing on your buttons...",
+  "Pressing the trousers...",
+  "Adding the finishing touches...",
+];
+
 function buildSuitImageCard(labelText) {
   const card = document.createElement("div");
   card.className = "suit-preview-card";
@@ -4225,7 +4235,15 @@ function buildSuitImageCard(labelText) {
       video.setAttribute("aria-hidden", "true");
       const caption = document.createElement("p");
       caption.className = "suit-preview-loading-text";
-      caption.innerHTML = "<strong>Drawing your suit...</strong><span>This usually takes about a minute.</span>";
+      caption.innerHTML = "<strong></strong><span>This usually takes about a minute.</span>";
+      const line = caption.querySelector("strong");
+      let step = 0;
+      line.textContent = SUIT_LOADING_STEPS[0];
+      const timer = setInterval(() => {
+        if (!caption.isConnected) return clearInterval(timer);
+        step = (step + 1) % SUIT_LOADING_STEPS.length;
+        line.textContent = SUIT_LOADING_STEPS[step];
+      }, 3500);
       media.append(video, caption);
       video.play().catch(() => {});
     },
