@@ -1462,3 +1462,26 @@ nav{position:sticky;top:0;}
 
 /* Preview page heading, centered over its card. */
 #previewSection .designer-head{text-align:center;}
+
+/* === CART DROPDOWN: restyled to match How It Works / account (2026-10) === */
+.nav-cart-dropdown{width:340px;background:#F6F1EC;border:none;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,0.22);overflow:hidden;}
+.nav-cart-dropdown-head{align-items:flex-end;padding:22px 22px 16px;border-bottom:none;}
+.nav-cart-head-text .hiw-eyebrow{margin-bottom:4px;}
+#cartBarCount{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--ivory);}
+.nav-cart-dropdown-head b{font-size:20px;}
+.nav-cart-items{padding:0 14px 14px;gap:8px;max-height:320px;}
+.nav-cart-empty{text-align:center;padding:14px 8px 8px;}
+.cart-item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 10px 12px 14px;}
+.cart-item:last-child{padding-bottom:12px;border-bottom:1px solid var(--line);}
+.cart-item-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+.cart-item-type{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--brass);font-weight:600;}
+.cart-item-label{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cart-item-price{font-size:14px;}
+.cart-item-remove{width:28px;height:28px;padding:0;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ivory-dim);font-size:17px;display:flex;align-items:center;justify-content:center;transition:border-color .15s ease,color .15s ease;}
+.cart-item-remove:hover{border-color:var(--oxblood);color:var(--oxblood);}
+.nav-cart-checkout-btn{width:calc(100% - 28px);margin:4px 14px 16px;border-radius:999px;padding:15px 24px;transition:background .15s ease;}
+.nav-cart-checkout-btn:hover{background:var(--brass);color:#161310;}
+.nav-cart-checkout-btn[hidden]{display:none;}
+@media(max-width:600px){
+  .nav-cart-dropdown{width:320px;}
+}
