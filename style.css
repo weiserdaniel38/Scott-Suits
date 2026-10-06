@@ -1514,3 +1514,10 @@ nav{position:sticky;top:0;}
 /* === HOME: the suit-type choice ("What are we building?") stays hidden until
    Start Designing is tapped, which adds body.designing (markDesignStarted). === */
 body:not(.designing) #suitTypeSection{display:none;}
+
+/* === HOME (phone): more room between Start Designing and the footer, so the
+   footer sits lower, clear of the browser's own bottom bar (2026-10) === */
+@media(max-width:900px){
+  body:not(.designing) .hero-text{padding-bottom:88px;}
+  body:not(.designing) footer{padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+}
