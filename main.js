@@ -4908,6 +4908,13 @@ document.querySelectorAll(".process-step[data-step]").forEach((el) => {
     mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
   }
 
+  // Reload: the browser keeps this tab's history entry, so put the customer
+  // back on the exact page and question they were on (never the
+  // confirmation screen -- the draft is gone by then anyway).
+  let reloadKey = null;
+  try { reloadKey = window.history.state && window.history.state.scottsuitsNav; } catch (e) { /* ignore */ }
+  if (reloadKey && String(reloadKey).split("|")[1] !== "confirmationSection") apply(reloadKey);
+
   // The page the customer landed on counts as the first entry.
   lastKey = currentKey();
   try { window.history.replaceState({ scottsuitsNav: lastKey }, "", window.location.href); } catch (e) { /* ignore */ }
