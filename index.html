@@ -22,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg">
-<link rel="stylesheet" href="./style.css?v=20261006c">
+<link rel="stylesheet" href="./style.css?v=20261006d">
 </head>
 <body>
 
@@ -86,7 +86,7 @@
           <button type="button" class="btn-primary nav-cart-checkout-btn" id="cartCheckoutBtn" hidden>Checkout</button>
         </div>
       </div>
-      <button type="button" class="nav-startover-btn" id="startOverBtn" onclick="startOver()" title="Clear everything and start over" hidden>Start Over</button>
+      <button type="button" class="nav-startover-btn" id="startOverBtn" onclick="startOver()" title="Clear everything and start over" hidden><svg class="nav-startover-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5"/></svg><span>Start Over</span></button>
       <button type="button" class="nav-cta" id="startDesigningBtn" onclick="startDesigning()">Start Designing</button>
     </div>
   </div>
@@ -185,27 +185,35 @@
      even exists in the progress bar, and so on. -->
 <section class="designer step active" id="suitTypeSection">
   <div class="designer-head">
+    <span class="suit-type-eyebrow">Let's begin</span>
     <h2>What are we building?</h2>
-    <p>Choose a full suit or just the jacket for this item -- you'll get the chance to add another item to the same order later.</p>
+    <p>Pick one to start. You can add another piece to the same order later.</p>
   </div>
   <div class="suit-type-grid">
     <button type="button" class="suit-type-card" id="chooseFullSuitBtn" data-suit-type="full">
       <span class="suit-type-icon">
         <img src="./assets/suit-type-full-suit.png" alt="Full suit -- jacket and pants">
       </span>
-      <span class="suit-type-name">Full Suit</span>
+      <span class="suit-type-body">
+        <span class="suit-type-name">Full Suit</span>
       <span class="suit-type-desc">Jacket &amp; Pants</span>
       <span class="suit-type-price">$350</span>
+        <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
+      </span>
     </button>
     <button type="button" class="suit-type-card" id="chooseJacketOnlyBtn" data-suit-type="jacketOnly">
       <span class="suit-type-icon">
         <img src="./assets/suit-type-jacket-only.png" alt="Jacket only">
       </span>
-      <span class="suit-type-name">Jacket Only</span>
+      <span class="suit-type-body">
+        <span class="suit-type-name">Jacket Only</span>
       <span class="suit-type-desc">No Pants</span>
       <span class="suit-type-price">$250</span>
+        <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
+      </span>
     </button>
   </div>
+  <p class="suit-type-note">Every style option is included in the price. No upcharges.</p>
 </section>
 
 <section class="designer step" id="designer">
@@ -582,11 +590,12 @@
      is just page content, so it always shows up. -->
 <div class="confirm-overlay" id="startOverConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="startOverConfirmTitle">
   <div class="confirm-panel">
+    <span class="confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5"/></svg></span>
     <h3 id="startOverConfirmTitle">Start over?</h3>
     <p id="startOverConfirmText">You'll lose your current selections &mdash; jacket, pants, measurements, and shipping details &mdash; and begin again from scratch.</p>
     <div class="confirm-actions">
-      <button type="button" class="btn-ghost" id="startOverCancelBtn">Cancel</button>
-      <button type="button" class="btn-primary" id="startOverConfirmBtn">Start Over</button>
+      <button type="button" class="btn-ghost" id="startOverCancelBtn">Keep designing</button>
+      <button type="button" class="btn-primary" id="startOverConfirmBtn">Yes, start over</button>
     </div>
   </div>
 </div>
