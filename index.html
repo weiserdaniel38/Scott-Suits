@@ -22,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg">
-<link rel="stylesheet" href="./style.css?v=20261006k">
+<link rel="stylesheet" href="./style.css?v=20261006n">
 </head>
 <body>
 
@@ -151,9 +151,8 @@
     </div>
     <span class="process-divider"></span>
     <!-- Hidden until the suit-picture service answers (see
-         initPreviewStep()); opens the "See your suit" card at the top of
-         the Measure step. -->
-    <div class="process-step" data-step="measurementsSection" data-milestone="preview" style="display:none">
+         initPreviewStep()). -->
+    <div class="process-step" data-step="previewSection" data-milestone="preview" style="display:none">
       <span class="step-num">03</span>
       <span class="step-label">Preview</span>
     </div>
@@ -267,6 +266,22 @@
   </div>
 </section>
 
+<!-- Preview page, between the designer and measurements: "See your suit
+     before you order". Only part of the flow once the generate-suit-image
+     function answers that it's set up (see previewStepOn in main.js);
+     #designPreview is filled in by updateDesignPreviewPanel(). -->
+<section class="measurements step" id="previewSection">
+  <div class="designer-head">
+    <h2>Preview your suit</h2>
+  </div>
+  <div class="suit-preview design-preview" id="designPreview" hidden></div>
+  <div class="measure-actions wiz-bar meas-bar">
+    <button type="button" class="wiz-back" id="backFromPreviewBtn">&larr; Back</button>
+    <div class="wiz-price"></div>
+    <button type="button" class="wiz-next btn-primary" id="continueFromPreviewBtn">Continue &rarr;</button>
+  </div>
+</section>
+
 <section class="measurements step" id="measurementsSection">
   <div class="designer-head">
     <h2>Enter your measurements</h2>
@@ -279,11 +294,6 @@
     <h3>Your measurements</h3>
     <p class="sub">Grab a tape measure (a patient friend helps). Everything is in centimeters.</p>
   </div>
-
-  <!-- "See your suit before you order": filled in by
-       updateDesignPreviewPanel() in main.js, only once the generate-suit-image
-       function answers that it's set up. -->
-  <div class="suit-preview design-preview" id="designPreview" hidden></div>
 
   <!-- Only shown once there's already at least one other suit in this order
        (see updateSamePreviousMeasurementsBanner() in main.js) -- the fields
@@ -647,6 +657,7 @@
   <span class="qa-nav-label">QA Nav</span>
   <button type="button" class="qa-nav-btn" data-qa-step="designer">Jacket</button>
   <button type="button" class="qa-nav-btn" data-qa-step="pantsSection">Pants</button>
+  <button type="button" class="qa-nav-btn" data-qa-step="previewSection">Preview</button>
   <button type="button" class="qa-nav-btn" data-qa-step="measurementsSection">Measurements</button>
   <button type="button" class="qa-nav-btn" data-qa-step="personalInfoSection">Order Form</button>
   <button type="button" class="qa-nav-btn" data-qa-step="confirmationSection">Confirmation</button>
@@ -682,7 +693,7 @@
 <script src="./config.js?v=20261006c"></script>
 <script src="./catalog.js?v=20261006c"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261006k"></script>
+<script src="./main.js?v=20261006m"></script>
 
 </body>
 </html>
