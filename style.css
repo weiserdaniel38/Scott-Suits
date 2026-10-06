@@ -750,7 +750,10 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .suit-preview-btn[hidden]{display:none;}
 .suit-preview-status{margin:10px 0 0;font-size:14px;opacity:0.8;min-height:1em;}
 /* White-background clip; multiply blends the white into the card. */
-.suit-preview-loading{display:block;width:180px;height:180px;margin:16px auto 8px;mix-blend-mode:multiply;}
+.suit-preview-loading{display:block;width:180px;height:180px;margin:16px auto 8px;mix-blend-mode:multiply;filter:brightness(1.08) contrast(1.1);}
+.suit-preview-loading-text{margin:0 0 8px;text-align:center;}
+.suit-preview-loading-text strong{display:block;font-size:18px;font-weight:700;}
+.suit-preview-loading-text span{display:block;margin-top:4px;font-size:14px;opacity:0.8;}
 .suit-preview-img{display:block;width:100%;height:auto;margin-top:12px;border:1px solid var(--line);border-radius:6px;background:#fff;}
 .customer-name-field{margin-bottom:28px;max-width:360px;}
 .address-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;}

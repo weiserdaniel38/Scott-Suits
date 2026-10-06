@@ -4203,10 +4203,9 @@ function buildSuitImageCard(labelText) {
     card,
     btn,
     working() {
-      btn.hidden = false;
+      btn.hidden = true;
       btn.disabled = true;
-      btn.textContent = "Drawing your suit...";
-      status.textContent = "This usually takes about a minute.";
+      status.textContent = "";
       media.innerHTML = "";
       // Daniel's button-stitching clip, looped until the picture arrives.
       const video = document.createElement("video");
@@ -4224,7 +4223,10 @@ function buildSuitImageCard(labelText) {
       video.playsInline = true;
       video.setAttribute("playsinline", "");
       video.setAttribute("aria-hidden", "true");
-      media.appendChild(video);
+      const caption = document.createElement("p");
+      caption.className = "suit-preview-loading-text";
+      caption.innerHTML = "<strong>Drawing your suit...</strong><span>This usually takes about a minute.</span>";
+      media.append(video, caption);
       video.play().catch(() => {});
     },
     showImage(url) {
