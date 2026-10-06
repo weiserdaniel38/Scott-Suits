@@ -1,6 +1,6 @@
 // Scott Suits -- draws a picture sheet of a customer's finished suit.
 //
-// The sheet follows the layout of assets/suit-sheet-layout-reference.jpg:
+// The sheet follows the layout of assets/suit-layout-outline.jpg:
 // full suit front, full suit back, trousers front, a sleeve-cuff close-up and
 // a trouser-waistband close-up (jacket-only orders get jacket views instead).
 //
@@ -50,7 +50,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk";
 
 const BUCKET = "suit-images";
-const LAYOUT_REFERENCE = "./assets/suit-sheet-layout-reference.jpg";
+const LAYOUT_REFERENCE = "./assets/suit-layout-outline.jpg";
 const STALE_PENDING_MS = 5 * 60 * 1000;
 
 const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
