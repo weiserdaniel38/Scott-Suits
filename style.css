@@ -1506,3 +1506,7 @@ nav{position:sticky;top:0;}
   .hero p.lead{font-size:15px;line-height:1.55;}
   .hero-cta{margin-top:20px;}
 }
+
+/* === HOME: the suit-type choice ("What are we building?") stays hidden until
+   Start Designing is tapped, which adds body.designing (markDesignStarted). === */
+body:not(.designing) #suitTypeSection{display:none;}
