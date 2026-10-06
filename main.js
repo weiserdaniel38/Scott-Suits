@@ -277,7 +277,12 @@ const STEP_FOCUS_SELECTOR = {
   // nav/process bar, half-covered rather than either skipped past cleanly or
   // shown in full. A function here (instead of a plain selector string) picks
   // whichever is actually topmost right now, so it lands fully in view.
-  previewSection: ".designer-head",
+  // Phones skip the heading so the picture card sits right under the step
+  // bar; desktop has room for both.
+  previewSection: () =>
+    window.innerWidth <= MOBILE_BREAKPOINT
+      ? document.getElementById("previewCardAnchor")
+      : document.querySelector("#previewSection .designer-head"),
   measurementsSection: () =>
     document.querySelector("#samePreviousMeasurementsBanner:not([hidden])") ||
     document.querySelector("#savedMeasurementsBanner:not([hidden])") ||
@@ -4332,6 +4337,10 @@ async function updateDesignPreviewPanel() {
 
   ui.btn.addEventListener("click", async () => {
     ui.working();
+    // On a phone, bring the whole card (video and caption) into view.
+    if (window.innerWidth <= MOBILE_BREAKPOINT) {
+      smoothScrollWindowTo(window.scrollY + box.getBoundingClientRect().top - getNavClearance());
+    }
     if (SUIT_IMAGES_PAUSED) return;
     try {
       const start = await callSuitImageFn({ preview: true, visual_spec: spec });
