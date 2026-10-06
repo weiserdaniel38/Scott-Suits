@@ -1398,3 +1398,37 @@ nav{position:sticky;top:0;}
   .navlinks .hiw-nav-btn{padding:5px 8px;}
 }
 .navlinks{align-items:center;}
+
+/* === ACCOUNT WINDOW: redesigned to match How It Works (2026-10) === */
+#accountOverlay{background:rgba(20,17,14,0.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:48px 24px;}
+#accountOverlay .account-panel{max-width:460px;border:none;border-radius:20px;padding:44px 40px 32px;box-shadow:0 24px 60px rgba(0,0,0,0.28);}
+#accountOverlay .account-panel:has(#accountLoggedInView:not([hidden])){max-width:720px;}
+#accountOverlay .how-it-works-close{top:16px;right:16px;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,0.45);color:var(--ivory);font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;}
+#accountOverlay .how-it-works-close:hover{border-color:var(--brass);color:var(--brass);}
+.acc-head{text-align:center;}
+#accountOverlay h2{font-size:30px;margin:0 0 8px;}
+#accountLoggedOutView .account-intro{text-align:center;margin:0 auto 14px;max-width:340px;}
+.acc-perks{margin-bottom:26px;}
+#accountOverlay .btn-google{border-radius:999px;padding:13px 16px;border-color:var(--line);}
+#accountOverlay .account-divider{margin:20px 0;}
+#accountOverlay .account-tabs{border:none;background:rgba(176,141,87,0.12);border-radius:999px;padding:4px;gap:4px;margin-bottom:24px;}
+#accountOverlay .account-tab{flex:1;margin:0;padding:10px 12px;border:none;border-radius:999px;font-size:13.5px;color:var(--ivory-dim);transition:background .15s ease,color .15s ease;}
+#accountOverlay .account-tab.active{background:#fff;color:var(--ivory);box-shadow:0 1px 3px rgba(34,30,25,0.12);}
+#accountOverlay .account-tab:hover{color:var(--ivory);}
+#accountOverlay .account-form .measure-field{margin-bottom:14px;}
+#accountOverlay .account-form .measure-field label{display:block;font-size:12.5px;font-weight:500;margin-bottom:6px;}
+#accountOverlay .measure-input-wrap{border-radius:12px;background:#fff;border:1px solid var(--line);transition:border-color .15s ease,box-shadow .15s ease;}
+#accountOverlay .measure-input-wrap:focus-within{border-color:var(--brass);box-shadow:0 0 0 3px rgba(176,141,87,0.18);}
+#accountOverlay .account-form .measure-input-wrap input{padding:12px 0;font-size:15px;}
+#accountOverlay .account-form .btn-primary,#accountOverlay #saveProfileMeasurementsBtn{border-radius:999px;justify-content:center;padding:15px 24px;margin-top:10px;}
+#accountOverlay .account-form .btn-primary:hover,#accountOverlay #saveProfileMeasurementsBtn:hover{background:var(--brass);color:#161310;}
+#accountOverlay .account-status-msg{text-align:center;}
+.acc-guest-note{text-align:center;font-size:12px;color:var(--ivory-dim);margin:18px 0 0;}
+#accountLoggedInView .account-intro{text-align:center;}
+@media(max-width:600px){
+  #accountOverlay{padding:0;align-items:flex-start;}
+  #accountOverlay .account-panel{border-radius:20px 20px 0 0;padding:40px 20px 28px;min-height:calc(100% - 24px);margin-top:24px;}
+  #accountOverlay .how-it-works-close{top:12px;right:12px;width:36px;height:36px;font-size:22px;}
+  #accountOverlay h2{font-size:26px;}
+  .acc-perks li{font-size:11px;padding:5px 10px;}
+}
