@@ -241,12 +241,14 @@ const JACKET_CATALOG = {
 // must appear in exactly one group here, in the order it should be offered.
 const JACKET_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
-  { label: "Collar & Lapel", keys: ["collar", "lapelwidth", "lapelbuttonhole", "buttonholeThreadColor", "feltundercollar", "feltColor"] },
-  { label: "Front & Pockets", keys: ["frontbutton", "buttoncolor", "pockettype", "lowerpocket"] },
-  { label: "Sleeves", keys: ["sleevecrown", "sleevecuffstyle", "cuffbuttons", "buttonNail", "threadColor"] },
-  { label: "Interior & Construction", keys: ["construction", "facing", "insidepocket", "lining"] },
-  { label: "Back", keys: ["backvent"] },
+  { label: "Shape & Lapel", keys: ["frontbutton", "collar", "lapelwidth"] },
+  { label: "Pockets & Vents", keys: ["pockettype", "lowerpocket", "backvent"] },
+  { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "feltundercollar", "feltColor", "threadColor", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
+  // Technical tailoring questions go last so they don't slow down the
+  // visible style choices above.
+  { label: "Tailor's Details", keys: ["construction", "facing", "sleevecrown"] },
 ];
 
 const PANTS_CATALOG = {
@@ -412,9 +414,9 @@ const PANTS_CATALOG = {
 // should be offered.
 const PANTS_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
-  { label: "Waistband", keys: ["waistLineHeight", "waistbandExtension", "waistbandStyle", "frontPleat", "beltLoops", "hookEye"] },
-  { label: "Bottom & Details", keys: ["bottomStyle", "buttonNail", "threadColor", "buttonholeThreadColor", "backWaistShape"] },
-  { label: "Pockets", keys: ["frontPocket", "watchPocket", "backPocket"] },
+  { label: "Front & Waistband", keys: ["frontPleat", "waistLineHeight", "waistbandStyle", "waistbandExtension", "beltLoops"] },
+  { label: "Pockets", keys: ["frontPocket", "backPocket", "watchPocket"] },
+  { label: "Bottom & Details", keys: ["bottomStyle", "backWaistShape", "hookEye", "threadColor", "buttonholeThreadColor", "buttonNail"] },
   { label: "Personalization", keys: ["monogram"] },
 ];
 
