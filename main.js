@@ -2109,6 +2109,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       renderTabs();
       renderOptions();
       scrollTabsIntoViewOnMobile();
+      if (window.__navChanged) window.__navChanged();
     });
   }
 
@@ -2872,6 +2873,15 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     resetToFirstTab: () => {
       closeReview();
       activeTab = keys[0];
+      renderTabs();
+      renderOptions();
+    },
+    // Used by the browser Back/Forward buttons (see "BROWSER HISTORY" below).
+    getActiveTab: () => activeTab,
+    setActiveTab: (k) => {
+      if (keys.indexOf(k) === -1) return;
+      closeReview();
+      activeTab = k;
       renderTabs();
       renderOptions();
     },
@@ -4826,6 +4836,82 @@ function goToStepById(stepId) {
 document.querySelectorAll(".process-step[data-step]").forEach((el) => {
   el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
 });
+
+// ============================================================
+// BROWSER HISTORY -- the browser's Back (and Forward) button steps through the
+// customer's own path: previous question in the designer, previous page
+// (measurements, order form...), and the homepage -- instead of leaving the
+// site. Every change of page or designer question adds one history entry;
+// Back re-shows the earlier state without clearing anything they picked.
+// ============================================================
+(function () {
+  let lastKey = null;
+  let applying = false;
+
+  function currentKey() {
+    const active = ALL_STEPS.find((el) => el.classList.contains("active"));
+    const stepId = active ? active.id : "suitTypeSection";
+    let tab = "";
+    if (stepId === "designer") tab = jacketDesigner.getActiveTab();
+    else if (stepId === "pantsSection") tab = pantsDesigner.getActiveTab();
+    return (document.body.classList.contains("designing") ? "d" : "h") + "|" + stepId + "|" + tab;
+  }
+
+  function sync() {
+    if (applying) return;
+    const k = currentKey();
+    if (k === lastKey) return;
+    lastKey = k;
+    try { window.history.pushState({ scottsuitsNav: k }, "", window.location.href); } catch (e) { /* history unavailable here */ }
+  }
+  let timer = null;
+  function schedule() {
+    if (applying) return;
+    clearTimeout(timer);
+    timer = setTimeout(sync, 80);
+  }
+  window.__navChanged = schedule;
+
+  function apply(k) {
+    const parts = String(k).split("|");
+    const mode = parts[0], stepId = parts[1], tab = parts[2];
+    const stepEl = document.getElementById(stepId);
+    if (!stepEl) return;
+    applying = true;
+    try {
+      closeLightbox();
+      document.querySelectorAll(".how-it-works-overlay.open").forEach((o) => o.classList.remove("open"));
+      if (mode === "h") resetDesignStarted(); else markDesignStarted();
+      ALL_STEPS.forEach((el) => el.classList.remove("active"));
+      stepEl.classList.add("active");
+      if (stepId === "designer" && tab) jacketDesigner.setActiveTab(tab);
+      if (stepId === "pantsSection" && tab) pantsDesigner.setActiveTab(tab);
+      if (stepEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+      if (stepEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
+      if (typeof updateProcessBar === "function") updateProcessBar();
+      if (stepId === "suitTypeSection" && mode === "h") window.scrollTo(0, 0); else scrollToStepTop(stepEl);
+      lastKey = k;
+    } finally {
+      setTimeout(() => { applying = false; }, 200);
+    }
+  }
+
+  window.addEventListener("popstate", (e) => {
+    const k = e.state && e.state.scottsuitsNav;
+    if (k) apply(k);
+  });
+
+  // Watch for page changes made by any of the existing buttons.
+  if (window.MutationObserver) {
+    const mo = new MutationObserver(schedule);
+    ALL_STEPS.forEach((el) => mo.observe(el, { attributes: true, attributeFilter: ["class"] }));
+    mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  // The page the customer landed on counts as the first entry.
+  lastKey = currentKey();
+  try { window.history.replaceState({ scottsuitsNav: lastKey }, "", window.location.href); } catch (e) { /* ignore */ }
+})();
 
 // ============================================================
 // TEMP QA NAV BAR -- internal testing only, not for customers.
