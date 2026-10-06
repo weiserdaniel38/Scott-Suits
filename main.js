@@ -7,11 +7,12 @@ const STEP_BACKGROUNDS_ENABLED = false;
 const suitTypeSection = document.getElementById("suitTypeSection");
 const jacketSection = document.getElementById("designer");
 const pantsSection = document.getElementById("pantsSection");
+const previewSection = document.getElementById("previewSection");
 const measurementsSection = document.getElementById("measurementsSection");
 const personalInfoSection = document.getElementById("personalInfoSection");
 const confirmationSection = document.getElementById("confirmationSection");
 const measureGrid = document.getElementById("measureGrid");
-const ALL_STEPS = [suitTypeSection, jacketSection, pantsSection, measurementsSection, personalInfoSection, confirmationSection];
+const ALL_STEPS = [suitTypeSection, jacketSection, pantsSection, previewSection, measurementsSection, personalInfoSection, confirmationSection];
 const MOBILE_BREAKPOINT = 900;
 
 // The flat price for one whole suit (jacket + pants together), and for a
@@ -276,6 +277,7 @@ const STEP_FOCUS_SELECTOR = {
   // nav/process bar, half-covered rather than either skipped past cleanly or
   // shown in full. A function here (instead of a plain selector string) picks
   // whichever is actually topmost right now, so it lands fully in view.
+  previewSection: ".designer-head",
   measurementsSection: () =>
     document.querySelector("#samePreviousMeasurementsBanner:not([hidden])") ||
     document.querySelector("#savedMeasurementsBanner:not([hidden])") ||
@@ -353,7 +355,7 @@ function goToStep(hideEl, showEl) {
     hideEl.classList.remove("active");
     showEl.classList.add("active");
     if (showEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
-    if (showEl === measurementsSection) setTimeout(updateDesignPreviewPanel, 0);
+    if (showEl === previewSection) setTimeout(updateDesignPreviewPanel, 0);
     if (showEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
     scrollToStepTop(showEl);
     saveDraft();
@@ -3235,7 +3237,7 @@ document.getElementById("continueBtn").addEventListener("click", () => {
   }
   // "Jacket Only" has no Pants step -- skip straight to Measurements.
   if (currentSuitType === "jacketOnly") {
-    goToStep(jacketSection, measurementsSection);
+    goToStep(jacketSection, stepAfterDesign());
     return;
   }
   pantsDesigner.resetToFirstTab();
@@ -3254,13 +3256,31 @@ document.getElementById("continuePantsBtn").addEventListener("click", () => {
     alert("Select an option for: " + pantsDesigner.missingLabels().join(", "));
     return;
   }
-  goToStep(pantsSection, measurementsSection);
+  goToStep(pantsSection, stepAfterDesign());
+});
+
+// The Preview page (see index.html) sits between designing and
+// measurements, but only once the suit-picture service is set up.
+let previewStepOn = false;
+function stepAfterDesign() {
+  return previewStepOn ? previewSection : measurementsSection;
+}
+
+document.getElementById("backFromPreviewBtn").addEventListener("click", () => {
+  goToStep(previewSection, currentSuitType === "jacketOnly" ? jacketSection : pantsSection);
+});
+document.getElementById("continueFromPreviewBtn").addEventListener("click", () => {
+  goToStep(previewSection, measurementsSection);
 });
 
 document.getElementById("backToDesignerBtn").addEventListener("click", () => {
   // Same as backToJacketBtn above -- Back resumes on the last tab you had
   // open, it doesn't reset to Fabric. "Jacket Only" skipped Pants on the way
   // in, so Back skips it too, straight to the jacket designer.
+  if (previewStepOn) {
+    goToStep(measurementsSection, previewSection);
+    return;
+  }
   if (currentSuitType === "jacketOnly") {
     goToStep(measurementsSection, jacketSection);
     return;
@@ -4242,7 +4262,7 @@ async function updateDesignPreviewPanel() {
   box.innerHTML = "";
   const head = document.createElement("div");
   head.className = "suit-preview-head";
-  head.innerHTML = "<h3>See your suit before you order</h3><p>We can draw a picture of this suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep filling in your measurements while it draws.</p>";
+  head.innerHTML = "<h3>See your suit before you order</h3><p>We can draw a picture of this suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can continue to your measurements while it draws.</p>";
   box.appendChild(head);
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
@@ -4909,10 +4929,11 @@ window.startOver = startOver;
 
 // The order the order flow actually happens in (used below to gate the
 // progress bar, and to know which designer -- if any -- lives on a page).
-const STEP_ORDER = ["designer", "pantsSection", "measurementsSection", "personalInfoSection"];
+const STEP_ORDER = ["designer", "pantsSection", "previewSection", "measurementsSection", "personalInfoSection"];
 const STEP_LABELS = {
   designer: "Design your jacket",
   pantsSection: "Customize your pants",
+  previewSection: "Preview your suit",
   measurementsSection: "Enter your measurements",
   personalInfoSection: "Personal Info and Shipping",
 };
@@ -4961,7 +4982,6 @@ function updateProcessBar() {
     else if (milestone === "ship") done = isShippingInfoComplete();
     else if (milestone === "order") done = orderSubmitted;
     else if (milestone === "preview") done = !!(designPreview && designPreview.status === "done");
-    if (milestone === "preview") el.classList.remove("current");
     el.classList.toggle("completed", done);
   });
 }
@@ -5025,7 +5045,9 @@ function updatePriceTextForSuitType() {
 // to go to or not.
 function updateContinueBackLabelsForSuitType() {
   const continueBtnEl = document.getElementById("continueBtn");
-  if (continueBtnEl) continueBtnEl.textContent = currentSuitType === "jacketOnly" ? "Continue to Measurements" : "Continue to Pants";
+  if (continueBtnEl) continueBtnEl.textContent = currentSuitType === "jacketOnly" ? (previewStepOn ? "Continue to Preview" : "Continue to Measurements") : "Continue to Pants";
+  const continuePantsBtnEl = document.getElementById("continuePantsBtn");
+  if (continuePantsBtnEl) continuePantsBtnEl.textContent = previewStepOn ? "Continue to Preview" : "Continue to Measurements";
   const backToDesignerBtnEl = document.getElementById("backToDesignerBtn");
   if (backToDesignerBtnEl) backToDesignerBtnEl.innerHTML = "&larr; Back";
 }
@@ -5098,32 +5120,18 @@ function goToStepById(stepId) {
   }
 }
 document.querySelectorAll(".process-step[data-step]").forEach((el) => {
-  if (el.getAttribute("data-milestone") === "preview") el.addEventListener("click", goToSuitPreview);
-  else el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
+  el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
 });
 
-// "Preview" in the step bar: the Measure step, scrolled to the
-// "See your suit before you order" card at its top.
-function goToSuitPreview() {
-  const scrollToCard = async () => {
-    const box = document.getElementById("designPreview");
-    if (!box || !measurementsSection.classList.contains("active")) return;
-    if (box.hidden) await updateDesignPreviewPanel();
-    if (box.hidden) return;
-    window.scrollTo({ top: window.scrollY + box.getBoundingClientRect().top - getNavClearance() - 12, behavior: "smooth" });
-  };
-  if (measurementsSection.classList.contains("active")) return scrollToCard();
-  goToStepById("measurementsSection");
-  if (measurementsSection.classList.contains("active")) setTimeout(scrollToCard, 50);
-  else setTimeout(() => { if (measurementsSection.classList.contains("active")) scrollToCard(); }, 700);
-}
-
-// Shows "Preview" in the step bar once the suit-picture service is set up.
+// Turns on the Preview page (and its step in the bar) once the suit-picture
+// service is set up.
 (function initPreviewStep() {
   const el = document.querySelector('.process-step[data-milestone="preview"]');
   if (!el) return;
   suitImagesReady().then((ready) => {
     if (!ready) return;
+    previewStepOn = true;
+    updateContinueBackLabelsForSuitType();
     el.style.display = "";
     if (el.nextElementSibling && el.nextElementSibling.classList.contains("process-divider")) el.nextElementSibling.style.display = "";
     updateProcessBarForSuitType();
@@ -5234,7 +5242,7 @@ function qaJumpToStep(stepId) {
     stepEl.classList.add("active");
     scrollToStepTop(stepEl);
     saveDraft();
-    if (stepEl === measurementsSection) setTimeout(updateDesignPreviewPanel, 0);
+    if (stepEl === previewSection) setTimeout(updateDesignPreviewPanel, 0);
   };
   // Same "scroll up before hiding" order as goToStep -- see its comment.
   const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
@@ -5347,6 +5355,6 @@ if (qaSkipPaymentBtn) {
 })();
 // ==================== END TEMP QA NAV BAR ====================
 
-// A reload that lands back on the Measurements step (see restoreDraft)
-// gets the "See your suit" panel too.
-if (measurementsSection.classList.contains("active")) setTimeout(updateDesignPreviewPanel, 0);
+// A reload that lands back on the Preview page (see restoreDraft) fills it
+// in too.
+if (previewSection.classList.contains("active")) setTimeout(updateDesignPreviewPanel, 0);
