@@ -4220,13 +4220,13 @@ function buildSuitImageCard(labelText) {
       // Daniel's button-stitching clip, looped until the picture arrives.
       const video = document.createElement("video");
       video.className = "suit-preview-loading";
-      [["./assets/suit-loading-buttons.mp4", "video/mp4"], ["./assets/suit-loading-buttons.webm", "video/webm"]].forEach(([src, type]) => {
+      [["./assets/suit-loading-thread.mp4", "video/mp4"], ["./assets/suit-loading-thread.webm", "video/webm"]].forEach(([src, type]) => {
         const source = document.createElement("source");
         source.src = src;
         source.type = type;
         video.appendChild(source);
       });
-      video.poster = "./assets/suit-loading-buttons.jpg";
+      video.poster = "./assets/suit-loading-thread.jpg";
       video.autoplay = true;
       video.loop = true;
       video.muted = true;
@@ -4301,7 +4301,7 @@ async function updateDesignPreviewPanel() {
   box.innerHTML = "";
   const head = document.createElement("div");
   head.className = "suit-preview-head";
-  head.innerHTML = "<h3>See your suit before you order</h3><p>We can draw a picture of this suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can continue to your measurements while it draws.</p>";
+  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep going to your measurements while it draws.</p>';
   box.appendChild(head);
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);

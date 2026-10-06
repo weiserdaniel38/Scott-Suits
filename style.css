@@ -1361,7 +1361,7 @@ nav{position:sticky;top:0;}
 .hiw-head{text-align:center;margin-bottom:30px;}
 .hiw-eyebrow{font-size:11.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--brass);font-weight:600;margin-bottom:10px;}
 #howItWorksOverlay h2{font-size:34px;margin:0 0 10px;}
-#howItWorksOverlay .how-it-works-intro{font-size:15px;margin:0 auto 18px;max-width:420px;}
+#howItWorksOverlay .how-it-works-intro{font-size:15px;margin:0 auto;max-width:420px;}
 .hiw-perks{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
 .hiw-perks li{font-size:12px;font-weight:500;color:var(--ivory);background:rgba(176,141,87,0.12);border-radius:999px;padding:6px 12px;}
 .hiw-perks li::before{content:"\2713";color:var(--brass);font-weight:700;margin-right:6px;}
@@ -1412,7 +1412,7 @@ nav{position:sticky;top:0;}
 #accountOverlay .how-it-works-close:hover{border-color:var(--brass);color:var(--brass);}
 .acc-head{text-align:center;}
 #accountOverlay h2{font-size:30px;margin:0 0 8px;}
-#accountLoggedOutView .account-intro{text-align:center;margin:0 auto 14px;max-width:340px;}
+#accountLoggedOutView .account-intro{text-align:center;margin:0 auto 26px;max-width:340px;}
 .acc-perks{margin-bottom:26px;}
 #accountOverlay .btn-google{border-radius:999px;padding:13px 16px;border-color:var(--line);}
 #accountOverlay .account-divider{margin:20px 0;}
@@ -1436,4 +1436,26 @@ nav{position:sticky;top:0;}
   #accountOverlay .how-it-works-close{top:12px;right:12px;width:36px;height:36px;font-size:22px;}
   #accountOverlay h2{font-size:26px;}
   .acc-perks li{font-size:11px;padding:5px 10px;}
+}
+
+/* === GENERATE MY SUIT: restyled to match How It Works / account (2026-10) === */
+#designPreview.suit-preview.design-preview{max-width:none;margin:0 0 28px;padding:36px 32px 28px;border:none;border-radius:20px;background:#F6F1EC;box-shadow:0 10px 34px rgba(34,30,25,0.10);}
+#designPreview .suit-preview-head h3{font-size:24px;margin:0 0 10px;}
+#designPreview .suit-preview-head p{font-size:14.5px;line-height:1.6;max-width:440px;margin:0 auto 24px;color:var(--ivory-dim);opacity:1;}
+#designPreview .hiw-perks{margin-bottom:24px;}
+#designPreview .suit-preview-card{margin:0;}
+#designPreview .suit-preview-btn{border-radius:999px;padding:15px 34px;transition:background .15s ease;}
+#designPreview .suit-preview-btn::before{content:"\2726";font-size:15px;line-height:1;color:var(--brass-light);}
+#designPreview .suit-preview-btn:hover{background:var(--brass);color:#161310;}
+#designPreview .suit-preview-btn:hover::before{color:#161310;}
+#designPreview .suit-preview-status{font-size:13.5px;color:var(--ivory-dim);opacity:1;}
+#designPreview .suit-preview-loading{width:170px;height:170px;margin:8px auto 14px;border-radius:50%;background:#e8e2da;border:0;box-shadow:0 6px 20px rgba(34,30,25,0.08);object-fit:cover;mix-blend-mode:normal;filter:none;}
+#designPreview .suit-preview-loading-text strong{font-size:17px;}
+#designPreview .suit-preview-loading-text span{font-size:13px;color:var(--ivory-dim);opacity:1;}
+#designPreview .suit-preview-img{border:none;border-radius:14px;box-shadow:0 8px 26px rgba(34,30,25,0.14);margin-top:4px;}
+@media(max-width:600px){
+  #designPreview.suit-preview.design-preview{padding:28px 18px 22px;}
+  #designPreview .suit-preview-head h3{font-size:20px;}
+  #designPreview .hiw-perks li{font-size:11px;padding:5px 10px;}
+  #designPreview .suit-preview-btn{width:100%;}
 }
