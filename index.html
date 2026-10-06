@@ -22,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg">
-<link rel="stylesheet" href="./style.css?v=20261006i">
+<link rel="stylesheet" href="./style.css?v=20261006j">
 </head>
 <body>
 
@@ -150,6 +150,14 @@
       <span class="step-label">Pants</span>
     </div>
     <span class="process-divider"></span>
+    <!-- Hidden until the suit-picture service answers (see
+         initPreviewStep()); opens the "See your suit" card at the top of
+         the Measure step. -->
+    <div class="process-step" data-step="measurementsSection" data-milestone="preview" style="display:none">
+      <span class="step-num">03</span>
+      <span class="step-label">Preview</span>
+    </div>
+    <span class="process-divider" style="display:none"></span>
     <div class="process-step" data-step="measurementsSection" data-milestone="measure">
       <span class="step-num">03</span>
       <img class="step-icon" src="./assets/step-measure-v2.png" alt="">
@@ -665,7 +673,7 @@
 <script src="./config.js?v=20261006c"></script>
 <script src="./catalog.js?v=20261006c"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261006i"></script>
+<script src="./main.js?v=20261006j"></script>
 
 </body>
 </html>

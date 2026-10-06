@@ -833,7 +833,7 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
   .logo-mark{height:40px;}
   .nav-right{width:auto;gap:12px;}
   .process{padding:6px 12px;}
-  .process-inner{gap:4px 14px;justify-content:space-between;}
+  .process-inner{gap:4px 10px;justify-content:space-between;}
   .step-label{font-size:9.5px;letter-spacing:1.1px;}
 }
 

@@ -4248,6 +4248,7 @@ async function updateDesignPreviewPanel() {
       if (designPreview !== preview) return;
       preview.status = r.status === "done" ? "done" : "failed";
       if (r.status === "done") preview.url = r.url;
+      updateProcessBar();
       if (box.contains(ui.card)) {
         if (r.status === "done") ui.showImage(r.url);
         else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
@@ -4953,6 +4954,8 @@ function updateProcessBar() {
     else if (milestone === "measure") done = collectMeasurements().missing.length === 0;
     else if (milestone === "ship") done = isShippingInfoComplete();
     else if (milestone === "order") done = orderSubmitted;
+    else if (milestone === "preview") done = !!(designPreview && designPreview.status === "done");
+    if (milestone === "preview") el.classList.remove("current");
     el.classList.toggle("completed", done);
   });
 }
@@ -5089,8 +5092,38 @@ function goToStepById(stepId) {
   }
 }
 document.querySelectorAll(".process-step[data-step]").forEach((el) => {
-  el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
+  if (el.getAttribute("data-milestone") === "preview") el.addEventListener("click", goToSuitPreview);
+  else el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
 });
+
+// "Preview" in the step bar: the Measure step, scrolled to the
+// "See your suit before you order" card at its top.
+function goToSuitPreview() {
+  const scrollToCard = async () => {
+    const box = document.getElementById("designPreview");
+    if (!box || !measurementsSection.classList.contains("active")) return;
+    if (box.hidden) await updateDesignPreviewPanel();
+    if (box.hidden) return;
+    window.scrollTo({ top: window.scrollY + box.getBoundingClientRect().top - getNavClearance() - 12, behavior: "smooth" });
+  };
+  if (measurementsSection.classList.contains("active")) return scrollToCard();
+  goToStepById("measurementsSection");
+  if (measurementsSection.classList.contains("active")) setTimeout(scrollToCard, 50);
+  else setTimeout(() => { if (measurementsSection.classList.contains("active")) scrollToCard(); }, 700);
+}
+
+// Shows "Preview" in the step bar once the suit-picture service is set up.
+(function initPreviewStep() {
+  const el = document.querySelector('.process-step[data-milestone="preview"]');
+  if (!el) return;
+  suitImagesReady().then((ready) => {
+    if (!ready) return;
+    el.style.display = "";
+    if (el.nextElementSibling && el.nextElementSibling.classList.contains("process-divider")) el.nextElementSibling.style.display = "";
+    updateProcessBarForSuitType();
+    updateProcessBar();
+  });
+})();
 
 // ============================================================
 // BROWSER HISTORY -- the browser's Back (and Forward) button steps through the
