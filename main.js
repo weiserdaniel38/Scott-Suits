@@ -4208,6 +4208,24 @@ function buildSuitImageCard(labelText) {
       btn.textContent = "Drawing your suit...";
       status.textContent = "This usually takes about a minute.";
       media.innerHTML = "";
+      // Daniel's button-stitching clip, looped until the picture arrives.
+      const video = document.createElement("video");
+      video.className = "suit-preview-loading";
+      [["./assets/suit-loading-buttons.mp4", "video/mp4"], ["./assets/suit-loading-buttons.webm", "video/webm"]].forEach(([src, type]) => {
+        const source = document.createElement("source");
+        source.src = src;
+        source.type = type;
+        video.appendChild(source);
+      });
+      video.poster = "./assets/suit-loading-buttons.jpg";
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("aria-hidden", "true");
+      media.appendChild(video);
+      video.play().catch(() => {});
     },
     showImage(url) {
       status.textContent = "";
@@ -4225,6 +4243,7 @@ function buildSuitImageCard(labelText) {
       media.appendChild(link);
     },
     fail(msg, canRetry) {
+      media.innerHTML = "";
       status.textContent = msg;
       btn.hidden = !canRetry;
       btn.disabled = false;
