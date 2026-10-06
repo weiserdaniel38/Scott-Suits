@@ -4301,7 +4301,7 @@ async function updateDesignPreviewPanel() {
   box.innerHTML = "";
   const head = document.createElement("div");
   head.className = "suit-preview-head";
-  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep going to your measurements while it draws.</p><ul class="hiw-perks"><li>Your fabric</li><li>Your buttons</li><li>Your lining</li><li>Your thread</li></ul>';
+  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep going to your measurements while it draws.</p>';
   box.appendChild(head);
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
