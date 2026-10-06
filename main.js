@@ -1095,7 +1095,9 @@ function upgradeFabricZoom(img, fabricCode, myToken) {
 // with .lightbox-frame-xl's max-width/max-height in style.css (also 1/3 of
 // its old min(92vw,2160px)/92vh values), since that CSS is the frame's own
 // outer bound and this is what actually sizes the image inside it.
-const XL_SCALE = 0.92 / 3;
+// Desktop later doubled too (2026-10-06), so it now matches mobile: 2/3 of
+// the original near-fullscreen fraction.
+const XL_SCALE = (0.92 / 3) * 2;
 // XL_SCALE_MOBILE: on mobile Daniel asked for the same square doubled back
 // up from that 1/3 size -- so 2x XL_SCALE, i.e. 2/3 of the original near-
 // fullscreen fraction. 900px is the same mobile/desktop split every other
