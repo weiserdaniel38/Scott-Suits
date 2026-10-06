@@ -1515,9 +1515,18 @@ nav{position:sticky;top:0;}
    Start Designing is tapped, which adds body.designing (markDesignStarted). === */
 body:not(.designing) #suitTypeSection{display:none;}
 
-/* === HOME (phone): more room between Start Designing and the footer, so the
-   footer sits lower, clear of the browser's own bottom bar (2026-10) === */
+/* === HOME (phone): the hero fills the first screen, photo on top and the
+   text spread evenly below it with Start Designing still in view, so the page
+   doesn't look empty; the footer starts just below the fold, clear of the
+   browser's own bottom bar (2026-10) === */
 @media(max-width:900px){
-  body:not(.designing) .hero-text{padding-bottom:88px;}
+  body:not(.designing) .hero{display:flex;flex-direction:column;min-height:calc(100svh - var(--nav-height,78px));}
+  body:not(.designing) .hero-photo{height:clamp(205px, 33svh, 300px);flex-shrink:0;}
+  body:not(.designing) .hero-grid{flex:1;display:flex;}
+  body:not(.designing) .hero-text{flex:1;justify-content:center;padding:clamp(18px, 3.5svh, 36px) 24px clamp(80px, 15svh, 140px);}
+  body:not(.designing) .hero h1{font-size:clamp(32px, 4.3svh, 38px);}
+  body:not(.designing) .hero-rule{margin:clamp(14px, 2.6svh, 24px) 0;}
+  body:not(.designing) .hero p.lead{font-size:clamp(15px, 2svh, 16.5px);line-height:1.6;}
+  body:not(.designing) .hero-cta{margin-top:clamp(20px, 3.6svh, 34px);}
   body:not(.designing) footer{padding-bottom:calc(72px + env(safe-area-inset-bottom));}
 }
