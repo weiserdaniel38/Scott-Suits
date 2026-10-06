@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scott's Suits — Custom Tailoring</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<!-- The nav is sticky (see style.css) so Start Over stays reachable no matter
+     how far down the page you are -- a separate fixed floating button was
+     tried first, but it sat on top of the page content while scrolling and
+     got in the way. Keeping it inside the (now-sticky) nav means it lives in
+     its own dedicated strip of chrome instead of overlapping anything.
+     Start Designing and Start Over are mutually exclusive (see main.js'
+     markDesignStarted/updateNavActionButtons): Start Designing is the way in
+     before anything's been touched, Start Over is the only nav action that
+     makes sense once you're actually in the flow -- so only one of the two
+     is ever visible, toggled via the "hidden" attribute. Start Over starts
+     hidden here since a fresh visitor hasn't started yet; JS flips them the
+     moment that changes. -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo-block" id="logoHomeLink" role="link" tabindex="0" aria-label="Scott Suits — back to the homepage" title="Back to the homepage">
+      <img class="logo-mark" src="./assets/logo-full-new.png" alt="Scott Suits Custom Tailoring" width="779" height="420" decoding="sync" fetchpriority="high">
+    </div>
+    <div class="nav-right">
+      <div class="navlinks"><button type="button" class="navlink-btn" id="howItWorksNavBtn">How It Works</button><span>Fabrics</span><span>Contact</span></div>
+      <!-- Account -- optional customer profile: saved measurements + past
+           orders, signed into with a one-time emailed link (no password).
+           Guest checkout still works fine without ever touching this. See
+           the CUSTOMER ACCOUNTS block in main.js and
+           add_customer_profiles_migration.sql for the database side. -->
+      <div class="nav-cart" id="navAccount">
+        <button type="button" class="nav-cart-btn" id="accountIconBtn" aria-haspopup="dialog" aria-label="My account">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+          </svg>
+          <span class="nav-cart-badge nav-account-badge" id="accountBadge" hidden>&#10003;</span>
+        </button>
+      </div>
+      <!-- Cart -- a plain icon + badge in the nav (so it's always visible,
+           the same sticky bar the rest of the nav is in) that opens a
+           dropdown right below it, never a separate page. See renderCartBar()
+           and initCartDropdown() in main.js. -->
+      <div class="nav-cart" id="navCart">
+        <button type="button" class="nav-cart-btn" id="cartIconBtn" aria-haspopup="true" aria-expanded="false" aria-label="View suits added to your order">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 3h2l2.4 12.1a2 2 0 0 0 2 1.9h8.6a2 2 0 0 0 2-1.6L21 7H6.2"/>
+            <circle cx="9.5" cy="20.5" r="1.4"/>
+            <circle cx="18" cy="20.5" r="1.4"/>
+          </svg>
+          <span class="nav-cart-badge" id="cartBadge" hidden></span>
+        </button>
+        <div class="nav-cart-dropdown" id="cartDropdown" hidden>
+          <div class="nav-cart-dropdown-head">
+            <span id="cartBarCount"></span>
+            <b id="cartBarTotal"></b>
+          </div>
+          <div class="nav-cart-items" id="cartBarList"></div>
+          <!-- Jumps straight to Personal Info/shipping with whatever's
+               already in the cart -- skips re-visiting Jacket/Pants/
+               Measurements for suits already added. Hidden whenever the
+               cart is empty (see renderCartBar() in main.js); there's
+               nothing to check out yet. -->
+          <button type="button" class="btn-primary nav-cart-checkout-btn" id="cartCheckoutBtn" hidden>Checkout</button>
+        </div>
+      </div>
+      <button type="button" class="nav-startover-btn" id="startOverBtn" onclick="startOver()" title="Clear everything and start over" hidden>Start Over</button>
+      <button type="button" class="nav-cta" id="startDesigningBtn" onclick="startDesigning()">Start Designing</button>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <!-- Full-bleed background photo (desktop only -- see .hero-photo CSS):
+       sits behind .hero-grid instead of boxed inside it, so the image reads
+       as part of the page rather than an inserted, framed card. The photo
+       is shown whole and uncropped (object-fit:contain, anchored right, so
+       it's the "zoomed out" view rather than tightly cropped) -- see the
+       long comment on .hero-photo for why the space beside it is a plain
+       matching fill rather than a second, blurred copy of the photo. -->
+  <div class="hero-photo">
+    <img class="hero-photo-fg" src="./assets/hero-collage.jpg" alt="Thread spool, fabric swatches, a hand-drawn jacket pattern, a needle and shears laid out on a tailor's table">
+  </div>
+  <!-- Decorative sketch filling the gap the right-anchored photo above
+       leaves on the left, on screens wide enough for one to open up (see
+       .hero-sketch-left CSS) -- a faint jacket illustration + tagline that
+       fades into the page background, behind .hero-text (lower z-index),
+       so it reads as texture rather than competing with the real content. -->
+  <img class="hero-sketch-left" src="./assets/hero-sketch-left.png" alt="" aria-hidden="true">
+  <div class="hero-grid">
+    <div class="hero-text">
+      <div class="hero-eyebrow">Custom Tailoring, Considered</div>
+      <h1>Custom-made, <em>without leaving home.</em></h1>
+      <div class="hero-rule"></div>
+      <p class="lead">Design every detail, send your measurements, and we build it for you.</p>
+      <div class="hero-cta">
+        <!-- Hidden once design has actually started (see
+             updateNavActionButtons() in main.js) -- same reasoning as the nav's
+             own Start Designing/Start Over swap: once you're mid-flow,
+             clicking this again would just be a confusing detour back to the
+             suit-type choice, not a real "start" action anymore. -->
+        <button class="btn-primary" id="heroStartDesigningBtn" onclick="startDesigning()">Start Designing <span aria-hidden="true">&rarr;</span></button>
+        <button class="btn-ghost" id="howItWorksHeroBtn">See how it works</button>
+      </div>
+      <!-- A quick-scan row of the site's two core promises -- convenience and
+           customization -- for anyone who won't read the full paragraph above,
+           right on the first screen they see. -->
+      <div class="hero-badges">
+        <span>Fully Customizable</span>
+        <span>No Showroom Needed</span>
+        <span>Delivered To Your Door</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="process">
+  <div class="process-inner">
+    <div class="process-step" data-step="designer" data-milestone="jacket">
+      <span class="step-num">01</span>
+      <img class="step-icon" src="./assets/step-jacket-v2.png" alt="">
+      <span class="step-label">Jacket</span>
+    </div>
+    <span class="process-divider"></span>
+    <div class="process-step" data-step="pantsSection" data-milestone="pants">
+      <span class="step-num">02</span>
+      <img class="step-icon" src="./assets/step-pants.png" alt="">
+      <span class="step-label">Pants</span>
+    </div>
+    <span class="process-divider"></span>
+    <div class="process-step" data-step="measurementsSection" data-milestone="measure">
+      <span class="step-num">03</span>
+      <img class="step-icon" src="./assets/step-measure-v2.png" alt="">
+      <span class="step-label">Measure</span>
+    </div>
+    <span class="process-divider"></span>
+    <div class="process-step" data-step="personalInfoSection" data-milestone="order">
+      <span class="step-num">04</span>
+      <img class="step-icon" src="./assets/step-order-v3.png" alt="">
+      <span class="step-label">Order</span>
+    </div>
+    <span class="process-divider"></span>
+    <!-- Still data-milestone="ship" under the hood -- updateProcessBar()'s
+         completion check for this milestone is isShippingInfoComplete(), so
+         the attribute value has to stay "ship" even though the step now
+         reads "Complete", which reads better than "Ship" as the actual
+         last step in the bar. -->
+    <div class="process-step" data-step="personalInfoSection" data-milestone="ship">
+      <span class="step-num">05</span>
+      <img class="step-icon" src="./assets/step-ship-v2.png" alt="">
+      <span class="step-label">Complete</span>
+    </div>
+    <span class="process-tagline">Fully Custom.<br>Made Easy.</span>
+  </div>
+</div>
+
+<!-- Shown right after "Start Designing" (and again before designing an
+     additional item into the same order): a one-time fork before the jacket
+     designer opens, so every suit in the order can be a full suit or just a
+     jacket. chooseSuitType() in main.js reads data-suit-type off whichever
+     card is clicked, then drives everything downstream -- pricing shown in
+     the designer, which measurements are asked for, whether the Pants step
+     even exists in the progress bar, and so on. -->
+<section class="designer step active" id="suitTypeSection">
+  <div class="designer-head">
+    <h2>What are we building?</h2>
+    <p>Choose a full suit or just the jacket for this item -- you'll get the chance to add another item to the same order later.</p>
+  </div>
+  <div class="suit-type-grid">
+    <button type="button" class="suit-type-card" id="chooseFullSuitBtn" data-suit-type="full">
+      <span class="suit-type-icon">
+        <img src="./assets/suit-type-full-suit.png" alt="Full suit -- jacket and pants">
+      </span>
+      <span class="suit-type-name">Full Suit</span>
+      <span class="suit-type-desc">Jacket &amp; Pants</span>
+      <span class="suit-type-price">$350</span>
+    </button>
+    <button type="button" class="suit-type-card" id="chooseJacketOnlyBtn" data-suit-type="jacketOnly">
+      <span class="suit-type-icon">
+        <img src="./assets/suit-type-jacket-only.png" alt="Jacket only">
+      </span>
+      <span class="suit-type-name">Jacket Only</span>
+      <span class="suit-type-desc">No Pants</span>
+      <span class="suit-type-price">$250</span>
+    </button>
+  </div>
+</section>
+
+<section class="designer step" id="designer">
+  <div class="designer-head">
+    <h2>Design your jacket</h2>
+    <p>Mix and match freely across fabric, collar, pockets, buttons, and more to build a jacket that's entirely your own — every option is included in the <span id="jacketPriceText">$350</span> price, all in, with no surprise upcharges when you review your order. Click the magnifier on any option to zoom in.</p>
+  </div>
+
+  <div class="designer-grid" id="designerGrid">
+    <div class="tabs" id="tabs"></div>
+    <p class="tabs-hint">Swipe left or right to see all the categories →</p>
+    <div class="options" id="options"></div>
+    <div class="summary">
+      <h3>Your Suit</h3>
+      <div id="summaryRows"></div>
+      <div class="summary-total"><span>Estimated Total</span><b id="totalPrice">$350</b></div>
+      <p class="summary-note">Estimated total — your final invoice is confirmed with you directly before production begins.</p>
+      <button class="btn-primary" id="continueBtn">Continue to Pants</button>
+    </div>
+  </div>
+</section>
+
+<section class="designer step" id="pantsSection">
+  <div class="designer-head">
+    <h2>Customize your pants</h2>
+    <p>Pick the fabric and style for your pants — match your jacket or make a statement with a contrasting fabric, the choice is entirely yours. Click the magnifier on any option to zoom in.</p>
+  </div>
+
+  <div class="designer-grid" id="pantsGrid">
+    <div class="tabs" id="pantsTabs"></div>
+    <p class="tabs-hint">Swipe left or right to see all the categories →</p>
+    <div class="options" id="pantsOptions"></div>
+    <div class="summary">
+      <h3>Your Pants</h3>
+      <div id="pantsSummaryRows"></div>
+      <div class="summary-total"><span>Estimated Total</span><b id="pantsTotalPrice">$350</b></div>
+      <p class="summary-note">Estimated total for the whole suit — your final invoice is confirmed with you directly before production begins.</p>
+      <div class="measure-actions">
+        <button class="btn-ghost" id="backToJacketBtn">&larr; Back to Jacket</button>
+        <button class="btn-primary" id="continuePantsBtn">Continue to Measurements</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="measurements step" id="measurementsSection">
+  <div class="designer-head">
+    <h2>Enter your measurements</h2>
+  </div>
+  <div class="wiz-head meas-head">
+    <div class="wiz-progress" id="measProgress"></div>
+    <div class="wiz-meta"><span class="wiz-step">Final step</span><span class="wiz-group">Measurements</span></div>
+  </div>
+  <div class="meas-intro">
+    <h3>Your measurements</h3>
+    <p class="sub">Grab a tape measure (a patient friend helps). Everything is in centimeters.</p>
+  </div>
+
+  <!-- Only shown once there's already at least one other suit in this order
+       (see updateSamePreviousMeasurementsBanner() in main.js) -- the fields
+       below always start blank for a new suit, since different suits in one
+       order are often for different people, but this covers the common case
+       of ordering more than one for the same person in a single click. -->
+  <div class="size-estimate saved-measurements-banner" id="samePreviousMeasurementsBanner" hidden>
+    <button type="button" class="size-estimate-toggle" id="useSamePreviousMeasurementsBtn">
+      <span>Ordering another suit for the same person?</span>
+      <span class="size-estimate-toggle-cta">Use the same measurements as Suit <span id="samePreviousMeasurementsSuitNum"></span></span>
+    </button>
+  </div>
+
+  <!-- Only shown to a signed-in customer who already has measurements saved
+       to their profile (see updateAccountUI() in main.js) -- fills every
+       field below from that saved profile in one click, the same way
+       applyEstimateBtn fills them from a standard size. -->
+  <div class="size-estimate saved-measurements-banner" id="savedMeasurementsBanner" hidden>
+    <button type="button" class="size-estimate-toggle" id="useSavedMeasurementsBtn">
+      <span>Signed in as <span id="savedMeasurementsEmail"></span></span>
+      <span class="size-estimate-toggle-cta">Use my saved measurements</span>
+    </button>
+  </div>
+
+  <div class="size-estimate" id="sizeEstimateBox">
+    <button type="button" class="size-estimate-toggle" id="sizeEstimateToggleBtn">
+      <span>Don't know your exact measurements?</span>
+      <span class="size-estimate-toggle-cta">Estimate from your standard size</span>
+    </button>
+    <div class="size-estimate-panel" id="sizeEstimatePanel" hidden>
+      <p class="size-estimate-intro">Tell us the off-the-rack sizes you normally wear and we'll fill in a starting estimate for every measurement below in seconds — review (and adjust) anything that doesn't feel right before continuing.</p>
+      <div class="size-estimate-grid">
+        <div class="measure-field">
+          <label for="estJacketChest">Jacket chest size</label>
+          <div class="measure-input-wrap"><select id="estJacketChest"></select></div>
+        </div>
+        <div class="measure-field">
+          <label for="estJacketLength">Jacket length</label>
+          <div class="measure-input-wrap">
+            <select id="estJacketLength">
+              <option value="S">Short</option>
+              <option value="R" selected>Regular</option>
+              <option value="L">Long</option>
+            </select>
+          </div>
+        </div>
+        <div class="measure-field">
+          <label for="estJacketFit">Jacket fit</label>
+          <div class="measure-input-wrap">
+            <select id="estJacketFit">
+              <option value="slim">Slim Fit</option>
+              <option value="regular" selected>Regular Fit</option>
+              <option value="superslim">Super Slim Fit</option>
+            </select>
+          </div>
+        </div>
+        <div class="measure-field size-estimate-pants-field">
+          <label for="estPantsWaist">Pants waist size</label>
+          <div class="measure-input-wrap"><select id="estPantsWaist"></select></div>
+        </div>
+        <div class="measure-field size-estimate-pants-field">
+          <label for="estPantsInseam">Pants inseam</label>
+          <div class="measure-input-wrap"><select id="estPantsInseam"></select></div>
+        </div>
+        <div class="measure-field size-estimate-pants-field">
+          <label for="estPantsLength">Pants length</label>
+          <div class="measure-input-wrap">
+            <select id="estPantsLength">
+              <option value="S">Short</option>
+              <option value="R" selected>Regular</option>
+              <option value="L">Long</option>
+            </select>
+          </div>
+        </div>
+        <div class="measure-field size-estimate-pants-field">
+          <label for="estPantsFit">Pants fit</label>
+          <div class="measure-input-wrap">
+            <select id="estPantsFit">
+              <option value="regular" selected>Tapered</option>
+              <option value="slim">Skinny</option>
+              <option value="superslim">Extra Skinny</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-primary" id="applyEstimateBtn">Fill in my measurements</button>
+      <p class="size-estimate-disclaimer">These numbers are estimated from standard sizing, not your own body — they're a starting point only. Please double-check (or adjust) every field below before continuing.</p>
+    </div>
+  </div>
+
+  <div class="measure-grid-head">
+    <button type="button" class="btn-ghost measure-reset-btn" id="resetMeasurementsBtn">Reset measurements</button>
+  </div>
+  <div class="measure-grid" id="measureGrid"></div>
+  <!-- Only shown while signed in -- lets a customer opt out of overwriting
+       their saved profile measurements with whatever's entered for this
+       particular order (e.g. ordering a suit as a gift for someone else).
+       Checked by default since most orders are for the customer themself. -->
+  <label class="save-measurements-toggle" id="saveMeasurementsToggleWrap" hidden>
+    <input type="checkbox" id="saveMeasurementsToProfileCheckbox" checked>
+    Save these measurements to my profile
+  </label>
+  <button class="meas-add-card" id="addAnotherSuitBtn" type="button">+ Add to Cart &amp; Design Another Suit</button>
+  <div class="measure-actions wiz-bar meas-bar">
+    <button type="button" class="wiz-back" id="backToDesignerBtn">&larr; Back</button>
+    <div class="wiz-price" id="measPrice"></div>
+    <button type="button" class="wiz-next btn-primary" id="continueToPersonalInfoBtn">Continue &rarr;</button>
+  </div>
+</section>
+
+<section class="personalinfo step" id="personalInfoSection">
+  <div class="designer-head">
+    <h2>Personal Info and Shipping</h2>
+  </div>
+  <div class="wiz-head meas-head">
+    <div class="wiz-progress" id="persProgress"></div>
+    <div class="wiz-meta"><span class="wiz-step">Last step</span><span class="wiz-group">Order</span></div>
+  </div>
+  <div class="meas-intro">
+    <h3>Where should we send it?</h3>
+    <p class="sub">Start typing your street address and pick it from the list &mdash; the fastest way to get your suit to the right door.</p>
+  </div>
+
+  <div class="pers-grid">
+    <div class="measure-field pers-full">
+      <label for="customerName">Full name</label>
+      <div class="measure-input-wrap"><input type="text" id="customerName" placeholder="Full name" autocomplete="name"></div>
+    </div>
+    <div class="measure-field">
+      <label for="customerPhone">Phone number</label>
+      <div class="measure-input-wrap"><input type="tel" id="customerPhone" placeholder="Phone number" autocomplete="tel"></div>
+    </div>
+    <div class="measure-field">
+      <label for="customerEmail">Email</label>
+      <div class="measure-input-wrap"><input type="email" id="customerEmail" placeholder="Email address" autocomplete="email"></div>
+    </div>
+    <div class="measure-field pers-full address-field-with-suggestions">
+      <label for="shippingAddress1">Street address</label>
+      <div class="measure-input-wrap"><input type="text" id="shippingAddress1" placeholder="Start typing your address..." autocomplete="address-line1"></div>
+      <div class="address-suggestions" id="addressSuggestions"></div>
+    </div>
+    <div class="measure-field pers-full">
+      <label for="shippingAddress2">Apt, suite, etc. (optional)</label>
+      <div class="measure-input-wrap"><input type="text" id="shippingAddress2" placeholder="Apt, suite, unit, etc." autocomplete="address-line2"></div>
+    </div>
+    <div class="measure-field">
+      <label for="shippingCity">City</label>
+      <div class="measure-input-wrap"><input type="text" id="shippingCity" placeholder="City" autocomplete="address-level2"></div>
+    </div>
+    <div class="measure-field">
+      <label for="shippingState">State / Province</label>
+      <div class="measure-input-wrap"><input type="text" id="shippingState" placeholder="State" autocomplete="address-level1"></div>
+    </div>
+    <div class="measure-field">
+      <label for="shippingZip">ZIP / Postal code</label>
+      <div class="measure-input-wrap"><input type="text" id="shippingZip" placeholder="ZIP code" autocomplete="postal-code"></div>
+    </div>
+    <div class="measure-field">
+      <label for="shippingCountry">Country</label>
+      <div class="measure-input-wrap"><input type="text" id="shippingCountry" placeholder="Country" autocomplete="country-name" value="United States"></div>
+    </div>
+  </div>
+  <p class="pers-total" id="orderTotalNote" hidden></p>
+  <div class="measure-actions wiz-bar meas-bar">
+    <button type="button" class="wiz-back" id="backToMeasurementsBtn">&larr; Back</button>
+    <div class="wiz-price" id="persPrice"></div>
+    <button type="button" class="wiz-next btn-primary" id="submitOrderBtn">Submit Order</button>
+  </div>
+</section>
+
+<section class="confirmation step" id="confirmationSection">
+  <div class="designer-head">
+    <h2>Order received</h2>
+    <p id="confirmationText"></p>
+  </div>
+  <!-- The "Client Form" (garment spec + shipping address, in the same plain-
+       text format sent to production) is intentionally NOT shown here --
+       customers only ever see this friendly confirmation message. Daniel
+       still gets the full text every time: it's saved on the order row in
+       Supabase (client_form_text) and included in the notification email
+       (see finalizeOrder() in main.js). -->
+</section>
+
+<footer>Scott's Suits — Custom Tailoring, Made Convenient.</footer>
+<!-- Invisible by default (height:0) -- scrollToStepTop() in main.js grows
+     this on demand right before it scrolls, just enough so the page has
+     room to fully scroll a short step (like the suit-type choice) up to
+     the nav, instead of the browser silently clamping the scroll short
+     because there wasn't enough page left below to scroll into. Never
+     shrunk back down afterward -- only ever visible if someone scrolls
+     past the real footer on purpose, which is harmless. See
+     ensureScrollRoom() in main.js. -->
+<div id="scrollSlack" aria-hidden="true" style="height:0;"></div>
+
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-card">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+    <div class="lb-stage">
+        <div class="lightbox-frame" id="lightboxFrame">
+          <img id="lightboxImg" src="" alt="" draggable="false">
+        </div>
+    </div>
+    <div class="lb-caprow">
+      <button type="button" class="lb-nav lb-prev" id="lbPrev" aria-label="Previous" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+      <button type="button" class="lb-nav lb-next" id="lbNext" aria-label="Next" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="lightbox-sub" id="lightboxSub"></div>
+    <button type="button" class="lightbox-confirm-btn" id="lightboxConfirmBtn" hidden>Confirm This Fabric</button>
+    <div class="lightbox-hint">Tap to zoom into that spot, pinch to zoom smoothly, drag to look around &mdash; tap again to zoom out</div>
+  </div>
+</div>
+
+<div class="how-it-works-overlay" id="howItWorksOverlay" role="dialog" aria-modal="true" aria-labelledby="howItWorksTitle">
+  <div class="how-it-works-panel">
+    <button class="lightbox-close how-it-works-close" id="howItWorksClose" aria-label="Close how it works">Close ✕</button>
+    <h2 id="howItWorksTitle">How It Works</h2>
+    <p class="how-it-works-intro">Five simple steps, all online, from wherever you are -- no showroom visit, no fittings, every detail customized to you.</p>
+    <ol class="how-it-works-list">
+      <li><span class="hiw-num">01</span><div><h3>Choose full suit or jacket only, then design your jacket</h3><p>Start with a full suit ($350) or just the jacket ($250), then pick your fabric and customize every detail -- collar, lapel, pockets, buttons, and more. Every option is included in the price, no surprise upcharges.</p></div></li>
+      <li><span class="hiw-num">02</span><div><h3>Customize your pants</h3><p>Choose the fabric and style for your pants -- match your jacket or go with a contrasting fabric. Entirely up to you.</p></div></li>
+      <li><span class="hiw-num">03</span><div><h3>Enter your measurements</h3><p>Enter your finished measurements in centimeters -- or estimate from your usual size in seconds -- so the suit is cut to fit you, not sized off a rack.</p></div></li>
+      <li><span class="hiw-num">04</span><div><h3>Personal info and shipping</h3><p>Tell us your name and where to ship your finished suit.</p></div></li>
+      <li><span class="hiw-num">05</span><div><h3>Submit your order</h3><p>Review your selections and submit. Your final invoice is confirmed with you directly before production begins.</p></div></li>
+    </ol>
+    <button class="btn-primary how-it-works-cta" id="howItWorksStartBtn">Start Designing</button>
+  </div>
+</div>
+
+<!-- Customer account overlay -- optional profile, reached via the person icon
+     in the nav. Same accessible-modal pattern as howItWorksOverlay above
+     (see the IIFE near the top of main.js): focus moves to the close button
+     on open, Escape and backdrop-click close it, focus returns to whatever
+     opened it. Signing in doesn't gate anything -- it's a convenience for
+     customers who want to save their measurements or look back at past
+     orders, nothing more. -->
+<div class="how-it-works-overlay account-overlay" id="accountOverlay" role="dialog" aria-modal="true" aria-labelledby="accountOverlayTitle">
+  <div class="how-it-works-panel account-panel">
+    <button class="lightbox-close how-it-works-close" id="accountOverlayClose" aria-label="Close account">Close ✕</button>
+    <h2 id="accountOverlayTitle">My Account</h2>
+
+    <div id="accountLoggedOutView">
+      <p class="account-intro">Create a free profile to save your measurements and revisit your past orders next time you visit.</p>
+
+      <!-- Google sign-in works the same whether this is someone's first visit
+           or their tenth -- Supabase creates the account automatically the
+           first time, so one button covers both "Create Account" and "Log
+           In" and lives above the tabs rather than inside either form. -->
+      <button type="button" class="btn-google" id="googleAuthBtn">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+          <path fill="#4285F4" d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.8741 2.6836-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8591-3.0477.8591-2.3436 0-4.3282-1.5831-5.0359-3.7104H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.9641 10.71c-.18-.54-.2823-1.1168-.2823-1.71s.1023-1.17.2823-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.9641 10.71z"/>
+          <path fill="#EA4335" d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.9641 7.29C4.6718 5.1627 6.6564 3.5795 9 3.5795z"/>
+        </svg>
+        Continue with Google
+      </button>
+      <div class="account-divider"><span>or</span></div>
+
+      <div class="account-tabs" role="tablist">
+        <button type="button" class="account-tab active" id="showSignupTabBtn" role="tab" aria-selected="true">Create Account</button>
+        <button type="button" class="account-tab" id="showLoginTabBtn" role="tab" aria-selected="false">Log In</button>
+      </div>
+
+      <form class="account-form" id="signupForm">
+        <div class="measure-field">
+          <label for="signupNameInput">Full name</label>
+          <div class="measure-input-wrap"><input type="text" id="signupNameInput" placeholder="Jane Doe" autocomplete="name"></div>
+        </div>
+        <div class="measure-field">
+          <label for="signupEmailInput">Email address</label>
+          <div class="measure-input-wrap"><input type="email" id="signupEmailInput" placeholder="you@example.com" autocomplete="email"></div>
+        </div>
+        <div class="measure-field">
+          <label for="signupPasswordInput">Password</label>
+          <div class="measure-input-wrap"><input type="password" id="signupPasswordInput" placeholder="At least 6 characters" autocomplete="new-password"></div>
+        </div>
+        <button type="submit" class="btn-primary" id="signupSubmitBtn">Create Account</button>
+      </form>
+
+      <form class="account-form" id="loginForm" hidden>
+        <div class="measure-field">
+          <label for="loginEmailInput">Email address</label>
+          <div class="measure-input-wrap"><input type="email" id="loginEmailInput" placeholder="you@example.com" autocomplete="email"></div>
+        </div>
+        <div class="measure-field">
+          <label for="loginPasswordInput">Password</label>
+          <div class="measure-input-wrap"><input type="password" id="loginPasswordInput" placeholder="Your password" autocomplete="current-password"></div>
+        </div>
+        <button type="submit" class="btn-primary" id="loginSubmitBtn">Log In</button>
+      </form>
+
+      <p class="account-status-msg" id="accountStatusMsg" hidden></p>
+    </div>
+
+    <div id="accountLoggedInView" hidden>
+      <p class="account-intro">Welcome back, <b id="accountNameDisplay"></b>. <button type="button" class="btn-ghost" id="accountLogoutBtn">Log out</button></p>
+
+      <h3>Saved Measurements</h3>
+      <p class="account-section-note">Fill these in once and reuse them any time you design a new suit.</p>
+      <div class="measure-grid" id="profileMeasureGrid"></div>
+      <button type="button" class="btn-primary" id="saveProfileMeasurementsBtn">Save Measurements</button>
+      <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
+
+      <h3>Past Orders</h3>
+      <div id="pastOrdersList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom confirmation for "Start Over", built from plain HTML/CSS instead
+     of the browser's native window.confirm(...). Some environments this page
+     is viewed in (an app's own embedded preview, for example) silently
+     suppress native JS dialogs, which made Start Over look completely dead
+     there -- tapping it did nothing at all, since the reset code never got
+     past an invisible, always-false "did they confirm?" check. This dialog
+     is just page content, so it always shows up. -->
+<div class="confirm-overlay" id="startOverConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="startOverConfirmTitle">
+  <div class="confirm-panel">
+    <h3 id="startOverConfirmTitle">Start over?</h3>
+    <p id="startOverConfirmText">You'll lose your current selections &mdash; jacket, pants, measurements, and shipping details &mdash; and begin again from scratch.</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="startOverCancelBtn">Cancel</button>
+      <button type="button" class="btn-primary" id="startOverConfirmBtn">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TEMP QA NAV BAR -- internal testing only, not for customers.
+     Lets you jump straight to any step to spot-check it, skipping
+     the normal fill-in-order requirement. To remove later, delete:
+       1. this whole block,
+       2. the ".qa-nav" CSS rules in style.css (marked TEMP QA NAV BAR),
+       3. the "TEMP QA NAV BAR" JS block near the bottom of main.js.
+     ============================================================ -->
+<div class="qa-nav" id="qaNavBar">
+  <span class="qa-nav-label">QA Nav</span>
+  <button type="button" class="qa-nav-btn" data-qa-step="designer">Jacket</button>
+  <button type="button" class="qa-nav-btn" data-qa-step="pantsSection">Pants</button>
+  <button type="button" class="qa-nav-btn" data-qa-step="measurementsSection">Measurements</button>
+  <button type="button" class="qa-nav-btn" data-qa-step="personalInfoSection">Order Form</button>
+  <button type="button" class="qa-nav-btn" data-qa-step="confirmationSection">Confirmation</button>
+  <!-- Runs the exact same validation + save as the real Submit Order button,
+       just skips the PayPal redirect in between -- so a full test order can
+       be placed (and shows up in Supabase/the email like any other) without
+       actually paying. Works from whichever step the Order Form fields
+       already have values filled in, same as Submit Order itself.
+       Label/title below are the no-PayPal-configured default (matching
+       today's blank PAYPAL_BUSINESS_EMAIL in config.js, where the real
+       Submit Order button has no payment step to skip either) -- main.js
+       overwrites both to the "Skip Payment" wording above the moment
+       PAYPAL_ENABLED is actually true, so this never claims to bypass a
+       payment step that isn't there. -->
+  <button type="button" class="qa-nav-btn qa-nav-btn-skip" id="qaSkipPaymentBtn" title="No payment is configured (PAYPAL_BUSINESS_EMAIL is blank in config.js) -- this does exactly what the real Submit Order button already does.">Submit (No Payment Configured)</button>
+  <!-- Lets QA see the true supplier codes (e.g. "5835-0543") behind every
+       fabric swatch instead of the customer-facing name, then flip straight
+       back -- useful for cross-checking a fabric against the supplier sheet
+       without leaving the designer. Checked state is remembered in
+       localStorage like the hide/show toggle above. -->
+  <label class="qa-nav-checkbox" for="qaRawFabricNamesToggle" title="Show fabrics by their original supplier code instead of the customer-facing name">
+    <input type="checkbox" id="qaRawFabricNamesToggle">
+    Raw Fabric Codes
+  </label>
+  <button type="button" class="qa-nav-hide-btn" id="qaNavHideBtn" title="Hide QA nav">Hide ✕</button>
+</div>
+<!-- Small pill that reappears in the corner once the bar above is hidden,
+     so it's never permanently gone -- click it to bring the bar back. -->
+<button type="button" class="qa-nav-show-btn" id="qaNavShowBtn" hidden>QA Nav</button>
+<!-- ==================== END TEMP QA NAV BAR ==================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./config.js"></script>
+<script src="./catalog.js"></script>
+<script src="./supabaseClient.js"></script>
+<script src="./main.js"></script>
+
+</body>
+</html>
