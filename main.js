@@ -5346,6 +5346,24 @@ if (qaSkipPaymentBtn) {
   const showBtn = document.getElementById("qaNavShowBtn");
   if (!bar || !hideBtn || !showBtn) return;
 
+  // Customers never see it: the bar and its pill stay hidden (markup ships
+  // with the bar hidden) unless this browser has opted in by opening the
+  // site once with ?qa=1. ?qa=0 opts back out.
+  let qaEnabled = false;
+  try {
+    const qaParam = new URLSearchParams(location.search).get("qa");
+    if (qaParam === "1") localStorage.setItem("qaNavEnabled", "1");
+    if (qaParam === "0") localStorage.removeItem("qaNavEnabled");
+    qaEnabled = localStorage.getItem("qaNavEnabled") === "1";
+  } catch (e) {
+    // Ignore -- stays off.
+  }
+  if (!qaEnabled) {
+    bar.hidden = true;
+    showBtn.hidden = true;
+    return;
+  }
+
   function setHidden(hidden) {
     bar.hidden = hidden;
     showBtn.hidden = !hidden;
@@ -5367,7 +5385,7 @@ if (qaSkipPaymentBtn) {
   } catch (e) {
     // Ignore -- default to hidden.
   }
-  if (startHidden) setHidden(true);
+  setHidden(startHidden);
 })();
 
 // "Raw Fabric Codes" toggle -- flips qaShowRawFabricNames (declared up near
