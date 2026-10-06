@@ -1459,3 +1459,6 @@ nav{position:sticky;top:0;}
   #designPreview .hiw-perks li{font-size:11px;padding:5px 10px;}
   #designPreview .suit-preview-btn{width:100%;}
 }
+
+/* Preview page heading, centered over its card. */
+#previewSection .designer-head{text-align:center;}
