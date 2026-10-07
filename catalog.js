@@ -422,7 +422,7 @@ const PANTS_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
   { label: "Front & Waistband", keys: ["frontPleat", "waistLineHeight", "waistbandStyle", "waistbandExtension", "beltLoops"] },
   { label: "Pockets", keys: ["frontPocket", "backPocket", "watchPocket"] },
-  { label: "Bottom & Details", keys: ["bottomStyle", "backWaistShape", "hookEye", "threadColor", "buttonholeThreadColor", "buttonNail"] },
+  { label: "Bottom & Details", keys: ["bottomStyle", "backWaistShape", "hookEye", "threadColor", "buttonNail"] },
   { label: "Personalization", keys: ["monogram"] },
 ];
 
@@ -2321,14 +2321,6 @@ PANTS_CATALOG.threadColor = {
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
   options: [MATCH_FABRIC_COLOR_OPTION].concat(flattenColorFamilies(THREAD_COLOR_FAMILIES)),
 };
-PANTS_CATALOG.buttonholeThreadColor = {
-  label: "Buttonhole Thread Color",
-  flatColorTiles: true,
-  column: "pants_buttonhole_thread_color",
-  colorFamilies: BUTTONHOLE_THREAD_COLOR_FAMILIES,
-  specialOptions: [MATCH_FABRIC_COLOR_OPTION],
-  options: [MATCH_FABRIC_COLOR_OPTION].concat(flattenColorFamilies(BUTTONHOLE_THREAD_COLOR_FAMILIES)),
-};
 PANTS_CATALOG.monogramThreadColor = {
   label: "Monogram Thread Color",
   column: "pants_monogram_thread_color",
@@ -2338,12 +2330,10 @@ PANTS_CATALOG.monogramThreadColor = {
 };
 
 // Thread Color sits right after Button Nail Method (Sleeves group on the
-// jacket, Bottom & Details on pants). Buttonhole Thread Color is placed
-// differently per garment: on the jacket it sits right after Lapel
-// Buttonhole (Collar & Lapel group), since that's the buttonhole its thread
-// actually sews; pants have no lapel/buttonhole style category to anchor
-// to, so it stays alongside Thread Color in Bottom & Details there. Neither
-// garment offers a Handmade Lapel Buttonhole Thread Color option anymore.
+// jacket, Bottom & Details on pants). Buttonhole Thread Color is jacket-only
+// (removed from pants 2026-10-07): it sits right after Lapel Buttonhole
+// (Collar & Lapel group), since that's the buttonhole its thread actually
+// sews. Neither garment offers a Handmade Lapel Buttonhole Thread Color option anymore.
 // Monogram Thread Color is the exception: it stays in Personalization,
 // right after Monogram Placement, since it only ever applies once a real
 // monogram is chosen.
@@ -2359,7 +2349,6 @@ JACKET_CATALOG.buttonholeThreadColor.description = "The thread stitched around t
 JACKET_CATALOG.monogramThreadColor.description = "The thread your jacket monogram is embroidered in.";
 PANTS_CATALOG.threadColor.label = "Button Thread Color";
 PANTS_CATALOG.threadColor.description = "The thread your pants buttons are sewn on with.";
-PANTS_CATALOG.buttonholeThreadColor.description = "The thread stitched around the buttonholes on your pants.";
 PANTS_CATALOG.monogramThreadColor.description = "The thread your pants monogram is embroidered in.";
 
 // === FABRIC_ZOOM_MAP:BEGIN ===
@@ -2490,7 +2479,6 @@ const PANTS_STEP_TAGLINES = {
   backPocket: "Your back pockets: buttons, flaps or none.",
   fabric: "Pick the cloth for your pants.",
   threadColor: "Blend in with your fabric or make it pop.",
-  buttonholeThreadColor: "Match your pants or flash a little color.",
   monogramThreadColor: "Whisper tone-on-tone or shout in contrast."
 };
 Object.keys(JACKET_STEP_TAGLINES).forEach((k) => { if (JACKET_CATALOG[k]) JACKET_CATALOG[k].tagline = JACKET_STEP_TAGLINES[k]; });

@@ -3216,7 +3216,6 @@ function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measur
     lines.push("Button nail method: " + (pants.buttonNail || ""));
     lines.push("Sewing stitch/ AMF stitch: no");
     lines.push("Thread color: " + factoryMatchText(pants.threadColor || ""));
-    lines.push("Buttonhole thread color: " + factoryMatchText(pants.buttonholeThreadColor || ""));
     lines.push("Watch pocket placement: " + (pants.watchPocket || ""));
     lines.push("Pant lining: no");
     lines.push("Heel guards: no");
