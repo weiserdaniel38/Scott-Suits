@@ -1908,13 +1908,28 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // forward again. A new question has no Next: picking an option moves on
     // by itself.
     const showNext = !!order[activeTab] && !textMissing(activeTab);
-    wizBar.innerHTML =
-      '<button type="button" class="wiz-back"' + (showBack ? "" : " disabled") + '>&larr; Back</button>' +
-      '<div class="wiz-price">' + (wizPriceEl ? wizPriceEl.textContent : "") + "</div>" +
-      '<button type="button" class="wiz-next btn-primary"' + (showNext ? "" : " disabled hidden") + ">" +
-      (atLast ? "Review" : "Next &rarr;") + "</button>";
-    wizBar.querySelector(".wiz-back").onclick = wizGoBack;
-    wizBar.querySelector(".wiz-next").onclick = wizGoNext;
+    // The bar's buttons are built once and only updated here. Replacing
+    // them on every question (innerHTML) left iPhone Safari showing the
+    // old, Next-less bar after a quick Back until something else forced a
+    // repaint.
+    if (!wizBar.firstChild) {
+      wizBar.innerHTML =
+        '<button type="button" class="wiz-back">&larr; Back</button>' +
+        '<div class="wiz-price"></div>' +
+        '<button type="button" class="wiz-next btn-primary"></button>';
+      wizBar.querySelector(".wiz-back").onclick = wizGoBack;
+      wizBar.querySelector(".wiz-next").onclick = wizGoNext;
+    }
+    const backBtn = wizBar.querySelector(".wiz-back");
+    const nextBtn = wizBar.querySelector(".wiz-next");
+    const priceEl = wizBar.querySelector(".wiz-price");
+    backBtn.disabled = !showBack;
+    const priceText = wizPriceEl ? wizPriceEl.textContent : "";
+    if (priceEl.textContent !== priceText) priceEl.textContent = priceText;
+    const nextLabel = atLast ? "Review" : "Next \u2192";
+    if (nextBtn.textContent !== nextLabel) nextBtn.textContent = nextLabel;
+    nextBtn.disabled = !showNext;
+    nextBtn.classList.toggle("wiz-next-off", !showNext);
   }
   if (wizPriceEl && window.MutationObserver) {
     new MutationObserver(() => {

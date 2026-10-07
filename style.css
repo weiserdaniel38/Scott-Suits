@@ -887,7 +887,7 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .fabric-pattern-heading{margin-top:26px;}
 
 /* --- Back / price / Next bar (sticks to the bottom of the screen) --- */
-.wiz-bar{position:sticky;bottom:var(--qa-nav-height,0px);z-index:40;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 2px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);border-top:1px solid var(--line);margin-top:6px;}
+.wiz-bar{position:sticky;-webkit-transform:translateZ(0);transform:translateZ(0);bottom:var(--qa-nav-height,0px);z-index:40;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 2px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);border-top:1px solid var(--line);margin-top:6px;}
 .wiz-back{background:none;border:1px solid var(--line);border-radius:999px;padding:13px 22px;font:500 14px 'Inter',sans-serif;color:var(--ivory);cursor:pointer;}
 .wiz-back:disabled{opacity:0;pointer-events:none;}
 .wiz-price{font-family:'Playfair Display',serif;font-size:21px;font-weight:600;}
@@ -918,7 +918,7 @@ body.wiz-lock{overflow:hidden;}
 
 /* Next only shows on a question that already has an answer; it keeps its
    space so the price stays centered. */
-.wiz-next[hidden]{display:inline-flex;visibility:hidden;pointer-events:none;}
+.wiz-next.wiz-next-off{opacity:0;pointer-events:none;}
 
 /* "<- All Colors" / "<- Back" inside a question: a clear, tappable button
    instead of faint text. */
