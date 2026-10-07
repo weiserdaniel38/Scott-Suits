@@ -50,15 +50,15 @@ const JACKET_CATALOG = {
     // arbitrary order -- with the shawl/diamond-only special case and "No
     // Lapel Buttonhole" (the absence of one) both placed at the end.
     options: [
-      { name: "Standard", img: "./assets/jacket-lapelbuttonhole-left.jpg" },
-      { name: "Right", img: "./assets/jacket-lapelbuttonhole-right.jpg" },
-      { name: "Right & Left", img: "./assets/jacket-lapelbuttonhole-right-left.jpg" },
-      { name: "Left Two", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
-      { name: "Right Two", img: "./assets/jacket-lapelbuttonhole-right-two.jpg" },
-      { name: "Left Three", img: "./assets/jacket-lapelbuttonhole-left-three.jpg" },
-      { name: "Left Three, Right Two", img: "./assets/jacket-lapelbuttonhole-left-three-right-two.jpg" },
-      { name: "4 Buttonholes On Left", img: "./assets/jacket-lapelbuttonhole-four-left.jpg" },
-      { name: "Buttonhole On Left, Only For Shawl And Diamond Lapel", displayName: "Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg" },
+      { name: "Standard", formNote: "1 buttonhole on left lapel", img: "./assets/jacket-lapelbuttonhole-left.jpg" },
+      { name: "Right", formNote: "1 buttonhole on right lapel", img: "./assets/jacket-lapelbuttonhole-right.jpg" },
+      { name: "Right & Left", formNote: "1 buttonhole on each lapel", img: "./assets/jacket-lapelbuttonhole-right-left.jpg" },
+      { name: "Left Two", formNote: "2 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
+      { name: "Right Two", formNote: "2 buttonholes on right lapel", img: "./assets/jacket-lapelbuttonhole-right-two.jpg" },
+      { name: "Left Three", formNote: "3 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-three.jpg" },
+      { name: "Left Three, Right Two", formNote: "3 buttonholes on left lapel, 2 on right lapel", img: "./assets/jacket-lapelbuttonhole-left-three-right-two.jpg" },
+      { name: "4 Buttonholes On Left", formNote: "4 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-four-left.jpg" },
+      { name: "Buttonhole On Left, Only For Shawl And Diamond Lapel", formNote: "1 buttonhole on left lapel", displayName: "Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg" },
       { name: "No Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-none.jpg",
         // Shows the shawl drawing (no buttonhole) when the collar is Shawl or Diamond.
         imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg" } } },

@@ -3156,26 +3156,78 @@ const MEASUREMENT_FORM_LABELS = {
   cuff: "Cuff-finished-",
 };
 
-// Builds the full plain-text Client Form used in production: customer selections
-// pulled live from the designer, plus the shop's fixed standard specs for the
-// items that aren't customer choices (AMF stitching, armhole shield, shoulder
-// type, label placement, pant lining, heel guards, etc). suitType is "full"
-// or "jacketOnly" -- for a Jacket Only item, pantsSel is null/empty and the
-// whole PANTS section (and pants measurements) is left out entirely rather
-// than printed blank.
+// Builds the full plain-text Client Form used in production. The customer's
+// choices are listed step by step exactly as the designer offers them: same
+// section headings and step names as JACKET_CATALOG_GROUPS /
+// PANTS_CATALOG_GROUPS, so any step added, renamed, hidden or removed on the
+// site shows up (or drops off) here automatically. Each choice prints its
+// stored factory value; for style options whose site name differs (e.g.
+// "Double Besom W/ Flap" shown as "Flap Pockets") the site name follows in
+// brackets. Fabric, lining, button, felt and thread choices print their
+// codes exactly as stored. A step the site skipped for this suit (e.g. Felt
+// Color without a chosen felt, Monogram Thread Color without a monogram) is
+// left off. The shop's fixed specs that aren't customer choices follow each
+// garment under their own heading. suitType is "full" or "jacketOnly" -- for
+// a Jacket Only item the whole PANTS section (and pants measurements) is
+// left out.
 // On the factory form, a "match the fabric" choice is left to the factory's
 // judgement -- say so explicitly instead of naming any specific color.
 function factoryMatchText(v) {
   return v === "Match Fabric Color" || v === "Best Match to Fabric" ? v + " (factory to match)" : v;
 }
+// Steps whose values are supplier codes -- printed as stored, never renamed.
+const CLIENT_FORM_CODE_KEYS = ["fabric", "lining", "buttoncolor", "feltColor", "threadColor", "buttonholeThreadColor", "monogramThreadColor"];
+// Fixed shop specs per garment (not customer choices on the site).
+const CLIENT_FORM_SHOP_SPECS = {
+  jacket: ["AMF stitching: .5cm", "Armhole shield: no", "Label placement: no", "Shoulder type: normal"],
+  pants: ["Sewing stitch/ AMF stitch: no", "Pant lining: no", "Heel guards: no", "Label placement: no"],
+};
+// One garment's step-by-step lines (see buildClientFormText).
+function clientFormGarmentLines(catalog, groups, sel, part, extras) {
+  const lines = [];
+  groups.forEach((group) => {
+    const groupLines = [];
+    group.keys.forEach((key) => {
+      const cat = catalog[key];
+      const value = sel[key];
+      if (!cat || !value) return;
+      let text;
+      if (key === "lining" && liningUploadSurcharge(sel)) {
+        const photoUrl = extras && extras.liningPhotoUrl;
+        text = "CUSTOMER'S OWN PHOTO (+$" + LINING_UPLOAD_OPTION.surchargeUsd + ") -- " +
+          (photoUrl ? "photo: " + photoUrl : "photo NOT attached (upload failed) -- contact the customer for it");
+      } else if (key === "lining" && value === LINING_MATCH_OPTION.name) {
+        text = "Match fabric (factory to match)";
+      } else if (CLIENT_FORM_CODE_KEYS.indexOf(key) !== -1) {
+        text = factoryMatchText(value);
+      } else {
+        const opt = (cat.options || []).find((o) => o.name === value);
+        let siteName = opt && opt.displayName;
+        if (opt && opt.displayNameBySelection) {
+          Object.keys(opt.displayNameBySelection).forEach((dep) => {
+            const alt = opt.displayNameBySelection[dep][sel[dep]];
+            if (alt) siteName = alt;
+          });
+        }
+        text = value + (siteName && siteName !== value ? " [" + siteName + "]" : "");
+        // An option's `formNote` (e.g. Square Waistband: "Centered over
+        // zipper") is added to the factory form only.
+        if (opt && opt.formNote) text += " -- " + opt.formNote.toUpperCase();
+      }
+      groupLines.push(cat.label + ": " + text);
+      const monogramText = extras && (part === "jacket" ? extras.jacketMonogramText : extras.pantsMonogramText);
+      if (key === "monogram" && monogramText) groupLines.push("Monogram text: " + monogramText);
+    });
+    if (!groupLines.length) return;
+    lines.push("- " + group.label + " -");
+    groupLines.forEach((l) => lines.push(l));
+  });
+  lines.push("- Shop standard specs -");
+  CLIENT_FORM_SHOP_SPECS[part].forEach((l) => lines.push(l));
+  return lines;
+}
 function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measurements, extras) {
   const isJacketOnly = suitType === "jacketOnly";
-  const jacketFabric = jacketSel.fabric || "";
-  const pantsFabric = !isJacketOnly && pantsSel ? pantsSel.fabric || "" : "";
-  let fabricLine = jacketFabric;
-  if (pantsFabric && pantsFabric !== jacketFabric) {
-    fabricLine = jacketFabric + " (Jacket) / " + pantsFabric + " (Pants)";
-  }
 
   const lines = [];
   lines.push("CLIENT FORM");
@@ -3183,81 +3235,16 @@ function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measur
   lines.push("Customer name: " + customerName);
   lines.push("Order type: " + (isJacketOnly ? "Jacket Only" : "Full Suit (Jacket + Pants)"));
   lines.push("");
-  lines.push("Fabric: " + fabricLine);
-  if (liningUploadSurcharge(jacketSel)) {
-    const photoUrl = extras && extras.liningPhotoUrl;
-    lines.push(
-      "Lining: CUSTOMER'S OWN PHOTO (+$" + LINING_UPLOAD_OPTION.surchargeUsd + ") -- " +
-        (photoUrl ? "photo: " + photoUrl : "photo NOT attached (upload failed) -- contact the customer for it")
-    );
-  } else if (jacketSel.lining === LINING_MATCH_OPTION.name) {
-    lines.push("Lining: Match fabric (factory to match)");
-  } else {
-    lines.push("Lining: " + (jacketSel.lining || ""));
-  }
-  lines.push("Button: ");
-  lines.push("Piping: ");
-  lines.push("Inside pick stitching: ");
-  lines.push("Felt: ");
-  lines.push("Bottom button hole on sleeve: ");
-  lines.push("");
   lines.push("JACKET");
-  lines.push("Collar style: " + (jacketSel.collar || ""));
-  lines.push("Front button request: " + (jacketSel.frontbutton || ""));
-  lines.push("Button color: " + factoryMatchText(jacketSel.buttoncolor || ""));
-  lines.push("Lapel width: " + (jacketSel.lapelwidth || ""));
-  lines.push("Lapel buttonhole: " + (jacketSel.lapelbuttonhole || ""));
-  lines.push("Top sleeve crown type: " + (jacketSel.sleevecrown || ""));
-  lines.push("Pocket type: " + (jacketSel.pockettype || ""));
-  lines.push("Lower pocket: " + (jacketSel.lowerpocket || ""));
-  lines.push("AMF stitching: .5cm");
-  lines.push("Thread color: " + factoryMatchText(jacketSel.threadColor || ""));
-  lines.push("Buttonhole thread color: " + factoryMatchText(jacketSel.buttonholeThreadColor || ""));
-  lines.push("Felt under collar: " + (jacketSel.feltundercollar || ""));
-  lines.push("Felt color: " + (jacketSel.feltColor || ""));
-  lines.push("Construction: " + (jacketSel.construction || ""));
-  lines.push("Facing style: " + (jacketSel.facing || ""));
-  lines.push("Inside pocket style: " + (jacketSel.insidepocket || ""));
-  lines.push("Armhole shield: no");
-  lines.push("Monogram placement: " + (jacketSel.monogram || ""));
-  if (extras && extras.jacketMonogramText) lines.push("Monogram text: " + extras.jacketMonogramText);
-  lines.push("Monogram thread color: " + factoryMatchText(jacketSel.monogramThreadColor || ""));
-  lines.push("Label placement: no");
-  lines.push("Shoulder type: normal");
-  lines.push("Back vents: " + (jacketSel.backvent || ""));
-  lines.push("Sleeve cuff style: " + (jacketSel.sleevecuffstyle || ""));
-  lines.push("Buttons on sleeve cuff: " + (jacketSel.cuffbuttons || ""));
+  clientFormGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
   lines.push("");
   if (!isJacketOnly) {
-    const pants = pantsSel || {};
     lines.push("PANTS");
-    lines.push("Waist line height: " + (pants.waistLineHeight || ""));
-    // An option's `formNote` (e.g. Square Waistband: "Centered over zipper")
-    // is added to the factory form only -- not shown on the customer's card.
-    const wextOpt = PANTS_CATALOG.waistbandExtension.options.find((o) => o.name === pants.waistbandExtension);
-    lines.push("Waistband extension style: " + (pants.waistbandExtension || "") + (wextOpt && wextOpt.formNote ? " -- " + wextOpt.formNote.toUpperCase() : ""));
-    lines.push("Waistband style: " + (pants.waistbandStyle || ""));
-    lines.push("Front pleat: " + (pants.frontPleat || ""));
-    lines.push("Belt loops: " + (pants.beltLoops || ""));
-    lines.push("Hook and eye style: " + (pants.hookEye || ""));
-    lines.push("Front pocket style: " + (pants.frontPocket || ""));
-    lines.push("Bottom style: " + (pants.bottomStyle || ""));
-    lines.push("Button nail method: " + (pants.buttonNail || ""));
-    lines.push("Sewing stitch/ AMF stitch: no");
-    lines.push("Thread color: " + factoryMatchText(pants.threadColor || ""));
-    lines.push("Watch pocket placement: " + (pants.watchPocket || ""));
-    lines.push("Pant lining: no");
-    lines.push("Heel guards: no");
-    lines.push("Label placement: no");
-    lines.push("Back waist shape: " + (pants.backWaistShape || ""));
-    lines.push("Monogram placement: " + (pants.monogram || ""));
-    if (extras && extras.pantsMonogramText) lines.push("Pants monogram text: " + extras.pantsMonogramText);
-    lines.push("Monogram thread color: " + factoryMatchText(pants.monogramThreadColor || ""));
-    lines.push("Back pocket style: " + (pants.backPocket || ""));
-    lines.push("Back dart: ");
+    clientFormGarmentLines(PANTS_CATALOG, PANTS_CATALOG_GROUPS, pantsSel || {}, "pants", extras).forEach((l) => lines.push(l));
     lines.push("");
   }
 
+  lines.push("MEASUREMENTS");
   const measurementList = isJacketOnly ? MEASUREMENTS.filter((m) => m.part === "jacket") : MEASUREMENTS;
   measurementList.forEach((m) => {
     const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + "-");
