@@ -2696,21 +2696,6 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       card.style.background = tint;
       card.style.color = L > 0.62 ? "#1c1814" : "#ffffff";
     });
-    // Once a fabric is picked, a very short description of it (catalog
-    // opt.description) appears as a full-width line right under the row the
-    // selected tile sits in, so it shows where the customer is looking.
-    const picked = tiles.find((t) => t.opt.name === order[activeTab]);
-    const selCard = picked && picked.opt.description ? grid.querySelector(".opt-card.fabric-tile.selected") : null;
-    if (selCard) {
-      let rowEnd = selCard;
-      while (rowEnd.nextElementSibling && rowEnd.nextElementSibling.offsetTop === selCard.offsetTop) rowEnd = rowEnd.nextElementSibling;
-      const desc = document.createElement("p");
-      desc.className = "fabric-desc";
-      const nm = document.createElement("strong");
-      nm.textContent = picked.opt.displayName || picked.opt.name;
-      desc.append(nm, " " + picked.opt.description);
-      rowEnd.after(desc);
-    }
   }
 
   // Flat color palette (used by Lapel / Pants Buttonhole Color): every color
