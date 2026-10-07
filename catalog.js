@@ -2350,6 +2350,18 @@ PANTS_CATALOG.monogramThreadColor = {
 JACKET_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monogramThreadColor");
 PANTS_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monogramThreadColor");
 
+// Each thread step says plainly which thread it is for -- "Thread Color"
+// alone left customers guessing (seams? buttonholes? buttons?). Labels and
+// descriptions only; the stored columns are unchanged.
+JACKET_CATALOG.threadColor.label = "Button Thread Color";
+JACKET_CATALOG.threadColor.description = "The thread your jacket's buttons are sewn on with.";
+JACKET_CATALOG.buttonholeThreadColor.description = "The thread stitched around the buttonhole on your lapel.";
+JACKET_CATALOG.monogramThreadColor.description = "The thread your jacket monogram is embroidered in.";
+PANTS_CATALOG.threadColor.label = "Button Thread Color";
+PANTS_CATALOG.threadColor.description = "The thread your pants buttons are sewn on with.";
+PANTS_CATALOG.buttonholeThreadColor.description = "The thread stitched around the buttonholes on your pants.";
+PANTS_CATALOG.monogramThreadColor.description = "The thread your pants monogram is embroidered in.";
+
 // === FABRIC_ZOOM_MAP:BEGIN ===
 // Auto-generated: maps each fabric's real supplier code to its
 // high-resolution zoom tile's sprite sheet (AVIF, 1560x1560 per tile,
