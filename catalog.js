@@ -2262,14 +2262,44 @@ JACKET_CATALOG.monogramThreadColor = {
   // "No Monogram Need" -- see the isApplicable() gating in createDesigner().
   requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
 };
-// Buttons are grouped into named color families the same way the thread
-// colors above are (see BUTTON_COLOR_FAMILIES) -- pick a color, then the
-// specific button within it. "Best Match to Fabric" lets the customer defer
-// the exact pick to the shop instead of choosing one themselves.
+// Buttons are browsed by material first (Horn / Shell / Corozo /
+// Polyester), then the specific button. The supplier code prefix says the
+// material (both button books print it on every label: KNJ/KNG = Real
+// Horn, KB = Shell, KG = Corozo, KSZ = Polyester). Within a material the
+// buttons run by color, dark to light, using BUTTON_COLOR_FAMILIES (which
+// still holds each button's color family and stays the source of truth for
+// names/images/hex). "Best Match to Fabric" lets the customer defer the
+// exact pick to the shop instead of choosing one themselves.
+const BUTTON_TYPE_ORDER = [
+  { name: "Horn", prefixes: ["KNJ", "KNG"], representativeImg: "./assets/jacket-buttoncolor-knj014.jpg" },
+  { name: "Shell", prefixes: ["KB"], representativeImg: "./assets/jacket-buttoncolor-kb113.jpg" },
+  { name: "Corozo", prefixes: ["KG"], representativeImg: "./assets/jacket-buttoncolor-kg198.jpg" },
+  { name: "Polyester", prefixes: ["KSZ"], representativeImg: "./assets/jacket-buttoncolor-ksz255.jpg" },
+];
+const BUTTON_COLOR_SORT = ["Black", "Navy", "Gray", "Blue", "Purple", "Brown", "Tortoiseshell", "Burgundy", "Red", "Tan", "Cream", "Pink", "White", "Multi-Color"];
+const BUTTON_TYPES = BUTTON_TYPE_ORDER.map((t) => {
+  const options = [];
+  BUTTON_COLOR_SORT.concat(BUTTON_COLOR_FAMILIES.map((f) => f.name))
+    .filter((name, i, all) => all.indexOf(name) === i)
+    .forEach((famName) => {
+      const fam = BUTTON_COLOR_FAMILIES.find((f) => f.name === famName);
+      if (!fam) return;
+      fam.options.forEach((o) => {
+        const prefix = (o.name.match(/^[A-Z]+/) || [""])[0];
+        if (t.prefixes.indexOf(prefix) !== -1) options.push(o);
+      });
+    });
+  return { name: t.name, representativeImg: t.representativeImg, options };
+});
 JACKET_CATALOG.buttoncolor = {
   label: "Button Color",
   column: "button_color",
-  colorFamilies: BUTTON_COLOR_FAMILIES,
+  colorFamilies: BUTTON_TYPES,
+  // Wording for the family-picker UI, since these groups are materials
+  // rather than colors (see renderColorFamilyOptions in main.js).
+  familyCountNoun: "button",
+  familyBackLabel: "All Button Types",
+  familySpecLabel: "button",
   specialOptions: [BEST_MATCH_FABRIC_BUTTON_OPTION],
   options: [BEST_MATCH_FABRIC_BUTTON_OPTION].concat(flattenColorFamilies(BUTTON_COLOR_FAMILIES)),
 };
