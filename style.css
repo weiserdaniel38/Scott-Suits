@@ -916,8 +916,9 @@ body.wiz-lock{overflow:hidden;}
 .wiz-rows{overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;}
 .wiz-sheet-head,.wiz-total,.wiz-sheet .summary-note,.wiz-continue{flex-shrink:0;}
 
-/* Next stays plainly grey until the current question has an answer. */
-.wiz-next:disabled{background:#d6d0c8;color:#8d867c;opacity:1;cursor:not-allowed;box-shadow:none;}
+/* Next only shows on a question that already has an answer; it keeps its
+   space so the price stays centered. */
+.wiz-next[hidden]{display:inline-flex;visibility:hidden;pointer-events:none;}
 
 /* "<- All Colors" / "<- Back" inside a question: a clear, tappable button
    instead of faint text. */
