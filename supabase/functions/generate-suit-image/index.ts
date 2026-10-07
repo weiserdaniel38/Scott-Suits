@@ -457,7 +457,7 @@ function fixedRules(spec: string): string {
   if (lapelHoles && !/^no lapel buttonhole/i.test(lapelHoles)) {
     rules.push(
       "- Lapel buttonholes: " + ((OPTION_LOOKS["Lapel Buttonhole"] || {})[lapelHoles] || lapelHoles) + ". " +
-        "Each lapel buttonhole is a short, slim keyhole-stitched slit about 2.5 cm long, placed near the OUTER edge of the lapel about 3 cm below the lapel's top edge, angled to run parallel to that top edge (not horizontal). " +
+        "Each lapel buttonhole is a short, slim buttonhole about 2.5 cm long: a narrow slit with tightly stitched thread edges (not an outlined box or rectangle), placed near the OUTER edge of the lapel about 3 cm below the lapel's top edge, angled to run parallel to that top edge (not horizontal). " +
         (/two|three|four|4/i.test(lapelHoles)
           ? "Multiple buttonholes on one lapel are stacked tightly in a neat column directly below one another, only about 1 cm apart (centre to centre), all the same length and perfectly parallel, the column following the outer edge of the lapel; never spread out down the lapel. "
           : "") +
@@ -680,11 +680,16 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const { text: spec, swatches: allSwatches } = parseSpec(raw);
   // An unlined jacket shows no lining, so don't show the model a lining swatch.
   const unlined = /^Facing Style: No Lining/m.test(spec);
-  const swatches = allSwatches.filter((r) => !(unlined && r.label.startsWith("lining")));
+  let swatches = allSwatches.filter((r) => !(unlined && r.label.startsWith("lining")));
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
   const isDrawing = (r: Ref) => r.label.startsWith("style ");
+  // The opening-cuff catalog drawings fold a corner of the cuff back to show
+  // it opens, and the image model copies that (cuff drawn open with lining
+  // showing). The cuff-button drawing and the text cover the cuff instead.
+  const openCuff = /^Sleeve Cuff Styles: .*(opening|working)/im.test(spec);
+  swatches = swatches.filter((r) => !(openCuff && r.label === "style Sleeve Cuff Styles"));
   const refs = swatches.filter((r) => !isDrawing(r)).slice(0, 5).concat(swatches.filter(isDrawing).slice(0, 8));
   const loaded = (await Promise.all(refs.map(loadRef))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
