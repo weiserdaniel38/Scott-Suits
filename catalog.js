@@ -157,13 +157,18 @@ const JACKET_CATALOG = {
     // won't know this tailoring term on sight the way they might "collar"
     // or "pocket".
     description: "The facing is the inside lining along the jacket's front edge, behind the lapel and buttons -- its shape and coverage affect the jacket's structure and weight.",
+    // Options taken off the designer. A draft saved while one of these was
+    // picked has it cleared on reload (see reconcileSelections in main.js)
+    // so the customer is asked again instead of ordering a retired style.
+    retiredOptions: [
+      "Small Round Facing",
+      "Arrow Shape Facing W/ Normal Inside Pocket + Cigarette Pocket",
+      "No Lining Light Construction W/ Piping Seam",
+    ],
     options: [
       { name: "Round Shape Facing", img: "./assets/jacket-facing-round.jpg", badge: "Standard" },
-      { name: "Small Round Facing", img: "./assets/jacket-facing-smallround.jpg" },
-      { name: "Arrow Shape Facing W/ Normal Inside Pocket + Cigarette Pocket", img: "./assets/jacket-facing-arrowwnipcp.jpg" },
       { name: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-halflwfabric.jpg" },
       { name: "No Lining Construction", img: "./assets/jacket-facing-nolining.jpg" },
-      { name: "No Lining Light Construction W/ Piping Seam", img: "./assets/jacket-facing-nolininglightwps.jpg" },
     ],
   },
   insidepocket: {
