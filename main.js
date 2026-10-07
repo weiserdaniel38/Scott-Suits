@@ -4164,7 +4164,7 @@ let suitImagesReadyPromise = null;
 // Pause switch: true = "Generate My Suit" shows the loading screen but never
 // asks the server to draw (no pictures, no image costs). Set back to false
 // to turn picture drawing on again.
-const SUIT_IMAGES_PAUSED = false;
+const SUIT_IMAGES_PAUSED = true;
 const SUIT_IMAGE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/generate-suit-image" : "";
 
 function callSuitImageFn(payload) {
