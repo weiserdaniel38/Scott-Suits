@@ -1478,14 +1478,45 @@ function orderProgressPct(stage) {
   const done = stage === "pers" ? designTotal + 1 : stage === "meas" ? designTotal : j.done + p.done;
   return Math.max(0, Math.min(99, Math.floor((done / total) * 100)));
 }
+// Which designers are finished -- drives the celebration line once every
+// design question is answered.
+function designProgressState() {
+  const jacketOnly = currentSuitType === "jacketOnly";
+  const j = wizProgressCounts.jacket || { done: 0, total: 0 };
+  const p = wizProgressCounts.pants || { done: 0, total: 0 };
+  const jacketDone = j.total > 0 && j.done >= j.total;
+  const pantsComplete = p.total > 0 && p.done >= p.total;
+  return { jacketOnly, jacketDone, pantsDone: p.done, allDone: jacketDone && (jacketOnly || pantsComplete) };
+}
 function orderProgressCheer(pct, stage) {
   if (stage === "pers") return "Last step. Your suit is nearly on its way!";
   if (stage === "meas") return "Way to go! Just your measurements left.";
+  // A new line every few answers (roughly every 7%), so it keeps changing
+  // as the customer works through the questions.
   if (pct <= 0) return "Let\u2019s get started!";
-  if (pct < 25) return "Great start, keep it going.";
-  if (pct < 50) return "Looking sharp. You\u2019re making great progress.";
-  if (pct < 75) return "Over halfway there!";
-  return "Way to go! Almost done.";
+  const d = designProgressState();
+  if (d.allDone) return d.jacketOnly
+    ? "\uD83C\uDF89 Your jacket is fully designed! It\u2019s going to look incredible."
+    : "\uD83C\uDF89 Your suit is fully designed! It\u2019s going to look incredible.";
+  if (d.jacketDone && !d.jacketOnly) {
+    if (d.pantsDone === 0) return "Jacket done! Now let\u2019s design the pants.";
+  }
+  const lines = [
+    "Great start!",
+    "Nice choice. Keep it going.",
+    "You\u2019ve got a good eye.",
+    "Looking sharp so far.",
+    "Making great progress.",
+    "This suit is coming together.",
+    "Almost halfway there!",
+    "Over halfway there!",
+    "Way to go! Keep those choices coming.",
+    "Looking great. The finish line\u2019s in sight.",
+    "Just a few more details.",
+    "Way to go! Almost done.",
+    "So close! A couple more and you\u2019re there.",
+  ];
+  return lines[Math.min(Math.floor((pct - 1) / 7), lines.length - 1)];
 }
 function refreshOrderProgress() {
   document.querySelectorAll(".wiz-pct[data-stage]").forEach((el) => {
@@ -1494,7 +1525,10 @@ function refreshOrderProgress() {
     el.textContent = pct + "%";
     const row = el.closest(".wiz-head");
     const cheer = row ? row.querySelector(".wiz-cheer") : null;
-    if (cheer) cheer.textContent = orderProgressCheer(pct, stage);
+    if (cheer) {
+      cheer.textContent = orderProgressCheer(pct, stage);
+      cheer.classList.toggle("celebrate", stage === "design" && designProgressState().allDone);
+    }
   });
 }
 
@@ -1934,7 +1968,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") +
         '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '"></button>'
       ).join("") +
-      '</div><span class="wiz-pct" data-stage="design"></span></div>' +
+      '</div><button type="button" class="wiz-pct" data-stage="design" title="Go to what\u2019s left"></button></div>' +
       '<div class="wiz-cheer"></div>' +
       '<div class="wiz-meta"><span class="wiz-step">Step ' + (idx + 1) + " of " + list.length + "</span>" +
       (group ? '<span class="wiz-group">' + wizEsc(group) + "</span>" : "") +
@@ -2972,6 +3006,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // Jumps back to the first tab (Fabric) -- called every time this
     // designer's page is navigated to, so it never opens on whatever tab
     // happened to be open last.
+    // First question still unanswered (in step order), or null when done.
+    firstMissingKey: () => keys.filter(isApplicable).find((k) => !order[k] || textMissing(k)) || null,
+    // Same move as tapping a progress segment (scrolls up, then swaps).
+    showTab: (k) => { if (keys.indexOf(k) !== -1 && k !== activeTab) switchTab(k); },
     resetToFirstTab: () => {
       closeReview();
       activeTab = keys[0];
@@ -5337,6 +5375,47 @@ function goToStepById(stepId) {
 }
 document.querySelectorAll(".process-step[data-step]").forEach((el) => {
   el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
+});
+
+// Tapping the completion percentage next to a progress bar jumps to the
+// earliest thing still left to do: the first unanswered jacket question,
+// then pants, then the next page / measurements, then the first empty
+// field on the current page.
+function goToFirstIncomplete() {
+  const active = ALL_STEPS.find((el) => el.classList.contains("active"));
+  if (!active) return;
+  const designers = [[jacketSection, jacketDesigner]];
+  if (currentSuitType !== "jacketOnly") designers.push([pantsSection, pantsDesigner]);
+  for (const [sec, des] of designers) {
+    const key = des.firstMissingKey();
+    if (!key) continue;
+    if (sec === active) { des.showTab(key); return; }
+    des.setActiveTab(key);
+    goToStep(active, sec);
+    return;
+  }
+  const focusFirstEmpty = (inputs) => {
+    const el = inputs.find((i) => i && !String(i.value || "").trim());
+    if (!el) return;
+    smoothScrollWindowTo(window.scrollY + el.getBoundingClientRect().top - getNavClearance() - 120, () => el.focus({ preventScroll: true }));
+  };
+  const measureInputs = () => activeMeasurements().map((m) => document.getElementById("m_" + m.id));
+  if (active === jacketSection || active === pantsSection) {
+    // Every design question is answered: on to the page after designing
+    // (Preview the first time through), or straight to Measurements once
+    // they've been there before.
+    const next = furthestStepIndex >= ALL_STEPS.indexOf(measurementsSection) ? measurementsSection : stepAfterDesign();
+    goToStep(active, next);
+    return;
+  }
+  if (active === measurementsSection) { focusFirstEmpty(measureInputs()); return; }
+  if (active === personalInfoSection) {
+    if (collectMeasurements().missing.length) { goToStep(active, measurementsSection); return; }
+    focusFirstEmpty([customerNameInput, shippingAddress1Input, shippingCityInput, shippingStateInput, shippingZipInput]);
+  }
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest && e.target.closest(".wiz-pct")) goToFirstIncomplete();
 });
 
 // Turns on the Preview page (and its step in the bar) once the suit-picture
