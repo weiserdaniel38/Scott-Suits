@@ -5072,6 +5072,11 @@ function hideOrderDoneNotice() {
 const orderDoneClose = document.getElementById("orderDoneClose");
 if (orderDoneClose) orderDoneClose.addEventListener("click", hideOrderDoneNotice);
 
+// Pre-launch "orders open next week" notice on the home page -- driven by
+// ORDERS_OPENING_SOON in config.js.
+const openingSoonNotice = document.getElementById("openingSoonNotice");
+if (openingSoonNotice) openingSoonNotice.hidden = !(typeof ORDERS_OPENING_SOON !== "undefined" && ORDERS_OPENING_SOON);
+
 const logoHomeLink = document.getElementById("logoHomeLink");
 if (logoHomeLink) {
   logoHomeLink.addEventListener("click", goHome);

@@ -51,3 +51,8 @@ const GEOAPIFY_API_KEY = "54de71427a894bd9b19dba08c690512d";
 // redirect PayPal sends back. That's a normal tradeoff for a small shop just
 // getting started, but it's not fraud-proof.
 const PAYPAL_BUSINESS_EMAIL = "";
+// Pre-launch notice on the home page: "We can't accept orders just yet, but
+// we will next week -- come explore and design your suit." Shoppers can
+// still design and submit as normal; this is only a message. Set this to
+// false once orders are open to remove the notice.
+const ORDERS_OPENING_SOON = true;

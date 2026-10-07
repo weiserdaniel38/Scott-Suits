@@ -27,7 +27,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261007bold1">
+<link rel="stylesheet" href="./style.css?v=20261007soon">
 </head>
 <body>
 
@@ -130,6 +130,12 @@
         <!-- "Your finished suit": filled in by renderSuitPreview() in main.js,
              only once the generate-suit-image function answers that it's set up. -->
         <div class="suit-preview" id="suitPreview" hidden></div>
+      </div>
+      <!-- Pre-launch notice: shown while ORDERS_OPENING_SOON is true in
+           config.js (see main.js). Turn that flag off once orders open. -->
+      <div class="opening-soon-notice" id="openingSoonNotice" role="note" hidden>
+        <span class="opening-soon-label">Orders open next week</span>
+        <p>We aren't accepting orders just yet, but we will be very soon. In the meantime, come explore the site and start designing your suit.</p>
       </div>
       <div class="hero-eyebrow">Custom Tailoring, Considered</div>
       <h1>Custom-made, <em>without leaving home.</em></h1>
@@ -699,10 +705,10 @@
 <!-- ==================== END TEMP QA NAV BAR ==================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="./config.js?v=20261006c"></script>
+<script src="./config.js?v=20261007soon"></script>
 <script src="./catalog.js?v=20261007shawlbh1"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261007shawlbh1"></script>
+<script src="./main.js?v=20261007soon"></script>
 
 </body>
 </html>
