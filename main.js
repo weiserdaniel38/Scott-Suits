@@ -2565,7 +2565,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
             ? '<img class="opt-swatch family-swatch" src="' + fam.representativeImg + '" alt="' + fam.name + '">'
             : '<div class="opt-swatch family-swatch" style="background:' + fam.swatchHex + ';"></div>') +
           '<div class="opt-name">' + fam.name + "</div>" +
-          '<div class="family-count">' + fam.options.length + " shade" + (fam.options.length === 1 ? "" : "s") + "</div>";
+          '<div class="family-count">' + fam.options.length + " " + (cat.familyCountNoun || "shade") + (fam.options.length === 1 ? "" : "s") + "</div>";
         card.onclick = () => {
           scrollToTopThenSwap(() => {
             familyBrowse[activeTab] = fam.name;
@@ -2584,7 +2584,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const fam = cat.colorFamilies.find((f) => f.name === browsedFamily);
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      '<button type="button" class="back-to-families-btn">&larr; All Colors</button>' +
+      '<button type="button" class="back-to-families-btn">&larr; ' + (cat.familyBackLabel || "All Colors") + "</button>" +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
       '<div class="opt-grid" id="' + gridId + '"></div>';
     // Back from a color's shades goes all the way to the step's first page,
@@ -2597,7 +2597,20 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       });
     };
     const grid = document.getElementById(gridId);
-    fam.options.forEach((opt) => renderSwatchCard(cat, opt, grid));
+    let lastSection = null;
+    fam.options.forEach((opt) => {
+      // Optional color headings within a family (Button Color's types run
+      // Black, Navy, Gray... -- see BUTTON_TYPES in catalog.js).
+      const sec = fam.colorSections && fam.colorSections[opt.name];
+      if (sec && sec.name !== lastSection) {
+        const h = document.createElement("div");
+        h.className = "opt-section-divider color-section-divider";
+        h.innerHTML = '<span class="color-section-dot" style="background:' + sec.hex + ';"></span>' + sec.name;
+        grid.appendChild(h);
+        lastSection = sec.name;
+      }
+      renderSwatchCard(cat, opt, grid);
+    });
   }
 
   // Fabric-only three-level picker: pattern type (Solid / Pinstripe /
@@ -3698,7 +3711,7 @@ function visualSpecOptionDetail(cat, rawValue) {
   }
   const parts = [];
   if (pattern) parts.push(pattern + " pattern");
-  if (family) parts.push(family + " color family");
+  if (family) parts.push(family + " " + (cat.familySpecLabel || "color family"));
   if (opt && opt.hex) parts.push("approx. color " + opt.hex);
   return { opt, text: shown + (parts.length ? " (" + parts.join(", ") + ")" : ""), matchesFabric: false };
 }

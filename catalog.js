@@ -1114,71 +1114,29 @@ const MONOGRAM_THREAD_COLOR_FAMILIES = [
 
 const BUTTON_COLOR_FAMILIES = [
   {
-    name: "Gray",
-    swatchHex: "#575156",
-    options: [
-      { name: "KNJ070", displayName: "Marbled Charcoal Gray", img: "./assets/jacket-buttoncolor-knj070.jpg", hex: "#4c4647" },
-      { name: "KB285", displayName: "Glossy Dove Gray", img: "./assets/jacket-buttoncolor-kb285.jpg", hex: "#474c4c" },
-      { name: "KB289", displayName: "Refined Steel Gray", img: "./assets/jacket-buttoncolor-kb289.jpg", hex: "#9c99a5" },
-      { name: "KB277", displayName: "Glossy Steel Gray", img: "./assets/jacket-buttoncolor-kb277.jpg", hex: "#453735" },
-      { name: "KB288", displayName: "Marbled Slate Gray", img: "./assets/jacket-buttoncolor-kb288.jpg", hex: "#382627" },
-      { name: "KG239", displayName: "Rich Dove Gray", img: "./assets/jacket-buttoncolor-kg239.jpg", hex: "#473d44" },
-      { name: "KG221", displayName: "Classic Steel Gray", img: "./assets/jacket-buttoncolor-kg221.jpg", hex: "#312b2c" },
-      { name: "KSZ429", displayName: "Refined Slate Gray", img: "./assets/jacket-buttoncolor-ksz429.jpg", hex: "#453b38" },
-      { name: "KSZ455", displayName: "Marbled Dove Gray", img: "./assets/jacket-buttoncolor-ksz455.jpg", hex: "#95929a" },
-      { name: "KSZ430", displayName: "Rich Steel Gray", img: "./assets/jacket-buttoncolor-ksz430.jpg", hex: "#3c3131" },
-      { name: "KSZ432", displayName: "Smoky Smoke Gray", img: "./assets/jacket-buttoncolor-ksz432.jpg", hex: "#39302f" },
-      { name: "KSZ426", displayName: "Classic Slate Gray", img: "./assets/jacket-buttoncolor-ksz426.jpg", hex: "#4f3f3d" },
-      { name: "KSZ436", displayName: "Marbled Smoke Gray", img: "./assets/jacket-buttoncolor-ksz436.jpg", hex: "#413131" },
-      { name: "KSZ424", displayName: "Refined Dove Gray", img: "./assets/jacket-buttoncolor-ksz424.jpg", hex: "#372d2c" },
-      { name: "KSZ425", displayName: "Classic Dove Gray", img: "./assets/jacket-buttoncolor-ksz425.jpg", hex: "#35323f" },
-      { name: "KSZ440", displayName: "Marbled Steel Gray", img: "./assets/jacket-buttoncolor-ksz440.jpg", hex: "#5f4f52" },
-      { name: "KSZ448", displayName: "Polished Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz448.jpg", hex: "#535157" },
-      { name: "KNJ052", displayName: "Refined Smoke Gray", img: "./assets/jacket-buttoncolor-knj052.jpg", hex: "#4e4c50" },
-      { name: "KNJ031", displayName: "Glossy Charcoal Gray", img: "./assets/jacket-buttoncolor-knj031.jpg", hex: "#352d30" },
-      { name: "KNJ033", displayName: "Polished Slate Gray", img: "./assets/jacket-buttoncolor-knj033.jpg", hex: "#3d3136" },
-      { name: "KNJ013", displayName: "Polished Smoke Gray", img: "./assets/jacket-buttoncolor-knj013.jpg", hex: "#454144" },
-      { name: "KB111", displayName: "Antique Dove Gray", img: "./assets/jacket-buttoncolor-kb111.jpg", hex: "#4e515c" },
-      { name: "KB1112", displayName: "Smoky Dove Gray", img: "./assets/jacket-buttoncolor-kb1112.jpg", hex: "#75747a" },
-      { name: "KB151", displayName: "Antique Slate Gray", img: "./assets/jacket-buttoncolor-kb151.jpg", hex: "#7b7988" },
-      { name: "KB026", displayName: "Rich Slate Gray", img: "./assets/jacket-buttoncolor-kb026.jpg", hex: "#545452" },
-      { name: "KB027", displayName: "Smoky Slate Gray", img: "./assets/jacket-buttoncolor-kb027.jpg", hex: "#9d9ea8" },
-      { name: "KB011", displayName: "Classic Smoke Gray", img: "./assets/jacket-buttoncolor-kb011.jpg", hex: "#565555" },
-      { name: "KB021", displayName: "Glossy Slate Gray", img: "./assets/jacket-buttoncolor-kb021.jpg", hex: "#525568" },
-      { name: "KB029", displayName: "Classic Charcoal Gray", img: "./assets/jacket-buttoncolor-kb029.jpg", hex: "#918f9c" },
-      { name: "KB030", displayName: "Glossy Smoke Gray", img: "./assets/jacket-buttoncolor-kb030.jpg", hex: "#94939f" },
-      { name: "KG109", displayName: "Smoky Steel Gray", img: "./assets/jacket-buttoncolor-kg109.jpg", hex: "#464859" },
-      { name: "KG206", displayName: "Antique Steel Gray", img: "./assets/jacket-buttoncolor-kg206.jpg", hex: "#52393c" },
-      { name: "KSZ257", displayName: "Refined Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz257.jpg", hex: "#5f5d62" },
-      { name: "KSZ260", displayName: "Polished Steel Gray", img: "./assets/jacket-buttoncolor-ksz260.jpg", hex: "#7f7c83" },
-      { name: "KSZ263", displayName: "Antique Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz263.jpg", hex: "#373739" },
-      { name: "KSZ298", displayName: "Rich Smoke Gray", img: "./assets/jacket-buttoncolor-ksz298.jpg", hex: "#7a787e" },
-      { name: "KSZ299", displayName: "Smoky Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz299.jpg", hex: "#3f3e43" },
-    ],
-  },
-  {
     name: "Black",
     swatchHex: "#241f21",
     options: [
+      { name: "KG221", displayName: "Matte Coal", img: "./assets/jacket-buttoncolor-kg221.jpg", hex: "#312b2c" },
+      { name: "KSZ424", displayName: "Feathered Onyx", img: "./assets/jacket-buttoncolor-ksz424.jpg", hex: "#372d2c" },
+      { name: "KNJ033", displayName: "Horn Ebony", img: "./assets/jacket-buttoncolor-knj033.jpg", hex: "#3d3136" },
+      { name: "KNJ013", displayName: "Satin Jet", img: "./assets/jacket-buttoncolor-knj013.jpg", hex: "#454144" },
+      { name: "KSZ260", displayName: "Dark Horn Onyx", img: "./assets/jacket-buttoncolor-ksz260.jpg", hex: "#7f7c83" },
+      { name: "KSZ263", displayName: "Misted Jet", img: "./assets/jacket-buttoncolor-ksz263.jpg", hex: "#373739" },
       { name: "KNJ075", displayName: "Polished Jet", img: "./assets/jacket-buttoncolor-knj075.jpg", hex: "#1a191b" },
       { name: "KNJ076", displayName: "Smoky Raven", img: "./assets/jacket-buttoncolor-knj076.jpg", hex: "#19191a" },
       { name: "KNJ077", displayName: "Glossy Ebony", img: "./assets/jacket-buttoncolor-knj077.jpg", hex: "#171716" },
-      { name: "KNJ069", displayName: "Classic Raven", img: "./assets/jacket-buttoncolor-knj069.jpg", hex: "#2c2828" },
       { name: "KNJ078", displayName: "Classic Jet", img: "./assets/jacket-buttoncolor-knj078.jpg", hex: "#242325" },
       { name: "KNJ068", displayName: "Refined Ebony", img: "./assets/jacket-buttoncolor-knj068.jpg", hex: "#302828" },
-      { name: "KNJ079", displayName: "Polished Ebony", img: "./assets/jacket-buttoncolor-knj079.jpg", hex: "#2c2424" },
-      { name: "KNJ074", displayName: "Smoky Ebony", img: "./assets/jacket-buttoncolor-knj074.jpg", hex: "#252123" },
       { name: "KNJ072", displayName: "Marbled Jet", img: "./assets/jacket-buttoncolor-knj072.jpg", hex: "#141315" },
       { name: "KNJ080", displayName: "Polished Raven", img: "./assets/jacket-buttoncolor-knj080.jpg", hex: "#272020" },
       { name: "KNJ084", displayName: "Marbled Raven", img: "./assets/jacket-buttoncolor-knj084.jpg", hex: "#1e1c1d" },
       { name: "KG224", displayName: "Rich Coal", img: "./assets/jacket-buttoncolor-kg224.jpg", hex: "#242125" },
-      { name: "KG240", displayName: "Marbled Ebony", img: "./assets/jacket-buttoncolor-kg240.jpg", hex: "#331815" },
       { name: "KG238", displayName: "Classic Onyx", img: "./assets/jacket-buttoncolor-kg238.jpg", hex: "#130f10" },
       { name: "KG244", displayName: "Refined Coal", img: "./assets/jacket-buttoncolor-kg244.jpg", hex: "#181515" },
       { name: "KG226", displayName: "Antique Ebony", img: "./assets/jacket-buttoncolor-kg226.jpg", hex: "#1b1919" },
       { name: "KSZ428", displayName: "Rich Jet", img: "./assets/jacket-buttoncolor-ksz428.jpg", hex: "#292528" },
       { name: "KSZ431", displayName: "Marbled Onyx", img: "./assets/jacket-buttoncolor-ksz431.jpg", hex: "#2c282b" },
-      { name: "KSZ421", displayName: "Smoky Onyx", img: "./assets/jacket-buttoncolor-ksz421.jpg", hex: "#2f201d" },
       { name: "KSZ423", displayName: "Rich Raven", img: "./assets/jacket-buttoncolor-ksz423.jpg", hex: "#2f2a2f" },
       { name: "KSZ433", displayName: "Glossy Jet", img: "./assets/jacket-buttoncolor-ksz433.jpg", hex: "#2e2726" },
       { name: "KNJ030", displayName: "Glossy Onyx", img: "./assets/jacket-buttoncolor-knj030.jpg", hex: "#212022" },
@@ -1188,118 +1146,53 @@ const BUTTON_COLOR_FAMILIES = [
       { name: "KNJ011", displayName: "Smoky Coal", img: "./assets/jacket-buttoncolor-knj011.jpg", hex: "#2b2a2e" },
       { name: "KG197", displayName: "Classic Coal", img: "./assets/jacket-buttoncolor-kg197.jpg", hex: "#1a181d" },
       { name: "KG199", displayName: "Antique Coal", img: "./assets/jacket-buttoncolor-kg199.jpg", hex: "#2d2724" },
-      { name: "KG191", displayName: "Refined Raven", img: "./assets/jacket-buttoncolor-kg191.jpg", hex: "#232229" },
       { name: "KSZ199", displayName: "Refined Jet", img: "./assets/jacket-buttoncolor-ksz199.jpg", hex: "#242121" },
-    ],
-  },
-  {
-    name: "Tan",
-    swatchHex: "#bba79a",
-    options: [
-      { name: "KB272", displayName: "Marbled Wheat Tan", img: "./assets/jacket-buttoncolor-kb272.jpg", hex: "#6b635a" },
-      { name: "KB275", displayName: "Marbled Camel Tan", img: "./assets/jacket-buttoncolor-kb275.jpg", hex: "#f8f0ec" },
-      { name: "KB273", displayName: "Classic Sand Tan", img: "./assets/jacket-buttoncolor-kb273.jpg", hex: "#978f91" },
-      { name: "KB274", displayName: "Antique Fawn Tan", img: "./assets/jacket-buttoncolor-kb274.jpg", hex: "#968e8d" },
-      { name: "KG220", displayName: "Classic Wheat Tan", img: "./assets/jacket-buttoncolor-kg220.jpg", hex: "#deb494" },
-      { name: "KG241", displayName: "Refined Sand Tan", img: "./assets/jacket-buttoncolor-kg241.jpg", hex: "#796b6a" },
-      { name: "KSZ435", displayName: "Refined Beige Tan", img: "./assets/jacket-buttoncolor-ksz435.jpg", hex: "#d7cecc" },
-      { name: "KSZ443", displayName: "Rich Wheat Tan", img: "./assets/jacket-buttoncolor-ksz443.jpg", hex: "#ddd2cf" },
-      { name: "KSZ438", displayName: "Marbled Beige Tan", img: "./assets/jacket-buttoncolor-ksz438.jpg", hex: "#a9907f" },
-      { name: "KSZ422", displayName: "Marbled Fawn Tan", img: "./assets/jacket-buttoncolor-ksz422.jpg", hex: "#dabea2" },
-      { name: "KNG010", displayName: "Glossy Wheat Tan", img: "./assets/jacket-buttoncolor-kng010.jpg", hex: "#fdf7f5" },
-      { name: "KNJ039", displayName: "Smoky Beige Tan", img: "./assets/jacket-buttoncolor-knj039.jpg", hex: "#897c74" },
-      { name: "KB116", displayName: "Polished Beige Tan", img: "./assets/jacket-buttoncolor-kb116.jpg", hex: "#b2a297" },
-      { name: "KB010", displayName: "Glossy Sand Tan", img: "./assets/jacket-buttoncolor-kb010.jpg", hex: "#d7d1c5" },
-      { name: "KB002", displayName: "Classic Beige Tan", img: "./assets/jacket-buttoncolor-kb002.jpg", hex: "#faf1e7" },
-      { name: "KB001", displayName: "Classic Camel Tan", img: "./assets/jacket-buttoncolor-kb001.jpg", hex: "#615a5c" },
-      { name: "KB023", displayName: "Glossy Fawn Tan", img: "./assets/jacket-buttoncolor-kb023.jpg", hex: "#6b6866" },
-      { name: "KG190", displayName: "Smoky Fawn Tan", img: "./assets/jacket-buttoncolor-kg190.jpg", hex: "#b29883" },
-      { name: "KG108", displayName: "Refined Wheat Tan", img: "./assets/jacket-buttoncolor-kg108.jpg", hex: "#c78966" },
-      { name: "KSZ255", displayName: "Antique Camel Tan", img: "./assets/jacket-buttoncolor-ksz255.jpg", hex: "#cba486" },
-      { name: "KSZ259", displayName: "Polished Wheat Tan", img: "./assets/jacket-buttoncolor-ksz259.jpg", hex: "#b69569" },
-      { name: "KSZ297", displayName: "Smoky Camel Tan", img: "./assets/jacket-buttoncolor-ksz297.jpg", hex: "#e9d0c1" },
-      { name: "KSZ196", displayName: "Antique Sand Tan", img: "./assets/jacket-buttoncolor-ksz196.jpg", hex: "#fae4dd" },
-      { name: "KSZ198", displayName: "Rich Camel Tan", img: "./assets/jacket-buttoncolor-ksz198.jpg", hex: "#9d897d" },
-      { name: "KSZ261", displayName: "Polished Fawn Tan", img: "./assets/jacket-buttoncolor-ksz261.jpg", hex: "#efdcc4" },
-      { name: "KSZ277", displayName: "Rich Sand Tan", img: "./assets/jacket-buttoncolor-ksz277.jpg", hex: "#bc967f" },
-      { name: "KSZ276", displayName: "Glossy Camel Tan", img: "./assets/jacket-buttoncolor-ksz276.jpg", hex: "#a78b81" },
-    ],
-  },
-  {
-    name: "Brown",
-    swatchHex: "#764831",
-    options: [
-      { name: "KB287", displayName: "Glossy Chestnut", img: "./assets/jacket-buttoncolor-kb287.jpg", hex: "#a37148" },
-      { name: "KB278", displayName: "Polished Walnut", img: "./assets/jacket-buttoncolor-kb278.jpg", hex: "#663b28" },
-      { name: "KG214", displayName: "Refined Walnut", img: "./assets/jacket-buttoncolor-kg214.jpg", hex: "#b86642" },
-      { name: "KG245", displayName: "Rich Chestnut", img: "./assets/jacket-buttoncolor-kg245.jpg", hex: "#6a2e1a" },
-      { name: "KG237", displayName: "Classic Chestnut", img: "./assets/jacket-buttoncolor-kg237.jpg", hex: "#3b1f19" },
-      { name: "KG222", displayName: "Marbled Walnut", img: "./assets/jacket-buttoncolor-kg222.jpg", hex: "#432318" },
-      { name: "KG242", displayName: "Smoky Espresso", img: "./assets/jacket-buttoncolor-kg242.jpg", hex: "#ac7856" },
-      { name: "KSZ434", displayName: "Marbled Umber", img: "./assets/jacket-buttoncolor-ksz434.jpg", hex: "#8c4727" },
-      { name: "KSZ427", displayName: "Smoky Umber", img: "./assets/jacket-buttoncolor-ksz427.jpg", hex: "#61341f" },
-      { name: "KSZ442", displayName: "Refined Cocoa", img: "./assets/jacket-buttoncolor-ksz442.jpg", hex: "#4e3531" },
-      { name: "KB008", displayName: "Antique Espresso", img: "./assets/jacket-buttoncolor-kb008.jpg", hex: "#693626" },
-      { name: "KG198", displayName: "Glossy Espresso", img: "./assets/jacket-buttoncolor-kg198.jpg", hex: "#4a3c30" },
-      { name: "KSZ258", displayName: "Classic Cocoa", img: "./assets/jacket-buttoncolor-ksz258.jpg", hex: "#704733" },
-      { name: "KSZ197", displayName: "Rich Cocoa", img: "./assets/jacket-buttoncolor-ksz197.jpg", hex: "#bb8b57" },
-    ],
-  },
-  {
-    name: "Cream",
-    swatchHex: "#c7bcbf",
-    options: [
-      { name: "KB279", displayName: "Refined Alabaster Cream", img: "./assets/jacket-buttoncolor-kb279.jpg", hex: "#d2caca" },
-      { name: "KB286", displayName: "Marbled Ivory Cream", img: "./assets/jacket-buttoncolor-kb286.jpg", hex: "#b7a3ab" },
-      { name: "KSZ454", displayName: "Glossy Pearl Cream", img: "./assets/jacket-buttoncolor-ksz454.jpg", hex: "#d0cac7" },
-      { name: "KB115", displayName: "Classic Vanilla Cream", img: "./assets/jacket-buttoncolor-kb115.jpg", hex: "#aba2a9" },
-      { name: "KSZ256", displayName: "Smoky Bone Cream", img: "./assets/jacket-buttoncolor-ksz256.jpg", hex: "#ded3d6" },
-    ],
-  },
-  {
-    name: "Tortoiseshell",
-    swatchHex: "#b16e4f",
-    options: [
-      { name: "KNJ071", displayName: "Refined Chestnut", img: "./assets/jacket-buttoncolor-knj071.jpg", hex: "#e1c094" },
-      { name: "KNJ053", displayName: "Glossy Amber", img: "./assets/jacket-buttoncolor-knj053.jpg", hex: "#a35f50" },
-      { name: "KNJ012", displayName: "Classic Honey", img: "./assets/jacket-buttoncolor-knj012.jpg", hex: "#8f361c" },
-      { name: "KNJ014", displayName: "Marbled Toffee", img: "./assets/jacket-buttoncolor-knj014.jpg", hex: "#b2633b" },
     ],
   },
   {
     name: "Navy",
     swatchHex: "#2c3445",
     options: [
-      { name: "KG223", displayName: "Refined Regal Navy", img: "./assets/jacket-buttoncolor-kg223.jpg", hex: "#333c4d" },
-      { name: "KG243", displayName: "Glossy Slate Navy", img: "./assets/jacket-buttoncolor-kg243.jpg", hex: "#2a444d" },
+      { name: "KSZ425", displayName: "Streaked Midnight Navy", img: "./assets/jacket-buttoncolor-ksz425.jpg", hex: "#35323f" },
+      { name: "KB021", displayName: "Textured Navy", img: "./assets/jacket-buttoncolor-kb021.jpg", hex: "#525568" },
+      { name: "KG206", displayName: "Rust-Flecked Navy", img: "./assets/jacket-buttoncolor-kg206.jpg", hex: "#52393c" },
+      { name: "KG191", displayName: "Deep Navy", img: "./assets/jacket-buttoncolor-kg191.jpg", hex: "#232229" },
       { name: "KSZ439", displayName: "Marbled Dusk Navy", img: "./assets/jacket-buttoncolor-ksz439.jpg", hex: "#2c2b40" },
       { name: "KSZ262", displayName: "Classic Midnight Navy", img: "./assets/jacket-buttoncolor-ksz262.jpg", hex: "#282739" },
     ],
   },
   {
-    name: "Burgundy",
-    swatchHex: "#4d2b2c",
+    name: "Gray",
+    swatchHex: "#575156",
     options: [
-      { name: "KG225", displayName: "Marbled Garnet Burgundy", img: "./assets/jacket-buttoncolor-kg225.jpg", hex: "#592923" },
-      { name: "KB152", displayName: "Glossy Merlot Burgundy", img: "./assets/jacket-buttoncolor-kb152.jpg", hex: "#4e3330" },
-      { name: "KB016", displayName: "Classic Wine Burgundy", img: "./assets/jacket-buttoncolor-kb016.jpg", hex: "#412532" },
-    ],
-  },
-  {
-    name: "Pink",
-    swatchHex: "#f1ddde",
-    options: [
-      { name: "KB028", displayName: "Marbled Rose Pink", img: "./assets/jacket-buttoncolor-kb028.jpg", hex: "#efd6d6" },
-      { name: "KB020", displayName: "Glossy Carnation Pink", img: "./assets/jacket-buttoncolor-kb020.jpg", hex: "#f7eff0" },
-      { name: "KG195", displayName: "Classic Blush Pink", img: "./assets/jacket-buttoncolor-kg195.jpg", hex: "#edd3d4" },
-    ],
-  },
-  {
-    name: "White",
-    swatchHex: "#eee8e8",
-    options: [
-      { name: "KB276", displayName: "Marbled Pearl White", img: "./assets/jacket-buttoncolor-kb276.jpg", hex: "#f0ebeb" },
-      { name: "KB022", displayName: "Classic Snow White", img: "./assets/jacket-buttoncolor-kb022.jpg", hex: "#ece4e6" },
+      { name: "KNJ070", displayName: "Marbled Charcoal Gray", img: "./assets/jacket-buttoncolor-knj070.jpg", hex: "#4c4647" },
+      { name: "KB285", displayName: "Glossy Dove Gray", img: "./assets/jacket-buttoncolor-kb285.jpg", hex: "#474c4c" },
+      { name: "KB289", displayName: "Refined Steel Gray", img: "./assets/jacket-buttoncolor-kb289.jpg", hex: "#9c99a5" },
+      { name: "KG239", displayName: "Rich Dove Gray", img: "./assets/jacket-buttoncolor-kg239.jpg", hex: "#473d44" },
+      { name: "KSZ455", displayName: "Marbled Dove Gray", img: "./assets/jacket-buttoncolor-ksz455.jpg", hex: "#95929a" },
+      { name: "KSZ448", displayName: "Polished Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz448.jpg", hex: "#535157" },
+      { name: "KNJ052", displayName: "Refined Smoke Gray", img: "./assets/jacket-buttoncolor-knj052.jpg", hex: "#4e4c50" },
+      { name: "KB111", displayName: "Antique Dove Gray", img: "./assets/jacket-buttoncolor-kb111.jpg", hex: "#4e515c" },
+      { name: "KB1112", displayName: "Smoky Dove Gray", img: "./assets/jacket-buttoncolor-kb1112.jpg", hex: "#75747a" },
+      { name: "KB151", displayName: "Antique Slate Gray", img: "./assets/jacket-buttoncolor-kb151.jpg", hex: "#7b7988" },
+      { name: "KB026", displayName: "Rich Slate Gray", img: "./assets/jacket-buttoncolor-kb026.jpg", hex: "#545452" },
+      { name: "KB027", displayName: "Smoky Slate Gray", img: "./assets/jacket-buttoncolor-kb027.jpg", hex: "#9d9ea8" },
+      { name: "KB011", displayName: "Classic Smoke Gray", img: "./assets/jacket-buttoncolor-kb011.jpg", hex: "#565555" },
+      { name: "KB029", displayName: "Classic Charcoal Gray", img: "./assets/jacket-buttoncolor-kb029.jpg", hex: "#918f9c" },
+      { name: "KB030", displayName: "Glossy Smoke Gray", img: "./assets/jacket-buttoncolor-kb030.jpg", hex: "#94939f" },
+      { name: "KG109", displayName: "Anchor Slate Gray", img: "./assets/jacket-buttoncolor-kg109.jpg", hex: "#464859" },
+      { name: "KSZ257", displayName: "Refined Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz257.jpg", hex: "#5f5d62" },
+      { name: "KSZ298", displayName: "Rich Smoke Gray", img: "./assets/jacket-buttoncolor-ksz298.jpg", hex: "#7a787e" },
+      { name: "KSZ299", displayName: "Smoky Charcoal Gray", img: "./assets/jacket-buttoncolor-ksz299.jpg", hex: "#3f3e43" },
+      { name: "KB272", displayName: "Smoky Pearl Gray", img: "./assets/jacket-buttoncolor-kb272.jpg", hex: "#6b635a" },
+      { name: "KB273", displayName: "Black-Rim Pearl Gray", img: "./assets/jacket-buttoncolor-kb273.jpg", hex: "#978f91" },
+      { name: "KB274", displayName: "Silver Pearl Gray", img: "./assets/jacket-buttoncolor-kb274.jpg", hex: "#968e8d" },
+      { name: "KG241", displayName: "Soft Dove Gray", img: "./assets/jacket-buttoncolor-kg241.jpg", hex: "#796b6a" },
+      { name: "KSZ435", displayName: "Pale Silver Gray", img: "./assets/jacket-buttoncolor-ksz435.jpg", hex: "#d7cecc" },
+      { name: "KB001", displayName: "Smoky Shell Gray", img: "./assets/jacket-buttoncolor-kb001.jpg", hex: "#615a5c" },
+      { name: "KB023", displayName: "Scalloped Gray", img: "./assets/jacket-buttoncolor-kb023.jpg", hex: "#6b6866" },
+      { name: "KB279", displayName: "Silver Shell Gray", img: "./assets/jacket-buttoncolor-kb279.jpg", hex: "#d2caca" },
+      { name: "KB115", displayName: "Abalone Gray", img: "./assets/jacket-buttoncolor-kb115.jpg", hex: "#aba2a9" },
     ],
   },
   {
@@ -1311,18 +1204,67 @@ const BUTTON_COLOR_FAMILIES = [
     ],
   },
   {
-    name: "Multi-Color",
-    swatchHex: "#e5dcda",
-    options: [
-      { name: "KB150", displayName: "Marbled Mosaic Multi-Color", img: "./assets/jacket-buttoncolor-kb150.jpg", hex: "#f0e5dc" },
-      { name: "KG196", displayName: "Classic Confetti Multi-Color", img: "./assets/jacket-buttoncolor-kg196.jpg", hex: "#dad3d9" },
-    ],
-  },
-  {
     name: "Purple",
     swatchHex: "#dcd8e1",
     options: [
-      { name: "KB113", displayName: "Classic Plum Purple", img: "./assets/jacket-buttoncolor-kb113.jpg", hex: "#dcd8e1" },
+      { name: "KB286", displayName: "Pearl Mauve Purple", img: "./assets/jacket-buttoncolor-kb286.jpg", hex: "#b7a3ab" },
+      { name: "KB016", displayName: "Deep Plum Purple", img: "./assets/jacket-buttoncolor-kb016.jpg", hex: "#412532" },
+    ],
+  },
+  {
+    name: "Green",
+    swatchHex: "#3b5a4a",
+    options: [
+      { name: "KG198", displayName: "Olive Green", img: "./assets/jacket-buttoncolor-kg198.jpg", hex: "#4a3c30" },
+      { name: "KG243", displayName: "Deep Teal Green", img: "./assets/jacket-buttoncolor-kg243.jpg", hex: "#2a444d" },
+    ],
+  },
+  {
+    name: "Brown",
+    swatchHex: "#764831",
+    options: [
+      { name: "KB277", displayName: "Smoky Mocha Brown", img: "./assets/jacket-buttoncolor-kb277.jpg", hex: "#453735" },
+      { name: "KB288", displayName: "Dark Espresso Brown", img: "./assets/jacket-buttoncolor-kb288.jpg", hex: "#382627" },
+      { name: "KSZ429", displayName: "Streaked Horn Brown", img: "./assets/jacket-buttoncolor-ksz429.jpg", hex: "#453b38" },
+      { name: "KSZ430", displayName: "Deep Cocoa Brown", img: "./assets/jacket-buttoncolor-ksz430.jpg", hex: "#3c3131" },
+      { name: "KSZ432", displayName: "Smoky Bark Brown", img: "./assets/jacket-buttoncolor-ksz432.jpg", hex: "#39302f" },
+      { name: "KSZ426", displayName: "Mottled Chocolate Brown", img: "./assets/jacket-buttoncolor-ksz426.jpg", hex: "#4f3f3d" },
+      { name: "KSZ436", displayName: "Muted Taupe Brown", img: "./assets/jacket-buttoncolor-ksz436.jpg", hex: "#413131" },
+      { name: "KSZ440", displayName: "Matte Mocha Brown", img: "./assets/jacket-buttoncolor-ksz440.jpg", hex: "#5f4f52" },
+      { name: "KNJ069", displayName: "Dark Horn Brown", img: "./assets/jacket-buttoncolor-knj069.jpg", hex: "#2c2828" },
+      { name: "KNJ079", displayName: "Streaked Mahogany Brown", img: "./assets/jacket-buttoncolor-knj079.jpg", hex: "#2c2424" },
+      { name: "KG240", displayName: "Glossy Mahogany Brown", img: "./assets/jacket-buttoncolor-kg240.jpg", hex: "#331815" },
+      { name: "KSZ421", displayName: "Swirled Chocolate Brown", img: "./assets/jacket-buttoncolor-ksz421.jpg", hex: "#2f201d" },
+      { name: "KB287", displayName: "Glossy Chestnut", img: "./assets/jacket-buttoncolor-kb287.jpg", hex: "#a37148" },
+      { name: "KB278", displayName: "Polished Walnut", img: "./assets/jacket-buttoncolor-kb278.jpg", hex: "#663b28" },
+      { name: "KG214", displayName: "Refined Walnut", img: "./assets/jacket-buttoncolor-kg214.jpg", hex: "#b86642" },
+      { name: "KG245", displayName: "Rich Chestnut", img: "./assets/jacket-buttoncolor-kg245.jpg", hex: "#6a2e1a" },
+      { name: "KG237", displayName: "Classic Chestnut", img: "./assets/jacket-buttoncolor-kg237.jpg", hex: "#3b1f19" },
+      { name: "KG222", displayName: "Marbled Walnut", img: "./assets/jacket-buttoncolor-kg222.jpg", hex: "#432318" },
+      { name: "KSZ434", displayName: "Marbled Umber", img: "./assets/jacket-buttoncolor-ksz434.jpg", hex: "#8c4727" },
+      { name: "KSZ427", displayName: "Smoky Umber", img: "./assets/jacket-buttoncolor-ksz427.jpg", hex: "#61341f" },
+      { name: "KSZ442", displayName: "Refined Cocoa", img: "./assets/jacket-buttoncolor-ksz442.jpg", hex: "#4e3531" },
+      { name: "KB008", displayName: "Antique Espresso", img: "./assets/jacket-buttoncolor-kb008.jpg", hex: "#693626" },
+      { name: "KG225", displayName: "Burnt Sienna Brown", img: "./assets/jacket-buttoncolor-kg225.jpg", hex: "#592923" },
+      { name: "KB152", displayName: "Glossy Russet Brown", img: "./assets/jacket-buttoncolor-kb152.jpg", hex: "#4e3330" },
+    ],
+  },
+  {
+    name: "Tortoiseshell",
+    swatchHex: "#b16e4f",
+    options: [
+      { name: "KNJ031", displayName: "Black Tortoise", img: "./assets/jacket-buttoncolor-knj031.jpg", hex: "#352d30" },
+      { name: "KNJ074", displayName: "Mottled Tortoise", img: "./assets/jacket-buttoncolor-knj074.jpg", hex: "#252123" },
+      { name: "KNJ039", displayName: "Blonde Tortoise", img: "./assets/jacket-buttoncolor-knj039.jpg", hex: "#897c74" },
+      { name: "KSZ255", displayName: "Classic Tortoise", img: "./assets/jacket-buttoncolor-ksz255.jpg", hex: "#cba486" },
+      { name: "KSZ259", displayName: "Light Tortoise", img: "./assets/jacket-buttoncolor-ksz259.jpg", hex: "#b69569" },
+      { name: "KSZ198", displayName: "Smoky Horn Tortoise", img: "./assets/jacket-buttoncolor-ksz198.jpg", hex: "#9d897d" },
+      { name: "KSZ276", displayName: "Clear Tortoise", img: "./assets/jacket-buttoncolor-ksz276.jpg", hex: "#a78b81" },
+      { name: "KSZ258", displayName: "Rich Tortoise", img: "./assets/jacket-buttoncolor-ksz258.jpg", hex: "#704733" },
+      { name: "KSZ197", displayName: "Golden Horn", img: "./assets/jacket-buttoncolor-ksz197.jpg", hex: "#bb8b57" },
+      { name: "KNJ053", displayName: "Glossy Amber", img: "./assets/jacket-buttoncolor-knj053.jpg", hex: "#a35f50" },
+      { name: "KNJ012", displayName: "Classic Honey", img: "./assets/jacket-buttoncolor-knj012.jpg", hex: "#8f361c" },
+      { name: "KNJ014", displayName: "Marbled Toffee", img: "./assets/jacket-buttoncolor-knj014.jpg", hex: "#b2633b" },
     ],
   },
   {
@@ -1330,6 +1272,64 @@ const BUTTON_COLOR_FAMILIES = [
     swatchHex: "#841c21",
     options: [
       { name: "KG192", displayName: "Classic Scarlet Red", img: "./assets/jacket-buttoncolor-kg192.jpg", hex: "#841c21" },
+    ],
+  },
+  {
+    name: "Tan",
+    swatchHex: "#bba79a",
+    options: [
+      { name: "KG220", displayName: "Classic Wheat Tan", img: "./assets/jacket-buttoncolor-kg220.jpg", hex: "#deb494" },
+      { name: "KSZ438", displayName: "Marbled Beige Tan", img: "./assets/jacket-buttoncolor-ksz438.jpg", hex: "#a9907f" },
+      { name: "KSZ422", displayName: "Marbled Fawn Tan", img: "./assets/jacket-buttoncolor-ksz422.jpg", hex: "#dabea2" },
+      { name: "KG190", displayName: "Smoky Fawn Tan", img: "./assets/jacket-buttoncolor-kg190.jpg", hex: "#b29883" },
+      { name: "KG108", displayName: "Anchor Copper Tan", img: "./assets/jacket-buttoncolor-kg108.jpg", hex: "#c78966" },
+      { name: "KSZ297", displayName: "Smoky Camel Tan", img: "./assets/jacket-buttoncolor-ksz297.jpg", hex: "#e9d0c1" },
+      { name: "KSZ277", displayName: "Rich Sand Tan", img: "./assets/jacket-buttoncolor-ksz277.jpg", hex: "#bc967f" },
+      { name: "KG242", displayName: "Wavy Camel Tan", img: "./assets/jacket-buttoncolor-kg242.jpg", hex: "#ac7856" },
+    ],
+  },
+  {
+    name: "Cream",
+    swatchHex: "#c7bcbf",
+    options: [
+      { name: "KNG010", displayName: "Ivory Horn Cream", img: "./assets/jacket-buttoncolor-kng010.jpg", hex: "#fdf7f5" },
+      { name: "KB002", displayName: "Pearl Cream", img: "./assets/jacket-buttoncolor-kb002.jpg", hex: "#faf1e7" },
+      { name: "KSZ196", displayName: "Soft Bone Cream", img: "./assets/jacket-buttoncolor-ksz196.jpg", hex: "#fae4dd" },
+      { name: "KSZ261", displayName: "Polished Ivory Cream", img: "./assets/jacket-buttoncolor-ksz261.jpg", hex: "#efdcc4" },
+      { name: "KSZ256", displayName: "Smoky Bone Cream", img: "./assets/jacket-buttoncolor-ksz256.jpg", hex: "#ded3d6" },
+      { name: "KNJ071", displayName: "Natural Horn Cream", img: "./assets/jacket-buttoncolor-knj071.jpg", hex: "#e1c094" },
+      { name: "KB150", displayName: "Mother of Pearl Cream", img: "./assets/jacket-buttoncolor-kb150.jpg", hex: "#f0e5dc" },
+    ],
+  },
+  {
+    name: "Pink",
+    swatchHex: "#f1ddde",
+    options: [
+      { name: "KB028", displayName: "Marbled Rose Pink", img: "./assets/jacket-buttoncolor-kb028.jpg", hex: "#efd6d6" },
+    ],
+  },
+  {
+    name: "White",
+    swatchHex: "#eee8e8",
+    options: [
+      { name: "KB275", displayName: "Pure Pearl White", img: "./assets/jacket-buttoncolor-kb275.jpg", hex: "#f8f0ec" },
+      { name: "KSZ443", displayName: "Speckled Chalk White", img: "./assets/jacket-buttoncolor-ksz443.jpg", hex: "#ddd2cf" },
+      { name: "KB010", displayName: "Clear Pearl White", img: "./assets/jacket-buttoncolor-kb010.jpg", hex: "#d7d1c5" },
+      { name: "KSZ454", displayName: "Marbled Frost White", img: "./assets/jacket-buttoncolor-ksz454.jpg", hex: "#d0cac7" },
+      { name: "KB020", displayName: "Textured Pearl White", img: "./assets/jacket-buttoncolor-kb020.jpg", hex: "#f7eff0" },
+      { name: "KB276", displayName: "Marbled Pearl White", img: "./assets/jacket-buttoncolor-kb276.jpg", hex: "#f0ebeb" },
+      { name: "KB022", displayName: "Classic Snow White", img: "./assets/jacket-buttoncolor-kb022.jpg", hex: "#ece4e6" },
+      { name: "KB113", displayName: "Rippled Pearl White", img: "./assets/jacket-buttoncolor-kb113.jpg", hex: "#dcd8e1" },
+    ],
+  },
+  {
+    name: "Multi-Color",
+    swatchHex: "#e5dcda",
+    options: [
+      { name: "KB116", displayName: "Abalone Multi-Color", img: "./assets/jacket-buttoncolor-kb116.jpg", hex: "#b2a297" },
+      { name: "KG223", displayName: "Teal & Tan Multi-Color", img: "./assets/jacket-buttoncolor-kg223.jpg", hex: "#333c4d" },
+      { name: "KG195", displayName: "Cream & Red Multi-Color", img: "./assets/jacket-buttoncolor-kg195.jpg", hex: "#edd3d4" },
+      { name: "KG196", displayName: "Cream & Navy Multi-Color", img: "./assets/jacket-buttoncolor-kg196.jpg", hex: "#dad3d9" },
     ],
   }
 ];
@@ -2262,14 +2262,52 @@ JACKET_CATALOG.monogramThreadColor = {
   // "No Monogram Need" -- see the isApplicable() gating in createDesigner().
   requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
 };
-// Buttons are grouped into named color families the same way the thread
-// colors above are (see BUTTON_COLOR_FAMILIES) -- pick a color, then the
-// specific button within it. "Best Match to Fabric" lets the customer defer
-// the exact pick to the shop instead of choosing one themselves.
+// Buttons are browsed by material first (Horn / Shell / Corozo /
+// Polyester), then the specific button. The supplier code prefix says the
+// material (both button books print it on every label: KNJ/KNG = Real
+// Horn, KB = Shell, KG = Corozo, KSZ = Polyester, shown as "Classic").
+// Within a material the buttons are grouped under color headings, dark to
+// light, using BUTTON_COLOR_FAMILIES (which
+// still holds each button's color family and stays the source of truth for
+// names/images/hex). "Best Match to Fabric" lets the customer defer the
+// exact pick to the shop instead of choosing one themselves.
+const BUTTON_TYPE_ORDER = [
+  { name: "Horn", prefixes: ["KNJ", "KNG"], representativeImg: "./assets/jacket-buttoncolor-knj014.jpg" },
+  { name: "Shell", prefixes: ["KB"], representativeImg: "./assets/jacket-buttoncolor-kb113.jpg" },
+  { name: "Corozo", prefixes: ["KG"], representativeImg: "./assets/jacket-buttoncolor-kg198.jpg" },
+  // Polyester buttons are shown to customers as "Classic" (stored values
+  // are the button codes, so the label is display-only).
+  { name: "Classic", prefixes: ["KSZ"], representativeImg: "./assets/jacket-buttoncolor-ksz255.jpg" },
+];
+const BUTTON_COLOR_SORT = ["Black", "Navy", "Gray", "Blue", "Purple", "Green", "Brown", "Tortoiseshell", "Burgundy", "Red", "Tan", "Cream", "Pink", "White", "Multi-Color"];
+const BUTTON_TYPES = BUTTON_TYPE_ORDER.map((t) => {
+  const options = [];
+  // Color heading for each button, shown above each color's run in the
+  // type's grid (see colorSections in renderColorFamilyOptions, main.js).
+  const colorSections = {};
+  BUTTON_COLOR_SORT.concat(BUTTON_COLOR_FAMILIES.map((f) => f.name))
+    .filter((name, i, all) => all.indexOf(name) === i)
+    .forEach((famName) => {
+      const fam = BUTTON_COLOR_FAMILIES.find((f) => f.name === famName);
+      if (!fam) return;
+      fam.options.forEach((o) => {
+        const prefix = (o.name.match(/^[A-Z]+/) || [""])[0];
+        if (t.prefixes.indexOf(prefix) === -1) return;
+        options.push(o);
+        colorSections[o.name] = { name: fam.name, hex: fam.swatchHex };
+      });
+    });
+  return { name: t.name, representativeImg: t.representativeImg, options, colorSections };
+});
 JACKET_CATALOG.buttoncolor = {
   label: "Button Color",
   column: "button_color",
-  colorFamilies: BUTTON_COLOR_FAMILIES,
+  colorFamilies: BUTTON_TYPES,
+  // Wording for the family-picker UI, since these groups are materials
+  // rather than colors (see renderColorFamilyOptions in main.js).
+  familyCountNoun: "button",
+  familyBackLabel: "All Button Types",
+  familySpecLabel: "button",
   specialOptions: [BEST_MATCH_FABRIC_BUTTON_OPTION],
   options: [BEST_MATCH_FABRIC_BUTTON_OPTION].concat(flattenColorFamilies(BUTTON_COLOR_FAMILIES)),
 };
