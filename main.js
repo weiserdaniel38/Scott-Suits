@@ -1463,6 +1463,41 @@ let qaShowRawFabricNames = false;
 
 // Builds a tabs/options/summary designer bound to a catalog + a set of DOM ids.
 // Used for both the jacket step and the pants step so the logic isn't duplicated.
+// Overall "how far along is this order", shown as a small percentage next to
+// every step progress bar (jacket, pants, measurements, personal info) with a
+// short encouraging line under it. Each designer reports its answered / total
+// question counts here whenever it renders; measurements and personal info
+// count as one step each after the designer questions. Rounded down so it
+// never says 100% before the order is actually placed.
+const wizProgressCounts = {};
+function orderProgressPct(stage) {
+  const j = wizProgressCounts.jacket || { done: 0, total: 0 };
+  const p = currentSuitType === "jacketOnly" ? { done: 0, total: 0 } : (wizProgressCounts.pants || { done: 0, total: 0 });
+  const designTotal = j.total + p.total;
+  const total = designTotal + 2;
+  const done = stage === "pers" ? designTotal + 1 : stage === "meas" ? designTotal : j.done + p.done;
+  return Math.max(0, Math.min(99, Math.floor((done / total) * 100)));
+}
+function orderProgressCheer(pct, stage) {
+  if (stage === "pers") return "Last step. Your suit is nearly on its way!";
+  if (stage === "meas") return "Way to go! Just your measurements left.";
+  if (pct <= 0) return "Let\u2019s get started!";
+  if (pct < 25) return "Great start, keep it going.";
+  if (pct < 50) return "Looking sharp. You\u2019re making great progress.";
+  if (pct < 75) return "Over halfway there!";
+  return "Way to go! Almost done.";
+}
+function refreshOrderProgress() {
+  document.querySelectorAll(".wiz-pct[data-stage]").forEach((el) => {
+    const stage = el.getAttribute("data-stage");
+    const pct = orderProgressPct(stage);
+    el.textContent = pct + "%";
+    const row = el.closest(".wiz-head");
+    const cheer = row ? row.querySelector(".wiz-cheer") : null;
+    if (cheer) cheer.textContent = orderProgressCheer(pct, stage);
+  });
+}
+
 function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // sameAsResolvers (optional): { categoryKey: () => "currently selected value elsewhere" }.
   // For any category listed here, an extra "Same as ___" card is added so the
@@ -1889,13 +1924,18 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       if (bgKey) wizSection.setAttribute("data-bg", bgKey); else wizSection.removeAttribute("data-bg");
     }
     syncFabricBg();
+    wizProgressCounts[isPantsDesigner ? "pants" : "jacket"] = {
+      done: list.filter((k) => order[k]).length,
+      total: list.length,
+    };
     wizHead.innerHTML =
-      '<div class="wiz-progress">' +
+      '<div class="wiz-progress-row"><div class="wiz-progress">' +
       list.map((k, i) =>
         '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") +
         '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '"></button>'
       ).join("") +
-      "</div>" +
+      '</div><span class="wiz-pct" data-stage="design"></span></div>' +
+      '<div class="wiz-cheer"></div>' +
       '<div class="wiz-meta"><span class="wiz-step">Step ' + (idx + 1) + " of " + list.length + "</span>" +
       (group ? '<span class="wiz-group">' + wizEsc(group) + "</span>" : "") +
       '<button type="button" class="wiz-review-link">Review</button></div>';
@@ -1903,6 +1943,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       b.onclick = () => { const k = b.getAttribute("data-k"); if (k !== activeTab) switchTab(k); };
     });
     wizHead.querySelector(".wiz-review-link").onclick = openReview;
+    refreshOrderProgress();
 
     const showBack = !atFirst || isPantsDesigner;
     // Next only appears on a question that's already answered -- i.e. when
@@ -3191,6 +3232,7 @@ function renderPersonalChrome() {
     for (let i = 0; i < Math.max(n, 1) + 1; i++) html += '<span class="wiz-seg done"></span>';
     bar.innerHTML = html + '<span class="wiz-seg current"></span>';
   }
+  refreshOrderProgress();
   const priceEl = document.getElementById("persPrice");
   if (priceEl) priceEl.textContent = "$" + cartTotalUsd();
 }
@@ -3203,6 +3245,7 @@ function renderMeasureChrome() {
     for (let i = 0; i < Math.max(n, 1); i++) html += '<span class="wiz-seg done"></span>';
     bar.innerHTML = html + '<span class="wiz-seg current"></span>';
   }
+  refreshOrderProgress();
   const priceEl = document.getElementById("measPrice");
   const src = document.getElementById(currentSuitType === "jacketOnly" ? "totalPrice" : "pantsTotalPrice");
   if (priceEl && src) priceEl.textContent = src.textContent;
