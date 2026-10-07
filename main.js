@@ -1040,10 +1040,9 @@ function isZoomCategory(key) {
 //   available (there's no separate, higher-res source to crop from -- see
 //   fabric-zoom-full-quality-status.md's notes on the felt supplier photos'
 //   native resolution), so there's nothing to swap to; returns null.
-// - Lining: LINING_ZOOM_MAP (catalog.js) points a subset of codes -- the
-//   ones with a genuine high-resolution supplier photo -- at a dedicated
-//   1080x1080 crop. A code with no entry falls back to its existing (lower-
-//   resolution) image, same as Felt.
+// - Lining: LINING_ZOOM_MAP (catalog.js) points every lining at its own
+//   full-size square crop from the supplier catalog. A code with no entry
+//   falls back to its grid image, same as Felt.
 // Both paths are a plain <img src> swap, no canvas involved -- unlike
 // upgradeFabricZoom, this can't fail with the file:// canvas-tainting
 // SecurityError described above, since nothing here ever touches a canvas.
@@ -1707,6 +1706,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       const cat = catalog[k];
       if (cat.allowedBySelection && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
       if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
+      // The lining catalog was replaced outright (Oct 2026): a saved draft or
+      // cart pointing at a lining that no longer exists asks again.
+      if (k === "lining" && order[k] && !(cat.options || []).some((o) => o.name === order[k])) order[k] = null;
       // "Upload Your Own Photo" with no photo behind it (e.g. a restored draft
       // whose photo is gone) can't be ordered -- ask again.
       if (order[k] && selectedIsUpload(k) && !customPhotos[k]) order[k] = null;
