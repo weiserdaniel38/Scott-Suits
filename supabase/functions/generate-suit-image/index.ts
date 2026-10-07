@@ -120,16 +120,260 @@ async function loadRef(ref: Ref): Promise<{ label: string; blob: Blob } | null> 
 }
 
 // ---------------------------------------------------------------------------
+// Option descriptions
+// ---------------------------------------------------------------------------
+// What every style option LOOKS like, for the picture generator.
+//
+// Keyed by the step label and the option's customer-facing name, exactly as
+// buildVisualSpecText() (main.js) writes them ("Lapel Style: Peak Lapel").
+// drawSheet() appends the matching text to each line so the image model is
+// told what the option looks like instead of guessing from its name. Written
+// from the catalog line drawings in assets/. "Wearer's left" is on the RIGHT
+// of the picture in front views and on the LEFT in back views.
+//
+// When a catalog option is added or renamed, add or rename it here too.
+
+const HIDDEN_OPTION_LABELS = [
+  // Inside the garment, never visible in any panel.
+  "Construction",
+  "Felt Under Collar",
+  "Felt Color",
+  // The opening/closing hardware under a closed waistband.
+  "Hook And Eye Style",
+];
+
+const NO_MONOGRAM = "no monogram or embroidery anywhere on the garment";
+const MONO = "a small, subtle embroidered monogram in the monogram thread color (no readable letters)";
+
+const OPTION_LOOKS: Record<string, Record<string, string>> = {
+  // ------------------------------------------------------------- JACKET
+  "Lapel Style": {
+    "Notch Lapel": "classic notch lapel: the collar meets the lapel at a small V-shaped notch opening outward, and the lapel tip points sideways/slightly down",
+    "Peak Lapel": "peak lapel: the lapel's upper edge sweeps UP into a sharp point aimed at the shoulder, nearly touching the collar, with only a narrow gap between them",
+    "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
+    "Diamond Lapel": "diamond lapel: one continuous collar-and-lapel with NO notch; its outer edge runs straight out to a single angled corner about halfway down the lapel, then straight in to the button, giving a long diamond silhouette",
+  },
+  "Lapel Width": {
+    Standard: "standard lapel width, about 9 cm at its widest",
+    Thin: "slim lapels, about 8 cm at the widest, visibly narrower than standard",
+    Wide: "wide lapels, about 10 cm at the widest, reaching well toward the shoulder",
+    "Extra Wide": "extra-wide statement lapels, about 11 cm at the widest, reaching close to the sleeve seam",
+  },
+  "Lapel Buttonhole": {
+    Standard: "one buttonhole stitched on the wearer's LEFT lapel near its top",
+    Right: "one buttonhole stitched on the wearer's RIGHT lapel near its top; none on the left",
+    "Right & Left": "one buttonhole stitched on EACH lapel near its top",
+    "Left Two": "TWO short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Right Two": "TWO short parallel buttonholes stacked on the wearer's RIGHT lapel; none on the left",
+    "Left Three": "THREE short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Left Three, Right Two": "THREE parallel buttonholes on the wearer's LEFT lapel and TWO on the RIGHT lapel",
+    "4 Buttonholes On Left": "FOUR short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Lapel Buttonhole": "one buttonhole stitched on the wearer's LEFT lapel near its top",
+    "No Lapel Buttonhole": "NO buttonhole on either lapel; both lapels are plain",
+  },
+  "Front Button": {
+    "Single Breasted One Button": "single-breasted, ONE button at the waist; the lapels roll long, down to that button",
+    "Single Breasted Two Buttons": "single-breasted, TWO buttons in a vertical line; only the top one fastens at the waist",
+    "Single Breasted Three Buttons": "single-breasted, THREE buttons in a vertical line; the lapels roll to the top button",
+    "Double Breasted 6X2": "double-breasted: SIX buttons in two vertical columns of three; the top pair is spaced wider apart, and the jacket fastens on the middle row",
+    "Double Breasted 4X2": "double-breasted: FOUR buttons in a square of two rows of two; the jacket fastens on the top row",
+    "Double Breasted 6X3": "double-breasted: SIX buttons in two straight columns of three, evenly spaced; the lapels roll to the top row",
+    "Double Breasted 4X1": "double-breasted: FOUR buttons; a widely spaced top pair high on the chest and a lower pair at the waist, fastening with ONE button",
+    "Double Breasted One Button": "double-breasted overlap with only ONE button, fastening at the waist; no other front buttons",
+    "Double Breasted 2X1": "double-breasted: TWO buttons side by side at the waist, fastening with ONE of them",
+    "Double Breasted 6X1": "double-breasted: SIX buttons in two columns of three (top pair wider apart), fastening with ONE button on the bottom row",
+  },
+  "Top Sleeve Crown Type": {
+    "Regular Armhole": "smooth, clean sleeve head where the sleeve meets the shoulder",
+    "Naples Sleeve": "Neapolitan 'spalla camicia' sleeve head: small soft gathers/shirring puckers at the top of the sleeve where it meets the shoulder",
+    "Close Seam Sleeve": "smooth sleeve head with a fine line of topstitching along the armhole seam at the top of the sleeve",
+  },
+  "Chest Pocket": {
+    "Normal Pocket": "a straight welt breast pocket on the wearer's left chest, angled slightly upward toward the arm",
+    "Boat Shape Pocket": "a 'barchetta' boat-shaped breast welt pocket on the wearer's left chest: its lower edge curves gently like the hull of a boat",
+    "Single Besom Pocket": "a narrow single-besom breast pocket on the wearer's left chest: one thin piped lip, no welt",
+    "Double Besom Pocket": "a narrow double-besom breast pocket on the wearer's left chest: two thin piped lips, no welt",
+    "Patch Pocket No Flap": "a patch breast pocket sewn on top of the wearer's left chest with rounded bottom corners and no flap",
+    "No Pocket": "NO breast pocket at all; the left chest is plain",
+  },
+  "Lower Pockets": {
+    "Single Besom Pocket": "two straight, horizontal single-besom hip pockets (one thin piped lip each), no flaps",
+    "Double Besom Pocket": "two straight, horizontal double-besom hip pockets (two thin piped lips each), no flaps",
+    "Single Besom + Single Besom Ticket": "two horizontal single-besom hip pockets, plus a smaller single-besom ticket pocket just above the wearer's right hip pocket; no flaps",
+    "Double Besom + Double Besom Ticket": "two horizontal double-besom hip pockets, plus a smaller double-besom ticket pocket just above the wearer's right hip pocket; no flaps",
+    "Flat Welt Pocket": "two straight horizontal welt hip pockets: a flat rectangular welt strip sewn up over each opening, no flaps",
+    "Single Besom Slant Pocket": "two SLANTED single-besom hip pockets angled downward toward the front, no flaps",
+    "Double Besom Slant Pocket": "two SLANTED double-besom hip pockets angled downward toward the front, no flaps",
+    "Flap Pockets": "two straight horizontal hip pockets with rectangular flaps",
+    "Flap Pockets + Single Besom Ticket": "two straight horizontal flap hip pockets, plus a smaller single-besom ticket pocket (no flap) just above the wearer's right hip pocket",
+    "Flap Pockets + Double Besom Ticket": "two straight horizontal flap hip pockets, plus a smaller double-besom ticket pocket (no flap) just above the wearer's right hip pocket",
+    "Flap Pockets + Flap Ticket Pocket": "two straight horizontal flap hip pockets, plus a smaller flapped ticket pocket just above the wearer's right hip pocket",
+    "Slant Flap Pocket": "two SLANTED hip pockets with flaps, angled downward toward the front ('hacking' pockets)",
+    "Slant Flap + Single Besom Ticket": "two slanted flap hip pockets, plus a smaller slanted single-besom ticket pocket just above the wearer's right hip pocket",
+    "Slant Flap + Double Besom Ticket": "two slanted flap hip pockets, plus a smaller slanted double-besom ticket pocket just above the wearer's right hip pocket",
+    "Slant Flap + Flap Ticket Pocket": "two slanted flap hip pockets, plus a smaller slanted flapped ticket pocket just above the wearer's right hip pocket",
+    "Patch Pocket": "two square patch pockets sewn on top of the jacket at the hips, open at the top, no flaps",
+    "Patch Pocket + Single Besom Ticket": "two patch hip pockets, plus a single-besom ticket pocket just above the wearer's right patch pocket",
+    "Patch Pocket + Double Besom Ticket": "two patch hip pockets, plus a double-besom ticket pocket just above the wearer's right patch pocket",
+    "Curved Patch Pocket": "two patch hip pockets with generously ROUNDED bottom corners, open at the top, no flaps",
+    "High-Back Patch Pocket": "two patch hip pockets whose top edge slopes, higher at the back (side) than at the front",
+    "High-Back Patch + Single Besom Ticket": "two high-back patch hip pockets, plus a single-besom ticket pocket just above the wearer's right patch pocket",
+    "High-Back Patch + Double Besom Ticket": "two high-back patch hip pockets, plus a double-besom ticket pocket just above the wearer's right patch pocket",
+    "No Front Pocket": "NO hip pockets at all; the lower front of the jacket is plain",
+  },
+  "Button Nail Method": {
+    "X Shape Sewing": "four-hole buttons sewn on with the thread crossing in an X",
+    "Parallel Sewing": "four-hole buttons sewn on with two parallel thread bars (=)",
+    "Arrow Shape Sewing": "four-hole buttons sewn on with the thread forming an arrow/crow's-foot shape (three lines meeting at one hole)",
+  },
+  "Facing Style": {
+    "Round Shape Facing": "fully lined jacket: inside, the fabric facing beside the front edge curves in a rounded shape at the hem, and the rest of the inside is the chosen lining",
+    "Half Lining W/ Fabric Facing": "half-lined jacket: lining only across the upper back and shoulders and down the front facings; the lower back inside is unlined with neat bound seams",
+    "No Lining Construction": "UNLINED jacket: no lining at all inside; the inside shows the suit fabric facings and neat bound seams",
+  },
+  "Inside Pocket Style": {
+    "Normal Inside Pocket W/ Pen Pocket": "inside: a welt pocket on each side of the chest (one with a pointed button tab) and a small pen pocket below",
+    "Normal Inside Pocket W/ Water Drop Pen Pocket": "inside: a welt pocket on each side of the chest (one with a pointed button tab) and a teardrop-shaped pen pocket below",
+    "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket": "inside: a welt pocket on each side of the chest (one with a pointed button tab), a small pen pocket and a slanted cigarette pocket lower down",
+  },
+  "Monogram Placement": {
+    "No Monogram": NO_MONOGRAM,
+    "Left Inside Pocket": MONO + " on the lining just above the wearer's left inside pocket (only visible when the jacket is open)",
+    "Right Inside Pocket": MONO + " on the lining just above the wearer's right inside pocket (only visible when the jacket is open)",
+    "Inside Pocket Satin Tape": MONO + " on a small satin label above the wearer's right inside pocket (only visible when the jacket is open)",
+    "Middle Under Collar": MONO + " centred on the underside of the collar (not visible from the outside)",
+    "Left Lapel Placement": MONO + " on the wearer's left lapel, angled along it below the buttonhole",
+    "Above Left Sleeve Cuff": MONO + " about 2 cm above the hem of the wearer's left sleeve, beside the cuff buttons",
+    "Above Right Sleeve Cuff": MONO + " about 2 cm above the hem of the wearer's right sleeve, beside the cuff buttons",
+    // Pants
+    "Left Back Pocket": MONO + " just above the wearer's left back pocket",
+    "Right Side Below Waistband Seam": MONO + " on the front of the trousers just below the waistband on the wearer's right",
+    "Inside Left Waist": MONO + " on the inside of the waistband (not visible from the outside)",
+  },
+  "Back Vents": {
+    "Side Vent": "TWO side vents: a vertical slit at the bottom of the back on each side seam; no centre vent",
+    "Center Vent": "ONE centre vent: a single vertical slit up the middle of the lower back",
+    "No Vent": "NO vents: the back hem is closed all the way round",
+  },
+  "Sleeve Cuff Styles": {
+    "Opening Sleeve Cuff": "working (functional) cuff buttonholes in a straight vertical row along the sleeve vent; drawn CLOSED and buttoned",
+    "Imitation Buttonhole Sleeve Cuff": "decorative stitched buttonholes in a straight vertical row along a closed sleeve vent",
+    "Opening Sleeve Cuff With Slant Buttons": "working cuff buttonholes on a DIAGONAL vent: the vent edge and the line of buttons run at an angle (lowest button nearest the edge of the sleeve), drawn CLOSED and buttoned",
+    "Imitation Buttonhole Cuff With Slant Buttons": "decorative buttonholes on a DIAGONAL closed vent: the vent edge and the line of buttons run at an angle",
+  },
+  "Buttons On Sleeve Cuff": {
+    "3 Flat Button": "THREE cuff buttons in a vertical row with small even gaps between them, horizontal buttonholes",
+    "4 Flat Button": "FOUR cuff buttons in a vertical row with small even gaps between them, horizontal buttonholes",
+    "5 Flat Button": "FIVE cuff buttons in a vertical row with small even gaps between them, horizontal buttonholes",
+    "4 Overlap Button": "FOUR 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
+    "5 Overlap Button": "FIVE 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
+    "6 Overlap Button": "SIX 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
+    "4 Slant Flat Button": "FOUR cuff buttons with small gaps between them, each buttonhole stitched at a diagonal angle",
+    "5 Slant Flat Button": "FIVE cuff buttons with small gaps between them, each buttonhole stitched at a diagonal angle",
+    "4 Slant Overlap Button": "FOUR 'kissing' cuff buttons overlapping each other, each buttonhole stitched at a diagonal angle",
+    "5 Slant Overlap Button": "FIVE 'kissing' cuff buttons overlapping each other, each buttonhole stitched at a diagonal angle",
+    "6 Slant Overlap Button": "SIX 'kissing' cuff buttons overlapping each other, each buttonhole stitched at a diagonal angle",
+    "Button Less Sleeve (4 Buttons)": "NO cuff buttons: only FOUR stitched buttonholes in a vertical row on the sleeve, with no buttons sewn on",
+  },
+
+  // -------------------------------------------------------------- PANTS
+  "Waist Line Height": {
+    Standard: "standard waistband, about 5 cm tall",
+    Tall: "slightly taller waistband, about 5.5 cm",
+  },
+  "Waistband Extension Style": {
+    "Round Shape": "a short tab (about 5 cm) overlapping just past the top of the fly, with a ROUNDED end and one button",
+    "Round Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly, with a ROUNDED end and no visible button",
+    "Long Round Shape": "a LONG extension: the waistband runs across the front past the front belt loop and ends near the hip in a ROUNDED tip with one button",
+    "Arrow Shape": "a short tab overlapping just past the top of the fly that tapers to a POINT like an arrowhead, with one button",
+    "Arrow Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly that tapers to a POINT like an arrowhead, no visible button",
+    "Square Shape": "a short tab overlapping just past the top of the fly with a SQUARE end and one button",
+    "Square Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly with a SQUARE end, no visible button",
+    "Square Waistband Centered": "no tab: the two waistband ends meet edge to edge exactly at the centre front above the fly, no visible button",
+    "Square Shape W/ Long Extension": "a LONG extension: the waistband runs across the front past the front belt loop and ends near the hip in a SQUARE end with one button",
+    "No Waistband + String": "no separate waistband: a soft drawstring waist tied in a small bow at the centre front, no belt loops",
+  },
+  "Waistband Style": {
+    "Normal Waistband": "a plain, straight waistband with no side adjusters",
+    "Elastic Waistband On Side Buttons": "a plain waistband with hidden side elastic and a small button adjuster on each side; no buckles",
+    "Arrow Shape Belt W/ Adjustable Buckle": "no belt loops at the sides; on each side of the waistband a pointed, arrow-shaped fabric strap threaded through a small metal buckle",
+    "Adjustable Waistband On Side W/ Buckle": "on each side of the waistband a short fabric side-adjuster tab closing through a small metal buckle, with a button beside it",
+  },
+  "Front Pleat": {
+    "No Pleat": "flat-front trousers: NO pleats, only a pressed crease down each leg",
+    "Single Pleat": "ONE forward-facing pleat on each side of the front, just below the waistband, flowing into the crease",
+    "Double Pleat": "TWO pleats on each side of the front, just below the waistband",
+  },
+  "Belt Loops": {
+    "Belt Loops": "standard straight vertical belt loops around the waistband",
+    "X Loops": "belt loops made of two crossed fabric strips forming an X",
+    "No Belt Loop": "NO belt loops anywhere on the waistband",
+  },
+  "Front Pocket Style": {
+    "Slant Pocket": "slanted side pockets: the opening runs diagonally from the waistband down to the side seam",
+    "Single Besom": "front besom pockets: a near-vertical piped opening with ONE lip on each side of the front, set in from the side seam",
+    "Double Besom": "front besom pockets: a near-vertical piped opening with TWO lips on each side of the front, set in from the side seam",
+    "On Seam Pocket": "pockets hidden in the side seams: the opening runs straight down along each side seam, almost invisible from the front",
+    "Moon Shape Pocket": "curved 'moon' (jeans-style) front pockets: the opening scoops in a curve from the waistband to the side seam",
+    "Moon Shape Pocket + Coin Pocket": "curved 'moon' front pockets, plus a small rectangular coin pocket inside the wearer's right pocket",
+  },
+  "Bottom Style": {
+    Hem: "plain hemmed trouser bottoms, NO turn-ups",
+    "Thin Cuff": "trouser bottoms with a THIN turn-up (cuff) about 3.5 cm tall",
+    "Classic Cuff": "trouser bottoms with a classic turn-up (cuff) about 4 cm tall",
+    "Tall Cuff": "trouser bottoms with a tall turn-up (cuff) about 5 cm tall",
+  },
+  "Watch Pocket Placement": {
+    "Right Waist Sewn Up": "a small welt watch pocket just below the waistband on the wearer's right front",
+    "Peach-Shaped Pocket": "a small pointed (peach-shaped) flap watch pocket with one button, just below the waistband on the wearer's right front",
+    "Top of Right Waist": "a small watch pocket opening set into the top edge of the waistband on the wearer's right",
+    "No Watch Pocket": "no watch pocket",
+  },
+  "Back Waist Shape": {
+    "No V Open": "back waistband is one straight continuous band across the centre back seam",
+    "Back Waist Seam V Shape": "the back waistband has a small V-shaped notch opening at the top of the centre back seam",
+    "Back Seam W/ Straight 3/8 Top Open": "the back waistband is split at the centre back seam with a small straight gap at the top",
+  },
+  "Back Pocket Style": {
+    "Single Besom With Buttons": "TWO back pockets, each a single-besom slit with one button below it",
+    "Double Besom With Buttons": "TWO back pockets, each a double-besom (two lips) with one button below it",
+    "Double Besom, Left Button": "TWO double-besom back pockets; only the wearer's LEFT one has a button below it",
+    "Double Besom, No Buttons": "TWO double-besom back pockets with NO buttons",
+    "Right Double Besom With Button": "ONE double-besom back pocket on the wearer's RIGHT only, with a button below it; no pocket on the left",
+    "Right Double Besom, No Button": "ONE double-besom back pocket on the wearer's RIGHT only, no button; no pocket on the left",
+    "Rhombus Pocket Flap": "TWO back pockets with flaps whose lower edge comes to a shallow V point (rhombus), each with one button",
+    "Peach Shape Pocket Flap": "TWO back pockets with flaps that have rounded corners and a soft point in the middle of the lower edge, each with one button",
+    "Slant Corner Pocket Flap": "TWO back pockets with flaps whose lower edge slants to one pointed corner, each with one button near that corner",
+    "Wave Pocket Flap": "TWO back pockets with flaps whose lower edge is a wavy curve, no buttons",
+    "No Pocket": "NO back pockets",
+  },
+};
+
+// Adds "Looks like: ..." to every spec line that has a description, and drops
+// lines that are never visible. Lines without a description pass unchanged.
+function describeSpec(spec: string): string {
+  return spec
+    .split("\n")
+    .filter((line) => !HIDDEN_OPTION_LABELS.some((l) => line.startsWith(l + ": ")))
+    .map((line) => {
+      const m = line.match(/^([^:]+): (.+)$/);
+      const look = m && OPTION_LOOKS[m[1]] && OPTION_LOOKS[m[1]][m[2].trim()];
+      return look ? line + " -- looks like: " + look : line;
+    })
+    .join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // Prompt
 // ---------------------------------------------------------------------------
 function layoutFor(jacketOnly: boolean): string {
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the lining visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside lining and inside pocket.
-Right side, two square close-up panels stacked: (4) a close-up of the sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
+Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket.
+Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the lining visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
-Right side, two square close-up panels stacked: (4) a close-up of the jacket sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the trouser waistband and fly, partly open, showing the waistband extension tab (its exact shape is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
 // Always added to the end of the final image prompt, whoever wrote the rest,
@@ -138,24 +382,51 @@ function fixedRules(spec: string): string {
   const rules = ["Strict accuracy rules:"];
   if (!/^Suit type: Jacket only/m.test(spec)) {
     const ext = (spec.match(/^Waistband Extension Style: (.+)$/m) || [])[1] || "";
-    const hook = (spec.match(/^Hook And Eye Style: (.+)$/m) || [])[1] || "";
-    const noButton = /no button|no waistband/i.test(ext);
+    const wstyle = (spec.match(/^Waistband Style: (.+)$/m) || [])[1] || "";
+    const buckle = /buckle/i.test(wstyle);
     rules.push(
-      "- No exposed metal anywhere on the trousers: no visible metal clasps, hooks, bars or buckles on the waistband or fly. A hook-and-eye, if any, is hidden inside the waistband and must not be visible." +
-        (noButton ? "" : " The waistband closes with a button."),
+      "- The trousers are shown fully CLOSED in every panel: fly zipped and hidden under its fly shield, waistband fastened. Never show an open fly, a visible zipper, or the inside of the waistband.",
     );
-    const shape = /arrow/i.test(ext) || (!ext && /arrow/i.test(hook))
-      ? "a POINTED, arrow-shaped tab that tapers to a point like an arrowhead at its end (not square, not rounded)"
-      : /square/i.test(ext)
-      ? "a square-cornered, straight-ended tab (not pointed, not rounded)"
-      : /round/i.test(ext)
-      ? "a tab with a rounded end (not pointed, not square)"
-      : "";
-    if (shape) {
+    rules.push(
+      "- No exposed metal on the trouser front: no visible clasps, hooks, bars or zipper teeth. Any hook-and-eye is hidden inside the waistband." +
+        (buckle ? " The only visible metal is the small side-adjuster buckles described below." : ""),
+    );
+    // One entry per Waistband Extension Style option (catalog.js), matched on
+    // the customer-facing name; most specific first.
+    const extRules: [RegExp, string][] = [
+      [/no waistband|string/i,
+        "There is NO separate waistband band and NO extension tab: the top edge of the trousers is a soft gathered drawstring waist, with a fabric drawstring tied in a small bow at the centre front above the fly. No button at the waist."],
+      [/centered|square waistband/i,
+        "There is NO extension tab: the two halves of the waistband meet edge to edge in a straight vertical seam exactly at the centre front, directly above the fly. No button or buttonhole is visible on the waistband."],
+      [/long round/i,
+        "The waistband has a LONG extension with a ROUNDED end: one side of the waistband continues right across the front, past the front belt loop, and ends near the side of the hip in a rounded tip fastened by one button there. Nothing fastens at the centre front."],
+      [/square.*long/i,
+        "The waistband has a LONG extension with a SQUARE end: one side of the waistband continues right across the front, past the front belt loop, and ends near the side of the hip in a straight, square-cornered end fastened by one button there. Nothing fastens at the centre front."],
+      [/arrow/i,
+        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly and tapers to a POINT like an arrowhead (not square, not rounded)."],
+      [/square/i,
+        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly, with a straight, square-cornered end (not pointed, not rounded)."],
+      [/round/i,
+        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly, with a ROUNDED end (not pointed, not square)."],
+    ];
+    const extRule = (extRules.find(([re]) => re.test(ext)) || [])[1];
+    if (extRule) {
+      const short = !/no waistband|string|centered|square waistband|long/i.test(ext);
       rules.push(
-        "- The waistband extension (the tab of waistband that overlaps at the top of the fly) is " + shape + "; show this shape clearly in the waistband close-up" +
-          (noButton ? ", with no visible button or buttonhole on the tab." : ", fastened with one button."),
+        "- Waistband front: " + extRule +
+          (short ? (/no button/i.test(ext) ? " The tab has NO visible button or buttonhole (it fastens hidden underneath)." : " The tab is fastened with one button.") : "") +
+          " Show this clearly in the full-suit front, the trousers front and the waistband close-up.",
       );
+    }
+    const styleRules: [RegExp, string][] = [
+      [/arrow shape belt/i, "a pointed, arrow-shaped fabric strap on each side of the waistband, threaded through a small metal adjuster buckle"],
+      [/side w\/ buckle|adjustable waistband on side/i, "a short fabric side-adjuster tab on each side of the waistband, closing through a small metal buckle"],
+      [/elastic/i, "a plain waistband with hidden elastic at the sides and a small button adjuster on each side, no buckles"],
+    ];
+    const styleRule = (styleRules.find(([re]) => re.test(wstyle)) || [])[1];
+    if (styleRule) rules.push("- Waistband style: " + styleRule + ".");
+    if (/^Belt Loops: No Belt Loop/im.test(spec) || /no waistband|string/i.test(ext)) {
+      rules.push("- The trousers have NO belt loops.");
     }
     if (/^Bottom Style: .*\bhem\b/im.test(spec) && !/^Bottom Style: .*cuff/im.test(spec)) {
       rules.push("- Trouser bottoms are plain hems with no turn-ups or cuffs.");
@@ -179,16 +450,37 @@ function fixedRules(spec: string): string {
         " (" + front + "). Draw exactly that many front buttons, no more and no fewer, in the front view.",
     );
   }
+  const db = front.match(/double breasted (\d)x(\d)/i);
+  if (db) {
+    rules.push(
+      "- The jacket is double-breasted with exactly " + db[1] + " front buttons in two vertical columns, of which " + db[2] +
+        (db[2] === "1" ? " fastens" : " fasten") + ". Draw exactly " + db[1] + " front buttons, no more and no fewer.",
+    );
+  }
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const c = cuff.toLowerCase().match(/\b(one|two|three|four|five|\d)\b/);
   const cw: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
   const cn = c ? cw[c[1]] || Number(c[1]) : 0;
-  if (cn) rules.push("- Each sleeve cuff has exactly " + cn + " button" + (cn === 1 ? "" : "s") + ".");
+  if (/button ?less/i.test(cuff)) {
+    rules.push("- The sleeve cuffs have NO buttons: only " + (cn || 4) + " stitched buttonholes in a vertical row, with no buttons sewn on.");
+  } else if (cn) {
+    rules.push("- Each sleeve cuff has exactly " + cn + " button" + (cn === 1 ? "" : "s") + ".");
+  }
+  if (/^Facing Style: No Lining/m.test(spec)) {
+    rules.push("- The jacket is UNLINED: wherever the inside shows (neck opening, folded-open front), draw the suit fabric facings and neat bound seams, with no lining fabric.");
+  }
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
+  rules.push(
+    "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned or folded-back cuff, no flap turned open, and no lining visible anywhere on the sleeves" +
+      (/opening|working/i.test(cuffStyle) ? " (\"Opening Sleeve Cuff\" only means the buttonholes are real and functional, not that the cuff is shown open)." : "."),
+  );
   if (/overlap/i.test(cuff)) {
     rules.push("- The cuff buttons OVERLAP: each button sits so close that its edge overlaps the next one (\"kissing\" buttons), with no gap between them.");
   }
-  if (/slant/i.test(cuff) || /slant/i.test(cuffStyle)) {
+  if (/slant/i.test(cuffStyle)) {
+    rules.push("- The sleeve vent is DIAGONAL: its edge and the line of cuff buttons run at a clear angle up the sleeve, not straight up.");
+  }
+  if (/slant/i.test(cuff)) {
     rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle, not horizontal.");
   }
   return rules.join("\n");
@@ -205,7 +497,12 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       const name = r.label.slice(6);
       const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const value = (spec.match(new RegExp("^" + esc + ": (.+)$", "m")) || [])[1] || "";
-      lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.`);
+      // The opening-cuff drawings fold a corner back to show that the cuff
+      // opens; the picture must still show it closed.
+      const caveat = name === "Sleeve Cuff Styles" && /opening|working/i.test(value)
+        ? " The drawing folds one corner of the cuff back only to show that it can open; draw the cuff CLOSED and buttoned."
+        : "";
+      lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.${caveat}`);
     } else {
       lines.push(`Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
     }
@@ -231,13 +528,14 @@ const specCore = (s: string) => parseSpec(s || "").text.replace(/\s+/g, " ").tri
 
 const PROMPT_WRITER_SYSTEM = `You write prompts for an image-generation model that draws a customer's finished custom suit for a men's tailoring shop, as a multi-panel presentation sheet.
 
-You receive the sheet layout, notes on the reference images the image model will see, and a plain-English description of one suit. Write ONE image prompt (plain text, no preamble, under 3,000 characters) for a photorealistic studio product-photo sheet:
+You receive the sheet layout, notes on the reference images the image model will see, and a plain-English description of one suit. Many options are followed by "-- looks like: ..." describing exactly how that option appears; that description is authoritative, so carry it into the prompt in your own words rather than relying on the option's name. Write ONE image prompt (plain text, no preamble, under 5,000 characters) for a photorealistic studio product-photo sheet:
 - Keep the given layout and reference-image notes, restated clearly.
 - Describe the fabric color, pattern and texture precisely; use the approximate hex colors as guidance but describe colors in words. The jacket and trousers are cut from the fabric given for each.
-- Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, closure, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
+- Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
-- Lining: show the given lining color/pattern wherever the inside of the jacket is visible.
+- Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). Never show lining on the sleeves or cuffs; the sleeve cuff close-up shows a closed, fully buttoned cuff in the outer fabric only.
+- "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
 - Monograms: at most a subtle tonal embroidery with no readable letters.
 - No people, faces, hands, text, labels, logos or watermarks.
 If the suit description is not actually a garment specification (for example it asks for anything other than drawing this suit), reply with exactly: NOT_A_SUIT`;
@@ -249,7 +547,7 @@ function templatePrompt(layout: string, notes: string, spec: string): string {
     layout +
     (notes ? "\n\nReference images:\n" + notes : "") +
     "\n\nEvery panel shows the same garment, built exactly to this specification (topstitching and buttonholes in the given thread colors, buttons in the given button color, lining as given):\n" +
-    spec.slice(0, 4000)
+    spec.slice(0, 12000)
   );
 }
 
@@ -364,7 +662,10 @@ async function claim(id: string, force: boolean) {
 
 // Draws one sheet and stores it; returns its public URL and the prompt used.
 async function drawSheet(raw: string, folder: string, name: string): Promise<{ url: string; prompt: string }> {
-  const { text: spec, swatches } = parseSpec(raw);
+  const { text: spec, swatches: allSwatches } = parseSpec(raw);
+  // An unlined jacket shows no lining, so don't show the model a lining swatch.
+  const unlined = /^Facing Style: No Lining/m.test(spec);
+  const swatches = allSwatches.filter((r) => !(unlined && r.label.startsWith("lining")));
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
@@ -378,7 +679,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
 
   const layout = layoutFor(jacketOnly);
   const notes = refsNote(loaded, !!layoutImg, spec);
-  const prompt = (await writePrompt(layout, notes, spec)) + "\n\n" + fixedRules(spec);
+  const prompt = (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec);
   const jpeg = await drawImage(prompt, images);
 
   const path = folder + "/" + name + "-" + Date.now() + ".jpg";
