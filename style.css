@@ -120,6 +120,11 @@ nav{position:sticky;top:0;z-index:60;background:var(--ink);border-bottom:1px sol
    more page background, which is invisible. */
 .hero-grid::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg, var(--ink) 0%, var(--ink) 40%, rgba(236,228,221,0.6) 65%, rgba(236,228,221,0) 90%);pointer-events:none;}
 .hero-text{position:relative;padding:20px 0 40px;max-width:560px;display:flex;flex-direction:column;justify-content:center;}
+.order-done-notice{position:relative;margin:0 0 24px;padding:16px 44px 16px 18px;border:1px solid var(--brass);border-left-width:4px;border-radius:6px;background:var(--card-tint);}
+.order-done-notice[hidden]{display:none;}
+.order-done-notice strong{display:block;font-size:16px;margin-bottom:4px;}
+.order-done-notice p{margin:0;font-size:14px;line-height:1.5;color:var(--ivory-dim);}
+.order-done-close{position:absolute;top:8px;right:10px;background:none;border:0;font-size:22px;line-height:1;color:var(--ivory-dim);cursor:pointer;padding:4px;}
 .hero-eyebrow{color:var(--ivory-dim);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;font-weight:500;}
 .hero h1{font-size:52px;line-height:1.12;max-width:560px;letter-spacing:-0.01em;font-weight:600;}
 .hero h1 em{font-style:italic;color:var(--ivory);}

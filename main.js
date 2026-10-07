@@ -4753,30 +4753,22 @@ async function finalizeOrder(input) {
     }
   }
 
-  document.getElementById("confirmationText").textContent = PAYPAL_ENABLED
-    ? "Thanks! We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
-    : "Thanks! We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.";
   // Deliberately NOT shown to the customer -- fullMessage (the full garment
   // spec + shipping address, in the same plain-text "Client Form" format
   // sent to production) stays internal. It's already saved on every order
   // row in Supabase (client_form_text) and included in the notification
-  // email above, so nothing about production is lost by not displaying it
-  // here -- it's simply not something a customer needs to see.
+  // email above, so nothing about production is lost by not displaying it.
   // So this order shows up right away in "Past Orders" if a signed-in
   // customer checks their account immediately after ordering.
   if (currentUser) loadOrderHistory();
-  if (visualSpecSaved) {
-    renderSuitPreview(
-      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
-    );
-  }
-  orderSubmitted = true;
-  updateProcessBar();
-  goToStep(personalInfoSection, confirmationSection);
-  cartItems = [];
-  pendingCommitIndex = null;
-  renderCartBar();
-  clearDraft();
+  // The suit is done: close out the designer and take the customer back to
+  // the homepage, with an "order received" note at the top.
+  returnHomeAfterOrder(
+    (PAYPAL_ENABLED
+      ? "We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
+      : "We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.") +
+      (currentUser ? " You can see this order any time under Past Orders in My Account." : "")
+  );
   return true;
 }
 
@@ -4994,6 +4986,7 @@ function markDesignStarted() {
   hasStartedDesigning = true;
   document.body.classList.add("designing");
   updateNavActionButtons();
+  hideOrderDoneNotice();
 }
 
 // Undoes markDesignStarted() -- used by startOver() to put the nav back to
@@ -5046,6 +5039,39 @@ function goHome() {
   suitTypeSection.classList.add("active");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+// Once an order is placed the suit is complete, so the designer closes out
+// entirely: every selection, measurement, personal field, the cart and the
+// saved draft are cleared (a reload can't bring the finished order back
+// into the designer), and the customer lands on the homepage as if on a
+// brand-new visit, with an "order received" note at the top. Their suit's
+// picture, if one was drawn, stays on the order and shows in Past Orders.
+function returnHomeAfterOrder(message) {
+  clearDesignerAndForm();
+  cartItems = [];
+  pendingCommitIndex = null;
+  designPreview = null;
+  renderCartBar();
+  updateOrderSummaryUI();
+  clearDraft();
+  resetDesignStarted();
+  ALL_STEPS.forEach((el) => el.classList.remove("active"));
+  suitTypeSection.classList.add("active");
+  updateProcessBar();
+  const notice = document.getElementById("orderDoneNotice");
+  if (notice) {
+    document.getElementById("orderDoneText").textContent = message;
+    notice.hidden = false;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function hideOrderDoneNotice() {
+  const notice = document.getElementById("orderDoneNotice");
+  if (notice) notice.hidden = true;
+}
+const orderDoneClose = document.getElementById("orderDoneClose");
+if (orderDoneClose) orderDoneClose.addEventListener("click", hideOrderDoneNotice);
+
 const logoHomeLink = document.getElementById("logoHomeLink");
 if (logoHomeLink) {
   logoHomeLink.addEventListener("click", goHome);
@@ -5072,23 +5098,17 @@ function startOver() {
   openStartOverConfirm();
 }
 
-function executeStartOver() {
+// Wipes the suit currently in the designer back to a blank jacket, along
+// with its measurements and the personal/shipping fields. Shared by Start
+// Over and returnHomeAfterOrder(); the cart and saved draft are left to the
+// caller.
+function clearDesignerAndForm() {
   jacketDesigner.resetSelections();
   pantsDesigner.resetSelections();
   // Back to the default suit type -- also rebuilds the measurement grid to
   // its full (jacket + pants) field set before the clearing loop below, and
   // resets the progress bar / prices / button wording along with it.
   applySuitType("full");
-
-  // The cart itself is deliberately left alone -- Start Over clears the suit
-  // currently being designed (and the shipping/personal-info fields below),
-  // not suits already added to the order. pendingCommitIndex still gets
-  // forgotten, same as removing a cart item does, since the designer it
-  // pointed at is about to be wiped -- there's no live suit left for it to
-  // update in place.
-  pendingCommitIndex = null;
-  renderCartBar();
-  updateOrderSummaryUI();
 
   MEASUREMENTS.forEach((m) => {
     const el = document.getElementById("m_" + m.id);
@@ -5105,6 +5125,21 @@ function executeStartOver() {
   shippingZipInput.value = "";
   shippingCountryInput.value = "United States";
   orderSubmitted = false;
+}
+
+function executeStartOver() {
+  clearDesignerAndForm();
+
+  // The cart itself is deliberately left alone -- Start Over clears the suit
+  // currently being designed (and the shipping/personal-info fields below),
+  // not suits already added to the order. pendingCommitIndex still gets
+  // forgotten, same as removing a cart item does, since the designer it
+  // pointed at is about to be wiped -- there's no live suit left for it to
+  // update in place.
+  pendingCommitIndex = null;
+  renderCartBar();
+  updateOrderSummaryUI();
+
 
   // Whether to treat this as a true brand-new-visit reset (nothing at all
   // left afterward -- see resetDesignStarted() and the draft handling below)

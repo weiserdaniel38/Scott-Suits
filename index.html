@@ -114,6 +114,15 @@
   <img class="hero-sketch-left" src="./assets/hero-sketch-left.png" alt="" aria-hidden="true">
   <div class="hero-grid">
     <div class="hero-text">
+      <!-- Shown by returnHomeAfterOrder() in main.js once an order is placed:
+           the customer lands back here on a fresh homepage, and this is their
+           "order received" receipt. Closed with its x, or by starting a new
+           design. -->
+      <div class="order-done-notice" id="orderDoneNotice" role="status" hidden>
+        <button type="button" class="order-done-close" id="orderDoneClose" aria-label="Dismiss">&times;</button>
+        <strong>Order received. Thank you!</strong>
+        <p id="orderDoneText"></p>
+      </div>
       <div class="hero-eyebrow">Custom Tailoring, Considered</div>
       <h1>Custom-made, <em>without leaving home.</em></h1>
       <div class="hero-rule"></div>
