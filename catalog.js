@@ -2256,6 +2256,7 @@ JACKET_CATALOG.feltColor = {
 };
 JACKET_CATALOG.monogramThreadColor = {
   label: "Monogram Thread Color",
+  flatColorTiles: true, // plain color tiles, dark to light, like Fabric (see renderFlatColorTiles in main.js)
   column: "jacket_monogram_thread_color",
   colorFamilies: MONOGRAM_THREAD_COLOR_FAMILIES,
   options: flattenColorFamilies(MONOGRAM_THREAD_COLOR_FAMILIES),
@@ -2323,6 +2324,7 @@ PANTS_CATALOG.threadColor = {
 };
 PANTS_CATALOG.monogramThreadColor = {
   label: "Monogram Thread Color",
+  flatColorTiles: true, // plain color tiles, dark to light, like Fabric (see renderFlatColorTiles in main.js)
   column: "pants_monogram_thread_color",
   colorFamilies: MONOGRAM_THREAD_COLOR_FAMILIES,
   options: flattenColorFamilies(MONOGRAM_THREAD_COLOR_FAMILIES),
