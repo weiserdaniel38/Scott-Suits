@@ -1919,6 +1919,20 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
 
   function wizGoBack() {
     cancelAutoAdvance();
+    // Inside a color's shades (or any inner page of a color step), Back
+    // returns to that step's first page -- all the colors -- before it ever
+    // goes to the previous step.
+    const innerPage =
+      (familyBrowse[activeTab] != null) || otherColorBrowse[activeTab] === true ||
+      (patternBrowse[activeTab] != null) || (patternFamilyBrowse[activeTab] != null);
+    if (innerPage) {
+      familyBrowse[activeTab] = null;
+      otherColorBrowse[activeTab] = false;
+      patternBrowse[activeTab] = null;
+      patternFamilyBrowse[activeTab] = null;
+      scrollToTopThenSwap(() => { renderOptions(); renderWizard(); });
+      return;
+    }
     const list = wizList();
     const i = list.indexOf(activeTab);
     if (i > 0) { switchTab(list[i - 1]); return; }
