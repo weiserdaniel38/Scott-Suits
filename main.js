@@ -1847,6 +1847,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function wizEsc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"); }
 
   function wizGoBack() {
+    cancelAutoAdvance();
     const list = wizList();
     const i = list.indexOf(activeTab);
     if (i > 0) { switchTab(list[i - 1]); return; }
@@ -2130,6 +2131,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // grid once we're actually there, avoids that: there's nothing left above
   // the fold for the swap to yank around.
   function switchTab(key) {
+    // Any move (Back, Next, a progress segment, a Review row) wins over a
+    // pick's pending auto-advance -- otherwise tapping Back right after a
+    // pick went back and then got carried forward again a moment later.
+    cancelAutoAdvance();
     scrollToTopThenSwap(() => {
       activeTab = key;
       renderTabs();
@@ -2146,7 +2151,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // The scroll helpers above are mobile-only internally (there's nothing to
   // scroll on desktop -- every tab and the full grid are already on
   // screen), so this same function works for both.
+  let autoAdvanceTimer = 0;
+  function cancelAutoAdvance() {
+    if (autoAdvanceTimer) { window.clearTimeout(autoAdvanceTimer); autoAdvanceTimer = 0; }
+  }
   function advanceToNextTab() {
+    cancelAutoAdvance();
     // Skip over any category that isn't currently applicable (e.g. Monogram
     // Thread Color when Monogram Placement is "No Monogram Need") -- it has
     // no tab to land on right now.
@@ -2160,12 +2170,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       // customer's request (see scrollContinueButtonIntoView's own comment
       // for the accidental-double-tap trade-off this reintroduces and why
       // it's accepted).
-      window.setTimeout(() => {
+      autoAdvanceTimer = window.setTimeout(() => {
+        autoAdvanceTimer = 0;
         scrollContinueButtonIntoView();
       }, 320);
       return;
     }
-    window.setTimeout(() => {
+    autoAdvanceTimer = window.setTimeout(() => {
+      autoAdvanceTimer = 0;
       switchTab(nextKey);
     }, 320);
   }
