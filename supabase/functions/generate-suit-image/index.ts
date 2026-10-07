@@ -175,13 +175,13 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Single Breasted One Button": "single-breasted, ONE button at the waist; the lapels roll long, down to that button",
     "Single Breasted Two Buttons": "single-breasted, TWO buttons in a vertical line; only the top one fastens at the waist",
     "Single Breasted Three Buttons": "single-breasted, THREE buttons in a vertical line; the lapels roll to the top button",
-    "Double Breasted 6X2": "double-breasted: SIX buttons in two vertical columns of three; the top pair is spaced wider apart, and the jacket fastens on the middle row",
-    "Double Breasted 4X2": "double-breasted: FOUR buttons in a square of two rows of two; the jacket fastens on the top row",
-    "Double Breasted 6X3": "double-breasted: SIX buttons in two straight columns of three, evenly spaced; the lapels roll to the top row",
-    "Double Breasted 4X1": "double-breasted: FOUR buttons; a widely spaced top pair high on the chest and a lower pair at the waist, fastening with ONE button",
-    "Double Breasted One Button": "double-breasted overlap with only ONE button, fastening at the waist; no other front buttons",
-    "Double Breasted 2X1": "double-breasted: TWO buttons side by side at the waist, fastening with ONE of them",
-    "Double Breasted 6X1": "double-breasted: SIX buttons in two columns of three (top pair wider apart), fastening with ONE button on the bottom row",
+    "Double Breasted 6X2": "double-breasted, SIX buttons in THREE rows of two: the TOP row sits high on the chest and is spaced WIDER apart (the two buttons sit further out, near the lapel edges); the MIDDLE and BOTTOM rows are spaced closer together and line up directly above each other. The lapels roll down to the middle row, and the jacket fastens at the MIDDLE row; the bottom row is decorative",
+    "Double Breasted 4X2": "double-breasted, FOUR buttons in TWO rows of two forming a square: both rows the same width apart, one row at the waist and one about a hand's width below it. The lapels roll down to the TOP row, and the jacket fastens at the top row",
+    "Double Breasted 6X3": "double-breasted, SIX buttons in THREE rows of two forming two straight, parallel vertical columns with equal spacing between rows, all rows the same width apart (no wider top row). The lapels roll down to the TOP row, which sits fairly high on the chest, and the jacket fastens there",
+    "Double Breasted 4X1": "double-breasted, FOUR buttons in TWO rows: the TOP pair sits high on the chest, spaced VERY wide apart (almost out toward the armholes, outside the lapels); the BOTTOM pair sits at the waist, spaced normally. The lapels roll long, down to the bottom row, and the jacket fastens with ONE button on the bottom row",
+    "Double Breasted One Button": "double-breasted wrap with ONE single button at the waist, on the front edge of the overlap; no other buttons on the front. The lapels roll long, down to that button",
+    "Double Breasted 2X1": "double-breasted, TWO buttons side by side in ONE row at the waist, nothing above or below them. The lapels roll long, down to that row, and the jacket fastens with ONE of them",
+    "Double Breasted 6X1": "double-breasted, SIX buttons in THREE rows of two forming a V that narrows downward: the TOP pair is spaced widest, the MIDDLE pair narrower, the BOTTOM pair narrowest. The lapels roll long, down to the bottom row, and the jacket fastens with ONE button on the bottom row",
   },
   "Top Sleeve Crown Type": {
     "Regular Armhole": "smooth, clean sleeve head where the sleeve meets the shoulder",
@@ -450,11 +450,15 @@ function fixedRules(spec: string): string {
         " (" + front + "). Draw exactly that many front buttons, no more and no fewer, in the front view.",
     );
   }
+  if (/^double breasted one button$/i.test(front)) {
+    rules.push("- Front buttons, placed exactly like this: " + OPTION_LOOKS["Front Button"][front] + ".");
+  }
   const db = front.match(/double breasted (\d)x(\d)/i);
   if (db) {
     rules.push(
-      "- The jacket is double-breasted with exactly " + db[1] + " front buttons in two vertical columns, of which " + db[2] +
-        (db[2] === "1" ? " fastens" : " fasten") + ". Draw exactly " + db[1] + " front buttons, no more and no fewer.",
+      "- The jacket is double-breasted with exactly " + db[1] + " front buttons, of which " + db[2] +
+        (db[2] === "1" ? " fastens" : " fasten") + ". Draw exactly " + db[1] + " front buttons, no more and no fewer, placed like this: " +
+        ((OPTION_LOOKS["Front Button"] || {})[front] || "") + ".",
     );
   }
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
