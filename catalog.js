@@ -2202,6 +2202,7 @@ JACKET_CATALOG.lining = {
 
 JACKET_CATALOG.threadColor = {
   label: "Thread Color",
+  flatColorTiles: true, // plain color tiles, dark to light, like Fabric (see renderFlatColorTiles in main.js)
   column: "jacket_thread_color",
   colorFamilies: THREAD_COLOR_FAMILIES,
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
@@ -2314,6 +2315,7 @@ JACKET_CATALOG.buttoncolor = {
 
 PANTS_CATALOG.threadColor = {
   label: "Thread Color",
+  flatColorTiles: true, // plain color tiles, dark to light, like Fabric (see renderFlatColorTiles in main.js)
   column: "pants_thread_color",
   colorFamilies: THREAD_COLOR_FAMILIES,
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
