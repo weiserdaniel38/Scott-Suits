@@ -156,7 +156,7 @@ const JACKET_CATALOG = {
     // Shown on the options page as a brief explainer -- most customers
     // won't know this tailoring term on sight the way they might "collar"
     // or "pocket".
-    description: "When you open your jacket, how do you want the lining inside to be shaped?",
+    description: "Choose how the lining inside your jacket is shaped when you open it.",
     // Options taken off the designer. A draft saved while one of these was
     // picked has it cleared on reload (see reconcileSelections in main.js)
     // so the customer is asked again instead of ordering a retired style.
