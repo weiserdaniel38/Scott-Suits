@@ -201,7 +201,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Double Besom Pocket": "two straight, horizontal double-besom hip pockets (two thin piped lips each), no flaps",
     "Single Besom + Single Besom Ticket": "two horizontal single-besom hip pockets, plus a smaller single-besom ticket pocket just above the wearer's right hip pocket; no flaps",
     "Double Besom + Double Besom Ticket": "two horizontal double-besom hip pockets, plus a smaller double-besom ticket pocket just above the wearer's right hip pocket; no flaps",
-    "Flat Welt Pocket": "two hip pockets built exactly like the normal chest welt pocket, just lower and wider: each a flat rectangular welt strip of the suit fabric (about 1.5 cm tall, about 15 cm wide) sewn up over a straight horizontal opening at hip level, with stitched ends; NOT a thin besom slit, and no flaps",
+    "Flat Welt Pocket": "two hip pockets that look exactly like the normal chest welt pocket, only lower (at hip level) and a little wider: each is a flat, upright rectangular welt strip of the suit fabric about 1.5 cm tall sewn over a straight horizontal opening, with neatly stitched ends. NO flaps and NO besom (thin piped) openings",
     "Single Besom Slant Pocket": "two SLANTED single-besom hip pockets angled downward toward the front, no flaps",
     "Double Besom Slant Pocket": "two SLANTED double-besom hip pockets angled downward toward the front, no flaps",
     "Flap Pockets": "two straight horizontal hip pockets with rectangular flaps",
@@ -452,6 +452,11 @@ function fixedRules(spec: string): string {
   }
   if (/^double breasted one button$/i.test(front)) {
     rules.push("- Front buttons, placed exactly like this: " + OPTION_LOOKS["Front Button"][front] + ".");
+  }
+  if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
+    rules.push(
+      "- The hip pockets are WELT pockets identical in style to the chest welt pocket, just lower: a flat rectangular fabric welt strip over each opening. They have NO flaps and are NOT besom (thin piped slit) pockets.",
+    );
   }
   const lapelHoles = (spec.match(/^Lapel Buttonhole: (.+)$/m) || [])[1] || "";
   if (lapelHoles && !/^no lapel buttonhole/i.test(lapelHoles)) {
