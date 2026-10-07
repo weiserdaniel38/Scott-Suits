@@ -2265,8 +2265,9 @@ JACKET_CATALOG.monogramThreadColor = {
 // Buttons are browsed by material first (Horn / Shell / Corozo /
 // Polyester), then the specific button. The supplier code prefix says the
 // material (both button books print it on every label: KNJ/KNG = Real
-// Horn, KB = Shell, KG = Corozo, KSZ = Polyester). Within a material the
-// buttons run by color, dark to light, using BUTTON_COLOR_FAMILIES (which
+// Horn, KB = Shell, KG = Corozo, KSZ = Polyester, shown as "Classic").
+// Within a material the buttons are grouped under color headings, dark to
+// light, using BUTTON_COLOR_FAMILIES (which
 // still holds each button's color family and stays the source of truth for
 // names/images/hex). "Best Match to Fabric" lets the customer defer the
 // exact pick to the shop instead of choosing one themselves.
@@ -2274,11 +2275,16 @@ const BUTTON_TYPE_ORDER = [
   { name: "Horn", prefixes: ["KNJ", "KNG"], representativeImg: "./assets/jacket-buttoncolor-knj014.jpg" },
   { name: "Shell", prefixes: ["KB"], representativeImg: "./assets/jacket-buttoncolor-kb113.jpg" },
   { name: "Corozo", prefixes: ["KG"], representativeImg: "./assets/jacket-buttoncolor-kg198.jpg" },
-  { name: "Polyester", prefixes: ["KSZ"], representativeImg: "./assets/jacket-buttoncolor-ksz255.jpg" },
+  // Polyester buttons are shown to customers as "Classic" (stored values
+  // are the button codes, so the label is display-only).
+  { name: "Classic", prefixes: ["KSZ"], representativeImg: "./assets/jacket-buttoncolor-ksz255.jpg" },
 ];
 const BUTTON_COLOR_SORT = ["Black", "Navy", "Gray", "Blue", "Purple", "Brown", "Tortoiseshell", "Burgundy", "Red", "Tan", "Cream", "Pink", "White", "Multi-Color"];
 const BUTTON_TYPES = BUTTON_TYPE_ORDER.map((t) => {
   const options = [];
+  // Color heading for each button, shown above each color's run in the
+  // type's grid (see colorSections in renderColorFamilyOptions, main.js).
+  const colorSections = {};
   BUTTON_COLOR_SORT.concat(BUTTON_COLOR_FAMILIES.map((f) => f.name))
     .filter((name, i, all) => all.indexOf(name) === i)
     .forEach((famName) => {
@@ -2286,10 +2292,12 @@ const BUTTON_TYPES = BUTTON_TYPE_ORDER.map((t) => {
       if (!fam) return;
       fam.options.forEach((o) => {
         const prefix = (o.name.match(/^[A-Z]+/) || [""])[0];
-        if (t.prefixes.indexOf(prefix) !== -1) options.push(o);
+        if (t.prefixes.indexOf(prefix) === -1) return;
+        options.push(o);
+        colorSections[o.name] = { name: fam.name, hex: fam.swatchHex };
       });
     });
-  return { name: t.name, representativeImg: t.representativeImg, options };
+  return { name: t.name, representativeImg: t.representativeImg, options, colorSections };
 });
 JACKET_CATALOG.buttoncolor = {
   label: "Button Color",

@@ -2597,7 +2597,20 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       });
     };
     const grid = document.getElementById(gridId);
-    fam.options.forEach((opt) => renderSwatchCard(cat, opt, grid));
+    let lastSection = null;
+    fam.options.forEach((opt) => {
+      // Optional color headings within a family (Button Color's types run
+      // Black, Navy, Gray... -- see BUTTON_TYPES in catalog.js).
+      const sec = fam.colorSections && fam.colorSections[opt.name];
+      if (sec && sec.name !== lastSection) {
+        const h = document.createElement("div");
+        h.className = "opt-section-divider color-section-divider";
+        h.innerHTML = '<span class="color-section-dot" style="background:' + sec.hex + ';"></span>' + sec.name;
+        grid.appendChild(h);
+        lastSection = sec.name;
+      }
+      renderSwatchCard(cat, opt, grid);
+    });
   }
 
   // Fabric-only three-level picker: pattern type (Solid / Pinstripe /
