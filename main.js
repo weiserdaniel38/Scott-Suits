@@ -1481,11 +1481,25 @@ function orderProgressPct(stage) {
 function orderProgressCheer(pct, stage) {
   if (stage === "pers") return "Last step. Your suit is nearly on its way!";
   if (stage === "meas") return "Way to go! Just your measurements left.";
+  // A new line every few answers (roughly every 7%), so it keeps changing
+  // as the customer works through the questions.
   if (pct <= 0) return "Let\u2019s get started!";
-  if (pct < 25) return "Great start, keep it going.";
-  if (pct < 50) return "Looking sharp. You\u2019re making great progress.";
-  if (pct < 75) return "Over halfway there!";
-  return "Way to go! Almost done.";
+  const lines = [
+    "Great start!",
+    "Nice choice. Keep it going.",
+    "You\u2019ve got a good eye.",
+    "Looking sharp so far.",
+    "Making great progress.",
+    "This suit is coming together.",
+    "Almost halfway there!",
+    "Over halfway there!",
+    "Way to go! Keep those choices coming.",
+    "Looking great. The finish line\u2019s in sight.",
+    "Just a few more details.",
+    "Way to go! Almost done.",
+    "So close! A couple more and you\u2019re there.",
+  ];
+  return lines[Math.min(Math.floor((pct - 1) / 7), lines.length - 1)];
 }
 function refreshOrderProgress() {
   document.querySelectorAll(".wiz-pct[data-stage]").forEach((el) => {
