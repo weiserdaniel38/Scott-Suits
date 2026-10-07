@@ -4581,7 +4581,7 @@ function currentDesignPreviewId() {
   return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() ? designPreview.id : null;
 }
 
-// Confirmation page.
+// The finished suit on the homepage's "order received" note.
 async function renderSuitPreview(suits) {
   const box = document.getElementById("suitPreview");
   if (!box || !suits.length) return;
@@ -4761,6 +4761,13 @@ async function finalizeOrder(input) {
   // So this order shows up right away in "Past Orders" if a signed-in
   // customer checks their account immediately after ordering.
   if (currentUser) loadOrderHistory();
+  // The finished suit's picture, shown in the "order received" note on the
+  // homepage. Built from the cart before returnHomeAfterOrder() clears it.
+  if (visualSpecSaved) {
+    renderSuitPreview(
+      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+    );
+  }
   // The suit is done: close out the designer and take the customer back to
   // the homepage, with an "order received" note at the top.
   returnHomeAfterOrder(
@@ -5043,8 +5050,8 @@ function goHome() {
 // entirely: every selection, measurement, personal field, the cart and the
 // saved draft are cleared (a reload can't bring the finished order back
 // into the designer), and the customer lands on the homepage as if on a
-// brand-new visit, with an "order received" note at the top. Their suit's
-// picture, if one was drawn, stays on the order and shows in Past Orders.
+// brand-new visit, with an "order received" note at the top that also shows
+// the finished suit's picture (see renderSuitPreview).
 function returnHomeAfterOrder(message) {
   clearDesignerAndForm();
   cartItems = [];
