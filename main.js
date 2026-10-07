@@ -3696,9 +3696,24 @@ function updateOrderSummaryUI() {
 // -- the icon itself always shows (so the feature is discoverable even with
 // nothing in the cart yet); only the badge count and the dropdown's list
 // change with cartItems.
-// One-line name for a suit in the cart, built from its fabric color and lapel
-// style, e.g. "Smoky Onyx Peak Lapel Suit" (or "... Jacket" for jacket only).
-// Uses the catalog's customer-facing names, never the raw fabric code.
+// Fabric code -> its plain color family ("Navy", "Black", "Gray"...), read
+// from the catalog's color families with the " Pattern" suffix dropped.
+let fabricFamilyByCode = null;
+function fabricColorFamily(code) {
+  if (!fabricFamilyByCode) {
+    fabricFamilyByCode = {};
+    (JACKET_CATALOG.fabric.patternTypes || []).forEach((p) => {
+      (p.colorFamilies || []).forEach((f) => {
+        (f.options || []).forEach((o) => { fabricFamilyByCode[o.name] = f.name.replace(/\s*Pattern$/i, ""); });
+      });
+    });
+  }
+  return fabricFamilyByCode[code] || "";
+}
+
+// One-line name for a suit in the cart, built from its fabric's plain color
+// and lapel style, e.g. "Navy Peak Lapel Suit" (or "... Jacket" for jacket
+// only). Never shows the raw fabric code.
 function cartItemTitle(item) {
   const sel = item.jacket || {};
   const shown = (cat, value) => {
@@ -3706,7 +3721,7 @@ function cartItemTitle(item) {
     const opt = (cat.options || []).find((o) => o.name === value);
     return (opt && opt.displayName) || value;
   };
-  const color = shown(JACKET_CATALOG.fabric, sel.fabric);
+  const color = fabricColorFamily(sel.fabric);
   let lapel = shown(JACKET_CATALOG.collar, sel.collar);
   if (lapel && !/lapel|collar/i.test(lapel)) lapel += " Lapel";
   const noun = item.type === "jacketOnly" ? "Jacket" : "Suit";
