@@ -1530,3 +1530,11 @@ body:not(.designing) #suitTypeSection{display:none;}
   body:not(.designing) .hero-cta{margin-top:clamp(20px, 3.6svh, 34px);}
   body:not(.designing) footer{padding-bottom:calc(72px + env(safe-area-inset-bottom));}
 }
+
+/* Fabric step: short description of the selected fabric, as a full-width
+   line under the selected tile's row (see renderColorFirstOptions). */
+.designer-grid .fabric-palette-grid .fabric-desc{grid-column:1/-1;margin:4px 0 6px;padding:8px 12px;border-left:2px solid var(--brass,#b08d57);background:rgba(228,220,205,0.55);color:#1c1814;font-size:12.5px;line-height:1.45;}
+.designer-grid .fabric-palette-grid .fabric-desc strong{font-weight:600;margin-right:4px;}
+@media(min-width:700px){ .designer-grid .fabric-palette-grid .fabric-desc{font-size:13.5px;} }
+#lightbox .lightbox-desc{color:var(--ivory);font-size:13.5px;line-height:1.45;margin-top:6px;max-width:440px;margin-left:auto;margin-right:auto;}
+#lightbox .lightbox-desc[hidden]{display:none;}
