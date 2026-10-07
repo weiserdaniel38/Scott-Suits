@@ -58,7 +58,10 @@ const JACKET_CATALOG = {
       { name: "Left Three", formNote: "3 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-three.jpg" },
       { name: "Left Three, Right Two", formNote: "3 buttonholes on left lapel, 2 on right lapel", img: "./assets/jacket-lapelbuttonhole-left-three-right-two.jpg" },
       { name: "4 Buttonholes On Left", formNote: "4 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-four-left.jpg" },
-      { name: "Buttonhole On Left, Only For Shawl And Diamond Lapel", formNote: "1 buttonhole on left lapel", displayName: "Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg" },
+      { name: "Buttonhole On Left, Only For Shawl And Diamond Lapel", formNote: "1 buttonhole on left lapel", displayName: "Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg",
+        // Hidden unless the Lapel Style is Shawl or Diamond (Notch, Peak or
+        // no lapel picked yet -> not offered).
+        onlyWhen: { collar: ["Shawl", "Diamond Lapel"] } },
       { name: "No Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-none.jpg",
         // Shows the shawl drawing (no buttonhole) when the collar is Shawl or Diamond.
         imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg" } } },

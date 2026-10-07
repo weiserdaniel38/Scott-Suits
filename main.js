@@ -1757,8 +1757,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       }
       return out;
     };
-    if (!rules) return cat.options.map(withImg);
+    // An option can carry `onlyWhen: { otherKey: ["Value", ...] }` to be
+    // offered only while otherKey is set to one of those values (e.g. the
+    // shawl/diamond lapel buttonhole is hidden under Notch or Peak).
+    const shownNow = (o) =>
+      !o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1);
+    if (!rules) return cat.options.filter(shownNow).map(withImg);
     return cat.options
+      .filter(shownNow)
       .filter((o) =>
         Object.keys(rules).every((dep) => {
           const list = rules[dep][order[dep]];
@@ -1773,7 +1779,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function reconcileSelections() {
     keys.forEach((k) => {
       const cat = catalog[k];
-      if (cat.allowedBySelection && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
+      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen)) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
       if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
       // The lining catalog was replaced outright (Oct 2026): a saved draft or
       // cart pointing at a lining that no longer exists asks again.
