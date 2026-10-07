@@ -126,10 +126,10 @@ function layoutFor(jacketOnly: boolean): string {
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the lining visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside lining and inside pocket.
-Right side, two square close-up panels stacked: (4) a close-up of the sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
+Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the lining visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
-Right side, two square close-up panels stacked: (4) a close-up of the jacket sleeve cuff showing the cuff buttons and buttonhole stitching; (5) a close-up of the trouser waistband and fly, partly open, showing the waistband extension tab (its exact shape is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the trouser waistband and fly, partly open, showing the waistband extension tab (its exact shape is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
 // Always added to the end of the final image prompt, whoever wrote the rest,
@@ -185,6 +185,10 @@ function fixedRules(spec: string): string {
   const cn = c ? cw[c[1]] || Number(c[1]) : 0;
   if (cn) rules.push("- Each sleeve cuff has exactly " + cn + " button" + (cn === 1 ? "" : "s") + ".");
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
+  rules.push(
+    "- The sleeve cuffs are CLOSED and fully buttoned, lying flat: no unbuttoned or folded-back cuff, no flap turned open, and no lining visible anywhere on the sleeves" +
+      (/opening|working/i.test(cuffStyle) ? " (\"Opening Sleeve Cuff\" only means the buttonholes are real and functional, not that the cuff is shown open)." : "."),
+  );
   if (/overlap/i.test(cuff)) {
     rules.push("- The cuff buttons OVERLAP: each button sits so close that its edge overlaps the next one (\"kissing\" buttons), with no gap between them.");
   }
@@ -237,7 +241,8 @@ You receive the sheet layout, notes on the reference images the image model will
 - Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, closure, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
-- Lining: show the given lining color/pattern wherever the inside of the jacket is visible.
+- Lining: show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). Never show lining on the sleeves or cuffs; the sleeve cuff close-up shows a closed, fully buttoned cuff in the outer fabric only.
+- "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
 - Monograms: at most a subtle tonal embroidery with no readable letters.
 - No people, faces, hands, text, labels, logos or watermarks.
 If the suit description is not actually a garment specification (for example it asks for anything other than drawing this suit), reply with exactly: NOT_A_SUIT`;
