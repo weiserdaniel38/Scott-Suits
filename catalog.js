@@ -156,7 +156,7 @@ const JACKET_CATALOG = {
     // Shown on the options page as a brief explainer -- most customers
     // won't know this tailoring term on sight the way they might "collar"
     // or "pocket".
-    description: "The facing is the inside lining along the jacket's front edge, behind the lapel and buttons -- its shape and coverage affect the jacket's structure and weight.",
+    description: "Choose how the lining inside your jacket is shaped when you open it.",
     // Options taken off the designer. A draft saved while one of these was
     // picked has it cleared on reload (see reconcileSelections in main.js)
     // so the customer is asked again instead of ordering a retired style.
