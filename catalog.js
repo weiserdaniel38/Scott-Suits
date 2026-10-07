@@ -166,9 +166,9 @@ const JACKET_CATALOG = {
       "No Lining Light Construction W/ Piping Seam",
     ],
     options: [
-      { name: "Round Shape Facing", img: "./assets/jacket-facing-round.jpg", badge: "Standard" },
-      { name: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-halflwfabric.jpg" },
-      { name: "No Lining Construction", img: "./assets/jacket-facing-nolining.jpg" },
+      { name: "Round Shape Facing", img: "./assets/jacket-facing-new-round.jpg", badge: "Standard" },
+      { name: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-new-halflwfabric.jpg" },
+      { name: "No Lining Construction", img: "./assets/jacket-facing-new-nolining.jpg" },
     ],
   },
   insidepocket: {
