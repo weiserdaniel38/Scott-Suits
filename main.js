@@ -4398,6 +4398,18 @@ async function renderSuitPreview(suits) {
   }
 }
 
+// The column name from a Supabase "unknown column" error, or null.
+// PostgREST says "Could not find the 'x' column of 'orders' in the schema
+// cache"; Postgres says "column orders.x does not exist" / "column \"x\" of
+// relation \"orders\" does not exist".
+function missingOrderColumn(error) {
+  const msg = (error && error.message) || "";
+  const m =
+    msg.match(/Could not find the '([^']+)' column/i) ||
+    msg.match(/column (?:orders\.)?"?([a-z0-9_]+)"? (?:of relation "?orders"? )?does not exist/i);
+  return m ? m[1] : null;
+}
+
 async function finalizeOrder(input) {
   const { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country } = input;
 
@@ -4458,19 +4470,23 @@ async function finalizeOrder(input) {
   try {
     const client = getSupabase();
     visualSpecSaved = true;
-    let { error } = await client.from("orders").insert(rows);
-    // If the image-feature migration hasn't been run yet, the database
-    // doesn't know the visual_spec column -- never lose a real order over
-    // that: retry once without it (the order is otherwise identical).
-    if (error && /visual_spec/i.test(error.message || "")) {
-      console.warn("visual_spec column missing; saving order without it. Run add_order_status_and_suit_image_migration.sql.");
-      visualSpecSaved = false;
-      const stripped = rows.map((r) => {
+    let toSave = rows;
+    let { error } = await client.from("orders").insert(toSave);
+    // A new designer option whose column hasn't been added to the database
+    // yet (see supabase/sql/) makes the whole insert fail. Never lose a real
+    // order over that: drop the unknown column and retry. Every choice is
+    // still in client_form_text, so nothing the shop needs is lost.
+    for (let tries = 0; error && tries < 20; tries++) {
+      const col = missingOrderColumn(error);
+      if (!col || !(col in toSave[0])) break;
+      console.warn("orders." + col + " column missing; saving order without it. Run the SQL in supabase/sql/.");
+      if (col === "visual_spec") visualSpecSaved = false;
+      toSave = toSave.map((r) => {
         const copy = Object.assign({}, r);
-        delete copy.visual_spec;
+        delete copy[col];
         return copy;
       });
-      ({ error } = await client.from("orders").insert(stripped));
+      ({ error } = await client.from("orders").insert(toSave));
     }
     if (error) {
       console.error("Failed to save order:", error);
