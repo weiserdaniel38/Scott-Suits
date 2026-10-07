@@ -2472,7 +2472,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const card = document.createElement("div");
     card.className = "opt-card same-as-card" + (order[activeTab] === sentinel ? " selected" : "");
     card.innerHTML =
-      (sourceOpt
+      (sourceOpt && cat.flatColorTiles && sourceOpt.hex
+        ? '<div class="opt-swatch" style="background:' + sourceOpt.hex + ';"></div>' // plain color, never a thread photo
+        : sourceOpt
         ? '<img class="opt-swatch" src="' + sourceOpt.img + '" alt="' + label + '">'
         : '<div class="opt-swatch same-as-placeholder"></div>') +
       '<div class="opt-name">' + label + "</div>";
