@@ -160,15 +160,15 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Extra Wide": "extra-wide statement lapels, about 11 cm at the widest, reaching close to the sleeve seam",
   },
   "Lapel Buttonhole": {
-    Standard: "one buttonhole stitched on the wearer's LEFT lapel near its top",
-    Right: "one buttonhole stitched on the wearer's RIGHT lapel near its top; none on the left",
-    "Right & Left": "one buttonhole stitched on EACH lapel near its top",
-    "Left Two": "TWO short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Right Two": "TWO short parallel buttonholes stacked on the wearer's RIGHT lapel; none on the left",
-    "Left Three": "THREE short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Left Three, Right Two": "THREE parallel buttonholes on the wearer's LEFT lapel and TWO on the RIGHT lapel",
-    "4 Buttonholes On Left": "FOUR short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Lapel Buttonhole": "one buttonhole stitched on the wearer's LEFT lapel near its top",
+    Standard: "one buttonhole on the wearer's LEFT lapel; none on the right",
+    Right: "one buttonhole on the wearer's RIGHT lapel; none on the left",
+    "Right & Left": "one buttonhole on EACH lapel, mirrored at the same height",
+    "Left Two": "TWO buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Right Two": "TWO buttonholes stacked on the wearer's RIGHT lapel; none on the left",
+    "Left Three": "THREE buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Left Three, Right Two": "THREE stacked buttonholes on the wearer's LEFT lapel and TWO on the RIGHT lapel, both stacks starting at the same height",
+    "4 Buttonholes On Left": "FOUR buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Lapel Buttonhole": "one buttonhole on the wearer's LEFT lapel; none on the right",
     "No Lapel Buttonhole": "NO buttonhole on either lapel; both lapels are plain",
   },
   "Front Button": {
@@ -452,6 +452,17 @@ function fixedRules(spec: string): string {
   }
   if (/^double breasted one button$/i.test(front)) {
     rules.push("- Front buttons, placed exactly like this: " + OPTION_LOOKS["Front Button"][front] + ".");
+  }
+  const lapelHoles = (spec.match(/^Lapel Buttonhole: (.+)$/m) || [])[1] || "";
+  if (lapelHoles && !/^no lapel buttonhole/i.test(lapelHoles)) {
+    rules.push(
+      "- Lapel buttonholes: " + ((OPTION_LOOKS["Lapel Buttonhole"] || {})[lapelHoles] || lapelHoles) + ". " +
+        "Each lapel buttonhole is a short, slim keyhole-stitched slit about 2.5 cm long, placed near the OUTER edge of the lapel about 3 cm below the lapel's top edge, angled to run parallel to that top edge (not horizontal). " +
+        (/two|three|four|4/i.test(lapelHoles)
+          ? "Multiple buttonholes on one lapel are stacked tightly in a neat column directly below one another, only about 1 cm apart (centre to centre), all the same length and perfectly parallel, the column following the outer edge of the lapel; never spread out down the lapel. "
+          : "") +
+        "Stitch them in the lapel buttonhole thread color.",
+    );
   }
   const db = front.match(/double breasted (\d)x(\d)/i);
   if (db) {
