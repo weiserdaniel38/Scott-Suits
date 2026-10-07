@@ -2512,9 +2512,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       '<button type="button" class="back-to-families-btn">&larr; All Colors</button>' +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
       '<div class="opt-grid" id="' + gridId + '"></div>';
+    // Back from a color's shades goes all the way to the step's first page,
+    // never just one level up.
     optionsEl.querySelector(".back-to-families-btn").onclick = () => {
       scrollToTopThenSwap(() => {
         familyBrowse[activeTab] = null;
+        otherColorBrowse[activeTab] = false;
         renderOptions();
       });
     };
@@ -2603,7 +2606,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     if (browsedFamily === null) {
       optionsEl.innerHTML =
         "<h3>" + cat.label + "</h3>" + descriptionHtml +
-        '<button type="button" class="back-to-families-btn">&larr; All Patterns</button>' +
+        '<button type="button" class="back-to-families-btn">&larr; All ' + cat.label + "s</button>" +
         '<p class="sub">' + pt.name + " -- choose a color family, then a shade within it.</p>" +
         '<div class="opt-grid color-family-grid" id="' + gridId + '"></div>';
       optionsEl.querySelector(".back-to-families-btn").onclick = () => {
@@ -2652,11 +2655,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const fam = pt.colorFamilies.find((f) => f.name === browsedFamily);
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      '<button type="button" class="back-to-families-btn">&larr; ' + pt.name + ' Colors</button>' +
+      '<button type="button" class="back-to-families-btn">&larr; All ' + cat.label + 's</button>' +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
       '<div class="opt-grid" id="' + gridId + '"></div>';
+    // Back from a color's shades goes all the way to the step's first page,
+    // never just one level up.
     optionsEl.querySelector(".back-to-families-btn").onclick = () => {
       scrollToTopThenSwap(() => {
+        patternBrowse[activeTab] = null;
         patternFamilyBrowse[activeTab] = null;
         renderOptions();
       });
