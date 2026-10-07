@@ -3696,6 +3696,38 @@ function updateOrderSummaryUI() {
 // -- the icon itself always shows (so the feature is discoverable even with
 // nothing in the cart yet); only the badge count and the dropdown's list
 // change with cartItems.
+// Fabric code -> its plain color family ("Navy", "Black", "Gray"...), read
+// from the catalog's color families with the " Pattern" suffix dropped.
+let fabricFamilyByCode = null;
+function fabricColorFamily(code) {
+  if (!fabricFamilyByCode) {
+    fabricFamilyByCode = {};
+    (JACKET_CATALOG.fabric.patternTypes || []).forEach((p) => {
+      (p.colorFamilies || []).forEach((f) => {
+        (f.options || []).forEach((o) => { fabricFamilyByCode[o.name] = f.name.replace(/\s*Pattern$/i, ""); });
+      });
+    });
+  }
+  return fabricFamilyByCode[code] || "";
+}
+
+// One-line name for a suit in the cart, built from its fabric's plain color
+// and lapel style, e.g. "Navy Peak Lapel Suit" (or "... Jacket" for jacket
+// only). Never shows the raw fabric code.
+function cartItemTitle(item) {
+  const sel = item.jacket || {};
+  const shown = (cat, value) => {
+    if (!cat || !value) return "";
+    const opt = (cat.options || []).find((o) => o.name === value);
+    return (opt && opt.displayName) || value;
+  };
+  const color = fabricColorFamily(sel.fabric);
+  let lapel = shown(JACKET_CATALOG.collar, sel.collar);
+  if (lapel && !/lapel|collar/i.test(lapel)) lapel += " Lapel";
+  const noun = item.type === "jacketOnly" ? "Jacket" : "Suit";
+  return [color, lapel, noun].filter(Boolean).join(" ");
+}
+
 function renderCartBar() {
   const cartBadge = document.getElementById("cartBadge");
   const cartBarCount = document.getElementById("cartBarCount");
@@ -3724,7 +3756,6 @@ function renderCartBar() {
     return;
   }
   cartItems.forEach((item, i) => {
-    const fabric = (item.jacket && item.jacket.fabric) || "";
     // Previously this only labeled the Jacket Only case, leaving a plain
     // "Suit 1 -- Charcoal Gray" for a full suit with no hint of what's
     // actually in it -- now both cases say so, so the cart list reads the
@@ -3737,7 +3768,7 @@ function renderCartBar() {
       '<span class="cart-item-price">$' + itemPriceUsd(item) + "</span>" +
       '<button type="button" class="cart-item-remove" aria-label="Remove this suit">&times;</button>';
     row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + typeTag;
-    row.querySelector(".cart-item-label").textContent = fabric || typeTag;
+    row.querySelector(".cart-item-label").textContent = cartItemTitle(item);
     row.querySelector(".cart-item-remove").addEventListener("click", (e) => {
       // Without this, the click event -- after removeCartItem's synchronous
       // renderCartBar() rebuilds this list and detaches this very button --
