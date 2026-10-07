@@ -3518,6 +3518,7 @@ if (addAnotherSuitBtn) {
     // jacket designer) so the next item in the same order can be a
     // different suit type -- e.g. a full suit plus a spare jacket.
     pendingCommitIndex = null;
+    editingCartIndex = null;
     goToStep(measurementsSection, suitTypeSection);
   });
 }
@@ -3693,13 +3694,18 @@ let cartItems = [];
 // someone go back from Personal Info (or back further, to Measurements/
 // Pants/Jacket) to tweak a suit and click through again without ending up
 // with a duplicate entry -- commitCurrentSuitToCart() below updates this
-// same slot in place instead of pushing a new one. It's deliberately reset
-// to null after removing any cart item (see removeCartItem) rather than
-// trying to track exactly which index shifted where -- simpler, and the
-// only downside is a rare edge case (remove a suit, then go back and
-// re-confirm an unrelated one) very occasionally adding a duplicate instead
-// of updating in place, which is a fine tradeoff for a small shop's cart.
+// same slot in place instead of pushing a new one. Removing a cart item
+// shifts it along with the items after it (see removeCartItem).
 let pendingCommitIndex = null;
+
+// The cart index of a suit reopened with its "Edit" link (see
+// editCartItem), or null. Always either null or equal to
+// pendingCommitIndex; it only adds the "Editing Suit N" notice on the
+// design pages and the highlight on that suit in the cart.
+let editingCartIndex = null;
+// That suit's "Generate My Suit" picture, kept so re-saving it without
+// changing anything that shows in the picture doesn't drop it.
+let editingCartPreview = null; // { spec, previewId }
 
 // Converts a resolved selections map (as returned by a designer's
 // getSelections(), or as stored in a cart item -- both already have any
@@ -3901,11 +3907,21 @@ function renderCartBar() {
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML =
-      '<div class="cart-item-info"><span class="cart-item-type"></span><span class="cart-item-label"></span></div>' +
+      '<div class="cart-item-info"><span class="cart-item-type"></span><span class="cart-item-label"></span>' +
+      '<button type="button" class="cart-item-edit">Edit</button></div>' +
       '<span class="cart-item-price">$' + itemPriceUsd(item) + "</span>" +
       '<button type="button" class="cart-item-remove" aria-label="Remove this suit">&times;</button>';
     row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + typeTag;
     row.querySelector(".cart-item-label").textContent = cartItemTitle(item);
+    if (i === editingCartIndex) row.classList.add("editing");
+    const editBtn = row.querySelector(".cart-item-edit");
+    editBtn.textContent = i === editingCartIndex ? "Editing now" : "Edit";
+    editBtn.setAttribute("aria-label", "Edit suit " + (i + 1));
+    editBtn.addEventListener("click", (e) => {
+      // Same reason as the remove button below.
+      e.stopPropagation();
+      editCartItem(i);
+    });
     row.querySelector(".cart-item-remove").addEventListener("click", (e) => {
       // Without this, the click event -- after removeCartItem's synchronous
       // renderCartBar() rebuilds this list and detaches this very button --
@@ -3924,10 +3940,13 @@ function renderCartBar() {
 
 function removeCartItem(index) {
   cartItems.splice(index, 1);
-  // See the comment on pendingCommitIndex above -- simplest safe thing to do
-  // here is forget which slot (if any) matched the live designer state,
-  // rather than trying to shift the index along with the removed item.
-  pendingCommitIndex = null;
+  // Keep pointing at the same suit after the ones before it shift down. If
+  // the removed suit is the one in the designer, forget it, so continuing
+  // adds it back as a new suit instead of overwriting another one.
+  const shift = (i) => (i === null || i === index ? null : i > index ? i - 1 : i);
+  pendingCommitIndex = shift(pendingCommitIndex);
+  editingCartIndex = shift(editingCartIndex);
+  updateProcessBar();
   renderCartBar();
   updateOrderSummaryUI();
   saveDraft();
@@ -3960,7 +3979,8 @@ const samePreviousMeasurementsSuitNum = document.getElementById("samePreviousMea
 
 function updateSamePreviousMeasurementsBanner() {
   if (!samePreviousMeasurementsBanner) return;
-  samePreviousMeasurementsBanner.hidden = !cartItems.length;
+  // Not while a cart suit is open with "Edit": it already has its own.
+  samePreviousMeasurementsBanner.hidden = !cartItems.length || editingCartIndex !== null;
   if (cartItems.length && samePreviousMeasurementsSuitNum) {
     samePreviousMeasurementsSuitNum.textContent = String(cartItems.length);
   }
@@ -4109,11 +4129,168 @@ if (cartCheckoutBtn) {
   });
 }
 
+// "Edit" on a suit in the cart -- reopens it in the jacket designer with
+// every choice, typed monogram, lining photo and measurement filled back in.
+// pendingCommitIndex then points at it, so finishing Measurements again
+// (either button) replaces that same cart item instead of adding a copy.
+function closeCartDropdown() {
+  const dropdown = document.getElementById("cartDropdown");
+  const cartToggleBtn = document.getElementById("cartIconBtn");
+  if (dropdown) dropdown.hidden = true;
+  if (cartToggleBtn) cartToggleBtn.setAttribute("aria-expanded", "false");
+}
+
+// Whether opening another suit would throw away work in the designer that
+// isn't in the cart: a suit never added at all, or changes to a cart suit
+// that haven't been saved back to it yet.
+function designerHasUnsavedWork() {
+  if (pendingCommitIndex !== null && cartItems[pendingCommitIndex]) {
+    return buildVisualSpecText(cartItems[pendingCommitIndex]) !== currentDesignSpec();
+  }
+  const anyChosen = (sel) => Object.keys(sel || {}).some((k) => sel[k]);
+  return anyChosen(jacketDesigner.getSelections()) || (currentSuitType !== "jacketOnly" && anyChosen(pantsDesigner.getSelections()));
+}
+
+function editCartItem(index) {
+  if (!cartItems[index]) return;
+  closeCartDropdown();
+  // Already the suit in the designer: just go back to it, keeping any
+  // changes made since it was last saved.
+  if (index === pendingCommitIndex) {
+    editingCartIndex = index;
+    renderCartBar();
+    showDesignerForEditing();
+    return;
+  }
+  if (designerHasUnsavedWork()) {
+    openEditSuitConfirm(index);
+    return;
+  }
+  loadCartItemIntoDesigner(index);
+}
+
+function loadCartItemIntoDesigner(index) {
+  const item = cartItems[index];
+  if (!item) return;
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  // Suit type first: it decides which measurement fields exist below.
+  applySuitType(item.type);
+  // Photo and texts before setSelections, same order as restoreDraft().
+  if (item.liningPhoto) jacketDesigner.setLiningPhoto(item.liningPhoto);
+  jacketDesigner.setTexts((item.texts && item.texts.jacket) || {});
+  pantsDesigner.setTexts((item.texts && item.texts.pants) || {});
+  jacketDesigner.setSelections(item.jacket || {});
+  if (item.type !== "jacketOnly" && item.pants) pantsDesigner.setSelections(item.pants);
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el) el.value = "";
+  });
+  activeMeasurements().forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && item.measurements && item.measurements[m.id] !== undefined) el.value = item.measurements[m.id];
+  });
+  designPreview = null;
+  pendingCommitIndex = index;
+  editingCartIndex = index;
+  editingCartPreview = item.previewId ? { spec: currentDesignSpec(), previewId: item.previewId } : null;
+  // Every page of this suit is already filled in, so the progress bar can
+  // jump straight to any of them, Measurements included.
+  furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(measurementsSection));
+  markDesignStarted();
+  renderCartBar();
+  showDesignerForEditing();
+}
+
+// The cart suit's existing picture, while the design still matches it.
+function editedSuitPreviewId() {
+  if (!editingCartPreview || editingCartIndex === null || editingCartIndex !== pendingCommitIndex) return null;
+  return editingCartPreview.spec === currentDesignSpec() ? editingCartPreview.previewId : null;
+}
+
+// Opens the jacket designer on its first tab, from whatever page is showing
+// (same "scroll up before hiding" swap as goToCheckout above).
+function showDesignerForEditing() {
+  jacketDesigner.resetToFirstTab();
+  const swap = () => {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    jacketSection.classList.add("active");
+    scrollToStepTop(jacketSection);
+    saveDraft();
+  };
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+
+// "Editing Suit N" strip under the progress bar, on the design pages only,
+// and the Measurements page's add button worded as saving changes.
+function updateEditingCartNotice() {
+  const editing = editingCartIndex !== null && !!cartItems[editingCartIndex];
+  const notice = document.getElementById("editingCartNotice");
+  if (notice) {
+    const active = document.querySelector(".step.active");
+    const onDesignPage = [jacketSection, pantsSection, previewSection, measurementsSection].includes(active);
+    notice.hidden = !(editing && onDesignPage);
+    const tag = document.getElementById("editingCartTag");
+    if (tag && editing) tag.textContent = "Editing Suit " + (editingCartIndex + 1);
+  }
+  updateSamePreviousMeasurementsBanner();
+  const addBtn = document.getElementById("addAnotherSuitBtn");
+  if (addBtn) addBtn.textContent = editing ? "+ Save Changes & Design Another Suit" : "+ Add to Cart & Design Another Suit";
+}
+
+// Asked before "Edit" replaces unsaved work in the designer -- an on-page
+// dialog, same as Start Over's (see the note on startOver() below).
+const openEditSuitConfirm = (function () {
+  const overlay = document.getElementById("editSuitConfirmOverlay");
+  if (!overlay) return (index) => loadCartItemIntoDesigner(index);
+  const cancelBtn = document.getElementById("editSuitCancelBtn");
+  const confirmBtn = document.getElementById("editSuitConfirmBtn");
+  const title = document.getElementById("editSuitConfirmTitle");
+  const text = document.getElementById("editSuitConfirmText");
+  let pendingIndex = null;
+  let lastFocused = null;
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+  function close() {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  }
+  cancelBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  confirmBtn.addEventListener("click", () => {
+    close();
+    if (pendingIndex !== null) loadCartItemIntoDesigner(pendingIndex);
+  });
+  return function open(index) {
+    pendingIndex = index;
+    lastFocused = document.activeElement;
+    if (title) title.textContent = "Edit Suit " + (index + 1) + "?";
+    if (text) {
+      text.textContent = pendingCommitIndex !== null && cartItems[pendingCommitIndex]
+        ? "Your latest changes to Suit " + (pendingCommitIndex + 1) + " aren't saved to your cart yet, so they'll be lost."
+        : "The suit you're designing now isn't in your cart yet, so its choices will be cleared.";
+    }
+    overlay.classList.add("open");
+    cancelBtn.focus();
+    document.addEventListener("keydown", onKeydown);
+  };
+})();
+
 // Validates the suit currently loaded in the jacket/pants/measurements
 // designer and saves it into the cart -- either as a brand new entry, or
-// (if this is the same suit already sitting at the end of the cart --
-// see pendingCommitIndex) updating that entry in place so going back to
-// tweak something and continuing again never creates a duplicate. Used by
+// (if this is a suit already in the cart -- see pendingCommitIndex)
+// updating that entry in place so going back to tweak something, or
+// reopening it with the cart's "Edit" link, never creates a duplicate. Used by
 // both "Add to Cart & Design Another Suit" and "Continue to Personal Info".
 function commitCurrentSuitToCart() {
   const { values: measurementValues, missing: missingMeasurements } = collectMeasurements();
@@ -4131,9 +4308,9 @@ function commitCurrentSuitToCart() {
     // Typed answers such as the monogram: { jacket: { monogram }, pants: { monogram } }.
     texts: { jacket: jacketDesigner.getTexts(), pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getTexts() },
     // A "Generate My Suit" picture of exactly this design, if one was drawn.
-    previewId: currentDesignPreviewId(),
+    previewId: currentDesignPreviewId() || editedSuitPreviewId(),
   };
-  if (pendingCommitIndex !== null && pendingCommitIndex === cartItems.length - 1) {
+  if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
     cartItems[pendingCommitIndex] = item;
   } else {
     cartItems.push(item);
@@ -4854,6 +5031,7 @@ function saveDraft() {
       // Photos are big, so they are kept out of the draft itself (below).
       cart: cartItems.map((it) => { const c = Object.assign({}, it); delete c.liningPhoto; return c; }),
       pendingCommitIndex: pendingCommitIndex,
+      editingCartIndex: editingCartIndex,
     };
     localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   } catch (e) {
@@ -4908,6 +5086,7 @@ function restoreDraft() {
   }
   if (draftPhotos && draftPhotos.jacket) jacketDesigner.setLiningPhoto(draftPhotos.jacket);
   if (draft.pendingCommitIndex !== undefined) pendingCommitIndex = draft.pendingCommitIndex;
+  if (draft.editingCartIndex !== undefined && draft.editingCartIndex === pendingCommitIndex) editingCartIndex = draft.editingCartIndex;
   renderCartBar();
   updateOrderSummaryUI();
 
@@ -5049,6 +5228,7 @@ function returnHomeAfterOrder(message) {
   clearDesignerAndForm();
   cartItems = [];
   pendingCommitIndex = null;
+  editingCartIndex = null;
   designPreview = null;
   renderCartBar();
   updateOrderSummaryUI();
@@ -5142,6 +5322,7 @@ function executeStartOver() {
   // pointed at is about to be wiped -- there's no live suit left for it to
   // update in place.
   pendingCommitIndex = null;
+  editingCartIndex = null;
   renderCartBar();
   updateOrderSummaryUI();
 
@@ -5296,6 +5477,7 @@ function isShippingInfoComplete() {
 // Order both live on personalInfoSection -- so completion is tracked per
 // data-milestone rather than per data-step.
 function updateProcessBar() {
+  updateEditingCartNotice();
   // The progress bar doesn't mean anything yet while suitTypeSection is
   // showing -- no suit type has been picked, so there's no "Jacket" step to
   // even be on. Hide the whole bar for that one screen; it reappears the
