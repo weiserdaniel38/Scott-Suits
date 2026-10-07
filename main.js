@@ -1691,6 +1691,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     keys.forEach((k) => {
       const cat = catalog[k];
       if (cat.allowedBySelection && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
+      if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
       // "Upload Your Own Photo" with no photo behind it (e.g. a restored draft
       // whose photo is gone) can't be ordered -- ask again.
       if (order[k] && selectedIsUpload(k) && !customPhotos[k]) order[k] = null;
