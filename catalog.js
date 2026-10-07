@@ -1934,6 +1934,85 @@ const FABRIC_TYPE_IMG = {
 // the supplier's Elite Wool book, so it's built from what the catalog knows:
 // the weave (pattern type) plus a season/occasion read from the fabric's
 // color group and how dark its photo is.
+// Hand-written short line per fabric (color + pattern + use), keyed by
+// supplier code. fabricDescription() below is the fallback for any fabric
+// added later without one.
+const FABRIC_DESCRIPTIONS = {
+  "26SU218.DBV3529": "Smoky black solid. Sharp for evening.",
+  "26SU209.DLL0177": "Inky black solid. Made for black tie.",
+  "26SU204.DPP0191": "Deep black solid. Timeless for weddings.",
+  "26SU203.DLL0160": "Warm near-black solid. Easy to dress up or down.",
+  "26SU245.DZZ0072": "Cool-toned black solid. Polished for dinners out.",
+  "26SU244.DZZ0071": "Very dark charcoal solid. An everyday business staple.",
+  "26SU237.DZZ0134": "Black herringbone. Formal, with quiet texture.",
+  "26SU236.DZZ0133": "Black herringbone with a mulberry tint. Subtle color in the light.",
+  "26SU242.DZZ0054": "Classic black herringbone. Rich texture for evening.",
+  "26SU192.DZZ0102": "Deep mulberry herringbone. Distinctive but understated.",
+  "26SU231.DZZ0130": "Jet black herringbone with a cool cast. Sleek and modern.",
+  "26SU233.DZZ0060": "Darkest charcoal herringbone. Dependable for meetings.",
+  "26SU184.DZZ0103": "Graphite herringbone. Modern and easy year-round.",
+  "DAT9758.DZZ0099": "Dark olive herringbone. A quietly unusual fall pick.",
+  "26SU232.DZZ0131": "Smoky gray-black herringbone. Relaxed yet sharp.",
+  "26SU191.DZZ0101": "Raven-dark herringbone. Great for winter evenings.",
+  "26SU226.DBV6494": "Graphite plaid with a tonal check. Dark and formal.",
+  "26SU207.DLL0175": "Deep cobalt navy solid. Crisp for business.",
+  "26SU230.DZZ0129": "Steel-toned navy solid. A sharp office suit.",
+  "26SU196.DLL0176": "Muted slate blue solid. Understated and versatile.",
+  "26SU185.DZZ0105": "Near-navy slate blue solid. Boardroom to wedding.",
+  "26SU229.DZZ0128": "Darkest indigo solid. As formal as black, but richer.",
+  "26SU247.DZZ0073": "Rich steel blue solid. Polished for daily wear.",
+  "26SU217.DBV3530": "Midnight blue solid. The classic alternative to black.",
+  "26SU216.DBV3531": "True navy solid. The most versatile suit color.",
+  "26SU213.DEE1018": "Violet-tinted indigo solid. Elegant for events.",
+  "26SU212.DBQ796A": "Saturated slate blue solid. Stands out in a good way.",
+  "26SU246.DZZ0069": "Gray-cast steel blue solid. Calm and professional.",
+  "26SU206.DLL0174": "Rich cobalt blue solid. Lively color for spring.",
+  "26SU205.DLL0173": "Bright steel blue solid. Our boldest blue.",
+  "26SU190.DPP0193": "Midnight blue pinstripe. The classic power suit.",
+  "26SU188.DZZ0109": "Eggplant pinstripe. Traditional stripe, modern color.",
+  "26SU187.DZZ0108": "Dark midnight pinstripe. A long, sharp line.",
+  "26SU234.DZZ0061": "Deep cobalt pinstripe. Bold business wear.",
+  "26SU186.DZZ0107": "Indigo herringbone. Navy with extra character.",
+  "26SU228.DZZ0127": "Smoky slate blue herringbone. Soft texture for cooler days.",
+  "26SU240.DZZ0056": "Midnight blue herringbone. Smart for fall and winter.",
+  "26SU224.DZZ0124": "Dark steel blue plaid. A check that stays professional.",
+  "26SU223.DZZ0125": "Slate blue plaid. A quiet check for the office.",
+  "26SU179.DZZ0114": "Cobalt plaid with a tonal grid. Interest without noise.",
+  "26SU183.DGG1120": "Deep cobalt plaid. A classic British-style check.",
+  "26SU181.DGG1118": "Midnight blue plaid. Business or weekend.",
+  "26SU178.DZZ0113": "Navy plaid with a visible check. A bit bolder.",
+  "26SU220.DZZ0064": "Darkest navy plaid. Subtle up close.",
+  "26SU173.DZZ0110": "Indigo plaid with a lighter blue grid. Lively and stylish.",
+  "26SU176.DGG1133": "Faded navy plaid. A relaxed vintage feel.",
+  "26SU215.DBV3535": "Iron gray solid. A clean alternative to navy.",
+  "26SU239.DZZ0055": "Charcoal herringbone. Smart for winter business.",
+  "26SU189.DPP0192": "Blue-gray pewter herringbone. Textured and refined.",
+  "26SU182.DGG1119": "Warm graphite plaid. A subtle, easy check.",
+  "26SU222.DZZ0123": "Smoky charcoal plaid. A muted everyday check.",
+  "26SU180.DGG1117": "Cool slate gray plaid. A fresh take on gray.",
+  "26SU175.DGG1132": "Pewter gray plaid. Vintage look, great with brown shoes.",
+  "26SU197.DLL0171": "Warm stone gray solid. Relaxed for any season.",
+  "26SU214.DBV3534": "Pale fog gray plaid. Light for spring and summer.",
+  "26SU193.DZZ0098": "Taupe-gray herringbone. Easygoing for daytime.",
+  "26SU210.DBP325A": "Soft ivory solid. Bright and summery.",
+  "26SU196.DLL0167": "Warm cream solid. For outdoor celebrations.",
+  "26SU198.DLL0172": "Chestnut brown solid. Warm and rich for fall.",
+  "26SU243.DZZ0070": "Brick brown solid. Earthy and a little different.",
+  "26SU225.DBV6495": "Umber brown pinstripe. A warmer classic stripe.",
+  "26SU238.DZZ0053": "Sienna brown herringbone. Cozy for cooler weather.",
+  "26SU194.DZZ0100": "Walnut brown herringbone. Country texture, city polish.",
+  "26SU227.DZZ0126": "Reddish walnut herringbone. Made for autumn.",
+  "26SU221.DBV6499": "Espresso brown plaid. Heritage style.",
+  "26SU219.DZZ0062": "Light espresso plaid. Warm and relaxed.",
+  "26SU201.DLL0168": "Deep berry solid. A bold evening color.",
+  "26SU211.DBP323A": "Dark mulberry red solid. Striking for the holidays.",
+  "26SU199.DLL0169": "Deep crimson solid. Confident for celebrations.",
+  "26SU200.DLL0170": "Terracotta red-brown solid. Warm for fall.",
+  "26SU235.DZZ0132": "Deep amethyst purple solid. Elegant at night.",
+  "26SU241.DZZ0057": "Smoky plum solid. Moody and refined.",
+  "26SU202.DBV3537": "Forest green solid. Rich for fall and winter.",
+  "26SU177.DZZ0112": "Dark teal plaid. A standout check for cooler months.",
+};
 const FABRIC_WEAVE_TEXT = {
   "Solid": "Smooth, fine wool",
   "Herringbone": "Textured herringbone wool",
@@ -1972,7 +2051,7 @@ const FABRIC_COLOR_FIRST = (function () {
         let bucket = byColor[color].patterns.find((b) => b.name === pt.name);
         if (!bucket) { bucket = { name: pt.name, img: FABRIC_TYPE_IMG[pt.name], options: [] }; byColor[color].patterns.push(bucket); }
         o.pattern = pt.name; // Solid / Plaid / Herringbone / Pinstripe -- shown when the fabric is selected
-        o.description = fabricDescription(pt.name, color, o.hex); // short line shown under the grid once selected
+        o.description = FABRIC_DESCRIPTIONS[o.name] || fabricDescription(pt.name, color, o.hex); // short line shown under the grid once selected
         bucket.options.push(o); byColor[color].all.push(o);
       });
     });
