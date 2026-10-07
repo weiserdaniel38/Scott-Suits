@@ -13,6 +13,11 @@ const personalInfoSection = document.getElementById("personalInfoSection");
 const confirmationSection = document.getElementById("confirmationSection");
 const measureGrid = document.getElementById("measureGrid");
 const ALL_STEPS = [suitTypeSection, jacketSection, pantsSection, previewSection, measurementsSection, personalInfoSection, confirmationSection];
+// Index (into ALL_STEPS) of the furthest page the customer has reached for
+// the suit being designed. Pages up to here can be jumped to from the
+// progress bar in either direction (see goToStepById); picking a suit type
+// starts it over (see updateProcessBar).
+let furthestStepIndex = 0;
 const MOBILE_BREAKPOINT = 900;
 
 // The flat price for one whole suit (jacket + pants together), and for a
@@ -1897,10 +1902,15 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     wizHead.querySelector(".wiz-review-link").onclick = openReview;
 
     const showBack = !atFirst || isPantsDesigner;
+    // Next only appears on a question that's already answered -- i.e. when
+    // the customer has gone back to a completed step and wants to move
+    // forward again. A new question has no Next: picking an option moves on
+    // by itself.
+    const showNext = !!order[activeTab] && !textMissing(activeTab);
     wizBar.innerHTML =
       '<button type="button" class="wiz-back"' + (showBack ? "" : " disabled") + '>&larr; Back</button>' +
       '<div class="wiz-price">' + (wizPriceEl ? wizPriceEl.textContent : "") + "</div>" +
-      '<button type="button" class="wiz-next btn-primary"' + (order[activeTab] && !textMissing(activeTab) ? "" : " disabled") + ">" +
+      '<button type="button" class="wiz-next btn-primary"' + (showNext ? "" : " disabled hidden") + ">" +
       (atLast ? "Review" : "Next &rarr;") + "</button>";
     wizBar.querySelector(".wiz-back").onclick = wizGoBack;
     wizBar.querySelector(".wiz-next").onclick = wizGoNext;
@@ -3251,7 +3261,9 @@ document.getElementById("continueBtn").addEventListener("click", () => {
     goToStep(jacketSection, stepAfterDesign());
     return;
   }
-  pantsDesigner.resetToFirstTab();
+  // First time into Pants starts at its first question; coming back to
+  // Pants after already being there resumes on the question they left.
+  if (furthestStepIndex < ALL_STEPS.indexOf(pantsSection)) pantsDesigner.resetToFirstTab();
   goToStep(jacketSection, pantsSection);
 });
 
@@ -4629,6 +4641,7 @@ function saveDraft() {
     const activeStepEl = document.querySelector(".step.active");
     const draft = {
       step: activeStepEl ? activeStepEl.id : "designer",
+      furthestStep: ALL_STEPS[furthestStepIndex] ? ALL_STEPS[furthestStepIndex].id : "",
       suitType: currentSuitType,
       jacket: jacketDesigner.getSelections(),
       pants: pantsDesigner.getSelections(),
@@ -4741,6 +4754,8 @@ function restoreDraft() {
     ALL_STEPS.forEach((el) => el.classList.remove("active"));
     stepEl.classList.add("active");
   }
+  const furthestEl = draft.furthestStep ? document.getElementById(draft.furthestStep) : null;
+  furthestStepIndex = Math.max(ALL_STEPS.indexOf(furthestEl), ALL_STEPS.indexOf(stepEl), 0);
   return true;
 }
 
@@ -5048,6 +5063,11 @@ function updateProcessBar() {
 
   const activeStepEl = document.querySelector(".step.active");
   const activeStepId = activeStepEl ? activeStepEl.id : "";
+  // Choosing a suit type begins a new suit, so nothing after it counts as
+  // reached any more; otherwise remember the furthest page reached.
+  const activeIdx = ALL_STEPS.indexOf(activeStepEl);
+  if (activeStepEl === suitTypeSection) furthestStepIndex = activeIdx;
+  else if (activeIdx > furthestStepIndex && activeStepEl !== confirmationSection) furthestStepIndex = activeIdx;
   document.querySelectorAll(".process-step[data-milestone]").forEach((el) => {
     el.classList.toggle("current", !!activeStepId && el.getAttribute("data-step") === activeStepId);
     const milestone = el.getAttribute("data-milestone");
@@ -5159,11 +5179,11 @@ if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => cho
 
 // Lets someone click any step in the progress bar at the top to jump straight
 // there and edit it -- not just move forward with Continue/Back buttons.
-// Jumping backward to an already-visited page is always allowed. Jumping
-// ahead of the page you're currently on is never allowed here, even if the
-// earlier steps happen to already be "complete" -- Continue/Back are the
-// only customer-facing way to move forward. (The QA nav bar bypasses this
-// entirely, on purpose, for internal testing.)
+// Jumping backward is always allowed. Jumping forward is allowed only to a
+// page already reached before (see furthestStepIndex), and only while every
+// page in between is still complete -- a page never reached yet is still
+// only reachable with Continue. (The QA nav bar bypasses this entirely, on
+// purpose, for internal testing.)
 function goToStepById(stepId) {
   const stepEl = document.getElementById(stepId);
   if (!stepEl) return;
@@ -5172,17 +5192,28 @@ function goToStepById(stepId) {
   const currentActiveStepEl = ALL_STEPS.find((el) => el.classList.contains("active"));
   const currentIndex = currentActiveStepEl ? STEP_ORDER.indexOf(currentActiveStepEl.id) : -1;
   if (targetIndex > -1 && currentIndex > -1 && targetIndex > currentIndex) {
-    alert('Please use "Continue" to move forward one step at a time.');
-    return;
+    if (ALL_STEPS.indexOf(stepEl) > furthestStepIndex) {
+      alert('Please use "Continue" to move forward one step at a time.');
+      return;
+    }
+    const unfinished = STEP_ORDER.slice(0, targetIndex).find((id) => {
+      if (id === "pantsSection" && currentSuitType === "jacketOnly") return false;
+      return !isStepComplete(id);
+    });
+    if (unfinished) {
+      alert("Please finish this step first: " + STEP_LABELS[unfinished] + ".");
+      return;
+    }
   }
 
   const swap = () => {
-    // No resetToFirstTab here -- since forward jumps are blocked above,
-    // this only ever runs going backward (or to the step you're already
-    // on), and Back should resume on the last tab you had open, same as
-    // the Back buttons.
+    // No resetToFirstTab here -- every page opens on the last tab you had
+    // open, the same as the Back buttons.
     ALL_STEPS.forEach((el) => el.classList.remove("active"));
     stepEl.classList.add("active");
+    if (stepEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+    if (stepEl === previewSection) setTimeout(updateDesignPreviewPanel, 0);
+    if (stepEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
     scrollToStepTop(stepEl);
     saveDraft();
   };
