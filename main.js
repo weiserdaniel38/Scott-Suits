@@ -2848,9 +2848,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     });
   }
 
-  // Flat color palette (used by Lapel / Pants Buttonhole Color): every color
-  // is its own small tile in its real color with the name in spaced capitals,
-  // the whole grid sorted darkest -> lightest -- same look as the Fabric step.
+  // Flat color palette (used by every thread color step): every color is its
+  // own small tile in its real color with the name in spaced capitals,
+  // grouped by color under small headings -- same look as the Fabric step.
   // Tapping a tile selects it. "Same as Jacket" / "Match Fabric Color" sit on
   // top as slim banners.
   function renderFlatColorTiles(cat, gridId, descriptionHtml) {
@@ -2871,9 +2871,36 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       const r = lin((n >> 16) & 255), g = lin((n >> 8) & 255), b = lin(n & 255);
       return 0.2104542553 * Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) + 0.793617785 * Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) - 0.0040720468 * Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
     };
-    const colors = cat.colorFamilies.reduce((all, f) => all.concat(f.options), []);
-    colors.sort((a, b) => okL(a.hex) - okL(b.hex) || (a.displayName || a.name).localeCompare(b.displayName || b.name));
-    colors.forEach((opt) => {
+    // Colors are grouped under a few plain headings (all the reds together,
+    // all the blues together...) built from the catalog's own color
+    // families, then sorted darkest -> lightest inside each group.
+    const DISPLAY_GROUPS = [
+      ["Black, Gray & White", ["Black", "Gray", "White & Ivory"]],
+      ["Red, Wine & Pink", ["Red & Wine", "Pink & Magenta"]],
+      ["Orange & Brown", ["Orange", "Brown & Tan"]],
+      ["Yellow & Gold", ["Yellow & Gold"]],
+      ["Green & Olive", ["Olive & Green-Yellow", "Green", "Teal"]],
+      ["Blue & Navy", ["Navy", "Blue"]],
+      ["Purple", ["Purple & Indigo"]],
+    ];
+    const groups = DISPLAY_GROUPS.map(([label, fams]) => ({ label, fams, colors: [] }));
+    cat.colorFamilies.forEach((f) => {
+      let g = groups.find((x) => x.fams.includes(f.name));
+      if (!g) { g = { label: f.name, fams: [f.name], colors: [] }; groups.push(g); } // safety net: an unmapped family still shows
+      g.colors = g.colors.concat(f.options);
+    });
+    const colors = [];
+    groups.filter((g) => g.colors.length).forEach((g) => {
+      g.colors.sort((a, b) => okL(a.hex) - okL(b.hex) || (a.displayName || a.name).localeCompare(b.displayName || b.name));
+      g.colors.forEach((opt, i) => colors.push({ opt, heading: i === 0 ? g.label : null }));
+    });
+    colors.forEach(({ opt, heading }) => {
+      if (heading) {
+        const h = document.createElement("h4");
+        h.className = "opt-section-divider";
+        h.textContent = heading;
+        grid.appendChild(h);
+      }
       renderSwatchCard(cat, opt, grid);
       const card = grid.lastElementChild;
       if (!card) return;
