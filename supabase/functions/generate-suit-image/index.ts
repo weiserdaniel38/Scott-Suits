@@ -129,7 +129,7 @@ Left side, three tall panels side by side: (1) the jacket front view on an invis
 Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the lining visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
-Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the trouser waistband and fly, partly open, showing the waistband extension tab (its exact shape is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
 // Always added to the end of the final image prompt, whoever wrote the rest,
@@ -138,24 +138,51 @@ function fixedRules(spec: string): string {
   const rules = ["Strict accuracy rules:"];
   if (!/^Suit type: Jacket only/m.test(spec)) {
     const ext = (spec.match(/^Waistband Extension Style: (.+)$/m) || [])[1] || "";
-    const hook = (spec.match(/^Hook And Eye Style: (.+)$/m) || [])[1] || "";
-    const noButton = /no button|no waistband/i.test(ext);
+    const wstyle = (spec.match(/^Waistband Style: (.+)$/m) || [])[1] || "";
+    const buckle = /buckle/i.test(wstyle);
     rules.push(
-      "- No exposed metal anywhere on the trousers: no visible metal clasps, hooks, bars or buckles on the waistband or fly. A hook-and-eye, if any, is hidden inside the waistband and must not be visible." +
-        (noButton ? "" : " The waistband closes with a button."),
+      "- The trousers are shown fully CLOSED in every panel: fly zipped and hidden under its fly shield, waistband fastened. Never show an open fly, a visible zipper, or the inside of the waistband.",
     );
-    const shape = /arrow/i.test(ext) || (!ext && /arrow/i.test(hook))
-      ? "a POINTED, arrow-shaped tab that tapers to a point like an arrowhead at its end (not square, not rounded)"
-      : /square/i.test(ext)
-      ? "a square-cornered, straight-ended tab (not pointed, not rounded)"
-      : /round/i.test(ext)
-      ? "a tab with a rounded end (not pointed, not square)"
-      : "";
-    if (shape) {
+    rules.push(
+      "- No exposed metal on the trouser front: no visible clasps, hooks, bars or zipper teeth. Any hook-and-eye is hidden inside the waistband." +
+        (buckle ? " The only visible metal is the small side-adjuster buckles described below." : ""),
+    );
+    // One entry per Waistband Extension Style option (catalog.js), matched on
+    // the customer-facing name; most specific first.
+    const extRules: [RegExp, string][] = [
+      [/no waistband|string/i,
+        "There is NO separate waistband band and NO extension tab: the top edge of the trousers is a soft gathered drawstring waist, with a fabric drawstring tied in a small bow at the centre front above the fly. No button at the waist."],
+      [/centered|square waistband/i,
+        "There is NO extension tab: the two halves of the waistband meet edge to edge in a straight vertical seam exactly at the centre front, directly above the fly. No button or buttonhole is visible on the waistband."],
+      [/long round/i,
+        "The waistband has a LONG extension with a ROUNDED end: one side of the waistband continues right across the front, past the front belt loop, and ends near the side of the hip in a rounded tip fastened by one button there. Nothing fastens at the centre front."],
+      [/square.*long/i,
+        "The waistband has a LONG extension with a SQUARE end: one side of the waistband continues right across the front, past the front belt loop, and ends near the side of the hip in a straight, square-cornered end fastened by one button there. Nothing fastens at the centre front."],
+      [/arrow/i,
+        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly and tapers to a POINT like an arrowhead (not square, not rounded)."],
+      [/square/i,
+        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly, with a straight, square-cornered end (not pointed, not rounded)."],
+      [/round/i,
+        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly, with a ROUNDED end (not pointed, not square)."],
+    ];
+    const extRule = (extRules.find(([re]) => re.test(ext)) || [])[1];
+    if (extRule) {
+      const short = !/no waistband|string|centered|square waistband|long/i.test(ext);
       rules.push(
-        "- The waistband extension (the tab of waistband that overlaps at the top of the fly) is " + shape + "; show this shape clearly in the waistband close-up" +
-          (noButton ? ", with no visible button or buttonhole on the tab." : ", fastened with one button."),
+        "- Waistband front: " + extRule +
+          (short ? (/no button/i.test(ext) ? " The tab has NO visible button or buttonhole (it fastens hidden underneath)." : " The tab is fastened with one button.") : "") +
+          " Show this clearly in the full-suit front, the trousers front and the waistband close-up.",
       );
+    }
+    const styleRules: [RegExp, string][] = [
+      [/arrow shape belt/i, "a pointed, arrow-shaped fabric strap on each side of the waistband, threaded through a small metal adjuster buckle"],
+      [/side w\/ buckle|adjustable waistband on side/i, "a short fabric side-adjuster tab on each side of the waistband, closing through a small metal buckle"],
+      [/elastic/i, "a plain waistband with hidden elastic at the sides and a small button adjuster on each side, no buckles"],
+    ];
+    const styleRule = (styleRules.find(([re]) => re.test(wstyle)) || [])[1];
+    if (styleRule) rules.push("- Waistband style: " + styleRule + ".");
+    if (/^Belt Loops: No Belt Loop/im.test(spec) || /no waistband|string/i.test(ext)) {
+      rules.push("- The trousers have NO belt loops.");
     }
     if (/^Bottom Style: .*\bhem\b/im.test(spec) && !/^Bottom Style: .*cuff/im.test(spec)) {
       rules.push("- Trouser bottoms are plain hems with no turn-ups or cuffs.");
@@ -238,7 +265,7 @@ const PROMPT_WRITER_SYSTEM = `You write prompts for an image-generation model th
 You receive the sheet layout, notes on the reference images the image model will see, and a plain-English description of one suit. Write ONE image prompt (plain text, no preamble, under 3,000 characters) for a photorealistic studio product-photo sheet:
 - Keep the given layout and reference-image notes, restated clearly.
 - Describe the fabric color, pattern and texture precisely; use the approximate hex colors as guidance but describe colors in words. The jacket and trousers are cut from the fabric given for each.
-- Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, closure, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
+- Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
 - Lining: show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). Never show lining on the sleeves or cuffs; the sleeve cuff close-up shows a closed, fully buttoned cuff in the outer fabric only.
@@ -369,7 +396,11 @@ async function claim(id: string, force: boolean) {
 
 // Draws one sheet and stores it; returns its public URL and the prompt used.
 async function drawSheet(raw: string, folder: string, name: string): Promise<{ url: string; prompt: string }> {
-  const { text: spec, swatches } = parseSpec(raw);
+  const parsed = parseSpec(raw);
+  const swatches = parsed.swatches;
+  // The hook-and-eye ("opening style") is hidden inside a closed waistband;
+  // mentioning it only tempts the model to draw the fly open.
+  const spec = parsed.text.replace(/^Hook And Eye Style: .*\n?/m, "");
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
