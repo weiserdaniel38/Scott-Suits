@@ -1929,6 +1929,28 @@ const FABRIC_TYPE_IMG = {
   "Herringbone": "./assets/fabrictype-herringbone.jpg",
   "Pinstripe": "./assets/fabrictype-pinstripe.jpg"
 };
+// Very short customer-facing description of a fabric, shown once it's
+// selected (see renderColorFirstOptions in main.js). The whole collection is
+// the supplier's Elite Wool book, so it's built from what the catalog knows:
+// the weave (pattern type) plus a season/occasion read from the fabric's
+// color group and how dark its photo is.
+const FABRIC_WEAVE_TEXT = {
+  "Solid": "Smooth, fine wool",
+  "Herringbone": "Textured herringbone wool",
+  "Plaid": "Soft wool in a classic check",
+  "Pinstripe": "Crisp pinstripe wool",
+};
+function fabricDescription(pattern, colorGroup, hex) {
+  const n = parseInt(String(hex || "#808080").replace("#", ""), 16);
+  const lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  const rich = /burgundy|aubergine|plum|wine|green|teal|brown|cognac|rust|olive/i.test(colorGroup || "");
+  let use;
+  if (lum >= 150) use = "Light and fresh for spring and summer.";
+  else if (lum >= 70) use = "Versatile for any season.";
+  else if (rich) use = "A rich tone for fall and winter.";
+  else use = "Year-round, from business to evening.";
+  return (FABRIC_WEAVE_TEXT[pattern] || "Fine wool") + ". " + use;
+}
 const FABRIC_COLOR_FIRST = (function () {
   const lum = (hex) => {
     const n = parseInt(String(hex || "#808080").replace("#", ""), 16);
@@ -1950,6 +1972,7 @@ const FABRIC_COLOR_FIRST = (function () {
         let bucket = byColor[color].patterns.find((b) => b.name === pt.name);
         if (!bucket) { bucket = { name: pt.name, img: FABRIC_TYPE_IMG[pt.name], options: [] }; byColor[color].patterns.push(bucket); }
         o.pattern = pt.name; // Solid / Plaid / Herringbone / Pinstripe -- shown when the fabric is selected
+        o.description = fabricDescription(pt.name, color, o.hex); // short line shown under the grid once selected
         bucket.options.push(o); byColor[color].all.push(o);
       });
     });

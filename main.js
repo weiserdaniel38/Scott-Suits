@@ -1175,6 +1175,16 @@ function openLightbox(src, name, catLabel, large, fabricCode, onConfirm, catKey)
     pill.textContent = lbOpt.pattern;
     lbSub.prepend(pill);
   }
+  // Very short fabric description (catalog opt.description) under the subtitle.
+  let lbDesc = document.getElementById("lightboxDesc");
+  if (!lbDesc) {
+    lbDesc = document.createElement("div");
+    lbDesc.id = "lightboxDesc";
+    lbDesc.className = "lightbox-desc";
+    lbSub.after(lbDesc);
+  }
+  lbDesc.textContent = lbOpt && lbOpt.description ? lbOpt.description : "";
+  lbDesc.hidden = !lbDesc.textContent;
   resetZoom();
   lightboxZoomToken++;
   const myToken = lightboxZoomToken;

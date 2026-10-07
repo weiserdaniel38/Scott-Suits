@@ -1530,3 +1530,6 @@ body:not(.designing) #suitTypeSection{display:none;}
   body:not(.designing) .hero-cta{margin-top:clamp(20px, 3.6svh, 34px);}
   body:not(.designing) footer{padding-bottom:calc(72px + env(safe-area-inset-bottom));}
 }
+
+#lightbox .lightbox-desc{color:var(--ivory);font-size:13.5px;line-height:1.45;margin-top:6px;max-width:440px;margin-left:auto;margin-right:auto;}
+#lightbox .lightbox-desc[hidden]{display:none;}
