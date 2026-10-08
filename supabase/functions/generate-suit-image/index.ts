@@ -36,7 +36,8 @@
 //   WEBHOOK_SECRET     optional -- needed only for the database trigger /
 //                      manual redraws
 //   IMAGE_MODEL        optional, default gpt-image-2
-//   IMAGE_QUALITY      optional, low | medium | high | auto (default medium)
+//   IMAGE_QUALITY      optional, low | medium | high | auto (default high: small
+//                      details like slanted cuff buttonholes need it)
 //   IMAGE_SIZE         optional, default 1536x1024 (landscape sheet)
 //   USE_LAYOUT_REFERENCE optional, set to "true" to also show the model the
 //                      gray outline sheet (off by default: the panels are
@@ -390,6 +391,30 @@ const SLANT_HOLES =
 const SLANT_VENT =
   "the sleeve vent is DIAGONAL and the cuff buttons climb along it in a slanted line: the lowest button sits furthest toward the middle of the sleeve and each higher button sits a little further toward the sleeve's back seam, following the diagonal vent edge, so the row of buttons leans at a clear angle instead of standing in a straight vertical column";
 
+// What each non-notch lapel must NOT look like.
+const LAPEL_NOT: Record<string, string> = {
+  "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
+  Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
+  "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single outward-pointing angle halfway down the lapel.",
+};
+
+// The details the image model most often gets wrong, put at the very TOP of
+// the final prompt (it pays most attention to the start), and repeated in
+// the strict rules at the end.
+function keyDetails(spec: string): string {
+  const out: string[] = [];
+  const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
+  const lapel = (OPTION_LOOKS["Lapel Style"] || {})[lapelStyle];
+  if (lapel && lapelStyle !== "Notch Lapel") out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || ""));
+  if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
+    out.push("- CUFF BUTTONHOLES: SLANTED, " + SLANT_HOLES + ".");
+  }
+  if (/slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")) {
+    out.push("- CUFF BUTTONS: " + SLANT_VENT + ".");
+  }
+  return out.length ? "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n") : "";
+}
+
 // Always added to the end of the final image prompt, whoever wrote the rest,
 // to correct mistakes the image model tends to make.
 function fixedRules(spec: string): string {
@@ -480,13 +505,8 @@ function fixedRules(spec: string): string {
     );
   }
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
-  const lapelNot: Record<string, string> = {
-    "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
-    Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-    "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single outward-pointing angle halfway down the lapel.",
-  };
-  if (lapelNot[lapelStyle]) {
-    rules.push("- Lapel shape, in every view and close-up: " + OPTION_LOOKS["Lapel Style"][lapelStyle] + ". " + lapelNot[lapelStyle]);
+  if (LAPEL_NOT[lapelStyle]) {
+    rules.push("- Lapel shape, in every view and close-up: " + OPTION_LOOKS["Lapel Style"][lapelStyle] + ". " + LAPEL_NOT[lapelStyle]);
   }
   const lapelHoles = (spec.match(/^Lapel Buttonhole: (.+)$/m) || [])[1] || "";
   if (lapelHoles && !/^no lapel buttonhole/i.test(lapelHoles)) {
@@ -646,7 +666,7 @@ async function drawImage(prompt: string, images: { label: string; blob: Blob }[]
   if (!key) throw new Error("OPENAI_API_KEY is not set in Edge Function secrets");
   const model = env("IMAGE_MODEL", "gpt-image-2");
   const size = env("IMAGE_SIZE", "1536x1024");
-  const quality = env("IMAGE_QUALITY", "medium");
+  const quality = env("IMAGE_QUALITY", "high");
   let res: Response;
   if (images.length) {
     const form = new FormData();
@@ -718,7 +738,12 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
   const isDrawing = (r: Ref) => r.label.startsWith("style ");
-  const refs = swatches.filter((r) => !isDrawing(r)).slice(0, 5).concat(swatches.filter(isDrawing).slice(0, 8));
+  // The lapel and cuff drawings go first: the model follows early images best.
+  const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
+  const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
+  const drawings = swatches.filter(isDrawing).sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+  const refs = drawings.filter((r) => rank(r) < FIRST.length)
+    .concat(swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   const loaded = (await Promise.all(refs.map(loadRef))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
   );
@@ -727,7 +752,8 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
 
   const layout = layoutFor(jacketOnly, spec);
   const notes = refsNote(loaded, !!layoutImg, spec);
-  const prompt = (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec);
+  const key = keyDetails(spec);
+  const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec);
   const jpeg = await drawImage(prompt, images);
 
   const path = folder + "/" + name + "-" + Date.now() + ".jpg";
