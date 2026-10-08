@@ -500,7 +500,7 @@ function fixedRules(spec: string): string {
   }
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   rules.push(
-    "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned or folded-back cuff, no flap turned open, and no lining visible anywhere on the sleeves" +
+    "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned cuff and no flap folded open. A small sliver of lining may peek out at the bottom corner of the cuff vent, but no larger area of lining shows on the sleeve" +
       (/opening|working/i.test(cuffStyle) ? " (\"Opening Sleeve Cuff\" only means the buttonholes are real and functional, not that the cuff is shown open)." : "."),
   );
   if (/overlap/i.test(cuff)) {
@@ -563,7 +563,7 @@ You receive the sheet layout, notes on the reference images the image model will
 - Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
-- Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). Never show lining on the sleeves or cuffs; the sleeve cuff close-up shows a closed, fully buttoned cuff in the outer fabric only.
+- Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
 - "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
 - Monograms: at most a subtle tonal embroidery with no readable letters.
 - No people, faces, hands, text, labels, logos or watermarks.
@@ -694,16 +694,11 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const { text: spec, swatches: allSwatches } = parseSpec(raw);
   // An unlined jacket shows no lining, so don't show the model a lining swatch.
   const unlined = /^Facing Style: No Lining/m.test(spec);
-  let swatches = allSwatches.filter((r) => !(unlined && r.label.startsWith("lining")));
+  const swatches = allSwatches.filter((r) => !(unlined && r.label.startsWith("lining")));
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
   const isDrawing = (r: Ref) => r.label.startsWith("style ");
-  // The opening-cuff catalog drawings fold a corner of the cuff back to show
-  // it opens, and the image model copies that (cuff drawn open with lining
-  // showing). The cuff-button drawing and the text cover the cuff instead.
-  const openCuff = /^Sleeve Cuff Styles: .*(opening|working)/im.test(spec);
-  swatches = swatches.filter((r) => !(openCuff && r.label === "style Sleeve Cuff Styles"));
   const refs = swatches.filter((r) => !isDrawing(r)).slice(0, 5).concat(swatches.filter(isDrawing).slice(0, 8));
   const loaded = (await Promise.all(refs.map(loadRef))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
