@@ -258,8 +258,8 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Sleeve Cuff Styles": {
     "Opening Sleeve Cuff": "working (functional) cuff buttonholes in a straight vertical row along the sleeve vent; drawn CLOSED and buttoned",
     "Imitation Buttonhole Sleeve Cuff": "decorative stitched buttonholes in a straight vertical row along a closed sleeve vent",
-    "Opening Sleeve Cuff With Slant Buttons": "working cuff buttonholes on a DIAGONAL vent: the vent edge and the line of buttons run at an angle (lowest button nearest the edge of the sleeve), drawn CLOSED and buttoned",
-    "Imitation Buttonhole Cuff With Slant Buttons": "decorative buttonholes on a DIAGONAL closed vent: the vent edge and the line of buttons run at an angle",
+    "Opening Sleeve Cuff With Slant Buttons": "working cuff buttonholes on a DIAGONAL vent: the vent edge runs at a steep angle and the buttons climb along it in a diagonal line, the lowest button furthest toward the middle of the sleeve and each higher button further toward the back seam; drawn CLOSED and buttoned",
+    "Imitation Buttonhole Cuff With Slant Buttons": "decorative buttonholes on a DIAGONAL closed vent: the vent edge runs at a steep angle and the buttons climb along it in a diagonal line, the lowest button furthest toward the middle of the sleeve and each higher button further toward the back seam",
   },
   "Buttons On Sleeve Cuff": {
     "3 Flat Button": "THREE cuff buttons in a vertical row with small even gaps between them, horizontal buttonholes",
@@ -268,11 +268,11 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "4 Overlap Button": "FOUR 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
     "5 Overlap Button": "FIVE 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
     "6 Overlap Button": "SIX 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
-    "4 Slant Flat Button": "FOUR cuff buttons with small gaps between them, each buttonhole stitched at a diagonal angle",
-    "5 Slant Flat Button": "FIVE cuff buttons with small gaps between them, each buttonhole stitched at a diagonal angle",
-    "4 Slant Overlap Button": "FOUR 'kissing' cuff buttons overlapping each other, each buttonhole stitched at a diagonal angle",
-    "5 Slant Overlap Button": "FIVE 'kissing' cuff buttons overlapping each other, each buttonhole stitched at a diagonal angle",
-    "6 Slant Overlap Button": "SIX 'kissing' cuff buttons overlapping each other, each buttonhole stitched at a diagonal angle",
+    "4 Slant Flat Button": "FOUR cuff buttons with small gaps between them, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
+    "5 Slant Flat Button": "FIVE cuff buttons with small gaps between them, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
+    "4 Slant Overlap Button": "FOUR 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
+    "5 Slant Overlap Button": "FIVE 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
+    "6 Slant Overlap Button": "SIX 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
     "Button Less Sleeve (4 Buttons)": "NO cuff buttons: only FOUR stitched buttonholes in a vertical row on the sleeve, with no buttons sewn on",
   },
 
@@ -366,20 +366,41 @@ function describeSpec(spec: string): string {
 // ---------------------------------------------------------------------------
 // Prompt
 // ---------------------------------------------------------------------------
-function layoutFor(jacketOnly: boolean): string {
+function layoutFor(jacketOnly: boolean, spec = ""): string {
+  const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+  const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
+  const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
+    (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket.
-Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
+Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
-Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
+
+// How slanted cuff buttonholes look in the catalog drawings. The image model
+// keeps drawing them horizontal, so this is repeated in the layout, the
+// reference-image notes and the rules.
+const SLANT_HOLES =
+  "each cuff buttonhole is a narrow stitched slit that starts at its button and runs inward across the sleeve, TILTED about 30 degrees upward (its far end clearly higher than the end at the button), all slits parallel, like a ladder of diagonal dashes; never horizontal and never vertical";
+
+// The "With Slant Buttons" cuff styles: the buttons themselves sit on a slant.
+const SLANT_VENT =
+  "the sleeve vent is DIAGONAL and the cuff buttons climb along it in a slanted line: the lowest button sits furthest toward the middle of the sleeve and each higher button sits a little further toward the sleeve's back seam, following the diagonal vent edge, so the row of buttons leans at a clear angle instead of standing in a straight vertical column";
 
 // Always added to the end of the final image prompt, whoever wrote the rest,
 // to correct mistakes the image model tends to make.
 function fixedRules(spec: string): string {
   const rules = ["Strict accuracy rules:"];
+  // First, because the image model ignores it most.
+  if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
+    rules.push("- MOST IMPORTANT: the cuff buttonholes are SLANTED, on both sleeves in every panel and in the cuff close-up: " + SLANT_HOLES + ".");
+  }
+  if (/slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")) {
+    rules.push("- MOST IMPORTANT: " + SLANT_VENT + ", on both sleeves in every panel and in the cuff close-up.");
+  }
   if (!/^Suit type: Jacket only/m.test(spec)) {
     const ext = (spec.match(/^Waistband Extension Style: (.+)$/m) || [])[1] || "";
     const wstyle = (spec.match(/^Waistband Style: (.+)$/m) || [])[1] || "";
@@ -506,12 +527,6 @@ function fixedRules(spec: string): string {
   if (/overlap/i.test(cuff)) {
     rules.push("- The cuff buttons OVERLAP: each button sits so close that its edge overlaps the next one (\"kissing\" buttons), with no gap between them.");
   }
-  if (/slant/i.test(cuffStyle)) {
-    rules.push("- The sleeve vent is DIAGONAL: its edge and the line of cuff buttons run at a clear angle up the sleeve, not straight up.");
-  }
-  if (/slant/i.test(cuff)) {
-    rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle of about 30 degrees, rising as it runs away from its button toward the back of the sleeve, all parallel to each other. They must NOT be horizontal.");
-  }
   return rules.join("\n");
 }
 
@@ -528,8 +543,12 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       const value = (spec.match(new RegExp("^" + esc + ": (.+)$", "m")) || [])[1] || "";
       // The opening-cuff drawings fold a corner back to show that the cuff
       // opens; the picture must still show it closed.
-      const caveat = name === "Sleeve Cuff Styles" && /opening|working/i.test(value)
+      const caveat = (name === "Sleeve Cuff Styles" && /opening|working/i.test(value)
         ? " The drawing folds one corner of the cuff back only to show that it can open; draw the cuff CLOSED and buttoned."
+        : "") + (name === "Sleeve Cuff Styles" && /slant/i.test(value)
+        ? " Note how the buttons climb in a diagonal line along the slanted vent, not a straight vertical column; copy that slant exactly."
+        : name === "Buttons On Sleeve Cuff" && /slant/i.test(value)
+        ? " Note how every buttonhole slit is TILTED diagonally upward away from its button, not horizontal; copy that angle exactly."
         : "";
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.${caveat}`);
     } else {
@@ -706,7 +725,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const layoutImg = useLayout ? await loadRef({ label: "layout example", src: LAYOUT_REFERENCE }) : null;
   const images = (layoutImg ? [layoutImg] : []).concat(loaded);
 
-  const layout = layoutFor(jacketOnly);
+  const layout = layoutFor(jacketOnly, spec);
   const notes = refsNote(loaded, !!layoutImg, spec);
   const prompt = (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec);
   const jpeg = await drawImage(prompt, images);
