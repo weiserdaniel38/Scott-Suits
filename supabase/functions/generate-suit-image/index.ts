@@ -458,6 +458,15 @@ function fixedRules(spec: string): string {
       "- The hip pockets are WELT pockets identical in style to the chest welt pocket, just lower: a flat rectangular fabric welt strip over each opening. They have NO flaps and are NOT besom (thin piped slit) pockets.",
     );
   }
+  const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
+  const lapelNot: Record<string, string> = {
+    "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
+    Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
+    "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single outward-pointing angle halfway down the lapel.",
+  };
+  if (lapelNot[lapelStyle]) {
+    rules.push("- Lapel shape, in every view and close-up: " + OPTION_LOOKS["Lapel Style"][lapelStyle] + ". " + lapelNot[lapelStyle]);
+  }
   const lapelHoles = (spec.match(/^Lapel Buttonhole: (.+)$/m) || [])[1] || "";
   if (lapelHoles && !/^no lapel buttonhole/i.test(lapelHoles)) {
     rules.push(
@@ -501,7 +510,7 @@ function fixedRules(spec: string): string {
     rules.push("- The sleeve vent is DIAGONAL: its edge and the line of cuff buttons run at a clear angle up the sleeve, not straight up.");
   }
   if (/slant/i.test(cuff)) {
-    rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle, not horizontal.");
+    rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle of about 30 degrees, rising as it runs away from its button toward the back of the sleeve, all parallel to each other. They must NOT be horizontal.");
   }
   return rules.join("\n");
 }
