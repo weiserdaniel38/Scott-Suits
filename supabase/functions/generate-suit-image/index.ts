@@ -549,7 +549,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
         ? " Note how the buttons climb in a diagonal line along the slanted vent, not a straight vertical column; copy that slant exactly."
         : name === "Buttons On Sleeve Cuff" && /slant/i.test(value)
         ? " Note how every buttonhole slit is TILTED diagonally upward away from its button, not horizontal; copy that angle exactly."
-        : "";
+        : "");
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.${caveat}`);
     } else {
       lines.push(`Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
