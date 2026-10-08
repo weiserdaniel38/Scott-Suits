@@ -160,15 +160,15 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Extra Wide": "extra-wide statement lapels, about 11 cm at the widest, reaching close to the sleeve seam",
   },
   "Lapel Buttonhole": {
-    Standard: "one buttonhole stitched on the wearer's LEFT lapel near its top",
-    Right: "one buttonhole stitched on the wearer's RIGHT lapel near its top; none on the left",
-    "Right & Left": "one buttonhole stitched on EACH lapel near its top",
-    "Left Two": "TWO short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Right Two": "TWO short parallel buttonholes stacked on the wearer's RIGHT lapel; none on the left",
-    "Left Three": "THREE short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Left Three, Right Two": "THREE parallel buttonholes on the wearer's LEFT lapel and TWO on the RIGHT lapel",
-    "4 Buttonholes On Left": "FOUR short parallel buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Lapel Buttonhole": "one buttonhole stitched on the wearer's LEFT lapel near its top",
+    Standard: "one buttonhole on the wearer's LEFT lapel; none on the right",
+    Right: "one buttonhole on the wearer's RIGHT lapel; none on the left",
+    "Right & Left": "one buttonhole on EACH lapel, mirrored at the same height",
+    "Left Two": "TWO buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Right Two": "TWO buttonholes stacked on the wearer's RIGHT lapel; none on the left",
+    "Left Three": "THREE buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Left Three, Right Two": "THREE stacked buttonholes on the wearer's LEFT lapel and TWO on the RIGHT lapel, both stacks starting at the same height",
+    "4 Buttonholes On Left": "FOUR buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Lapel Buttonhole": "one buttonhole on the wearer's LEFT lapel; none on the right",
     "No Lapel Buttonhole": "NO buttonhole on either lapel; both lapels are plain",
   },
   "Front Button": {
@@ -201,7 +201,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Double Besom Pocket": "two straight, horizontal double-besom hip pockets (two thin piped lips each), no flaps",
     "Single Besom + Single Besom Ticket": "two horizontal single-besom hip pockets, plus a smaller single-besom ticket pocket just above the wearer's right hip pocket; no flaps",
     "Double Besom + Double Besom Ticket": "two horizontal double-besom hip pockets, plus a smaller double-besom ticket pocket just above the wearer's right hip pocket; no flaps",
-    "Flat Welt Pocket": "two straight horizontal welt hip pockets: a flat rectangular welt strip sewn up over each opening, no flaps",
+    "Flat Welt Pocket": "two hip pockets that look exactly like the normal chest welt pocket, only lower (at hip level) and a little wider: each is a flat, upright rectangular welt strip of the suit fabric about 1.5 cm tall sewn over a straight horizontal opening, with neatly stitched ends. NO flaps and NO besom (thin piped) openings",
     "Single Besom Slant Pocket": "two SLANTED single-besom hip pockets angled downward toward the front, no flaps",
     "Double Besom Slant Pocket": "two SLANTED double-besom hip pockets angled downward toward the front, no flaps",
     "Flap Pockets": "two straight horizontal hip pockets with rectangular flaps",
@@ -453,6 +453,31 @@ function fixedRules(spec: string): string {
   if (/^double breasted one button$/i.test(front)) {
     rules.push("- Front buttons, placed exactly like this: " + OPTION_LOOKS["Front Button"][front] + ".");
   }
+  if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
+    rules.push(
+      "- The hip pockets are WELT pockets identical in style to the chest welt pocket, just lower: a flat rectangular fabric welt strip over each opening. They have NO flaps and are NOT besom (thin piped slit) pockets.",
+    );
+  }
+  const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
+  const lapelNot: Record<string, string> = {
+    "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
+    Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
+    "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single outward-pointing angle halfway down the lapel.",
+  };
+  if (lapelNot[lapelStyle]) {
+    rules.push("- Lapel shape, in every view and close-up: " + OPTION_LOOKS["Lapel Style"][lapelStyle] + ". " + lapelNot[lapelStyle]);
+  }
+  const lapelHoles = (spec.match(/^Lapel Buttonhole: (.+)$/m) || [])[1] || "";
+  if (lapelHoles && !/^no lapel buttonhole/i.test(lapelHoles)) {
+    rules.push(
+      "- Lapel buttonholes: " + ((OPTION_LOOKS["Lapel Buttonhole"] || {})[lapelHoles] || lapelHoles) + ". " +
+        "Each lapel buttonhole is a short, slim buttonhole about 2.5 cm long: a narrow slit with tightly stitched thread edges (not an outlined box or rectangle), placed near the OUTER edge of the lapel about 3 cm below the lapel's top edge, angled to run parallel to that top edge (not horizontal). " +
+        (/two|three|four|4/i.test(lapelHoles)
+          ? "Multiple buttonholes on one lapel are stacked tightly in a neat column directly below one another, only about 1 cm apart (centre to centre), all the same length and perfectly parallel, the column following the outer edge of the lapel; never spread out down the lapel. "
+          : "") +
+        "Stitch them in the lapel buttonhole thread color.",
+    );
+  }
   const db = front.match(/double breasted (\d)x(\d)/i);
   if (db) {
     rules.push(
@@ -475,7 +500,7 @@ function fixedRules(spec: string): string {
   }
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   rules.push(
-    "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned or folded-back cuff, no flap turned open, and no lining visible anywhere on the sleeves" +
+    "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned cuff and no flap folded open. A small sliver of lining may peek out at the bottom corner of the cuff vent, but no larger area of lining shows on the sleeve" +
       (/opening|working/i.test(cuffStyle) ? " (\"Opening Sleeve Cuff\" only means the buttonholes are real and functional, not that the cuff is shown open)." : "."),
   );
   if (/overlap/i.test(cuff)) {
@@ -485,7 +510,7 @@ function fixedRules(spec: string): string {
     rules.push("- The sleeve vent is DIAGONAL: its edge and the line of cuff buttons run at a clear angle up the sleeve, not straight up.");
   }
   if (/slant/i.test(cuff)) {
-    rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle, not horizontal.");
+    rules.push("- The cuff buttonholes are SLANTED: each buttonhole is stitched at a clear diagonal angle of about 30 degrees, rising as it runs away from its button toward the back of the sleeve, all parallel to each other. They must NOT be horizontal.");
   }
   return rules.join("\n");
 }
@@ -538,7 +563,7 @@ You receive the sheet layout, notes on the reference images the image model will
 - Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
-- Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). Never show lining on the sleeves or cuffs; the sleeve cuff close-up shows a closed, fully buttoned cuff in the outer fabric only.
+- Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
 - "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
 - Monograms: at most a subtle tonal embroidery with no readable letters.
 - No people, faces, hands, text, labels, logos or watermarks.
