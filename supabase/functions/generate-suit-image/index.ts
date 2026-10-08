@@ -9,7 +9,7 @@
 //     and before the measurements / order form ("Generate My Suit"):
 //       { preview: true, visual_spec }     start drawing -> { preview_id }
 //       { preview_check: "<preview_id>" }  ask whether it's done yet
-//     Rate limited per visitor and per day (see PREVIEW_* below); previews
+//     Optionally rate limited per visitor and per day (see PREVIEW_* below); previews
 //     live in the suit_previews table.
 //   * After the order is saved:
 //       { attach: "<preview_id>", order_id, suit_number }
@@ -42,8 +42,8 @@
 //                      gray outline sheet (off by default: the panels are
 //                      described in words only)
 //   SITE_URL           optional, default https://scottssuits.com
-//   PREVIEW_PER_VISITOR_PER_DAY optional, default 6
-//   PREVIEW_PER_DAY    optional, default 150 (all visitors together)
+//   PREVIEW_PER_VISITOR_PER_DAY optional; unset means no per-visitor limit
+//   PREVIEW_PER_DAY    optional; unset means no daily limit (all visitors)
 //   ANTHROPIC_MODEL    optional, default claude-opus-5-5
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
@@ -549,7 +549,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
         ? " Note how the buttons climb in a diagonal line along the slanted vent, not a straight vertical column; copy that slant exactly."
         : name === "Buttons On Sleeve Cuff" && /slant/i.test(value)
         ? " Note how every buttonhole slit is TILTED diagonally upward away from its button, not horizontal; copy that angle exactly."
-        : "";
+        : "");
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.${caveat}`);
     } else {
       lines.push(`Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
@@ -787,10 +787,11 @@ async function startPreview(req: Request, raw: string): Promise<Response> {
   if (!looksLikeSuitSpec(raw)) return json({ error: "Not a suit description" }, 400);
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const visitor = await visitorKey(req);
-  const perVisitor = Number(env("PREVIEW_PER_VISITOR_PER_DAY", "6")) || 6;
-  const perDay = Number(env("PREVIEW_PER_DAY", "150")) || 150;
-  if ((await countSince({ visitor }, since)) >= perVisitor) return json({ status: "limit", scope: "visitor" }, 429);
-  if ((await countSince(null, since)) >= perDay) return json({ status: "limit", scope: "day" }, 429);
+  // Limits are off unless set (turned off for now at Daniel's request).
+  const perVisitor = Number(env("PREVIEW_PER_VISITOR_PER_DAY", "0"));
+  const perDay = Number(env("PREVIEW_PER_DAY", "0"));
+  if (perVisitor > 0 && (await countSince({ visitor }, since)) >= perVisitor) return json({ status: "limit", scope: "visitor" }, 429);
+  if (perDay > 0 && (await countSince(null, since)) >= perDay) return json({ status: "limit", scope: "day" }, 429);
   const { data, error } = await supabase
     .from("suit_previews")
     .insert({ visitor, visual_spec: raw, status: "pending" })
