@@ -2317,6 +2317,7 @@ JACKET_CATALOG.buttoncolor = {
   familyCountNoun: "button",
   familyBackLabel: "All Button Types",
   familySpecLabel: "button",
+  compactCards: true, // smaller button cards: 3 per row on phones, 4 on desktop
   specialOptions: [BEST_MATCH_FABRIC_BUTTON_OPTION],
   options: [BEST_MATCH_FABRIC_BUTTON_OPTION].concat(flattenColorFamilies(BUTTON_COLOR_FAMILIES)),
 };

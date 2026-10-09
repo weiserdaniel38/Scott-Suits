@@ -2661,7 +2661,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
       '<button type="button" class="back-to-families-btn">&larr; ' + (cat.familyBackLabel || "All Colors") + "</button>" +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
-      '<div class="opt-grid" id="' + gridId + '"></div>';
+      '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' + gridId + '"></div>';
     // Back from a color's shades goes all the way to the step's first page,
     // never just one level up.
     optionsEl.querySelector(".back-to-families-btn").onclick = () => {

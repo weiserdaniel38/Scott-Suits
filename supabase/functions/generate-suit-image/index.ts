@@ -414,13 +414,13 @@ const LAPEL_NOT: Record<string, string> = {
 // The details the image model most often gets wrong, put at the very TOP of
 // the final prompt (it pays most attention to the start), and repeated in
 // the strict rules at the end.
-// The image model drew a besom chest pocket as a stack of piped lines above a
-// second, separate welt slit. There is only ever one chest pocket.
 // Double-breasted jackets came out far too long (hem well below the sleeve
 // ends, like an overcoat). They are cut the same length as single-breasted.
 const JACKET_LENGTH =
   "a standard suit-jacket length, exactly like a normal single-breasted suit jacket: the hem ends just below the seat, about level with the ends of the sleeves when the arms hang straight; never longer, never a long coat, frock coat or overcoat length";
 
+// The image model drew a besom chest pocket as a stack of piped lines above a
+// second, separate welt slit. There is only ever one chest pocket.
 const BESOM_CHEST_NOT =
   "There is exactly ONE chest pocket opening on the jacket: never stack a second slit, welt or pocket above or below it, and draw no extra stitched lines around it";
 
