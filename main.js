@@ -1915,6 +1915,55 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   window.addEventListener("resize", syncFabricBgSoon);
   setInterval(syncFabricBg, 300); // catches the step first appearing / layout shifts
 
+  // "More options" hint: on steps with more cards than fit on screen, a small
+  // pill sits just above the Back / price / Next bar (and the cards fade into
+  // the bar) so customers know they can scroll for more -- only on steps with
+  // plenty more to see. It goes away as soon as the customer starts scrolling
+  // that page, and comes back only on the next page of cards. Only a class is
+  // toggled -- the bar's children are never rebuilt (see the iPhone Safari
+  // note in renderWizard).
+  const MORE_HINT_MIN_HIDDEN = 6;
+  let moreHintFirstCard = null; // first card of the page the hint belongs to
+  let moreHintStartY = 0;       // scroll position when that page appeared
+  let moreHintSince = 0;        // when that page appeared
+  let moreHintDismissed = false;
+  function syncMoreHint() {
+    const more = wizBar.querySelector(".wiz-more");
+    if (!more) return;
+    const cards = optionsEl.querySelectorAll(".opt-card");
+    if (cards[0] !== moreHintFirstCard) {
+      // A new page of cards: start fresh.
+      moreHintFirstCard = cards[0] || null;
+      moreHintStartY = window.scrollY;
+      moreHintSince = Date.now();
+      moreHintDismissed = false;
+    } else if (!moreHintDismissed) {
+      // The page's own scroll-to-top can still be settling just after it
+      // appears; don't count that as the customer scrolling.
+      if (Date.now() - moreHintSince < 700) moreHintStartY = window.scrollY;
+      else if (Math.abs(window.scrollY - moreHintStartY) > 24) moreHintDismissed = true;
+    }
+    // Only worth pointing out when a lot is hidden (Daniel: not for a row or
+    // two) -- at least MORE_HINT_MIN_HIDDEN cards still mostly below the bar.
+    const barTop = Math.min(wizBar.getBoundingClientRect().top, window.innerHeight);
+    let hidden = 0;
+    for (let i = cards.length - 1; i >= 0 && hidden < MORE_HINT_MIN_HIDDEN; i--) {
+      const r = cards[i].getBoundingClientRect();
+      if (r.height > 0 && r.top + r.height * 0.5 > barTop) hidden++;
+      else break;
+    }
+    const show = !moreHintDismissed && hidden >= MORE_HINT_MIN_HIDDEN;
+    if (wizBar.classList.contains("has-more") !== show) wizBar.classList.toggle("has-more", show);
+  }
+  let moreHintRaf = 0;
+  function syncMoreHintSoon() {
+    if (moreHintRaf) return;
+    moreHintRaf = requestAnimationFrame(() => { moreHintRaf = 0; syncMoreHint(); });
+  }
+  window.addEventListener("scroll", syncMoreHintSoon, { passive: true });
+  window.addEventListener("resize", syncMoreHintSoon);
+  setInterval(syncMoreHint, 300); // catches a new step's cards appearing
+
   function wizList() { return keys.filter(isApplicable); }
   function wizGroupLabel(key) {
     if (!groups) return "";
@@ -2013,8 +2062,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       wizBar.innerHTML =
         '<button type="button" class="wiz-back">&larr; Back</button>' +
         '<div class="wiz-price"></div>' +
-        '<button type="button" class="wiz-next btn-primary"></button>';
+        '<button type="button" class="wiz-next btn-primary"></button>' +
+        '<button type="button" class="wiz-more" tabindex="-1">More options <span aria-hidden="true">&darr;</span></button>';
       wizBar.querySelector(".wiz-back").onclick = wizGoBack;
+      wizBar.querySelector(".wiz-more").onclick = () => {
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.6), behavior: "smooth" });
+      };
       wizBar.querySelector(".wiz-next").onclick = wizGoNext;
     }
     const backBtn = wizBar.querySelector(".wiz-back");
@@ -4684,6 +4737,32 @@ function currentDesignSpec() {
   }
 }
 
+// The preview picture can only use the customer's own lining photo once it
+// is online, so upload it (once per photo) to the same public bucket orders
+// use. Resolves to the public URL, or "" when there's no photo or the upload
+// fails (the picture is then drawn without it).
+const previewLiningUploads = new Map();
+function previewLiningPhotoUrl(photo) {
+  if (!photo) return Promise.resolve("");
+  if (!previewLiningUploads.has(photo)) {
+    const job = (async () => {
+      const blob = await (await fetch(photo)).blob();
+      const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+      const path = "previews/" + id + ".jpg";
+      const client = getSupabase();
+      const { error } = await client.storage.from("lining-photos").upload(path, blob, { contentType: "image/jpeg" });
+      if (error) throw error;
+      return client.storage.from("lining-photos").getPublicUrl(path).data.publicUrl;
+    })().catch((err) => {
+      console.warn("Preview lining photo upload failed:", err);
+      previewLiningUploads.delete(photo);
+      return "";
+    });
+    previewLiningUploads.set(photo, job);
+  }
+  return previewLiningUploads.get(photo);
+}
+
 // Top of the Measurements step: "See your suit before you order".
 async function updateDesignPreviewPanel() {
   const box = document.getElementById("designPreview");
@@ -4720,7 +4799,8 @@ async function updateDesignPreviewPanel() {
     });
   };
 
-  if (designPreview && designPreview.spec === spec) {
+  const liningPhoto = jacketDesigner.getLiningPhoto();
+  if (designPreview && designPreview.spec === spec && designPreview.photo === liningPhoto) {
     if (designPreview.status === "done") ui.showImage(designPreview.url);
     else if (designPreview.status === "pending") watch(designPreview);
   }
@@ -4733,10 +4813,16 @@ async function updateDesignPreviewPanel() {
     }
     if (SUIT_IMAGES_PAUSED) return;
     try {
-      const start = await callSuitImageFn({ preview: true, visual_spec: spec });
+      // The customer's own lining photo goes in as a swatch, like the
+      // catalog linings (not part of `spec`, which only identifies the design).
+      const photoUrl = await previewLiningPhotoUrl(liningPhoto);
+      const sent = photoUrl
+        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getSelections() }, { liningPhotoUrl: photoUrl })
+        : spec;
+      const start = await callSuitImageFn({ preview: true, visual_spec: sent });
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
-      designPreview = { spec, id: start.data.preview_id, status: "pending", url: null };
+      designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null };
       watch(designPreview);
     } catch (e) {
       console.error(e);
@@ -4748,7 +4834,7 @@ async function updateDesignPreviewPanel() {
 // The finished preview for the suit being committed to the cart, if the
 // customer drew one and hasn't changed the design since.
 function currentDesignPreviewId() {
-  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() ? designPreview.id : null;
+  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() && designPreview.photo === jacketDesigner.getLiningPhoto() ? designPreview.id : null;
 }
 
 // The finished suit on the homepage's "order received" note.
