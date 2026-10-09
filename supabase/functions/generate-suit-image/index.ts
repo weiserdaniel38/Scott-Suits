@@ -179,10 +179,10 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Double Breasted 6X2": "double-breasted, SIX buttons in THREE rows of two: the TOP row sits high on the chest and is spaced WIDER apart (the two buttons sit further out, near the lapel edges); the MIDDLE and BOTTOM rows are spaced closer together and line up directly above each other. The lapels roll down to the middle row, and the jacket fastens at the MIDDLE row; the bottom row is decorative",
     "Double Breasted 4X2": "double-breasted, FOUR buttons in TWO rows of two forming a square: both rows the same width apart, one row at the waist and one about a hand's width below it. The lapels roll down to the TOP row, and the jacket fastens at the top row",
     "Double Breasted 6X3": "double-breasted, SIX buttons in THREE rows of two forming two straight, parallel vertical columns with equal spacing between rows, all rows the same width apart (no wider top row). The lapels roll down to the TOP row, which sits fairly high on the chest, and the jacket fastens there",
-    "Double Breasted 4X1": "double-breasted, FOUR buttons in TWO rows: the TOP pair sits high on the chest, spaced VERY wide apart (almost out toward the armholes, outside the lapels); the BOTTOM pair sits at the waist, spaced normally. The lapels roll long, down to the bottom row, and the jacket fastens with ONE button on the bottom row",
-    "Double Breasted One Button": "double-breasted wrap with ONE single button at the waist, on the front edge of the overlap; no other buttons on the front. The lapels roll long, down to that button",
-    "Double Breasted 2X1": "double-breasted, TWO buttons side by side in ONE row at the waist, nothing above or below them. The lapels roll long, down to that row, and the jacket fastens with ONE of them",
-    "Double Breasted 6X1": "double-breasted, SIX buttons in THREE rows of two forming a V that narrows downward: the TOP pair is spaced widest, the MIDDLE pair narrower, the BOTTOM pair narrowest. The lapels roll long, down to the bottom row, and the jacket fastens with ONE button on the bottom row",
+    "Double Breasted 4X1": "double-breasted, FOUR buttons in TWO rows: the TOP pair sits high on the chest, spaced VERY wide apart (almost out toward the armholes, outside the lapels); the BOTTOM pair sits at the waist, spaced normally. The lapels roll low, down to the bottom row, and the jacket fastens with ONE button on the bottom row",
+    "Double Breasted One Button": "double-breasted wrap with ONE single button at the waist, on the front edge of the overlap; no other buttons on the front. The lapels roll low, down to that button",
+    "Double Breasted 2X1": "double-breasted, TWO buttons side by side in ONE row at the waist, nothing above or below them. The lapels roll low, down to that row, and the jacket fastens with ONE of them",
+    "Double Breasted 6X1": "double-breasted, SIX buttons in THREE rows of two forming a V that narrows downward: the TOP pair is spaced widest, the MIDDLE pair narrower, the BOTTOM pair narrowest. The lapels roll low, down to the bottom row, and the jacket fastens with ONE button on the bottom row",
   },
   "Top Sleeve Crown Type": {
     "Regular Armhole": "smooth, clean sleeve head where the sleeve meets the shoulder",
@@ -406,6 +406,11 @@ const LAPEL_NOT: Record<string, string> = {
 // the strict rules at the end.
 // The image model drew a besom chest pocket as a stack of piped lines above a
 // second, separate welt slit. There is only ever one chest pocket.
+// Double-breasted jackets came out far too long (hem well below the sleeve
+// ends, like an overcoat). They are cut the same length as single-breasted.
+const JACKET_LENGTH =
+  "a standard suit-jacket length, exactly like a normal single-breasted suit jacket: the hem ends just below the seat, about level with the ends of the sleeves when the arms hang straight; never longer, never a long coat, frock coat or overcoat length";
+
 const BESOM_CHEST_NOT =
   "There is exactly ONE chest pocket opening on the jacket: never stack a second slit, welt or pocket above or below it, and draw no extra stitched lines around it";
 
@@ -423,6 +428,9 @@ function keyDetails(spec: string): string {
   }
   if (/slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONS: " + SLANT_VENT + ".");
+  }
+  if (/^Front Button: Double Breasted/im.test(spec)) {
+    out.push("- JACKET LENGTH: the double-breasted jacket is " + JACKET_LENGTH + ".");
   }
   const chest = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
   if (/besom/i.test(chest)) out.push("- CHEST POCKET: " + OPTION_LOOKS["Chest Pocket"][chest] + ". " + BESOM_CHEST_NOT + ".");
@@ -537,6 +545,7 @@ function fixedRules(spec: string): string {
         "Stitch them in the lapel buttonhole thread color.",
     );
   }
+  rules.push("- Jacket length, in every view: " + JACKET_LENGTH + ".");
   const db = front.match(/double breasted (\d)x(\d)/i);
   if (db) {
     rules.push(
