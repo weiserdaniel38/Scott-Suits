@@ -1917,16 +1917,34 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
 
   // "More options" hint: on steps with more cards than fit on screen, a small
   // pill sits just above the Back / price / Next bar (and the cards fade into
-  // the bar) so customers know they can scroll for more. It goes away once
-  // the last row of cards is in view. Only a class is toggled -- the bar's
-  // children are never rebuilt (see the iPhone Safari note in renderWizard).
+  // the bar) so customers know they can scroll for more. It goes away as soon
+  // as the customer starts scrolling that page (or the last row is already in
+  // view), and comes back only on the next page of cards. Only a class is
+  // toggled -- the bar's children are never rebuilt (see the iPhone Safari
+  // note in renderWizard).
+  let moreHintFirstCard = null; // first card of the page the hint belongs to
+  let moreHintStartY = 0;       // scroll position when that page appeared
+  let moreHintSince = 0;        // when that page appeared
+  let moreHintDismissed = false;
   function syncMoreHint() {
     const more = wizBar.querySelector(".wiz-more");
     if (!more) return;
     const cards = optionsEl.querySelectorAll(".opt-card");
+    if (cards[0] !== moreHintFirstCard) {
+      // A new page of cards: start fresh.
+      moreHintFirstCard = cards[0] || null;
+      moreHintStartY = window.scrollY;
+      moreHintSince = Date.now();
+      moreHintDismissed = false;
+    } else if (!moreHintDismissed) {
+      // The page's own scroll-to-top can still be settling just after it
+      // appears; don't count that as the customer scrolling.
+      if (Date.now() - moreHintSince < 700) moreHintStartY = window.scrollY;
+      else if (Math.abs(window.scrollY - moreHintStartY) > 24) moreHintDismissed = true;
+    }
     const last = cards.length ? cards[cards.length - 1].getBoundingClientRect() : null;
     const barTop = Math.min(wizBar.getBoundingClientRect().top, window.innerHeight);
-    const show = !!last && last.height > 0 && last.top + last.height * 0.5 > barTop;
+    const show = !moreHintDismissed && !!last && last.height > 0 && last.top + last.height * 0.5 > barTop;
     if (wizBar.classList.contains("has-more") !== show) wizBar.classList.toggle("has-more", show);
   }
   let moreHintRaf = 0;
