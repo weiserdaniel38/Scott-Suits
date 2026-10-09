@@ -152,7 +152,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Notch Lapel": "classic notch lapel: the collar meets the lapel at a small V-shaped notch opening outward, and the lapel tip points sideways/slightly down",
     "Peak Lapel": "peak lapel: the lapel's upper edge sweeps UP into a sharp point aimed at the shoulder, nearly touching the collar, with only a narrow gap between them",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
-    "Diamond Lapel": "diamond lapel: one continuous collar-and-lapel with NO notch; its outer edge runs straight out to a single angled corner about halfway down the lapel, then straight in to the button, giving a long diamond silhouette",
+    "Diamond Lapel": "diamond lapel: one continuous collar-and-lapel with NO notch; from the neck its outer edge runs straight down and slightly outward to a single blunt corner in the UPPER third of the lapel (about level with the chest pocket), then runs in a long straight line down to the top button, giving a slim, elongated diamond silhouette; the lapel is no wider than the chosen lapel width",
   },
   "Lapel Width": {
     Standard: "standard lapel width, about 9 cm at its widest",
@@ -269,11 +269,11 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "4 Overlap Button": "FOUR 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
     "5 Overlap Button": "FIVE 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
     "6 Overlap Button": "SIX 'kissing' cuff buttons: each overlaps the edge of the next, no gaps, horizontal buttonholes",
-    "4 Slant Flat Button": "FOUR cuff buttons with small gaps between them, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
-    "5 Slant Flat Button": "FIVE cuff buttons with small gaps between them, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
-    "4 Slant Overlap Button": "FOUR 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
-    "5 Slant Overlap Button": "FIVE 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
-    "6 Slant Overlap Button": "SIX 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 30 degrees upward away from its button (diagonal, never horizontal)",
+    "4 Slant Flat Button": "FOUR cuff buttons with small gaps between them, each buttonhole slit tilted about 35 degrees upward away from its button (diagonal, never horizontal)",
+    "5 Slant Flat Button": "FIVE cuff buttons with small gaps between them, each buttonhole slit tilted about 35 degrees upward away from its button (diagonal, never horizontal)",
+    "4 Slant Overlap Button": "FOUR 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 35 degrees upward away from its button (diagonal, never horizontal)",
+    "5 Slant Overlap Button": "FIVE 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 35 degrees upward away from its button (diagonal, never horizontal)",
+    "6 Slant Overlap Button": "SIX 'kissing' cuff buttons overlapping each other, each buttonhole slit tilted about 35 degrees upward away from its button (diagonal, never horizontal)",
     "Button Less Sleeve (4 Buttons)": "NO cuff buttons: only FOUR stitched buttonholes in a vertical row on the sleeve, with no buttons sewn on",
   },
 
@@ -368,13 +368,16 @@ function describeSpec(spec: string): string {
 // Prompt
 // ---------------------------------------------------------------------------
 function layoutFor(jacketOnly: boolean, spec = ""): string {
+  const inside = (OPTION_LOOKS["Inside Pocket Style"] || {})[(spec.match(/^Inside Pocket Style: (.+)$/m) || [])[1] || ""];
+  const insideNote = " (the inside pockets are horizontal welt pockets sewn on the INSIDE of the jacket, in the lining and facing at chest height, never on the outer fabric" +
+    (inside ? "; " + inside : "") + ")";
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket.
+Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
@@ -385,7 +388,7 @@ Right side, two square close-up panels stacked: (4) a close-up of the closed jac
 // keeps drawing them horizontal, so this is repeated in the layout, the
 // reference-image notes and the rules.
 const SLANT_HOLES =
-  "each cuff buttonhole is a narrow stitched slit that starts at its button and runs inward across the sleeve, TILTED about 30 degrees upward (its far end clearly higher than the end at the button), all slits parallel, like a ladder of diagonal dashes; never horizontal and never vertical";
+  "each cuff buttonhole is a narrow stitched slit that starts at its button and runs inward across the sleeve, TILTED about 35 degrees upward (its far end clearly higher than the end at the button), all slits parallel, like a ladder of diagonal dashes; never horizontal and never vertical";
 
 // The "With Slant Buttons" cuff styles: the buttons themselves sit on a slant.
 const SLANT_VENT =
@@ -395,7 +398,7 @@ const SLANT_VENT =
 const LAPEL_NOT: Record<string, string> = {
   "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-  "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single outward-pointing angle halfway down the lapel.",
+  "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single blunt outward angle in the upper third of the lapel. It is NOT an oversized or extra-wide lapel.",
 };
 
 // The details the image model most often gets wrong, put at the very TOP of
@@ -405,7 +408,11 @@ function keyDetails(spec: string): string {
   const out: string[] = [];
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const lapel = (OPTION_LOOKS["Lapel Style"] || {})[lapelStyle];
-  if (lapel && lapelStyle !== "Notch Lapel") out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || ""));
+  if (lapel && lapelStyle !== "Notch Lapel") {
+    const width = (spec.match(/^Lapel Width: (.+)$/m) || [])[1] || "";
+    const widthLook = (OPTION_LOOKS["Lapel Width"] || {})[width];
+    out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : ""));
+  }
   if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONHOLES: SLANTED, " + SLANT_HOLES + ".");
   }
@@ -557,7 +564,10 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
     lines.push(`Image ${n++} is a LAYOUT EXAMPLE only: copy its panel arrangement, camera angles, lighting and white background, but NOT its garment (its color, fabric, cuffs or styling).`);
   }
   for (const r of refs) {
-    if (r.label.startsWith("style ")) {
+    if (r.label === "cuff reference") {
+      const value = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen cuff buttons ("${value}"): copy EXACTLY how each buttonhole runs from its button diagonally UP and inward at this steep angle, the number of buttons and how they touch or overlap. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
+    } else if (r.label.startsWith("style ")) {
       const name = r.label.slice(6);
       const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const value = (spec.match(new RegExp("^" + esc + ": (.+)$", "m")) || [])[1] || "";
@@ -738,13 +748,22 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const useLayout = env("USE_LAYOUT_REFERENCE", "false").toLowerCase() === "true";
 
   const isDrawing = (r: Ref) => r.label.startsWith("style ");
+  // Slant cuff buttons: the catalog drawing's slant is too subtle for the
+  // image model, so show it a bolder cuff illustration instead (falls back to
+  // the drawing if that file can't be loaded).
+  const cuffValue = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+  const slantRef = cuffValue.match(/^(\d) Slant (Flat|Overlap) Button$/);
+  const cuffRefSrc = slantRef ? "./assets/jacket-cuffref-slant" + (slantRef[2] === "Overlap" ? "overlap" : "") + slantRef[1] + ".jpg" : "";
   // The lapel and cuff drawings go first: the model follows early images best.
   const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
   const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
   const drawings = swatches.filter(isDrawing).sort((a, b) => rank(a) - rank(b)).slice(0, 8);
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
     .concat(swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
-  const loaded = (await Promise.all(refs.map(loadRef))).filter(
+  const loadOne = async (r: Ref) =>
+    (cuffRefSrc && r.label === "style Buttons On Sleeve Cuff" && (await loadRef({ label: "cuff reference", src: cuffRefSrc }))) ||
+    loadRef(r);
+  const loaded = (await Promise.all(refs.map(loadOne))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
   );
   const layoutImg = useLayout ? await loadRef({ label: "layout example", src: LAYOUT_REFERENCE }) : null;
