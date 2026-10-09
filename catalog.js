@@ -2220,6 +2220,10 @@ JACKET_CATALOG.buttonholeThreadColor = {
   label: "Lapel Buttonhole Color",
   flatColorTiles: true, // one flat palette of color tiles, dark to light (see renderFlatColorTiles in main.js)
   chooseOtherColor: true,
+  // Only offered once a real lapel buttonhole is picked: with "No Lapel
+  // Buttonhole" there's no buttonhole to color, so the step is hidden and
+  // any color picked earlier is cleared (see isApplicable in main.js).
+  requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
   column: "jacket_buttonhole_thread_color",
   colorFamilies: BUTTONHOLE_THREAD_COLOR_FAMILIES,
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
