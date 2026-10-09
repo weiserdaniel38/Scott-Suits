@@ -155,7 +155,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Notch Lapel": "classic notch lapel: the collar meets the lapel at a small V-shaped notch opening outward, and the lapel tip points sideways/slightly down",
     "Peak Lapel": "peak lapel: the lapel's upper edge sweeps UP into a sharp point aimed at the shoulder, nearly touching the collar, with only a narrow gap between them",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
-    "Diamond Lapel": "diamond lapel: one continuous collar-and-lapel with NO notch; from the neck its outer edge runs straight down and slightly outward to a single blunt corner in the UPPER third of the lapel (about level with the chest pocket), then runs in a long straight line down to the top button, giving a slim, elongated diamond silhouette; the lapel is no wider than the chosen lapel width",
+    "Diamond Lapel": "diamond lapel, a cross between a shawl collar and a peak lapel: like a SHAWL, collar and lapel are one continuous piece starting right at the back of the neck, with NO notch, gap or step between them; like a PEAK lapel, it has one SHARP pointed corner. From the neck the edge runs in a straight line down and OUTWARD to that sharp point in the UPPER third of the lapel (about level with the chest pocket), then a much longer straight edge runs back INWARD to where the lapels meet at the top button, so each lapel is a tall kite shape. Both lapels are identical mirror images; the lapel is no wider than the chosen lapel width",
   },
   "Lapel Width": {
     Standard: "standard lapel width, about 9 cm at its widest",
@@ -376,14 +376,16 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
     (inside ? "; " + inside : "") + ")";
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
+  const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
+  const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")" : "";
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel buttonhole, chest pocket and fabric texture.`
+Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
+Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
+Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
@@ -397,11 +399,16 @@ const SLANT_HOLES =
 const SLANT_VENT =
   "the sleeve vent is DIAGONAL and the cuff buttons climb along it in a slanted line: the lowest button sits furthest toward the middle of the sleeve and each higher button sits a little further toward the sleeve's back seam, following the diagonal vent edge, so the row of buttons leans at a clear angle instead of standing in a straight vertical column";
 
+// The diamond lapel in a few words, for the panel descriptions. The image
+// model kept drawing it as a notch or peak lapel.
+const DIAMOND_SHORT =
+  "both lapels are DIAMOND lapels, a cross between a shawl and a peak lapel: one continuous piece from the neck with no notch, like a shawl, coming to one sharp outward point in the upper third, like a peak, so each lapel is a tall kite shape";
+
 // What each non-notch lapel must NOT look like.
 const LAPEL_NOT: Record<string, string> = {
   "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-  "Diamond Lapel": "It is NOT a notch lapel and NOT a peak lapel: there is NO notch and no gap between collar and lapel; the only corner on the whole edge is the single blunt outward angle in the upper third of the lapel. It is NOT an oversized or extra-wide lapel.",
+  "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
 };
 
 // The details the image model most often gets wrong, put at the very TOP of
@@ -424,7 +431,8 @@ function keyDetails(spec: string, ownLining = false): string {
   if (lapel && lapelStyle !== "Notch Lapel") {
     const width = (spec.match(/^Lapel Width: (.+)$/m) || [])[1] || "";
     const widthLook = (OPTION_LOOKS["Lapel Width"] || {})[width];
-    out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : ""));
+    out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : "") +
+      (lapelStyle === "Diamond Lapel" ? " Draw both lapels in this exact shape in the front view and in every close-up that shows them." : ""));
   }
   if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONHOLES: SLANTED, " + SLANT_HOLES + ".");
@@ -590,7 +598,9 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
     lines.push(`Image ${n++} is a LAYOUT EXAMPLE only: copy its panel arrangement, camera angles, lighting and white background, but NOT its garment (its color, fabric, cuffs or styling).`);
   }
   for (const r of refs) {
-    if (r.label === "cuff reference") {
+    if (r.label === "lapel reference") {
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
+    } else if (r.label === "cuff reference") {
       const value = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen cuff buttons ("${value}"): copy EXACTLY how each buttonhole runs from its button diagonally UP and inward at this steep angle, the number of buttons and how they touch or overlap. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
     } else if (r.label.startsWith("style ")) {
@@ -782,6 +792,10 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const cuffValue = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const slantRef = cuffValue.match(/^(\d) Slant (Flat|Overlap) Button$/);
   const cuffRefSrc = slantRef ? "./assets/jacket-cuffref-slant" + (slantRef[2] === "Overlap" ? "overlap" : "") + slantRef[1] + ".jpg" : "";
+  // Diamond lapel: the catalog drawing alone kept coming out as a notch or
+  // peak lapel, so show a bolder filled-in illustration instead (falls back
+  // to the drawing if that file can't be loaded).
+  const lapelRefSrc = /^Lapel Style: Diamond Lapel$/m.test(spec) ? "./assets/jacket-lapelref-diamond.jpg" : "";
   // The lapel and cuff drawings go first: the model follows early images best.
   const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
   const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
@@ -790,6 +804,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
     .concat(swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   const loadOne = async (r: Ref) =>
     (cuffRefSrc && r.label === "style Buttons On Sleeve Cuff" && (await loadRef({ label: "cuff reference", src: cuffRefSrc }))) ||
+    (lapelRefSrc && r.label === "style Lapel Style" && (await loadRef({ label: "lapel reference", src: lapelRefSrc }))) ||
     loadRef(r);
   const loaded = (await Promise.all(refs.map(loadOne))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
