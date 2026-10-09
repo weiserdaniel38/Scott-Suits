@@ -1915,6 +1915,55 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   window.addEventListener("resize", syncFabricBgSoon);
   setInterval(syncFabricBg, 300); // catches the step first appearing / layout shifts
 
+  // "More options" hint: on steps with more cards than fit on screen, a small
+  // pill sits just above the Back / price / Next bar (and the cards fade into
+  // the bar) so customers know they can scroll for more -- only on steps with
+  // plenty more to see. It goes away as soon as the customer starts scrolling
+  // that page, and comes back only on the next page of cards. Only a class is
+  // toggled -- the bar's children are never rebuilt (see the iPhone Safari
+  // note in renderWizard).
+  const MORE_HINT_MIN_HIDDEN = 6;
+  let moreHintFirstCard = null; // first card of the page the hint belongs to
+  let moreHintStartY = 0;       // scroll position when that page appeared
+  let moreHintSince = 0;        // when that page appeared
+  let moreHintDismissed = false;
+  function syncMoreHint() {
+    const more = wizBar.querySelector(".wiz-more");
+    if (!more) return;
+    const cards = optionsEl.querySelectorAll(".opt-card");
+    if (cards[0] !== moreHintFirstCard) {
+      // A new page of cards: start fresh.
+      moreHintFirstCard = cards[0] || null;
+      moreHintStartY = window.scrollY;
+      moreHintSince = Date.now();
+      moreHintDismissed = false;
+    } else if (!moreHintDismissed) {
+      // The page's own scroll-to-top can still be settling just after it
+      // appears; don't count that as the customer scrolling.
+      if (Date.now() - moreHintSince < 700) moreHintStartY = window.scrollY;
+      else if (Math.abs(window.scrollY - moreHintStartY) > 24) moreHintDismissed = true;
+    }
+    // Only worth pointing out when a lot is hidden (Daniel: not for a row or
+    // two) -- at least MORE_HINT_MIN_HIDDEN cards still mostly below the bar.
+    const barTop = Math.min(wizBar.getBoundingClientRect().top, window.innerHeight);
+    let hidden = 0;
+    for (let i = cards.length - 1; i >= 0 && hidden < MORE_HINT_MIN_HIDDEN; i--) {
+      const r = cards[i].getBoundingClientRect();
+      if (r.height > 0 && r.top + r.height * 0.5 > barTop) hidden++;
+      else break;
+    }
+    const show = !moreHintDismissed && hidden >= MORE_HINT_MIN_HIDDEN;
+    if (wizBar.classList.contains("has-more") !== show) wizBar.classList.toggle("has-more", show);
+  }
+  let moreHintRaf = 0;
+  function syncMoreHintSoon() {
+    if (moreHintRaf) return;
+    moreHintRaf = requestAnimationFrame(() => { moreHintRaf = 0; syncMoreHint(); });
+  }
+  window.addEventListener("scroll", syncMoreHintSoon, { passive: true });
+  window.addEventListener("resize", syncMoreHintSoon);
+  setInterval(syncMoreHint, 300); // catches a new step's cards appearing
+
   function wizList() { return keys.filter(isApplicable); }
   function wizGroupLabel(key) {
     if (!groups) return "";
@@ -2013,8 +2062,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       wizBar.innerHTML =
         '<button type="button" class="wiz-back">&larr; Back</button>' +
         '<div class="wiz-price"></div>' +
-        '<button type="button" class="wiz-next btn-primary"></button>';
+        '<button type="button" class="wiz-next btn-primary"></button>' +
+        '<button type="button" class="wiz-more" tabindex="-1">More options <span aria-hidden="true">&darr;</span></button>';
       wizBar.querySelector(".wiz-back").onclick = wizGoBack;
+      wizBar.querySelector(".wiz-more").onclick = () => {
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.6), behavior: "smooth" });
+      };
       wizBar.querySelector(".wiz-next").onclick = wizGoNext;
     }
     const backBtn = wizBar.querySelector(".wiz-back");
