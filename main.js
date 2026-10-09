@@ -526,6 +526,57 @@ function customerDisplayName() {
   );
 }
 
+// First name only, for the "Welcome, Bob" greeting: Google sign-ins carry
+// given_name/name, email signups carry the full_name typed on the form.
+// Empty when there's no name at all, so the greeting just says "Welcome back".
+function customerFirstName() {
+  if (!currentUser) return "";
+  const meta = currentUser.user_metadata || {};
+  if (meta.given_name) return String(meta.given_name).trim();
+  const full = meta.full_name || meta.name || (currentProfile && currentProfile.full_name) || "";
+  return String(full).trim().split(/\s+/)[0] || "";
+}
+
+// "Welcome" vs "Welcome back": an account is greeted as new the first time
+// this browser sees it, if it was created in the last few days (covers the
+// gap between signing up and clicking the confirmation email). Decided once
+// per user per page load, so a just-signed-up customer keeps seeing
+// "Welcome" until they reload, then "Welcome back" from then on.
+const NEW_ACCOUNT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+let welcomeDecidedForUserId = null;
+let welcomeAsNewCustomer = false;
+function greetAsNewCustomer() {
+  if (!currentUser) return false;
+  if (welcomeDecidedForUserId === currentUser.id) return welcomeAsNewCustomer;
+  const key = "scottSuitsWelcomed_" + currentUser.id;
+  let seenBefore = false;
+  try {
+    seenBefore = localStorage.getItem(key) === "1";
+    localStorage.setItem(key, "1");
+  } catch (err) {}
+  const created = Date.parse(currentUser.created_at);
+  const recent = !isNaN(created) && Date.now() - created < NEW_ACCOUNT_WINDOW_MS;
+  welcomeDecidedForUserId = currentUser.id;
+  welcomeAsNewCustomer = !seenBefore && recent;
+  return welcomeAsNewCustomer;
+}
+
+function updateWelcomeGreeting() {
+  const heroWelcome = document.getElementById("heroWelcome");
+  const accountGreetingWord = document.getElementById("accountGreetingWord");
+  if (!currentUser) {
+    if (heroWelcome) heroWelcome.hidden = true;
+    return;
+  }
+  const word = greetAsNewCustomer() ? "Welcome" : "Welcome back";
+  const first = customerFirstName();
+  if (heroWelcome) {
+    heroWelcome.textContent = first ? word + ", " + first : word;
+    heroWelcome.hidden = false;
+  }
+  if (accountGreetingWord) accountGreetingWord.textContent = word;
+}
+
 // Reflects currentUser/currentProfile into every place the UI depends on
 // them: the nav badge, which of the two account-overlay views shows, the
 // "use my saved measurements" banner on the real Measurements step, and the
@@ -536,6 +587,7 @@ function updateAccountUI() {
   if (accountLoggedInView) accountLoggedInView.hidden = !loggedIn;
   if (accountBadge) accountBadge.hidden = !loggedIn;
   if (accountNameDisplay) accountNameDisplay.textContent = customerDisplayName();
+  updateWelcomeGreeting();
   if (saveMeasurementsToggleWrap) saveMeasurementsToggleWrap.hidden = !loggedIn;
 
   const hasSaved = !!(currentProfile && currentProfile.measurements && Object.keys(currentProfile.measurements).length);
