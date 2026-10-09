@@ -4737,6 +4737,32 @@ function currentDesignSpec() {
   }
 }
 
+// The preview picture can only use the customer's own lining photo once it
+// is online, so upload it (once per photo) to the same public bucket orders
+// use. Resolves to the public URL, or "" when there's no photo or the upload
+// fails (the picture is then drawn without it).
+const previewLiningUploads = new Map();
+function previewLiningPhotoUrl(photo) {
+  if (!photo) return Promise.resolve("");
+  if (!previewLiningUploads.has(photo)) {
+    const job = (async () => {
+      const blob = await (await fetch(photo)).blob();
+      const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+      const path = "previews/" + id + ".jpg";
+      const client = getSupabase();
+      const { error } = await client.storage.from("lining-photos").upload(path, blob, { contentType: "image/jpeg" });
+      if (error) throw error;
+      return client.storage.from("lining-photos").getPublicUrl(path).data.publicUrl;
+    })().catch((err) => {
+      console.warn("Preview lining photo upload failed:", err);
+      previewLiningUploads.delete(photo);
+      return "";
+    });
+    previewLiningUploads.set(photo, job);
+  }
+  return previewLiningUploads.get(photo);
+}
+
 // Top of the Measurements step: "See your suit before you order".
 async function updateDesignPreviewPanel() {
   const box = document.getElementById("designPreview");
@@ -4773,7 +4799,8 @@ async function updateDesignPreviewPanel() {
     });
   };
 
-  if (designPreview && designPreview.spec === spec) {
+  const liningPhoto = jacketDesigner.getLiningPhoto();
+  if (designPreview && designPreview.spec === spec && designPreview.photo === liningPhoto) {
     if (designPreview.status === "done") ui.showImage(designPreview.url);
     else if (designPreview.status === "pending") watch(designPreview);
   }
@@ -4786,10 +4813,16 @@ async function updateDesignPreviewPanel() {
     }
     if (SUIT_IMAGES_PAUSED) return;
     try {
-      const start = await callSuitImageFn({ preview: true, visual_spec: spec });
+      // The customer's own lining photo goes in as a swatch, like the
+      // catalog linings (not part of `spec`, which only identifies the design).
+      const photoUrl = await previewLiningPhotoUrl(liningPhoto);
+      const sent = photoUrl
+        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getSelections() }, { liningPhotoUrl: photoUrl })
+        : spec;
+      const start = await callSuitImageFn({ preview: true, visual_spec: sent });
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
-      designPreview = { spec, id: start.data.preview_id, status: "pending", url: null };
+      designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null };
       watch(designPreview);
     } catch (e) {
       console.error(e);
@@ -4801,7 +4834,7 @@ async function updateDesignPreviewPanel() {
 // The finished preview for the suit being committed to the cart, if the
 // customer drew one and hasn't changed the design since.
 function currentDesignPreviewId() {
-  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() ? designPreview.id : null;
+  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() && designPreview.photo === jacketDesigner.getLiningPhoto() ? designPreview.id : null;
 }
 
 // The finished suit on the homepage's "order received" note.
