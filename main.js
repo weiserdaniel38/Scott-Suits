@@ -731,6 +731,33 @@ function hideAccountStatus(el) {
   el.textContent = "";
 }
 
+// Supabase's own error text ("email rate limit exceeded", "Email not
+// confirmed", ...) reads like a broken site to a customer, so the common
+// account errors get plain-English versions that say what to do next.
+function friendlyAuthError(error) {
+  const code = (error && (error.code || error.error_code)) || "";
+  const msg = ((error && error.message) || "").toLowerCase();
+  if (code === "over_email_send_rate_limit" || msg.includes("rate limit")) {
+    return "We couldn't send the confirmation email right now -- too many sign-ups at once. Please try again in a little while, or use Continue with Google.";
+  }
+  if (code === "email_not_confirmed" || msg.includes("email not confirmed")) {
+    return "Please confirm your email first -- click the link we emailed you, then log in.";
+  }
+  if (code === "user_already_exists" || msg.includes("already registered")) {
+    return "An account with this email already exists. Log in instead, or use Continue with Google.";
+  }
+  if (code === "invalid_credentials" || msg.includes("invalid login credentials")) {
+    return "That email and password don't match an account. Check them, or create an account first.";
+  }
+  if (code === "weak_password" || msg.includes("password should")) {
+    return (error && error.message) || "Please choose a stronger password.";
+  }
+  if (code === "email_address_invalid" || (msg.includes("email address") && msg.includes("invalid"))) {
+    return "That email address doesn't look right -- please check it.";
+  }
+  return (error && error.message) || "Something went wrong. Please try again.";
+}
+
 // Toggles between the Create Account and Log In forms -- plain show/hide,
 // same tab idea as the category tabs in the jacket/pants designer, just far
 // simpler (two panes, not a scrollable strip). Switching clears whatever
@@ -830,7 +857,13 @@ if (signupForm) {
         options: { data: { full_name: name }, emailRedirectTo: baseUrl },
       });
       if (error) {
-        showAccountStatus(accountStatusMsg, error.message);
+        showAccountStatus(accountStatusMsg, friendlyAuthError(error));
+      } else if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        // Supabase's answer when the email already has an account (from an
+        // earlier sign-up or Continue with Google): it looks like a success
+        // but sends no email, so saying "check your email" would leave the
+        // customer waiting for a message that never comes.
+        showAccountStatus(accountStatusMsg, "An account with this email already exists. Log in instead, or use Continue with Google.");
       } else if (data && data.session) {
         // Email confirmation is off for this project -- signed in right
         // away. onAuthStateChange fires on its own and swaps the overlay to
@@ -868,7 +901,7 @@ if (loginForm) {
       const client = getSupabase();
       const { error } = await client.auth.signInWithPassword({ email, password });
       if (error) {
-        showAccountStatus(accountStatusMsg, error.message);
+        showAccountStatus(accountStatusMsg, friendlyAuthError(error));
       } else {
         loginForm.reset();
       }
@@ -932,6 +965,26 @@ if (useSavedMeasurementsBtn) {
 // clicked magic-link URL, so there's no separate "handle the redirect"
 // codepath to write (contrast with handlePayPalReturn() above, which needs
 // one because PayPal has no equivalent of its own JS client running here).
+// A confirmation link that has expired or was already used (some email apps
+// open links on their own to scan them) brings the customer back here with
+// only an error in the address bar -- read it before supabase-js clears it
+// and say what happened, instead of landing them on the home page with no
+// sign the sign-up didn't finish.
+(function () {
+  const hash = window.location.hash || "";
+  if (hash.indexOf("error_description=") === -1) return;
+  const params = new URLSearchParams(hash.slice(1));
+  const code = params.get("error_code") || "";
+  const message =
+    code === "otp_expired"
+      ? "That confirmation link has expired or was already used. Try logging in -- if that doesn't work, create your account again to get a fresh link."
+      : params.get("error_description") || "That link didn't work. Please try again.";
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+  if (accountIconBtn) accountIconBtn.click();
+  if (showLoginTabBtn) showLoginTabBtn.click();
+  showAccountStatus(accountStatusMsg, message);
+})();
+
 if (isSupabaseConfigured()) {
   try {
     getSupabase().auth.onAuthStateChange((event, session) => {
