@@ -1578,3 +1578,15 @@ body:not(.designing) #suitTypeSection{display:none;}
 @media (max-width:600px){
   .editing-cart-notice{margin-top:6px;padding:5px 14px;font-size:11.5px;}
 }
+
+/* --- "More options" hint above the Back / price / Next bar ---
+   Shown (via .has-more, set by syncMoreHint in main.js) only while there are
+   more option cards below the bar. A soft fade over the cut-off row plus a
+   small pill; tapping the pill scrolls down. */
+.wiz-more{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:999px;background:rgba(34,30,25,0.86);color:#fff;font:600 12.5px 'Inter',sans-serif;letter-spacing:0.4px;white-space:nowrap;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.18);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility .2s;}
+.wiz-more span{display:inline-block;animation:wizMoreNudge 1.6s ease-in-out infinite;}
+@keyframes wizMoreNudge{0%,100%{transform:translateY(0);}50%{transform:translateY(3px);}}
+.wiz-bar::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:56px;background:linear-gradient(to bottom,rgba(236,228,221,0),var(--ink));opacity:0;pointer-events:none;transition:opacity .2s ease;}
+.wiz-bar.has-more::before{opacity:1;}
+.wiz-bar.has-more .wiz-more{opacity:1;visibility:visible;pointer-events:auto;}
+@media(prefers-reduced-motion:reduce){.wiz-more span{animation:none;}}

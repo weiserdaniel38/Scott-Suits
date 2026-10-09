@@ -1915,6 +1915,29 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   window.addEventListener("resize", syncFabricBgSoon);
   setInterval(syncFabricBg, 300); // catches the step first appearing / layout shifts
 
+  // "More options" hint: on steps with more cards than fit on screen, a small
+  // pill sits just above the Back / price / Next bar (and the cards fade into
+  // the bar) so customers know they can scroll for more. It goes away once
+  // the last row of cards is in view. Only a class is toggled -- the bar's
+  // children are never rebuilt (see the iPhone Safari note in renderWizard).
+  function syncMoreHint() {
+    const more = wizBar.querySelector(".wiz-more");
+    if (!more) return;
+    const cards = optionsEl.querySelectorAll(".opt-card");
+    const last = cards.length ? cards[cards.length - 1].getBoundingClientRect() : null;
+    const barTop = Math.min(wizBar.getBoundingClientRect().top, window.innerHeight);
+    const show = !!last && last.height > 0 && last.top + last.height * 0.5 > barTop;
+    if (wizBar.classList.contains("has-more") !== show) wizBar.classList.toggle("has-more", show);
+  }
+  let moreHintRaf = 0;
+  function syncMoreHintSoon() {
+    if (moreHintRaf) return;
+    moreHintRaf = requestAnimationFrame(() => { moreHintRaf = 0; syncMoreHint(); });
+  }
+  window.addEventListener("scroll", syncMoreHintSoon, { passive: true });
+  window.addEventListener("resize", syncMoreHintSoon);
+  setInterval(syncMoreHint, 300); // catches a new step's cards appearing
+
   function wizList() { return keys.filter(isApplicable); }
   function wizGroupLabel(key) {
     if (!groups) return "";
@@ -2013,8 +2036,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       wizBar.innerHTML =
         '<button type="button" class="wiz-back">&larr; Back</button>' +
         '<div class="wiz-price"></div>' +
-        '<button type="button" class="wiz-next btn-primary"></button>';
+        '<button type="button" class="wiz-next btn-primary"></button>' +
+        '<button type="button" class="wiz-more" tabindex="-1">More options <span aria-hidden="true">&darr;</span></button>';
       wizBar.querySelector(".wiz-back").onclick = wizGoBack;
+      wizBar.querySelector(".wiz-more").onclick = () => {
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.6), behavior: "smooth" });
+      };
       wizBar.querySelector(".wiz-next").onclick = wizGoNext;
     }
     const backBtn = wizBar.querySelector(".wiz-back");
