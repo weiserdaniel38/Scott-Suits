@@ -192,8 +192,8 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Chest Pocket": {
     "Normal Pocket": "a straight welt breast pocket on the wearer's left chest, angled slightly upward toward the arm",
     "Boat Shape Pocket": "a 'barchetta' boat-shaped breast welt pocket on the wearer's left chest: its lower edge curves gently like the hull of a boat",
-    "Single Besom Pocket": "a narrow single-besom breast pocket on the wearer's left chest: one thin piped lip, no welt",
-    "Double Besom Pocket": "a narrow double-besom breast pocket on the wearer's left chest: two thin piped lips, no welt",
+    "Single Besom Pocket": "ONE single-besom breast pocket on the wearer's left chest, angled slightly upward toward the arm: a single slit opening about 11 cm long edged by one thin piped lip of the suit fabric about 5 mm tall, flush with the chest, no welt strip and no flap",
+    "Double Besom Pocket": "ONE double-besom breast pocket on the wearer's left chest, angled slightly upward toward the arm: a single slit opening about 11 cm long edged by two thin piped lips of the suit fabric (one just above the opening and one just below it, each about 4 mm tall, touching each other), so the whole pocket is one slim band under 1 cm tall; flush with the chest, no welt strip and no flap",
     "Patch Pocket No Flap": "a patch breast pocket sewn on top of the wearer's left chest with rounded bottom corners and no flap",
     "No Pocket": "NO breast pocket at all; the left chest is plain",
   },
@@ -404,6 +404,11 @@ const LAPEL_NOT: Record<string, string> = {
 // The details the image model most often gets wrong, put at the very TOP of
 // the final prompt (it pays most attention to the start), and repeated in
 // the strict rules at the end.
+// The image model drew a besom chest pocket as a stack of piped lines above a
+// second, separate welt slit. There is only ever one chest pocket.
+const BESOM_CHEST_NOT =
+  "There is exactly ONE chest pocket opening on the jacket: never stack a second slit, welt or pocket above or below it, and draw no extra stitched lines around it";
+
 function keyDetails(spec: string): string {
   const out: string[] = [];
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
@@ -419,6 +424,8 @@ function keyDetails(spec: string): string {
   if (/slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONS: " + SLANT_VENT + ".");
   }
+  const chest = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
+  if (/besom/i.test(chest)) out.push("- CHEST POCKET: " + OPTION_LOOKS["Chest Pocket"][chest] + ". " + BESOM_CHEST_NOT + ".");
   return out.length ? "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n") : "";
 }
 
@@ -505,6 +512,10 @@ function fixedRules(spec: string): string {
   }
   if (/^double breasted one button$/i.test(front)) {
     rules.push("- Front buttons, placed exactly like this: " + OPTION_LOOKS["Front Button"][front] + ".");
+  }
+  const chestPocket = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
+  if (/besom/i.test(chestPocket)) {
+    rules.push("- Chest pocket, in the front view and the lapel close-up: " + OPTION_LOOKS["Chest Pocket"][chestPocket] + ". " + BESOM_CHEST_NOT + ".");
   }
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     rules.push(
