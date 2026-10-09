@@ -152,7 +152,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Notch Lapel": "classic notch lapel: the collar meets the lapel at a small V-shaped notch opening outward, and the lapel tip points sideways/slightly down",
     "Peak Lapel": "peak lapel: the lapel's upper edge sweeps UP into a sharp point aimed at the shoulder, nearly touching the collar, with only a narrow gap between them",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
-    "Diamond Lapel": "diamond lapel: each lapel is one flat, elongated KITE shape made of exactly two straight edges, with collar and lapel as one continuous piece and NO notch, gap or step anywhere: the first straight edge starts right at the back of the neck and slants down and OUTWARD toward the shoulder to one clear outward corner in the UPPER third of the lapel (about level with the chest pocket); from that corner the second, much longer straight edge runs back INWARD in one straight line down to where the lapels meet at the top button. Both lapels are identical mirror images, so together they look like two tall kites pointing down; the lapel is no wider than the chosen lapel width",
+    "Diamond Lapel": "diamond lapel, a cross between a shawl collar and a peak lapel: like a SHAWL, collar and lapel are one continuous piece starting right at the back of the neck, with NO notch, gap or step between them; like a PEAK lapel, it has one SHARP pointed corner. From the neck the edge runs in a straight line down and OUTWARD to that sharp point in the UPPER third of the lapel (about level with the chest pocket), then a much longer straight edge runs back INWARD to where the lapels meet at the top button, so each lapel is a tall kite shape. Both lapels are identical mirror images; the lapel is no wider than the chosen lapel width",
   },
   "Lapel Width": {
     Standard: "standard lapel width, about 9 cm at its widest",
@@ -399,13 +399,13 @@ const SLANT_VENT =
 // The diamond lapel in a few words, for the panel descriptions. The image
 // model kept drawing it as a notch or peak lapel.
 const DIAMOND_SHORT =
-  "both lapels are DIAMOND lapels: each one a tall kite shape with two straight outer edges meeting at a single outward corner in the upper third, no notch and no upward peak";
+  "both lapels are DIAMOND lapels, a cross between a shawl and a peak lapel: one continuous piece from the neck with no notch, like a shawl, coming to one sharp outward point in the upper third, like a peak, so each lapel is a tall kite shape";
 
 // What each non-notch lapel must NOT look like.
 const LAPEL_NOT: Record<string, string> = {
   "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-  "Diamond Lapel": "It is NOT a notch lapel, NOT a peak lapel and NOT a rounded shawl: there is NO notch, NO V-cut and no gap between collar and lapel, and the lapel does NOT point up toward the shoulder; the outer edge has exactly ONE corner (pointing sideways, outward) and both edges meeting at it are perfectly straight, never curved. It is NOT an oversized or extra-wide lapel.",
+  "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
 };
 
 // The details the image model most often gets wrong, put at the very TOP of
@@ -593,7 +593,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
   }
   for (const r of refs) {
     if (r.label === "lapel reference") {
-      lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels, a tall kite with two straight outer edges, one outward corner in the upper third and no notch or peak, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
       const value = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen cuff buttons ("${value}"): copy EXACTLY how each buttonhole runs from its button diagonally UP and inward at this steep angle, the number of buttons and how they touch or overlap. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
