@@ -148,6 +148,9 @@ const MONO = "a small, subtle embroidered monogram in the monogram thread color 
 
 const OPTION_LOOKS: Record<string, Record<string, string>> = {
   // ------------------------------------------------------------- JACKET
+  Lining: {
+    "Upload Your Own Photo (+$80)": "the customer's OWN lining fabric, shown in the swatch photo labelled \"lining (customer's own photo)\": copy its exact colors, pattern and scale; it is NOT matched to the suit fabric",
+  },
   "Lapel Style": {
     "Notch Lapel": "classic notch lapel: the collar meets the lapel at a small V-shaped notch opening outward, and the lapel tip points sideways/slightly down",
     "Peak Lapel": "peak lapel: the lapel's upper edge sweeps UP into a sharp point aimed at the shoulder, nearly touching the collar, with only a narrow gap between them",
@@ -404,7 +407,7 @@ const LAPEL_NOT: Record<string, string> = {
 // The details the image model most often gets wrong, put at the very TOP of
 // the final prompt (it pays most attention to the start), and repeated in
 // the strict rules at the end.
-function keyDetails(spec: string): string {
+function keyDetails(spec: string, ownLining = false): string {
   const out: string[] = [];
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const lapel = (OPTION_LOOKS["Lapel Style"] || {})[lapelStyle];
@@ -418,6 +421,9 @@ function keyDetails(spec: string): string {
   }
   if (/slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONS: " + SLANT_VENT + ".");
+  }
+  if (ownLining) {
+    out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
   }
   return out.length ? "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n") : "";
 }
@@ -582,7 +588,9 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
         : "");
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of the customer's chosen ${name}${value ? ` ("${value}")` : ""}: copy exactly the shape, angle, count, spacing and overlap it shows, but render it photorealistically in the suit's own fabric, thread and button colors, never as a drawing.${caveat}`);
     } else {
-      lines.push(`Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
+      lines.push(r.label.startsWith("lining (customer")
+        ? `Image ${n++} is the customer's own lining fabric photo: the jacket lining must be THIS fabric, with its exact colors, pattern and pattern scale, wherever the inside of the jacket shows (it is not the suit fabric).`
+        : `Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
     }
   }
   return lines.join("\n");
@@ -771,7 +779,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
 
   const layout = layoutFor(jacketOnly, spec);
   const notes = refsNote(loaded, !!layoutImg, spec);
-  const key = keyDetails(spec);
+  const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")));
   const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec);
   const jpeg = await drawImage(prompt, images);
 
