@@ -1931,16 +1931,15 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       (!o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1)) &&
       (!o.hiddenWhen || Object.keys(o.hiddenWhen).every((dep) => o.hiddenWhen[dep].indexOf(order[dep]) === -1));
     if (!rules) return cat.options.filter(shownNow).filter((o) => presetAllows(key, o)).map(withImg);
-    return cat.options
+    const lists = Object.keys(rules).map((dep) => rules[dep][order[dep]]).filter(Boolean);
+    const allowed = cat.options
       .filter(shownNow)
       .filter((o) => presetAllows(key, o))
-      .filter((o) =>
-        Object.keys(rules).every((dep) => {
-          const list = rules[dep][order[dep]];
-          return !list || list.indexOf(o.name) !== -1;
-        })
-      )
-      .map(withImg);
+      .filter((o) => lists.every((list) => list.indexOf(o.name) !== -1));
+    // The allowed list's own order wins (e.g. Shawl -> "No Lapel Buttonhole"
+    // shown first).
+    if (lists.length) allowed.sort((a, b) => lists[0].indexOf(a.name) - lists[0].indexOf(b.name));
+    return allowed.map(withImg);
   }
   // Drops a previously chosen value that the current choices no longer allow
   // (e.g. a lapel buttonhole picked earlier, then the collar changed to Shawl),
@@ -2996,14 +2995,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const fam = pt.colorFamilies.find((f) => f.name === browsedFamily);
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      '<button type="button" class="back-to-families-btn">&larr; All ' + cat.label + 's</button>' +
+      '<button type="button" class="back-to-families-btn">&larr; ' +
+      (cat.backToColorFamilies ? pt.name + " Colors" : "All " + cat.label + "s") + "</button>" +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
       '<div class="opt-grid" id="' + gridId + '"></div>';
     // Back from a color's shades goes all the way to the step's first page,
-    // never just one level up.
+    // unless the category sets `backToColorFamilies` (Lining): then it goes
+    // one level up, to the color boxes of the same pattern type.
     optionsEl.querySelector(".back-to-families-btn").onclick = () => {
       scrollToTopThenSwap(() => {
-        patternBrowse[activeTab] = null;
+        if (!cat.backToColorFamilies) patternBrowse[activeTab] = null;
         patternFamilyBrowse[activeTab] = null;
         renderOptions();
       });

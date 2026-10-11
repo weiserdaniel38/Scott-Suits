@@ -42,12 +42,12 @@ const JACKET_CATALOG = {
     label: "Lapel Buttonhole",
     column: "lapel_buttonhole",
     // When the Collar Style is Shawl or Diamond Lapel, only these two choices
-    // are offered (see allowedOptions() in main.js). Notch and Peak keep the
-    // full list.
+    // are offered, in this order (see allowedOptions() in main.js). Notch and
+    // Peak keep the full list.
     allowedBySelection: {
       collar: {
-        "Shawl": ["Buttonhole On Left, Only For Shawl And Diamond Lapel", "No Lapel Buttonhole"],
-        "Diamond Lapel": ["Buttonhole On Left, Only For Shawl And Diamond Lapel", "No Lapel Buttonhole"],
+        "Shawl": ["No Lapel Buttonhole", "Buttonhole On Left, Only For Shawl And Diamond Lapel"],
+        "Diamond Lapel": ["No Lapel Buttonhole", "Buttonhole On Left, Only For Shawl And Diamond Lapel"],
       },
     },
     // Ordered by buttonhole count (one, then two, then three-plus), each
@@ -2204,6 +2204,9 @@ JACKET_CATALOG.lining = {
   label: "Lining",
   column: "jacket_lining",
   patternTypes: LINING_PATTERN_TYPES,
+  // Back from a color's linings returns to that pattern type's color boxes,
+  // not all the way to the list of linings (see renderPatternTypeOptions).
+  backToColorFamilies: true,
   specialOptions: [LINING_MATCH_OPTION, LINING_UPLOAD_OPTION],
   options: [LINING_MATCH_OPTION, LINING_UPLOAD_OPTION].concat(flattenPatternTypes(LINING_PATTERN_TYPES)),
 };
