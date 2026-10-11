@@ -424,6 +424,10 @@ const JACKET_LENGTH =
 const BESOM_CHEST_NOT =
   "There is exactly ONE chest pocket opening on the jacket: never stack a second slit, welt or pocket above or below it, and draw no extra stitched lines around it";
 
+// Flat welt hip pockets kept coming out as flap pockets.
+const WELT_NOT_FLAP =
+  "single WELT pockets, NOT flap pockets: on each hip a narrow rectangular welt strip of the suit fabric stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like the chest pocket; nothing hangs down over the opening, there is no flap and no shadow under a flap";
+
 function keyDetails(spec: string, ownLining = false): string {
   const out: string[] = [];
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
@@ -445,6 +449,9 @@ function keyDetails(spec: string, ownLining = false): string {
   }
   const chest = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
   if (/besom/i.test(chest)) out.push("- CHEST POCKET: " + OPTION_LOOKS["Chest Pocket"][chest] + ". " + BESOM_CHEST_NOT + ".");
+  if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
+    out.push("- HIP POCKETS: " + WELT_NOT_FLAP + ".");
+  }
   if (ownLining) {
     out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
   }
@@ -598,7 +605,9 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
     lines.push(`Image ${n++} is a LAYOUT EXAMPLE only: copy its panel arrangement, camera angles, lighting and white background, but NOT its garment (its color, fabric, cuffs or styling).`);
   }
   for (const r of refs) {
-    if (r.label === "lapel reference") {
+    if (r.label === "pocket reference") {
+      lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pockets: copy EXACTLY their look in the front view and the top two close-ups: ${WELT_NOT_FLAP}, with no besom piping. Ignore the jacket's other details in this drawing (its lapel, buttons and cuffs come from the other references), and render the pockets photorealistically in the suit fabric, never as a drawing.`);
+    } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
       const value = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
@@ -814,8 +823,12 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
   const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
   const drawings = swatches.filter(isDrawing).sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+  // Single welt hip pockets: Daniel's own drawing of how they look.
+  const pocketRef: Ref[] = /^Lower Pockets: Flat Welt Pocket$/m.test(spec)
+    ? [{ label: "pocket reference", src: "./assets/jacket-pocketref-flatwelt.jpg" }]
+    : [];
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
-    .concat(swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
+    .concat(pocketRef, swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   const loadOne = async (r: Ref) =>
     ventImg && r.label === "style Buttons On Sleeve Cuff" ? null :
     (ventImg && r.label === "style Sleeve Cuff Styles" && ventImg) ||
