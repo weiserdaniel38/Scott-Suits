@@ -134,6 +134,8 @@ nav{position:sticky;top:0;z-index:60;background:var(--ink);border-bottom:1px sol
 .opening-soon-label{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:600;color:var(--brass);margin-bottom:6px;}
 .opening-soon-notice p{margin:0;font-size:14px;line-height:1.55;color:var(--ivory);}
 .hero-eyebrow{color:var(--ivory-dim);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;font-weight:500;}
+.hero-welcome{margin:0 0 14px;font-size:20px;font-weight:600;letter-spacing:0.01em;color:var(--brass);}
+.hero-welcome[hidden]{display:none;}
 .hero h1{font-size:52px;line-height:1.12;max-width:560px;letter-spacing:-0.01em;font-weight:600;}
 .hero h1 em{font-style:italic;color:var(--ivory);}
 .hero-rule{width:56px;height:2px;background:var(--brass);margin:26px 0;}

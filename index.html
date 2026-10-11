@@ -27,7 +27,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261009morehint">
+<link rel="stylesheet" href="./style.css?v=20261009welcome">
 </head>
 <body>
 
@@ -137,6 +137,10 @@
         <span class="opening-soon-label">Orders open next week</span>
         <p>We aren't accepting orders just yet, but we will be very soon. In the meantime, come explore the site and start designing your suit.</p>
       </div>
+      <!-- "Welcome, Bob" the first time a just-created account is seen in
+           this browser, "Welcome back, Bob" every other time. Filled in and
+           shown by updateWelcomeGreeting() in main.js; hidden when signed out. -->
+      <p class="hero-welcome" id="heroWelcome" hidden></p>
       <div class="hero-eyebrow">Custom Tailoring, Considered</div>
       <h1>Custom-made, <em>without leaving home.</em></h1>
       <div class="hero-rule"></div>
@@ -633,7 +637,7 @@
     </div>
 
     <div id="accountLoggedInView" hidden>
-      <p class="account-intro">Welcome back, <b id="accountNameDisplay"></b>. <button type="button" class="btn-ghost" id="accountLogoutBtn">Log out</button></p>
+      <p class="account-intro"><span id="accountGreetingWord">Welcome back</span>, <b id="accountNameDisplay"></b>. <button type="button" class="btn-ghost" id="accountLogoutBtn">Log out</button></p>
 
       <h3>Saved Measurements</h3>
       <p class="account-section-note">Fill these in once and reuse them any time you design a new suit.</p>
@@ -728,7 +732,7 @@
 <script src="./config.js?v=20261007soon"></script>
 <script src="./catalog.js?v=20261009btnsmall"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261009signup"></script>
+<script src="./main.js?v=20261011signup"></script>
 
 </body>
 </html>
