@@ -383,15 +383,33 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const backPocket = (OPTION_LOOKS["Back Pocket Style"] || {})[(spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || ""];
   const backWaist = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
   const backNote = [backWaist, backPocket].filter(Boolean).map((t) => "; " + t).join("");
+  const cuffCount = cuffCountText(spec) ? " (" + cuffCountText(spec) + ")" : "";
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture.`
+Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+}
+
+// How many buttons each sleeve cuff has (0 if unknown). The image model kept
+// adding one (five chosen, six drawn), so the count is stated everywhere.
+function cuffButtonCount(spec: string): number {
+  const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+  const m = cuff.match(/\d/);
+  return m ? Number(m[0]) : 0;
+}
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+function cuffCountText(spec: string): string {
+  const n = cuffButtonCount(spec);
+  if (!n) return "";
+  const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+  const what = /button ?less/i.test(cuff) ? "stitched buttonholes (no buttons)" : "buttons";
+  const count = Array.from({ length: n }, (_, i) => i + 1).join(", ");
+  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + ". Never " + (n + 1) + ", never " + (n - 1) + "; count them before finishing";
 }
 
 // How slanted cuff buttonholes look in the catalog drawings. The image model
@@ -464,6 +482,7 @@ function keyDetails(spec: string, ownLining = false): string {
     out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : "") +
       (lapelStyle === "Diamond Lapel" ? " Draw both lapels in this exact shape in the front view and in every close-up that shows them." : ""));
   }
+  if (cuffCountText(spec)) out.push("- CUFF BUTTON COUNT: " + cuffCountText(spec) + ".");
   if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONHOLES: SLANTED, " + SLANT_HOLES + ".");
   }
@@ -619,7 +638,7 @@ function fixedRules(spec: string): string {
   if (/button ?less/i.test(cuff)) {
     rules.push("- The sleeve cuffs have NO buttons: only " + (cn || 4) + " stitched buttonholes in a vertical row, with no buttons sewn on.");
   } else if (cn) {
-    rules.push("- Each sleeve cuff has exactly " + cn + " button" + (cn === 1 ? "" : "s") + ".");
+    rules.push("- MOST IMPORTANT: " + cuffCountText(spec) + ", in the cuff close-up and on both sleeves in every view.");
   }
   if (/^Facing Style: No Lining/m.test(spec)) {
     rules.push("- The jacket is UNLINED: wherever the inside shows (neck opening, folded-open front), draw the suit fabric facings and neat bound seams, with no lining fabric.");
