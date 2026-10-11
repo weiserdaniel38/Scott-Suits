@@ -378,6 +378,8 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")" : "";
+  const chestPocket = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
+  const chestNote = /besom/i.test(chestPocket) ? " (the chest pocket is a " + chestPocket.toLowerCase().replace(/ pocket$/, "") + ": just one thin piped slit, NOT a raised welt strip)" : "";
   const backPocket = (OPTION_LOOKS["Back Pocket Style"] || {})[(spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || ""];
   const backWaist = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
   const backNote = [backWaist, backPocket].filter(Boolean).map((t) => "; " + t).join("");
@@ -386,7 +388,7 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket and fabric texture.`
+Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
@@ -429,6 +431,11 @@ const JACKET_LENGTH =
 const BESOM_CHEST_NOT =
   "There is exactly ONE chest pocket opening on the jacket: never stack a second slit, welt or pocket above or below it, and draw no extra stitched lines around it";
 
+// A single/double besom chest pocket kept coming out as a welt pocket (a
+// raised rectangular strip, like a boxy patch).
+const BESOM_NOT_WELT =
+  "It is NOT a welt pocket: there is NO raised rectangular strip or box of fabric and no visible stitched outline. From a normal distance the whole pocket reads as just a thin slit cut into the chest, edged only by its slim piped lip(s), under 1 cm tall in total";
+
 // Flat welt hip pockets kept coming out as flap pockets.
 const WELT_NOT_FLAP =
   "single WELT pockets, NOT flap pockets: on each hip a narrow rectangular welt strip of the suit fabric stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like the chest pocket; nothing hangs down over the opening, there is no flap and no shadow under a flap";
@@ -453,7 +460,7 @@ function keyDetails(spec: string, ownLining = false): string {
     out.push("- JACKET LENGTH: the double-breasted jacket is " + JACKET_LENGTH + ".");
   }
   const chest = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
-  if (/besom/i.test(chest)) out.push("- CHEST POCKET: " + OPTION_LOOKS["Chest Pocket"][chest] + ". " + BESOM_CHEST_NOT + ".");
+  if (/besom/i.test(chest)) out.push("- CHEST POCKET: " + OPTION_LOOKS["Chest Pocket"][chest] + ". " + BESOM_NOT_WELT + ". " + BESOM_CHEST_NOT + ".");
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     out.push("- HIP POCKETS: " + WELT_NOT_FLAP + ".");
   }
@@ -558,7 +565,7 @@ function fixedRules(spec: string): string {
   }
   const chestPocket = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
   if (/besom/i.test(chestPocket)) {
-    rules.push("- Chest pocket, in the front view and the lapel close-up: " + OPTION_LOOKS["Chest Pocket"][chestPocket] + ". " + BESOM_CHEST_NOT + ".");
+    rules.push("- Chest pocket, in the front view and the lapel close-up: " + OPTION_LOOKS["Chest Pocket"][chestPocket] + ". " + BESOM_NOT_WELT + ". " + BESOM_CHEST_NOT + ".");
   }
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     rules.push(
