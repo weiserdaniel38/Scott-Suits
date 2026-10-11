@@ -404,8 +404,10 @@ const SLANT_VENT =
 const DIAMOND_SHORT =
   "both lapels are DIAMOND lapels, a cross between a shawl and a peak lapel: one continuous piece from the neck with no notch, like a shawl, coming to one sharp outward point in the upper third, like a peak, so each lapel is a tall kite shape";
 
-// What each non-notch lapel must NOT look like.
+// What each lapel must NOT look like. Notch is here too: with nothing said,
+// the model drew double-breasted jackets with peak lapels.
 const LAPEL_NOT: Record<string, string> = {
+  "Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up toward the shoulder and has NO sharp upward point; a clear open V-shaped gap separates the collar from the lapel. This holds even on a double-breasted jacket, which here has NOTCH lapels, not the peak lapels double-breasted suits often have.",
   "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
@@ -432,7 +434,7 @@ function keyDetails(spec: string, ownLining = false): string {
   const out: string[] = [];
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const lapel = (OPTION_LOOKS["Lapel Style"] || {})[lapelStyle];
-  if (lapel && lapelStyle !== "Notch Lapel") {
+  if (lapel) {
     const width = (spec.match(/^Lapel Width: (.+)$/m) || [])[1] || "";
     const widthLook = (OPTION_LOOKS["Lapel Width"] || {})[width];
     out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : "") +
