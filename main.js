@@ -1925,8 +1925,11 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // An option can carry `onlyWhen: { otherKey: ["Value", ...] }` to be
     // offered only while otherKey is set to one of those values (e.g. the
     // shawl/diamond lapel buttonhole is hidden under Notch or Peak).
+    // `hiddenWhen` is the reverse: hidden while otherKey is set to one of
+    // those values (e.g. Notch lapel on a double breasted front).
     const shownNow = (o) =>
-      !o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1);
+      (!o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1)) &&
+      (!o.hiddenWhen || Object.keys(o.hiddenWhen).every((dep) => o.hiddenWhen[dep].indexOf(order[dep]) === -1));
     if (!rules) return cat.options.filter(shownNow).filter((o) => presetAllows(key, o)).map(withImg);
     return cat.options
       .filter(shownNow)
@@ -1946,7 +1949,13 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     applyPresetFixed();
     keys.forEach((k) => {
       const cat = catalog[k];
-      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
+      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen || o.hiddenWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) {
+        // An option with `replaceWith` moves to that option instead of
+        // asking again (Notch -> Peak once the front is double breasted).
+        const was = (cat.options || []).find((o) => o.name === order[k]);
+        const swap = was && was.replaceWith;
+        order[k] = swap && allowedOptions(k).some((o) => o.name === swap) ? swap : null;
+      }
       if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
       // The lining catalog was replaced outright (Oct 2026): a saved draft or
       // cart pointing at a lining that no longer exists asks again.
