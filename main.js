@@ -1801,16 +1801,19 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const b = hexToRgb(towardHex);
     return rgbToHex(a.map((v, i) => v + (b[i] - v) * amt));
   }
-  // The swatch color for the "Match Fabric Color" / "Best Match to Fabric" /
-  // lining "Match Fabric" cards IN THE PICKER GRID ONLY: a flat fill of the
-  // selected fabric's own color, so the box reads as that fabric's shade
-  // (an earlier light-to-dark gradient washed dark fabrics out into a
-  // generic gray-black). Still never reveals the exact thread/button the
+  // The swatch for the "Match Fabric Color" / "Best Match to Fabric" /
+  // lining "Match Fabric" cards IN THE PICKER GRID ONLY: a soft gradient of
+  // the selected fabric's own color -- roughly the tone that will be used,
+  // not an exact color, so it never reveals the exact thread/button the
   // nearest-color match (resolveBestMatchOption, used for the order
-  // summary/production text below) would pick. Returns null if there's no
-  // hex to build from.
+  // summary/production text below) would pick. The light end only moves a
+  // little toward white so a dark fabric still reads as its own shade
+  // rather than a generic gray. Returns null if there's no hex to build from.
   function fabricSwatchCss(hex) {
-    return hex || null;
+    if (!hex) return null;
+    const light = mixHex(hex, "#ffffff", 0.18);
+    const dark = mixHex(hex, "#000000", 0.3);
+    return "linear-gradient(135deg, " + light + " 0%, " + hex + " 50%, " + dark + " 100%)";
   }
 
   // For a "Match Fabric Color" / "Best Match to Fabric" card (see
@@ -2572,7 +2575,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       activeTab === "fabric" && qaShowRawFabricNames ? opt.name : opt.displayName || opt.name;
     // A "matchesFabric" option (Match Fabric Color / Best Match to Fabric)
     // no longer reveals the actual real color option that the nearest-color
-    // match would pick -- instead it shows a swatch filled with the
+    // match would pick -- instead it shows a soft gradient of the
     // selected fabric's own color, labeled with the FABRIC's name,
     // so the customer knows roughly what tone to expect without being shown
     // the exact thread/button that'll be auto-selected. (The real resolved
