@@ -2508,3 +2508,73 @@ const PANTS_STEP_TAGLINES = {
 Object.keys(JACKET_STEP_TAGLINES).forEach((k) => { if (JACKET_CATALOG[k]) JACKET_CATALOG[k].tagline = JACKET_STEP_TAGLINES[k]; });
 Object.keys(PANTS_STEP_TAGLINES).forEach((k) => { if (PANTS_CATALOG[k]) PANTS_CATALOG[k].tagline = PANTS_STEP_TAGLINES[k]; });
 // === STEP TAGLINES:END ===
+
+// === CLASSIC SUIT PRESET ===
+// A third card on "What are we building?" (Daniel, 2026-10-11): a full suit
+// where the customer only picks the fabric (4 dark solids: 2 black, 2 navy),
+// single or double breasted, and the lapel style. Everything else is fixed:
+// SB is always two buttons, DB the standard 6X2; standard lapel width;
+// lining, buttons and threads match the fabric; 5 slant cuff buttons. The
+// pants are fixed too (fabric same as the jacket) and the Pants step is
+// skipped. See setPreset() in createDesigner (main.js).
+//   steps:   the only questions asked, in the designer's usual order
+//   allowed: options offered for a step (others hidden)
+//   fixed:   values filled in for every other question
+//   fixedBySelection: extra fixed values that depend on a pick (a Shawl or
+//            Diamond lapel takes its own lapel buttonhole)
+const CLASSIC_SUIT_PRESET = {
+  jacket: {
+    steps: ["fabric", "frontbutton", "collar"],
+    allowed: {
+      fabric: ["26SU218.DBV3529", "26SU209.DLL0177", "26SU216.DBV3531", "26SU217.DBV3530"],
+      frontbutton: ["Single Breasted Two Buttons", "Double Breasted 6X2"],
+    },
+    fixed: {
+      lapelwidth: "9 cm",
+      pockettype: "Normal Pocket",
+      lowerpocket: "Double Besom W/ Flap",
+      backvent: "Side Vent",
+      sleevecuffstyle: "Working Sleeve Cuff W/ Slant Type Button",
+      cuffbuttons: "5 Slant Button",
+      buttoncolor: "Best Match to Fabric",
+      lining: "Match Fabric",
+      lapelbuttonhole: "Standard",
+      buttonholeThreadColor: "Match Fabric Color",
+      frontButtonholeThreadColor: "Match Fabric Color",
+      feltundercollar: "Match Felt Undercollar",
+      threadColor: "Match Fabric Color",
+      buttonNail: "X Shape Sewing Button",
+      insidepocket: "Normal Inside Pocket W/ Pen Pocket",
+      monogram: "No Monogram Need",
+      construction: "Fused Construction",
+      facing: "Round Shape Facing",
+      sleevecrown: "Regular Armhole",
+    },
+    fixedBySelection: {
+      collar: {
+        "Shawl": { lapelbuttonhole: "Buttonhole On Left, Only For Shawl And Diamond Lapel" },
+        "Diamond Lapel": { lapelbuttonhole: "Buttonhole On Left, Only For Shawl And Diamond Lapel" },
+      },
+    },
+  },
+  pants: {
+    steps: [],
+    fixed: {
+      fabric: "__same_as__fabric",
+      frontPleat: "No Pleat",
+      waistLineHeight: "5.0 cm",
+      waistbandStyle: "Normal Waistband",
+      waistbandExtension: "Round Shape 5cm",
+      beltLoops: "Belt Loops",
+      frontPocket: "Slant Pocket",
+      backPocket: "Besom Pocket W/ Button",
+      watchPocket: "No Watch Pocket",
+      bottomStyle: "Turn Up Bottom",
+      backWaistShape: "No V Open",
+      hookEye: "Metal Hook And Eye",
+      threadColor: "Match Fabric Color",
+      buttonNail: "X Shape Sewing Button",
+      monogram: "No Monogram Need",
+    },
+  },
+};
