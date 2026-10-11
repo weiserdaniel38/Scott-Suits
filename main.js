@@ -5062,7 +5062,11 @@ async function updateDesignPreviewPanel() {
   // The finished picture gets a small "Review selections" link under it.
   const showImage = (url) => {
     ui.showImage(url);
-    ui.card.querySelector(".suit-preview-media").appendChild(buildSelectionsReview(ui.card));
+    const media = ui.card.querySelector(".suit-preview-media");
+    const note = document.createElement("p");
+    note.className = "suit-preview-disclaimer";
+    note.textContent = "This picture is AI-generated and drawn as accurately as possible. Small details may differ, but your suit is made exactly to the selections you chose.";
+    media.append(note, buildSelectionsReview(ui.card));
   };
 
   const watch = (preview) => {
