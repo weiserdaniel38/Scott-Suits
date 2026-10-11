@@ -1602,11 +1602,11 @@ body:not(.designing) #suitTypeSection{display:none;}
 .wiz-bar.has-more .wiz-more{opacity:1;visibility:visible;pointer-events:auto;}
 @media(prefers-reduced-motion:reduce){.wiz-more span{animation:none;}}
 
-/* Three suit-type cards (Full Suit, Jacket Only, Classic Suit) side by side
-   on desktop; phones keep stacking them. */
-@media(min-width:901px){
-  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1000px;}
-}
+/* Classic Suit preset: a quiet text link under the suit-type cards. */
+.suit-type-preset-link{text-align:center;margin-top:14px;}
+.suit-type-preset-link button{background:none;border:0;padding:4px 2px;font:inherit;font-size:13px;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(0,0,0,.25);cursor:pointer;}
+.suit-type-preset-link button:hover{color:var(--ivory);text-decoration-color:currentColor;}
+@media(max-width:600px){.suit-type-preset-link{margin-top:10px;}.suit-type-preset-link button{font-size:12px;}}
 
 /* Top menu links (How It Works, Fabrics, Contact) are plain text at every
    size: no outline or pill around them. On phones How It Works and Contact show as small
