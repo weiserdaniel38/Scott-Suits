@@ -13,7 +13,12 @@ const JACKET_CATALOG = {
     // catalog_BACKUP_before_lapel_cleanup_20261005.js.txt. The stored
     // names are unchanged, so older orders still read correctly.
     options: [
-      { name: "Notch Lapel", img: "./assets/jacket-collar-new-notch.jpg" },
+      { name: "Notch Lapel", img: "./assets/jacket-collar-new-notch.jpg",
+        // Not offered on a double breasted jacket (Daniel, 2026-10-11). A
+        // Notch picked earlier becomes Peak when the front turns double
+        // breasted (see reconcileSelections() in main.js).
+        hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
+        replaceWith: "Peak Lapel" },
       { name: "Peak Lapel", img: "./assets/jacket-collar-new-peak.jpg" },
       { name: "Shawl", img: "./assets/jacket-collar-new-shawl.jpg" },
       { name: "Diamond Lapel", img: "./assets/jacket-collar-new-diamond.jpg" },
