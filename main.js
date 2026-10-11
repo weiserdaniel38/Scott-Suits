@@ -3340,7 +3340,7 @@ function factoryMatchText(v) {
   return v === "Match Fabric Color" || v === "Best Match to Fabric" ? v + " (factory to match)" : v;
 }
 // Steps whose values are supplier codes -- printed as stored, never renamed.
-const CLIENT_FORM_CODE_KEYS = ["fabric", "lining", "buttoncolor", "feltColor", "threadColor", "buttonholeThreadColor", "monogramThreadColor"];
+const CLIENT_FORM_CODE_KEYS = ["fabric", "lining", "buttoncolor", "feltColor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "monogramThreadColor"];
 // Fixed shop specs per garment (not customer choices on the site).
 const CLIENT_FORM_SHOP_SPECS = {
   jacket: ["AMF stitching: .5cm", "Armhole shield: no", "Label placement: no", "Shoulder type: normal"],

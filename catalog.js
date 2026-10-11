@@ -253,7 +253,7 @@ const JACKET_CATALOG_GROUPS = [
   { label: "Shape & Lapel", keys: ["frontbutton", "collar", "lapelwidth"] },
   { label: "Pockets & Vents", keys: ["pockettype", "lowerpocket", "backvent"] },
   { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
-  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "feltundercollar", "feltColor", "threadColor", "buttonNail", "insidepocket"] },
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "frontButtonholeThreadColor", "feltundercollar", "feltColor", "threadColor", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
   // Technical tailoring questions go last so they don't slow down the
   // visible style choices above.
@@ -2229,6 +2229,18 @@ JACKET_CATALOG.buttonholeThreadColor = {
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
   options: [MATCH_FABRIC_COLOR_OPTION].concat(flattenColorFamilies(BUTTONHOLE_THREAD_COLOR_FAMILIES)),
 };
+// The thread around the jacket's other buttonholes -- the front closure and
+// the sleeve cuffs. Added 2026-10-11 at Daniel's request: until then only the
+// lapel buttonhole had a color. Same 49 colors and flat tiles as the lapel
+// step, always offered (every jacket has front buttonholes).
+JACKET_CATALOG.frontButtonholeThreadColor = {
+  label: "Buttonhole Thread Color",
+  flatColorTiles: true,
+  column: "jacket_front_buttonhole_thread_color",
+  colorFamilies: BUTTONHOLE_THREAD_COLOR_FAMILIES,
+  specialOptions: [MATCH_FABRIC_COLOR_OPTION],
+  options: [MATCH_FABRIC_COLOR_OPTION].concat(flattenColorFamilies(BUTTONHOLE_THREAD_COLOR_FAMILIES)),
+};
 // Felt under collar: the hidden structural layer sewn beneath the outer
 // collar fabric (not visible when worn) -- a plain style pick like Facing
 // Style above, not a colorFamilies swatch picker, since the supplier's own
@@ -2356,6 +2368,7 @@ PANTS_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monog
 JACKET_CATALOG.threadColor.label = "Button Thread Color";
 JACKET_CATALOG.threadColor.description = "The thread your jacket's buttons are sewn on with.";
 JACKET_CATALOG.buttonholeThreadColor.description = "The thread stitched around the buttonhole on your lapel.";
+JACKET_CATALOG.frontButtonholeThreadColor.description = "The thread stitched around the buttonholes on your jacket front and sleeves.";
 JACKET_CATALOG.monogramThreadColor.description = "The thread your jacket monogram is embroidered in.";
 PANTS_CATALOG.threadColor.label = "Button Thread Color";
 PANTS_CATALOG.threadColor.description = "The thread your pants buttons are sewn on with.";
@@ -2468,6 +2481,7 @@ const JACKET_STEP_TAGLINES = {
   lining: "The secret fashion only you see.",
   threadColor: "Blend in with your fabric or make it pop.",
   buttonholeThreadColor: "Match the suit or flash a little color.",
+  frontButtonholeThreadColor: "Tone-on-tone or a little contrast where it buttons.",
   feltundercollar: "", // intentionally no one-liner
   feltColor: "A sneaky pop of color when you flip your collar.",
   monogramThreadColor: "Whisper tone-on-tone or shout in contrast.",
