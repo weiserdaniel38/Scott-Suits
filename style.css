@@ -1224,6 +1224,14 @@ nav{position:sticky;top:0;}
 .pers-grid .measure-input-wrap input::placeholder{color:rgba(34,30,25,0.28);font-weight:400;}
 .pers-grid .address-suggestions{top:calc(100% + 6px);border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 10px 30px rgba(34,30,25,0.12);overflow-x:hidden;}
 .pers-total{margin:18px 2px 0;font-size:13.5px;color:var(--ivory-dim);}
+/* Shop admin only (see refreshAdminStatus in main.js). */
+.admin-order{margin:18px 0 0;padding:14px 16px;border:1px dashed var(--brass);border-radius:6px;background:var(--card-tint);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.admin-order[hidden]{display:none;}
+.admin-order p{font-size:13px;color:var(--ivory-dim);}
+.admin-order strong{color:var(--brass);text-transform:uppercase;letter-spacing:1.2px;font-size:11px;margin-right:6px;}
+.admin-order-btn{background:none;border:1px solid var(--ivory);color:var(--ivory);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:11px 18px;border-radius:999px;cursor:pointer;}
+.admin-order-btn:hover{border-color:var(--brass);color:var(--brass);}
+.admin-order-btn:disabled{opacity:0.6;cursor:not-allowed;}
 #personalInfoSection .measure-actions.meas-bar{margin-top:18px;}
 
 /* Logo = link to the homepage */

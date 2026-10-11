@@ -900,13 +900,31 @@ async function countSince(filter: Record<string, string> | null, sinceIso: strin
   return count || 0;
 }
 
+// True when the request carries the sign-in token of an account listed in
+// public.admins (see supabase/sql/6_admin_account.sql). Admins skip the
+// picture limits. Any problem (no token, table not created yet) means "not admin".
+async function isAdminRequest(req: Request): Promise<boolean> {
+  const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
+  if (!m) return false;
+  try {
+    const { data, error } = await supabase.auth.getUser(m[1]);
+    if (error || !data?.user) return false;
+    const { data: row } = await supabase.from("admins").select("user_id").eq("user_id", data.user.id).maybeSingle();
+    return !!row;
+  } catch {
+    return false;
+  }
+}
+
 async function startPreview(req: Request, raw: string): Promise<Response> {
   if (!looksLikeSuitSpec(raw)) return json({ error: "Not a suit description" }, 400);
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const visitor = await visitorKey(req);
-  // Limits are off unless set (turned off for now at Daniel's request).
-  const perVisitor = Number(env("PREVIEW_PER_VISITOR_PER_DAY", "0"));
-  const perDay = Number(env("PREVIEW_PER_DAY", "0"));
+  // Limits are off unless set (turned off for now at Daniel's request), and
+  // never apply to the shop admin.
+  const admin = await isAdminRequest(req);
+  const perVisitor = admin ? 0 : Number(env("PREVIEW_PER_VISITOR_PER_DAY", "0"));
+  const perDay = admin ? 0 : Number(env("PREVIEW_PER_DAY", "0"));
   if (perVisitor > 0 && (await countSince({ visitor }, since)) >= perVisitor) return json({ status: "limit", scope: "visitor" }, 429);
   if (perDay > 0 && (await countSince(null, since)) >= perDay) return json({ status: "limit", scope: "day" }, 429);
   const { data, error } = await supabase
