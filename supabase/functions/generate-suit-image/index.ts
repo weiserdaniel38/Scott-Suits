@@ -1,7 +1,7 @@
 // Scott Suits -- draws a picture sheet of a customer's finished suit.
 //
 // The sheet has five panels, described to the model in words only:
-// full suit front, full suit back, trousers front, a sleeve-cuff close-up and
+// full suit front, full suit back, trousers back, a sleeve-cuff close-up and
 // a trouser-waistband close-up (jacket-only orders get jacket views instead).
 //
 // How it's called:
@@ -378,6 +378,8 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")" : "";
+  const backPocket = (OPTION_LOOKS["Back Pocket Style"] || {})[(spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || ""];
+  const backNote = backPocket ? " (" + backPocket + ")" : "";
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
@@ -385,7 +387,7 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
+Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, BACK view, so the back pockets are clearly visible below the waistband${backNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
@@ -478,6 +480,11 @@ function fixedRules(spec: string): string {
     rules.push(
       "- The trousers are shown fully CLOSED in every panel: fly zipped and hidden under its fly shield, waistband fastened. Never show an open fly, a visible zipper, or the inside of the waistband.",
     );
+    const backPocket = (spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || "";
+    const backLook = (OPTION_LOOKS["Back Pocket Style"] || {})[backPocket];
+    if (backLook) {
+      rules.push("- Trouser back pockets, clearly visible in the trousers back view: " + backLook + ".");
+    }
     rules.push(
       "- No exposed metal on the trouser front: no visible clasps, hooks, bars or zipper teeth. Any hook-and-eye is hidden inside the waistband." +
         (buckle ? " The only visible metal is the small side-adjuster buckles described below." : ""),
@@ -506,7 +513,7 @@ function fixedRules(spec: string): string {
       rules.push(
         "- Waistband front: " + extRule +
           (short ? (/no button/i.test(ext) ? " The tab has NO visible button or buttonhole (it fastens hidden underneath)." : " The tab is fastened with one button.") : "") +
-          " Show this clearly in the full-suit front, the trousers front and the waistband close-up.",
+          " Show this clearly in the full-suit front and the waistband close-up.",
       );
     }
     const styleRules: [RegExp, string][] = [
