@@ -1622,3 +1622,17 @@ body:not(.designing) #suitTypeSection{display:none;}
   .navlinks{gap:8px;}
   .navlinks .navlink-btn{font-size:9.5px;}
 }
+
+/* Preview page: small "Review selections" link under the finished suit
+   picture; the list opens below it and the picture sticks under the top bar
+   while it's open, so each choice can be checked against the drawing. */
+.selections-review{margin-top:14px;text-align:center;}
+.selections-review-toggle{background:none;border:none;padding:4px 2px;font:500 13px 'Inter',sans-serif;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--brass);cursor:pointer;}
+.selections-review-toggle:hover{color:var(--ivory);}
+.selections-review-list{margin-top:10px;text-align:left;}
+.selections-review-part{font:600 11px 'Inter',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin:14px 0 4px;}
+.selections-review-part:first-child{margin-top:0;}
+.selections-review-row{display:flex;justify-content:space-between;gap:14px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px;line-height:1.45;}
+.selections-review-row span:first-child{color:var(--ivory-dim);}
+.selections-review-row span:last-child{color:var(--ivory);text-align:right;}
+#designPreview .suit-preview-card.reviewing .suit-preview-media > a{display:block;position:-webkit-sticky;position:sticky;top:var(--review-sticky-top,0px);z-index:2;background:#F6F1EC;padding:6px 0;-webkit-transform:translateZ(0);transform:translateZ(0);}

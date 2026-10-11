@@ -3258,6 +3258,13 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       keys.filter(isApplicable).forEach((key) => { row[catalog[key].column] = resolvedValue(key); });
       return row;
     },
+    // { label, value } for every choice that applies, in step order, with
+    // the same wording as the designer's Review sheet. Used by the
+    // "Review your selections" sheet under the finished suit picture.
+    reviewRows: () => {
+      reconcileSelections();
+      return keys.filter(isApplicable).map((k) => ({ label: catalog[k].label, value: displayValue(k) || "" }));
+    },
     // Selected option display names, keyed by catalog key (e.g. "collar" -> "Notch Lapel").
     // Used to fill in the printable Client Form. Any "same as jacket" links are
     // resolved to the real fabric name here, not left as an internal marker.
@@ -4984,6 +4991,43 @@ function previewLiningPhotoUrl(photo) {
   return previewLiningUploads.get(photo);
 }
 
+// "Review selections" under the finished picture on the Preview page: a
+// small link that opens a compact list of every jacket choice (and pants
+// choice, unless only a jacket is being made) right below the picture. While
+// it's open the picture sticks under the top bar, so the customer can
+// scroll the list and check each choice against the drawing.
+function buildSelectionsReview(card) {
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const wrap = document.createElement("div");
+  wrap.className = "selections-review";
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "selections-review-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.textContent = "Review selections";
+  const list = document.createElement("div");
+  list.className = "selections-review-list";
+  list.hidden = true;
+  wrap.append(toggle, list);
+  toggle.addEventListener("click", () => {
+    const open = list.hidden;
+    if (open) {
+      const sections = [["Jacket", jacketDesigner.reviewRows()]];
+      if (!isJacketOnlyType(currentSuitType)) sections.push(["Pants", pantsDesigner.reviewRows()]);
+      list.innerHTML = sections.map(([title, rows]) =>
+        (sections.length > 1 ? '<h4 class="selections-review-part">' + title + "</h4>" : "") +
+        rows.filter((r) => r.value).map((r) => '<div class="selections-review-row"><span>' + esc(r.label) + "</span><span>" + esc(r.value) + "</span></div>").join("")
+      ).join("");
+      card.style.setProperty("--review-sticky-top", Math.max(0, getNavClearance() - 12) + "px");
+    }
+    list.hidden = !open;
+    card.classList.toggle("reviewing", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "Hide selections" : "Review selections";
+  });
+  return wrap;
+}
+
 // Top of the Measurements step: "See your suit before you order".
 async function updateDesignPreviewPanel() {
   const box = document.getElementById("designPreview");
@@ -5005,6 +5049,11 @@ async function updateDesignPreviewPanel() {
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
   box.hidden = false;
+  // The finished picture gets a small "Review selections" link under it.
+  const showImage = (url) => {
+    ui.showImage(url);
+    ui.card.querySelector(".suit-preview-media").appendChild(buildSelectionsReview(ui.card));
+  };
 
   const watch = (preview) => {
     ui.working(isJacketOnlyType(currentSuitType));
@@ -5014,7 +5063,7 @@ async function updateDesignPreviewPanel() {
       if (r.status === "done") preview.url = r.url;
       updateProcessBar();
       if (box.contains(ui.card)) {
-        if (r.status === "done") ui.showImage(r.url);
+        if (r.status === "done") showImage(r.url);
         else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
       }
     });
@@ -5022,7 +5071,7 @@ async function updateDesignPreviewPanel() {
 
   const liningPhoto = jacketDesigner.getLiningPhoto();
   if (designPreview && designPreview.spec === spec && designPreview.photo === liningPhoto) {
-    if (designPreview.status === "done") ui.showImage(designPreview.url);
+    if (designPreview.status === "done") showImage(designPreview.url);
     else if (designPreview.status === "pending") watch(designPreview);
   }
 
