@@ -675,7 +675,8 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       const holes = /slant/i.test(value)
         ? "how each buttonhole runs from its button diagonally UP and inward at this steep angle"
         : "the straight horizontal buttonholes";
-      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ${vent ? `sleeve cuff ("${style}", "${value}"): copy EXACTLY how the row of buttons climbs DIAGONALLY along the slanted vent (lowest button furthest in, each higher button further toward the back seam; never a straight vertical column), ` : `cuff buttons ("${value}"): copy EXACTLY `}${holes}, the number of buttons and how they touch or overlap. The cuff is closed and buttoned. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
+      const count = cuffCountText(spec) ? " (" + cuffCountText(spec) + ")" : "";
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ${vent ? `sleeve cuff ("${style}", "${value}"): copy EXACTLY how the row of buttons climbs DIAGONALLY along the slanted vent (lowest button furthest in, each higher button further toward the back seam; never a straight vertical column), ` : `cuff buttons ("${value}"): copy EXACTLY `}${holes}, the number of buttons${count} and how they touch or overlap. The cuff is closed and buttoned. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
     } else if (r.label.startsWith("style ")) {
       const name = r.label.slice(6);
       const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -873,7 +874,14 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const ventRefSrc = cuffKey && /slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")
     ? "./assets/jacket-cuffref-vent-" + (cuffKey[2] ? "slant" : "") + (cuffKey[3] === "Overlap" ? "overlap" : cuffKey[2] ? "" : "flat") + cuffKey[1] + ".jpg"
     : "";
-  const ventImg = ventRefSrc ? await loadRef({ label: "cuff reference", src: ventRefSrc }) : null;
+  // Straight cuffs: with the catalog drawings (the cuff-style drawing always
+  // shows three buttons) the model drew one button too many, so show one
+  // illustration with exactly the chosen count in place of both drawings.
+  const straightRefSrc = !ventRefSrc && cuffKey && !cuffKey[2]
+    ? "./assets/jacket-cuffref-straight-" + (cuffKey[3] === "Overlap" ? "overlap" : "flat") + cuffKey[1] + ".jpg"
+    : "";
+  const cuffImgSrc = ventRefSrc || straightRefSrc;
+  const ventImg = cuffImgSrc ? await loadRef({ label: "cuff reference", src: cuffImgSrc }) : null;
   // Diamond lapel: the catalog drawing alone kept coming out as a notch or
   // peak lapel, so show a bolder filled-in illustration instead (falls back
   // to the drawing if that file can't be loaded).
