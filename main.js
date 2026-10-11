@@ -4991,38 +4991,41 @@ function previewLiningPhotoUrl(photo) {
   return previewLiningUploads.get(photo);
 }
 
-// "Review your selections" sheet under the finished picture on the Preview
-// page: every jacket choice (and pants choice, unless only a jacket is being
-// made) at a glance, in the same sheet style as the designer's Review.
-function openSelectionsReview() {
+// "Review selections" under the finished picture on the Preview page: a
+// small link that opens a compact list of every jacket choice (and pants
+// choice, unless only a jacket is being made) right below the picture. While
+// it's open the picture sticks under the top bar, so the customer can
+// scroll the list and check each choice against the drawing.
+function buildSelectionsReview(card) {
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-  const sections = [["Jacket", jacketDesigner.reviewRows()]];
-  if (!isJacketOnlyType(currentSuitType)) sections.push(["Pants", pantsDesigner.reviewRows()]);
-  const sheet = document.createElement("div");
-  sheet.className = "wiz-sheet selections-review";
-  sheet.innerHTML =
-    '<div class="wiz-sheet-card" role="dialog" aria-modal="true" aria-label="Your selections">' +
-    '<div class="wiz-sheet-head"><h3>Your selections</h3><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
-    '<div class="wiz-rows">' +
-    sections.map(([title, rows]) =>
-      (sections.length > 1 ? '<h4 class="selections-review-part">' + title + "</h4>" : "") +
-      rows.filter((r) => r.value).map((r) => '<div class="wiz-row"><span>' + esc(r.label) + "</span><span>" + esc(r.value) + "</span></div>").join("")
-    ).join("") +
-    "</div>" +
-    '<button type="button" class="btn-primary wiz-continue">Looks good</button>' +
-    "</div>";
-  const close = () => {
-    sheet.remove();
-    document.body.classList.remove("wiz-lock");
-    document.removeEventListener("keydown", onKey);
-  };
-  const onKey = (e) => { if (e.key === "Escape") close(); };
-  document.body.appendChild(sheet);
-  document.body.classList.add("wiz-lock");
-  document.addEventListener("keydown", onKey);
-  sheet.addEventListener("click", (e) => { if (e.target === sheet) close(); });
-  sheet.querySelector(".wiz-close").onclick = close;
-  sheet.querySelector(".wiz-continue").onclick = close;
+  const wrap = document.createElement("div");
+  wrap.className = "selections-review";
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "selections-review-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.textContent = "Review selections";
+  const list = document.createElement("div");
+  list.className = "selections-review-list";
+  list.hidden = true;
+  wrap.append(toggle, list);
+  toggle.addEventListener("click", () => {
+    const open = list.hidden;
+    if (open) {
+      const sections = [["Jacket", jacketDesigner.reviewRows()]];
+      if (!isJacketOnlyType(currentSuitType)) sections.push(["Pants", pantsDesigner.reviewRows()]);
+      list.innerHTML = sections.map(([title, rows]) =>
+        (sections.length > 1 ? '<h4 class="selections-review-part">' + title + "</h4>" : "") +
+        rows.filter((r) => r.value).map((r) => '<div class="selections-review-row"><span>' + esc(r.label) + "</span><span>" + esc(r.value) + "</span></div>").join("")
+      ).join("");
+      card.style.setProperty("--review-sticky-top", Math.max(0, getNavClearance() - 12) + "px");
+    }
+    list.hidden = !open;
+    card.classList.toggle("reviewing", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "Hide selections" : "Review selections";
+  });
+  return wrap;
 }
 
 // Top of the Measurements step: "See your suit before you order".
@@ -5046,15 +5049,10 @@ async function updateDesignPreviewPanel() {
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
   box.hidden = false;
-  // The finished picture gets a "Review your selections" button under it.
+  // The finished picture gets a small "Review selections" link under it.
   const showImage = (url) => {
     ui.showImage(url);
-    const review = document.createElement("button");
-    review.type = "button";
-    review.className = "suit-preview-review-btn";
-    review.textContent = "Review your selections";
-    review.addEventListener("click", openSelectionsReview);
-    ui.card.querySelector(".suit-preview-media").appendChild(review);
+    ui.card.querySelector(".suit-preview-media").appendChild(buildSelectionsReview(ui.card));
   };
 
   const watch = (preview) => {
