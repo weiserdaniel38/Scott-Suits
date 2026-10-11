@@ -455,6 +455,27 @@ function isSupabaseConfigured() {
 // Kept as plain module state, same pattern as currentSuitType/cartItems.
 let currentUser = null;
 let currentProfile = null;
+// The shop admin (see supabase/sql/6_admin_account.sql) gets a "Place order
+// without payment" button. This only decides what's shown: the database
+// itself refuses a no-payment order from anyone who isn't an admin.
+let currentIsAdmin = false;
+
+async function refreshAdminStatus() {
+  const user = currentUser;
+  let admin = false;
+  if (user) {
+    try {
+      const { data, error } = await getSupabase().rpc("is_admin");
+      admin = !error && data === true;
+    } catch (e) {
+      admin = false;
+    }
+  }
+  if (user !== currentUser) return;
+  currentIsAdmin = admin;
+  const wrap = document.getElementById("adminOrderWrap");
+  if (wrap) wrap.hidden = !admin;
+}
 
 const accountIconBtn = document.getElementById("accountIconBtn");
 const accountBadge = document.getElementById("accountBadge");
@@ -741,6 +762,7 @@ function refreshAccountData() {
   updateAccountUI();
   loadProfile();
   loadOrderHistory();
+  refreshAdminStatus();
 }
 
 // Accessible modal, same open()/close() shape as the How It Works overlay
@@ -4756,10 +4778,24 @@ let suitImagesReadyPromise = null;
 const SUIT_IMAGES_PAUSED = false;
 const SUIT_IMAGE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/generate-suit-image" : "";
 
-function callSuitImageFn(payload) {
+// A signed-in customer's token rides along so the server can tell the shop
+// admin apart (admins have no picture limit); guests send none.
+async function suitImageAuthHeaders() {
+  if (!currentUser) return {};
+  try {
+    const { data } = await getSupabase().auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    return token ? { Authorization: "Bearer " + token } : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+async function callSuitImageFn(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
   return fetch(SUIT_IMAGE_FN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
   }).then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, status: res.status, data })));
 }
@@ -5069,7 +5105,8 @@ function missingOrderColumn(error) {
   return m ? m[1] : null;
 }
 
-async function finalizeOrder(input) {
+async function finalizeOrder(input, opts) {
+  const adminNoPayment = !!(opts && opts.adminNoPayment);
   const { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country } = input;
 
   const orderId =
@@ -5099,6 +5136,7 @@ async function finalizeOrder(input) {
     row.suit_number = i + 1;
     row.suit_type = item.type === "jacketOnly" ? "jacket_only" : "full_suit";
     row.item_price_usd = itemPriceUsd(item);
+    if (adminNoPayment) row.admin_no_payment = true;
     Object.assign(row, item.measurements);
 
     // Phone/email are deliberately kept OUT of the Client Form text -- that
@@ -5121,7 +5159,7 @@ async function finalizeOrder(input) {
   const shippingBlock = buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
   const fullMessage = shippingBlock + "\n\n" + clientFormText;
   const contactBlock = buildContactBlock(customerPhone, customerEmail);
-  const emailMessage = contactBlock + "\n\n" + fullMessage;
+  const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") + contactBlock + "\n\n" + fullMessage;
 
   submitBtn.disabled = true;
   submitBtn.textContent = "Saving...";
@@ -5137,7 +5175,8 @@ async function finalizeOrder(input) {
     // still in client_form_text, so nothing the shop needs is lost.
     for (let tries = 0; error && tries < 20; tries++) {
       const col = missingOrderColumn(error);
-      if (!col || !(col in toSave[0])) break;
+      // Never quietly save an admin order as a normal one.
+      if (!col || !(col in toSave[0]) || col === "admin_no_payment") break;
       console.warn("orders." + col + " column missing; saving order without it. Run the SQL in supabase/sql/.");
       if (col === "visual_spec") visualSpecSaved = false;
       toSave = toSave.map((r) => {
@@ -5172,6 +5211,7 @@ async function finalizeOrder(input) {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           _subject:
+            (adminNoPayment ? "[ADMIN, NO PAYMENT] " : "") +
             "New Scott's Suits order \u2014 " +
             customerName +
             (cartItems.length > 1 ? " (" + cartItems.length + " suits)" : ""),
@@ -5205,7 +5245,7 @@ async function finalizeOrder(input) {
   // The suit is done: close out the designer and take the customer back to
   // the homepage, with an "order received" note at the top.
   returnHomeAfterOrder(
-    (PAYPAL_ENABLED
+    (PAYPAL_ENABLED && !adminNoPayment
       ? "We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
       : "We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.") +
       (currentUser ? " You can see this order any time under Past Orders in My Account." : "")
@@ -5257,6 +5297,23 @@ submitBtn.addEventListener("click", async () => {
   window.location.href = buildPayPalCheckoutUrl();
 });
 
+
+// Admin only: saves the order exactly like Submit Order, never sending them
+// to PayPal, and marks it admin_no_payment.
+const adminNoPayBtn = document.getElementById("adminNoPayBtn");
+if (adminNoPayBtn) {
+  adminNoPayBtn.addEventListener("click", async () => {
+    if (!currentIsAdmin) return;
+    const input = collectAndValidateOrderInput();
+    if (!input) return;
+    adminNoPayBtn.disabled = true;
+    try {
+      await finalizeOrder(input, { adminNoPayment: true });
+    } finally {
+      adminNoPayBtn.disabled = false;
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Remembers where someone was in the order flow (including every selection,
