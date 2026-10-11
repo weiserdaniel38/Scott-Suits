@@ -1801,18 +1801,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const b = hexToRgb(towardHex);
     return rgbToHex(a.map((v, i) => v + (b[i] - v) * amt));
   }
-  // Builds a soft, deliberately imprecise gradient swatch from a fabric's
-  // hex -- used on the "Match Fabric Color" / "Best Match to Fabric" cards IN
-  // THE PICKER GRID ONLY, so a browsing customer sees roughly the tone that
-  // will be used without being shown the exact thread/button the real
-  // nearest-color match (resolveBestMatchOption, still used for the order
+  // The swatch color for the "Match Fabric Color" / "Best Match to Fabric" /
+  // lining "Match Fabric" cards IN THE PICKER GRID ONLY: a flat fill of the
+  // selected fabric's own color, so the box reads as that fabric's shade
+  // (an earlier light-to-dark gradient washed dark fabrics out into a
+  // generic gray-black). Still never reveals the exact thread/button the
+  // nearest-color match (resolveBestMatchOption, used for the order
   // summary/production text below) would pick. Returns null if there's no
   // hex to build from.
-  function fabricGradientCss(hex) {
-    if (!hex) return null;
-    const light = mixHex(hex, "#ffffff", 0.45);
-    const dark = mixHex(hex, "#000000", 0.35);
-    return "linear-gradient(135deg, " + light + " 0%, " + hex + " 55%, " + dark + " 100%)";
+  function fabricSwatchCss(hex) {
+    return hex || null;
   }
 
   // For a "Match Fabric Color" / "Best Match to Fabric" card (see
@@ -2574,8 +2572,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       activeTab === "fabric" && qaShowRawFabricNames ? opt.name : opt.displayName || opt.name;
     // A "matchesFabric" option (Match Fabric Color / Best Match to Fabric)
     // no longer reveals the actual real color option that the nearest-color
-    // match would pick -- instead it shows a vague gradient swatch built
-    // from the selected fabric's own color, labeled with the FABRIC's name,
+    // match would pick -- instead it shows a swatch filled with the
+    // selected fabric's own color, labeled with the FABRIC's name,
     // so the customer knows roughly what tone to expect without being shown
     // the exact thread/button that'll be auto-selected. (The real resolved
     // match is still used for the order summary/production text -- see
@@ -2588,7 +2586,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     if (opt.matchesFabric) {
       const fabricOpt = resolveFabricOption();
       if (fabricOpt && fabricOpt.hex) {
-        gradientCss = fabricGradientCss(fabricOpt.hex);
+        gradientCss = fabricSwatchCss(fabricOpt.hex);
         shownName = opt.name + " (" + (fabricOpt.displayName || fabricOpt.name) + ")";
       }
     }

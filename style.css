@@ -1636,3 +1636,11 @@ body:not(.designing) #suitTypeSection{display:none;}
 .selections-review-row span:first-child{color:var(--ivory-dim);}
 .selections-review-row span:last-child{color:var(--ivory);text-align:right;}
 #designPreview .suit-preview-card.reviewing .suit-preview-media > a{display:block;position:-webkit-sticky;position:sticky;top:var(--review-sticky-top,0px);z-index:2;background:#F6F1EC;padding:6px 0;-webkit-transform:translateZ(0);transform:translateZ(0);}
+
+/* iPhone Safari zooms the whole page in when a text field or dropdown under
+   16px is tapped, and stays zoomed afterwards -- which left later steps
+   cut off on the right. 16px on phones stops that auto-zoom. */
+@media(max-width:900px){
+  .measure-input-wrap select,
+  #accountOverlay .account-form .measure-input-wrap input{font-size:16px;}
+}
