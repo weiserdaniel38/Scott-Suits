@@ -1,7 +1,7 @@
 // Scott Suits -- draws a picture sheet of a customer's finished suit.
 //
 // The sheet has five panels, described to the model in words only:
-// full suit front, full suit back, trousers back, a sleeve-cuff close-up and
+// full suit front, full suit back, trousers back close-up, a sleeve-cuff close-up and
 // a trouser-waistband close-up (jacket-only orders get jacket views instead).
 //
 // How it's called:
@@ -379,7 +379,8 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")" : "";
   const backPocket = (OPTION_LOOKS["Back Pocket Style"] || {})[(spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || ""];
-  const backNote = backPocket ? " (" + backPocket + ")" : "";
+  const backWaist = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
+  const backNote = [backWaist, backPocket].filter(Boolean).map((t) => "; " + t).join("");
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
@@ -387,7 +388,7 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, BACK view, so the back pockets are clearly visible below the waistband${backNote}.
+Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
@@ -483,7 +484,11 @@ function fixedRules(spec: string): string {
     const backPocket = (spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || "";
     const backLook = (OPTION_LOOKS["Back Pocket Style"] || {})[backPocket];
     if (backLook) {
-      rules.push("- Trouser back pockets, clearly visible in the trousers back view: " + backLook + ".");
+      rules.push("- Trouser back pockets, clearly visible in the trousers back close-up: " + backLook + ".");
+    }
+    const backWaistLook = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
+    if (backWaistLook) {
+      rules.push("- Back of the waistband, clearly visible in the trousers back close-up: " + backWaistLook + ".");
     }
     rules.push(
       "- No exposed metal on the trouser front: no visible clasps, hooks, bars or zipper teeth. Any hook-and-eye is hidden inside the waistband." +
