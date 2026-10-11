@@ -1592,3 +1592,9 @@ body:not(.designing) #suitTypeSection{display:none;}
 .wiz-bar.has-more::before{opacity:1;}
 .wiz-bar.has-more .wiz-more{opacity:1;visibility:visible;pointer-events:auto;}
 @media(prefers-reduced-motion:reduce){.wiz-more span{animation:none;}}
+
+/* Three suit-type cards (Full Suit, Jacket Only, Classic Suit) side by side
+   on desktop; phones keep stacking them. */
+@media(min-width:901px){
+  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1000px;}
+}
