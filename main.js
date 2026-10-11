@@ -3258,6 +3258,13 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       keys.filter(isApplicable).forEach((key) => { row[catalog[key].column] = resolvedValue(key); });
       return row;
     },
+    // { label, value } for every choice that applies, in step order, with
+    // the same wording as the designer's Review sheet. Used by the
+    // "Review your selections" sheet under the finished suit picture.
+    reviewRows: () => {
+      reconcileSelections();
+      return keys.filter(isApplicable).map((k) => ({ label: catalog[k].label, value: displayValue(k) || "" }));
+    },
     // Selected option display names, keyed by catalog key (e.g. "collar" -> "Notch Lapel").
     // Used to fill in the printable Client Form. Any "same as jacket" links are
     // resolved to the real fabric name here, not left as an internal marker.
@@ -4984,6 +4991,40 @@ function previewLiningPhotoUrl(photo) {
   return previewLiningUploads.get(photo);
 }
 
+// "Review your selections" sheet under the finished picture on the Preview
+// page: every jacket choice (and pants choice, unless only a jacket is being
+// made) at a glance, in the same sheet style as the designer's Review.
+function openSelectionsReview() {
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const sections = [["Jacket", jacketDesigner.reviewRows()]];
+  if (!isJacketOnlyType(currentSuitType)) sections.push(["Pants", pantsDesigner.reviewRows()]);
+  const sheet = document.createElement("div");
+  sheet.className = "wiz-sheet selections-review";
+  sheet.innerHTML =
+    '<div class="wiz-sheet-card" role="dialog" aria-modal="true" aria-label="Your selections">' +
+    '<div class="wiz-sheet-head"><h3>Your selections</h3><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
+    '<div class="wiz-rows">' +
+    sections.map(([title, rows]) =>
+      (sections.length > 1 ? '<h4 class="selections-review-part">' + title + "</h4>" : "") +
+      rows.filter((r) => r.value).map((r) => '<div class="wiz-row"><span>' + esc(r.label) + "</span><span>" + esc(r.value) + "</span></div>").join("")
+    ).join("") +
+    "</div>" +
+    '<button type="button" class="btn-primary wiz-continue">Looks good</button>' +
+    "</div>";
+  const close = () => {
+    sheet.remove();
+    document.body.classList.remove("wiz-lock");
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.body.appendChild(sheet);
+  document.body.classList.add("wiz-lock");
+  document.addEventListener("keydown", onKey);
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) close(); });
+  sheet.querySelector(".wiz-close").onclick = close;
+  sheet.querySelector(".wiz-continue").onclick = close;
+}
+
 // Top of the Measurements step: "See your suit before you order".
 async function updateDesignPreviewPanel() {
   const box = document.getElementById("designPreview");
@@ -5005,6 +5046,16 @@ async function updateDesignPreviewPanel() {
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
   box.hidden = false;
+  // The finished picture gets a "Review your selections" button under it.
+  const showImage = (url) => {
+    ui.showImage(url);
+    const review = document.createElement("button");
+    review.type = "button";
+    review.className = "suit-preview-review-btn";
+    review.textContent = "Review your selections";
+    review.addEventListener("click", openSelectionsReview);
+    ui.card.querySelector(".suit-preview-media").appendChild(review);
+  };
 
   const watch = (preview) => {
     ui.working(isJacketOnlyType(currentSuitType));
@@ -5014,7 +5065,7 @@ async function updateDesignPreviewPanel() {
       if (r.status === "done") preview.url = r.url;
       updateProcessBar();
       if (box.contains(ui.card)) {
-        if (r.status === "done") ui.showImage(r.url);
+        if (r.status === "done") showImage(r.url);
         else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
       }
     });
@@ -5022,7 +5073,7 @@ async function updateDesignPreviewPanel() {
 
   const liningPhoto = jacketDesigner.getLiningPhoto();
   if (designPreview && designPreview.spec === spec && designPreview.photo === liningPhoto) {
-    if (designPreview.status === "done") ui.showImage(designPreview.url);
+    if (designPreview.status === "done") showImage(designPreview.url);
     else if (designPreview.status === "pending") watch(designPreview);
   }
 

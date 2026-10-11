@@ -1622,3 +1622,13 @@ body:not(.designing) #suitTypeSection{display:none;}
   .navlinks{gap:8px;}
   .navlinks .navlink-btn{font-size:9.5px;}
 }
+
+/* Preview page: "Review your selections" under the finished suit picture. */
+#designPreview .suit-preview-review-btn{display:block;margin:18px auto 0;border:1.5px solid var(--ivory);border-radius:999px;padding:12px 28px;background:transparent;color:var(--ivory);font:600 14px 'Inter',sans-serif;cursor:pointer;transition:background .15s ease,color .15s ease;}
+#designPreview .suit-preview-review-btn:hover{background:var(--ivory);color:#F6F1EC;}
+.selections-review-part{font:600 12px 'Inter',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin:18px 0 2px;}
+.selections-review-part:first-child{margin-top:4px;}
+.selections-review .wiz-row{cursor:default;}
+.selections-review .wiz-row:hover span:first-child{color:var(--ivory-dim);}
+@media(max-width:600px){#designPreview .suit-preview-review-btn{width:100%;}}
+.selections-review .wiz-row{padding:9px 0;font-size:13px;}
