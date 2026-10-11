@@ -2234,7 +2234,7 @@ JACKET_CATALOG.buttonholeThreadColor = {
 // lapel buttonhole had a color. Same 49 colors and flat tiles as the lapel
 // step, always offered (every jacket has front buttonholes).
 JACKET_CATALOG.frontButtonholeThreadColor = {
-  label: "Buttonhole Thread Color",
+  label: "Front & Sleeve Buttonhole Color",
   flatColorTiles: true,
   column: "jacket_front_buttonhole_thread_color",
   colorFamilies: BUTTONHOLE_THREAD_COLOR_FAMILIES,
