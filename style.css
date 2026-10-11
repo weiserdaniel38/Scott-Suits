@@ -1015,10 +1015,10 @@ nav{position:sticky;top:0;}
   .is-framed nav::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:60px;background:var(--ink);}
 }
 
-/* Phones: bring "How It Works" back in the top bar (the Fabrics/Contact placeholders stay hidden) */
+/* Phones: bring "How It Works" and "Contact" back in the top bar (Fabrics stays hidden) */
 @media(max-width:600px){
   .navlinks{display:flex;gap:0;font-size:10.5px;letter-spacing:0.4px;}
-  .navlinks span,.navlinks .nav-fabrics-link,.navlinks .nav-contact-link{display:none;}
+  .navlinks span,.navlinks .nav-fabrics-link{display:none;}
   .navlinks .navlink-btn{white-space:nowrap;}
   .nav-right{gap:8px;}
   .nav-inner{gap:6px;}
@@ -1606,4 +1606,18 @@ body:not(.designing) #suitTypeSection{display:none;}
    on desktop; phones keep stacking them. */
 @media(min-width:901px){
   #suitTypeSection .suit-type-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1000px;}
+}
+
+/* Top menu links (How It Works, Fabrics, Contact) are plain text at every
+   size: no outline or pill around them. On phones all three show as small
+   text so Contact is reachable there too. */
+.navlinks .navlink-btn,.navlinks .hiw-nav-btn{border:none !important;border-radius:0;background:none !important;padding:0 !important;color:var(--ivory-dim);}
+.navlinks .navlink-btn:hover,.navlinks .navlink-btn:active{background:none !important;color:var(--brass);}
+@media(max-width:600px){
+  .navlinks{align-items:center;gap:12px;}
+  .navlinks .navlink-btn,.navlinks .nav-fabrics-link{display:inline-block;font-size:10px;font-weight:500;letter-spacing:0.3px;color:var(--ivory);}
+}
+@media(max-width:380px){
+  .navlinks{gap:8px;}
+  .navlinks .navlink-btn{font-size:9.5px;}
 }
