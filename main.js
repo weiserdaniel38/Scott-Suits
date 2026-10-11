@@ -1651,7 +1651,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // omitted, every category is still offered, just without section headings.
   // Customer-supplied photos (data URLs, already downsized), keyed by category
   // -- currently just the lining. Kept in memory; main.js also mirrors them
-  // into localStorage separately from the draft (see saveDraft).
+  // into sessionStorage separately from the draft (see saveDraft).
   const customPhotos = {};
   // Free-text answers (e.g. the monogram) for categories with a `textInput`.
   const customTexts = {};
@@ -3211,7 +3211,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // The customer's own lining photo (data URL) while it is the chosen
     // lining, else null. Used when the suit is added to the cart.
     getLiningPhoto: () => (selectedIsUpload("lining") ? customPhotos.lining || null : null),
-    // Restores a photo (from localStorage) BEFORE setSelections.
+    // Restores a photo (from sessionStorage) BEFORE setSelections.
     setLiningPhoto: (dataUrl) => { if (dataUrl) customPhotos.lining = dataUrl; },
     // Re-applies a saved set of selections (used to restore a draft on reload).
     setSelections: (saved) => {
@@ -5201,11 +5201,22 @@ submitBtn.addEventListener("click", async () => {
 
 // ---------------------------------------------------------------------------
 // Remembers where someone was in the order flow (including every selection,
-// measurement, and personal/shipping field) in this browser, so refreshing
-// the page -- or coming back later -- picks up right where they left off
-// instead of starting over. Cleared automatically once an order is submitted.
+// measurement, and personal/shipping field) in this tab, so refreshing the
+// page picks up right where they left off instead of starting over. Kept in
+// sessionStorage, not localStorage: a brand-new tab or window opens the site
+// fresh instead of inheriting another tab's design. Cleared automatically
+// once an order is submitted.
 // ---------------------------------------------------------------------------
 const DRAFT_STORAGE_KEY = "scottSuitsDraftOrder";
+
+// Drafts used to live in localStorage (shared by every tab); drop any copy
+// left over from then so it can't linger in the browser.
+try {
+  localStorage.removeItem(DRAFT_STORAGE_KEY);
+  localStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+} catch (e) {
+  // ignore
+}
 
 function saveDraft() {
   try {
@@ -5238,17 +5249,17 @@ function saveDraft() {
       pendingCommitIndex: pendingCommitIndex,
       editingCartIndex: editingCartIndex,
     };
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   } catch (e) {
-    // localStorage can be unavailable (private browsing, disabled storage, etc) -- not fatal.
+    // sessionStorage can be unavailable (private browsing, disabled storage, etc) -- not fatal.
   }
   // The customer's own lining photo(s) live under a separate key, so a photo
   // too big for the browser's storage quota can never cost the rest of the
   // draft. Failure just means the photo has to be re-added after a reload.
   try {
     const photos = { jacket: jacketDesigner.getLiningPhoto(), cart: cartItems.map((it) => it.liningPhoto || null) };
-    if (photos.jacket || photos.cart.some(Boolean)) localStorage.setItem(DRAFT_STORAGE_KEY + "_photos", JSON.stringify(photos));
-    else localStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+    if (photos.jacket || photos.cart.some(Boolean)) sessionStorage.setItem(DRAFT_STORAGE_KEY + "_photos", JSON.stringify(photos));
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
   } catch (e) {
     // not fatal
   }
@@ -5257,12 +5268,12 @@ function saveDraft() {
 
 function clearDraft() {
   try {
-    localStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
   } catch (e) {
     // ignore
   }
   try {
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
   } catch (e) {
     // ignore
   }
@@ -5271,7 +5282,7 @@ function clearDraft() {
 function restoreDraft() {
   let draft = null;
   try {
-    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
     if (raw) draft = JSON.parse(raw);
   } catch (e) {
     draft = null;
@@ -5281,7 +5292,7 @@ function restoreDraft() {
   if (Array.isArray(draft.cart)) cartItems = draft.cart;
   let draftPhotos = null;
   try {
-    const rawPhotos = localStorage.getItem(DRAFT_STORAGE_KEY + "_photos");
+    const rawPhotos = sessionStorage.getItem(DRAFT_STORAGE_KEY + "_photos");
     if (rawPhotos) draftPhotos = JSON.parse(rawPhotos);
   } catch (e) {
     draftPhotos = null;
