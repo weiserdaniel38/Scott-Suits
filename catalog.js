@@ -2526,7 +2526,7 @@ const CLASSIC_SUIT_PRESET = {
   jacket: {
     steps: ["fabric", "frontbutton", "collar"],
     allowed: {
-      fabric: ["26SU218.DBV3529", "26SU204.DPP0191", "26SU216.DBV3531", "26SU217.DBV3530"],
+      fabric: ["26SU218.DBV3529", "26SU209.DLL0177", "26SU216.DBV3531", "26SU217.DBV3530"],
       frontbutton: ["Single Breasted Two Buttons", "Double Breasted 6X2"],
     },
     fixed: {
@@ -2534,7 +2534,7 @@ const CLASSIC_SUIT_PRESET = {
       pockettype: "Normal Pocket",
       lowerpocket: "Double Besom W/ Flap",
       backvent: "Side Vent",
-      sleevecuffstyle: "Working Sleeve Cuff",
+      sleevecuffstyle: "Working Sleeve Cuff W/ Slant Type Button",
       cuffbuttons: "5 Slant Button",
       buttoncolor: "Best Match to Fabric",
       lining: "Match Fabric",

@@ -3271,7 +3271,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // goes back to the fully custom designer. Picks outside the preset's
     // allowed options are cleared; its fixed answers are filled in.
     setPreset: (p) => {
+      // Leaving a preset (for the custom designer or another preset) starts
+      // the design fresh -- otherwise its fixed answers would stay behind as
+      // if the customer had picked them.
+      const leaving = !!preset && preset !== (p || null);
       preset = p || null;
+      if (leaving) keys.forEach((k) => { order[k] = null; });
       if (preset && preset.steps.indexOf(activeTab) === -1) activeTab = preset.steps[0] || keys[0];
       reconcileSelections();
       renderTabs();
@@ -5864,15 +5869,8 @@ function applySuitType(type) {
 // moves straight into the jacket designer, same "scroll up before hiding"
 // swap every other step transition uses (see goToStep()).
 function chooseSuitType(type) {
-  // Leaving the Classic Suit preset for a custom type starts the design
-  // fresh -- otherwise every question would already be answered with the
-  // preset's fixed picks.
-  const leavingPreset = currentSuitType === "preset" && type !== "preset";
+  // (Leaving the Classic Suit preset clears its fixed answers -- see setPreset.)
   applySuitType(type);
-  if (leavingPreset) {
-    jacketDesigner.resetSelections();
-    pantsDesigner.resetSelections();
-  }
   jacketDesigner.resetToFirstTab();
   goToStep(suitTypeSection, jacketSection);
 }
