@@ -2541,7 +2541,7 @@ const CLASSIC_SUIT_PRESET = {
       pockettype: "Normal Pocket",
       backvent: "Side Vent",
       sleevecuffstyle: "Working Sleeve Cuff W/ Slant Type Button",
-      cuffbuttons: "5 Slant Button",
+      cuffbuttons: "5 Slant Overlap Button",
       buttoncolor: "Best Match to Fabric",
       lining: "Match Fabric",
       lapelbuttonhole: "Standard",
