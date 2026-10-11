@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261009welcome">
+<link rel="stylesheet" href="./style.css?v=20261011preset">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -270,6 +270,20 @@
         <span class="suit-type-name">Jacket Only</span>
       <span class="suit-type-desc">No Pants</span>
       <span class="suit-type-price">$250</span>
+        <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
+      </span>
+    </button>
+    <!-- Classic Suit preset: only fabric (4 dark solids), single/double
+         breasted and lapel style are asked; see CLASSIC_SUIT_PRESET in
+         catalog.js. -->
+    <button type="button" class="suit-type-card" id="chooseClassicSuitBtn" data-suit-type="preset">
+      <span class="suit-type-icon">
+        <img src="./assets/suit-type-full-suit.png?v=20261006d" alt="Classic suit -- black or navy">
+      </span>
+      <span class="suit-type-body">
+        <span class="suit-type-name">Classic Suit</span>
+      <span class="suit-type-desc">Black or Navy &middot; 3 Quick Picks</span>
+      <span class="suit-type-price">$350</span>
         <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
       </span>
     </button>
@@ -748,9 +762,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261007soon"></script>
-<script src="./catalog.js?v=20261011holename"></script>
+<script src="./catalog.js?v=20261011preset"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261011holecolor"></script>
+<script src="./main.js?v=20261011preset"></script>
 
 </body>
 </html>

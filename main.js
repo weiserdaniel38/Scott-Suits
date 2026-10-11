@@ -41,6 +41,14 @@ const JACKET_ONLY_PRICE_USD = 250;
 // saved draft from before this feature existed) behaves exactly as before.
 let currentSuitType = "full";
 
+// The Classic Suit preset ("preset") is a full suit -- jacket + pants, full
+// price, all measurements -- but its pants are fixed, so it has no Pants
+// step to design. Use this for "is there a Pants step", and
+// currentSuitType === "jacketOnly" for "are there pants in the order".
+function hasPantsStep() {
+  return currentSuitType === "full";
+}
+
 function suitPriceForType(type) {
   return type === "jacketOnly" ? JACKET_ONLY_PRICE_USD : SUIT_PRICE_USD;
 }
@@ -1577,7 +1585,7 @@ let qaShowRawFabricNames = false;
 const wizProgressCounts = {};
 function orderProgressPct(stage) {
   const j = wizProgressCounts.jacket || { done: 0, total: 0 };
-  const p = currentSuitType === "jacketOnly" ? { done: 0, total: 0 } : (wizProgressCounts.pants || { done: 0, total: 0 });
+  const p = !hasPantsStep() ? { done: 0, total: 0 } : (wizProgressCounts.pants || { done: 0, total: 0 });
   const designTotal = j.total + p.total;
   const total = designTotal + 2;
   const done = stage === "pers" ? designTotal + 1 : stage === "meas" ? designTotal : j.done + p.done;
@@ -1587,11 +1595,12 @@ function orderProgressPct(stage) {
 // design question is answered.
 function designProgressState() {
   const jacketOnly = currentSuitType === "jacketOnly";
+  const noPantsStep = !hasPantsStep();
   const j = wizProgressCounts.jacket || { done: 0, total: 0 };
   const p = wizProgressCounts.pants || { done: 0, total: 0 };
   const jacketDone = j.total > 0 && j.done >= j.total;
   const pantsComplete = p.total > 0 && p.done >= p.total;
-  return { jacketOnly, jacketDone, pantsDone: p.done, allDone: jacketDone && (jacketOnly || pantsComplete) };
+  return { jacketOnly, noPantsStep, jacketDone, pantsDone: p.done, allDone: jacketDone && (noPantsStep || pantsComplete) };
 }
 function orderProgressCheer(pct, stage) {
   if (stage === "pers") return "Last step. Your suit is nearly on its way!";
@@ -1603,7 +1612,7 @@ function orderProgressCheer(pct, stage) {
   if (d.allDone) return d.jacketOnly
     ? "\uD83C\uDF89 Your jacket is fully designed! It\u2019s going to look incredible."
     : "\uD83C\uDF89 Your suit is fully designed! It\u2019s going to look incredible.";
-  if (d.jacketDone && !d.jacketOnly) {
+  if (d.jacketDone && !d.noPantsStep) {
     if (d.pantsDone === 0) return "Jacket done! Now let\u2019s design the pants.";
   }
   const lines = [
@@ -1841,6 +1850,30 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // `allowedBySelection: { otherKey: { "Value": ["option name", ...] } }`:
   // while otherKey is set to "Value", only the listed options are offered
   // (e.g. Shawl collar -> only the shawl lapel buttonhole or no buttonhole).
+  // A preset suit (see CLASSIC_SUIT_PRESET in catalog.js) limits which
+  // questions are asked and which options they offer, and fills in the rest.
+  // null = the normal, fully custom designer.
+  let preset = null;
+  function presetAllows(key, o) {
+    const list = preset && preset.allowed && preset.allowed[key];
+    return !list || list.indexOf(o.name) !== -1;
+  }
+  // Writes the preset's fixed answers (including any that depend on a pick,
+  // e.g. the Shawl lapel's own buttonhole) over the current selections.
+  function applyPresetFixed() {
+    if (!preset) return;
+    Object.keys(preset.fixed || {}).forEach((k) => { if (catalog[k]) order[k] = preset.fixed[k]; });
+    const bySel = preset.fixedBySelection || {};
+    Object.keys(bySel).forEach((dep) => {
+      const extra = bySel[dep][order[dep]];
+      if (extra) Object.keys(extra).forEach((k) => { if (catalog[k]) order[k] = extra[k]; });
+    });
+  }
+  // Questions shown in the wizard: every applicable one, or only the
+  // preset's own steps while a preset is loaded.
+  function isShown(key) {
+    return isApplicable(key) && (!preset || preset.steps.indexOf(key) !== -1);
+  }
   function allowedOptions(key) {
     const cat = catalog[key];
     const rules = cat.allowedBySelection;
@@ -1867,9 +1900,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // shawl/diamond lapel buttonhole is hidden under Notch or Peak).
     const shownNow = (o) =>
       !o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1);
-    if (!rules) return cat.options.filter(shownNow).map(withImg);
+    if (!rules) return cat.options.filter(shownNow).filter((o) => presetAllows(key, o)).map(withImg);
     return cat.options
       .filter(shownNow)
+      .filter((o) => presetAllows(key, o))
       .filter((o) =>
         Object.keys(rules).every((dep) => {
           const list = rules[dep][order[dep]];
@@ -1882,9 +1916,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // (e.g. a lapel buttonhole picked earlier, then the collar changed to Shawl),
   // so the customer is asked again instead of keeping an invalid combination.
   function reconcileSelections() {
+    applyPresetFixed();
     keys.forEach((k) => {
       const cat = catalog[k];
-      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen)) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
+      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) order[k] = null;
       if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
       // The lining catalog was replaced outright (Oct 2026): a saved draft or
       // cart pointing at a lining that no longer exists asks again.
@@ -2069,7 +2104,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   window.addEventListener("resize", syncMoreHintSoon);
   setInterval(syncMoreHint, 300); // catches a new step's cards appearing
 
-  function wizList() { return keys.filter(isApplicable); }
+  function wizList() { return keys.filter(isShown); }
   function wizGroupLabel(key) {
     if (!groups) return "";
     const g = groups.find((x) => x.keys.indexOf(key) !== -1);
@@ -2431,7 +2466,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // Thread Color when Monogram Placement is "No Monogram Need") -- it has
     // no tab to land on right now.
     let nextIdx = keys.indexOf(activeTab) + 1;
-    while (nextIdx < keys.length && !isApplicable(keys[nextIdx])) nextIdx++;
+    while (nextIdx < keys.length && !isShown(keys[nextIdx])) nextIdx++;
     const nextKey = keys[nextIdx];
     if (!nextKey) {
       // That was the last category for this step -- auto-scroll the
@@ -2477,7 +2512,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       // related categories (e.g. "Collar & Lapel") instead of leaving all of
       // them in one undifferentiated list.
       groups.forEach((group) => {
-        const visibleKeys = group.keys.filter(isApplicable);
+        const visibleKeys = group.keys.filter(isShown);
         if (!visibleKeys.length) return;
         const label = document.createElement("div");
         label.className = "tab-group-label";
@@ -2486,7 +2521,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         visibleKeys.forEach(renderTab);
       });
     } else {
-      keys.filter(isApplicable).forEach(renderTab);
+      keys.filter(isShown).forEach(renderTab);
     }
     renderWizard();
   }
@@ -3086,7 +3121,11 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // sight -- shown above the usual selection hint when present.
     const descriptionHtml = cat.description ? '<p class="cat-description">' + cat.description + "</p>" : "";
 
-    if (cat.colorFirst) {
+    // A step a preset narrows to a few options (e.g. its 4 fabrics) shows
+    // them as plain picture cards instead of the full color/pattern browser.
+    const presetLimited = !!(preset && preset.allowed && preset.allowed[activeTab]);
+
+    if (cat.colorFirst && !presetLimited) {
       renderColorFirstOptions(cat, gridId, descriptionHtml);
       return;
     }
@@ -3096,7 +3135,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       return;
     }
 
-    if (cat.patternTypes) {
+    if (cat.patternTypes && !presetLimited) {
       renderPatternTypeOptions(cat, gridId, descriptionHtml);
       return;
     }
@@ -3228,11 +3267,25 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // happened to be open last.
     // First question still unanswered (in step order), or null when done.
     firstMissingKey: () => keys.filter(isApplicable).find((k) => !order[k] || textMissing(k)) || null,
+    // Loads a preset (CLASSIC_SUIT_PRESET.jacket / .pants) or, with null,
+    // goes back to the fully custom designer. Picks outside the preset's
+    // allowed options are cleared; its fixed answers are filled in.
+    setPreset: (p) => {
+      preset = p || null;
+      if (preset && preset.steps.indexOf(activeTab) === -1) activeTab = preset.steps[0] || keys[0];
+      reconcileSelections();
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
+    // Whether the customer has answered any question they were actually
+    // asked (a preset's own filled-in answers don't count).
+    hasUserChoices: () => keys.filter(isShown).some((k) => order[k]),
     // Same move as tapping a progress segment (scrolls up, then swaps).
     showTab: (k) => { if (keys.indexOf(k) !== -1 && k !== activeTab) switchTab(k); },
     resetToFirstTab: () => {
       closeReview();
-      activeTab = keys[0];
+      activeTab = keys.find(isShown) || keys[0];
       renderTabs();
       renderOptions();
     },
@@ -3257,7 +3310,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       Object.keys(otherColorBrowse).forEach((k) => { delete otherColorBrowse[k]; });
       Object.keys(colorFirstBrowse).forEach((k) => { delete colorFirstBrowse[k]; });
       Object.keys(typeBrowse).forEach((k) => { delete typeBrowse[k]; });
-      activeTab = keys[0];
+      applyPresetFixed();
+      activeTab = keys.find(isShown) || keys[0];
       renderTabs();
       renderOptions();
       renderSummary();
@@ -3397,7 +3451,7 @@ function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measur
   lines.push("CLIENT FORM");
   lines.push("");
   lines.push("Customer name: " + customerName);
-  lines.push("Order type: " + (isJacketOnly ? "Jacket Only" : "Full Suit (Jacket + Pants)"));
+  lines.push("Order type: " + (isJacketOnly ? "Jacket Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Classic Suit preset" : "Full Suit (Jacket + Pants)"));
   lines.push("");
   lines.push("JACKET");
   clientFormGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
@@ -3471,7 +3525,7 @@ function renderPersonalChrome() {
   const bar = document.getElementById("persProgress");
   if (bar) {
     let n = document.querySelectorAll("#designer .wiz-seg").length;
-    if (currentSuitType !== "jacketOnly") n += document.querySelectorAll("#pantsSection .wiz-seg").length;
+    if (hasPantsStep()) n += document.querySelectorAll("#pantsSection .wiz-seg").length;
     let html = "";
     for (let i = 0; i < Math.max(n, 1) + 1; i++) html += '<span class="wiz-seg done"></span>';
     bar.innerHTML = html + '<span class="wiz-seg current"></span>';
@@ -3484,14 +3538,14 @@ function renderMeasureChrome() {
   const bar = document.getElementById("measProgress");
   if (bar) {
     let n = document.querySelectorAll("#designer .wiz-seg").length;
-    if (currentSuitType !== "jacketOnly") n += document.querySelectorAll("#pantsSection .wiz-seg").length;
+    if (hasPantsStep()) n += document.querySelectorAll("#pantsSection .wiz-seg").length;
     let html = "";
     for (let i = 0; i < Math.max(n, 1); i++) html += '<span class="wiz-seg done"></span>';
     bar.innerHTML = html + '<span class="wiz-seg current"></span>';
   }
   refreshOrderProgress();
   const priceEl = document.getElementById("measPrice");
-  const src = document.getElementById(currentSuitType === "jacketOnly" ? "totalPrice" : "pantsTotalPrice");
+  const src = document.getElementById(!hasPantsStep() ? "totalPrice" : "pantsTotalPrice");
   if (priceEl && src) priceEl.textContent = src.textContent;
 }
 
@@ -3578,8 +3632,9 @@ document.getElementById("continueBtn").addEventListener("click", () => {
     alert("Select an option for: " + jacketDesigner.missingLabels().join(", "));
     return;
   }
-  // "Jacket Only" has no Pants step -- skip straight to Measurements.
-  if (currentSuitType === "jacketOnly") {
+  // "Jacket Only" and the Classic Suit preset have no Pants step -- skip
+  // straight to Measurements.
+  if (!hasPantsStep()) {
     goToStep(jacketSection, stepAfterDesign());
     return;
   }
@@ -3612,7 +3667,7 @@ function stepAfterDesign() {
 }
 
 document.getElementById("backFromPreviewBtn").addEventListener("click", () => {
-  goToStep(previewSection, currentSuitType === "jacketOnly" ? jacketSection : pantsSection);
+  goToStep(previewSection, !hasPantsStep() ? jacketSection : pantsSection);
 });
 document.getElementById("continueFromPreviewBtn").addEventListener("click", () => {
   goToStep(previewSection, measurementsSection);
@@ -3626,7 +3681,7 @@ document.getElementById("backToDesignerBtn").addEventListener("click", () => {
     goToStep(measurementsSection, previewSection);
     return;
   }
-  if (currentSuitType === "jacketOnly") {
+  if (!hasPantsStep()) {
     goToStep(measurementsSection, jacketSection);
     return;
   }
@@ -4061,7 +4116,7 @@ function renderCartBar() {
     // "Suit 1 -- Charcoal Gray" for a full suit with no hint of what's
     // actually in it -- now both cases say so, so the cart list reads the
     // same way (suit type, then fabric) no matter which was ordered.
-    const typeTag = item.type === "jacketOnly" ? "Jacket Only" : "Full Suit";
+    const typeTag = item.type === "jacketOnly" ? "Jacket Only" : item.type === "preset" ? "Classic Suit" : "Full Suit";
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML =
@@ -4305,8 +4360,7 @@ function designerHasUnsavedWork() {
   if (pendingCommitIndex !== null && cartItems[pendingCommitIndex]) {
     return buildVisualSpecText(cartItems[pendingCommitIndex]) !== currentDesignSpec();
   }
-  const anyChosen = (sel) => Object.keys(sel || {}).some((k) => sel[k]);
-  return anyChosen(jacketDesigner.getSelections()) || (currentSuitType !== "jacketOnly" && anyChosen(pantsDesigner.getSelections()));
+  return jacketDesigner.hasUserChoices() || (hasPantsStep() && pantsDesigner.hasUserChoices());
 }
 
 function editCartItem(index) {
@@ -5741,7 +5795,7 @@ function updateProcessBarForSuitType() {
   // specificity as the browser's built-in `[hidden]{display:none}` rule, so
   // `hidden` alone isn't guaranteed to actually hide it. An inline style
   // always wins regardless of specificity.
-  const hidePants = currentSuitType === "jacketOnly";
+  const hidePants = !hasPantsStep();
   pantsStepEl.style.display = hidePants ? "none" : "";
   if (pantsDividerEl) pantsDividerEl.style.display = hidePants ? "none" : "";
 
@@ -5781,7 +5835,7 @@ function updatePriceTextForSuitType() {
 // to go to or not.
 function updateContinueBackLabelsForSuitType() {
   const continueBtnEl = document.getElementById("continueBtn");
-  if (continueBtnEl) continueBtnEl.textContent = currentSuitType === "jacketOnly" ? (previewStepOn ? "Continue to Preview" : "Continue to Measurements") : "Continue to Pants";
+  if (continueBtnEl) continueBtnEl.textContent = !hasPantsStep() ? (previewStepOn ? "Continue to Preview" : "Continue to Measurements") : "Continue to Pants";
   const continuePantsBtnEl = document.getElementById("continuePantsBtn");
   if (continuePantsBtnEl) continuePantsBtnEl.textContent = previewStepOn ? "Continue to Preview" : "Continue to Measurements";
   const backToDesignerBtnEl = document.getElementById("backToDesignerBtn");
@@ -5795,7 +5849,9 @@ function updateContinueBackLabelsForSuitType() {
 // the progress bar, prices shown while designing, and the Continue/Back
 // button wording all in sync with the choice.
 function applySuitType(type) {
-  currentSuitType = type === "jacketOnly" ? "jacketOnly" : "full";
+  currentSuitType = type === "jacketOnly" || type === "preset" ? type : "full";
+  jacketDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.jacket : null);
+  pantsDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.pants : null);
   renderMeasurementFields();
   updateSamePreviousMeasurementsBanner();
   updateProcessBarForSuitType();
@@ -5808,12 +5864,22 @@ function applySuitType(type) {
 // moves straight into the jacket designer, same "scroll up before hiding"
 // swap every other step transition uses (see goToStep()).
 function chooseSuitType(type) {
+  // Leaving the Classic Suit preset for a custom type starts the design
+  // fresh -- otherwise every question would already be answered with the
+  // preset's fixed picks.
+  const leavingPreset = currentSuitType === "preset" && type !== "preset";
   applySuitType(type);
+  if (leavingPreset) {
+    jacketDesigner.resetSelections();
+    pantsDesigner.resetSelections();
+  }
   jacketDesigner.resetToFirstTab();
   goToStep(suitTypeSection, jacketSection);
 }
 const chooseFullSuitBtn = document.getElementById("chooseFullSuitBtn");
 const chooseJacketOnlyBtn = document.getElementById("chooseJacketOnlyBtn");
+const chooseClassicSuitBtn = document.getElementById("chooseClassicSuitBtn");
+if (chooseClassicSuitBtn) chooseClassicSuitBtn.addEventListener("click", () => chooseSuitType("preset"));
 if (chooseFullSuitBtn) chooseFullSuitBtn.addEventListener("click", () => chooseSuitType("full"));
 if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => chooseSuitType("jacketOnly"));
 
@@ -5837,7 +5903,7 @@ function goToStepById(stepId) {
       return;
     }
     const unfinished = STEP_ORDER.slice(0, targetIndex).find((id) => {
-      if (id === "pantsSection" && currentSuitType === "jacketOnly") return false;
+      if (id === "pantsSection" && !hasPantsStep()) return false;
       return !isStepComplete(id);
     });
     if (unfinished) {
@@ -5878,7 +5944,7 @@ function goToFirstIncomplete() {
   const active = ALL_STEPS.find((el) => el.classList.contains("active"));
   if (!active) return;
   const designers = [[jacketSection, jacketDesigner]];
-  if (currentSuitType !== "jacketOnly") designers.push([pantsSection, pantsDesigner]);
+  if (hasPantsStep()) designers.push([pantsSection, pantsDesigner]);
   for (const [sec, des] of designers) {
     const key = des.firstMissingKey();
     if (!key) continue;
