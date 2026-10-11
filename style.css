@@ -1625,6 +1625,7 @@ body:not(.designing) #suitTypeSection{display:none;}
 /* Preview page: small "Review selections" link under the finished suit
    picture; the list opens below it and the picture sticks under the top bar
    while it's open, so each choice can be checked against the drawing. */
+.suit-preview-disclaimer{margin:12px auto 0;max-width:440px;font-size:12px;line-height:1.5;font-style:italic;color:var(--ivory-dim);text-align:center;}
 .selections-review{margin-top:14px;text-align:center;}
 .selections-review-toggle{background:none;border:none;padding:4px 2px;font:500 13px 'Inter',sans-serif;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--brass);cursor:pointer;}
 .selections-review-toggle:hover{color:var(--ivory);}
