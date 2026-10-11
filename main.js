@@ -3478,7 +3478,7 @@ function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measur
   lines.push("CLIENT FORM");
   lines.push("");
   lines.push("Customer name: " + customerName);
-  lines.push("Order type: " + (isJacketOnly ? "Jacket Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Classic Suit preset" : "Full Suit (Jacket + Pants)"));
+  lines.push("Order type: " + (isJacketOnly ? "Jacket Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Preset Suit" : "Full Suit (Jacket + Pants)"));
   lines.push("");
   lines.push("JACKET");
   clientFormGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
@@ -4143,7 +4143,7 @@ function renderCartBar() {
     // "Suit 1 -- Charcoal Gray" for a full suit with no hint of what's
     // actually in it -- now both cases say so, so the cart list reads the
     // same way (suit type, then fabric) no matter which was ordered.
-    const typeTag = item.type === "jacketOnly" ? "Jacket Only" : item.type === "preset" ? "Classic Suit" : "Full Suit";
+    const typeTag = item.type === "jacketOnly" ? "Jacket Only" : item.type === "preset" ? "Preset Suit" : "Full Suit";
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML =
