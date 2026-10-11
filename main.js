@@ -3204,7 +3204,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       // Optional small section divider (e.g. Single vs Double Breasted):
       // an option can carry a `section` label; a heading is drawn whenever
       // it changes from the previous option's.
-      if (opt.section && opt.section !== lastSection) {
+      if (opt.section && opt.section !== lastSection && !presetLimited) {
         const h = document.createElement("h4");
         h.className = "opt-section-divider";
         h.textContent = opt.section;
