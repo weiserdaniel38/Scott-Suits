@@ -5,118 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fabrics — Scott's Suits</title>
 <link rel="icon" href="./favicon.ico" sizes="any">
-<meta name="description" content="Browse every suit fabric at Scott's Suits: fine Italian Super 120s wool in solids, pinstripes, herringbones and plaids. Every fabric is included in the $350 suit price.">
+<link rel="icon" type="image/png" href="./assets/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="description" content="Scott's Suits are made from fine Italian Super 120s wool: soft, smooth-draping, breathable and crease-resistant.">
 <link rel="canonical" href="https://scottssuits.com/fabrics.html">
-<!-- Standalone page (linked from the nav "Fabrics" item). Same inline styling
-     approach as contact.html / privacy.html so none of the designer's layout
-     rules apply here. The fabric list is read straight from catalog.js
-     (FABRIC_PATTERN_TYPES), so it always matches what the designer offers. -->
+<!-- Linked from the nav "Fabrics" item. Uses the homepage's own stylesheet,
+     nav and hero layout so it looks like the rest of the site; no main.js,
+     so the nav buttons here are plain links back to the homepage. -->
+<link rel="stylesheet" href="./style.css?v=20261011preset">
 <style>
-  :root{--ink:#ECE4DD;--ivory:#221E19;--ivory-dim:rgba(34,30,25,0.62);--brass:#B08D57;--line:rgba(34,30,25,0.14);}
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--ink);color:var(--ivory);font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65;font-size:16px;}
-  .wrap{max-width:1080px;margin:0 auto;padding:28px 16px 64px;}
-  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:28px;}
-  header a img{width:170px;height:auto;display:block;}
-  h1{font-family:'Playfair Display',Georgia,serif;font-weight:600;font-size:32px;margin:0 0 6px;}
-  h2{font-family:'Playfair Display',Georgia,serif;font-weight:600;font-size:24px;margin:0 0 2px;}
-  .dim{color:var(--ivory-dim);font-size:15px;margin:0 0 22px;max-width:640px;}
-  a{color:var(--ivory);text-decoration-color:var(--brass);text-underline-offset:3px;}
-  .cta{display:inline-block;padding:12px 22px;background:var(--ivory);color:var(--ink);text-decoration:none;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;}
-  .cta:hover,.cta:focus-visible{background:var(--brass);color:var(--ivory);}
-  .about{max-width:640px;margin:0 0 26px;padding:18px 20px;border-left:2px solid var(--brass);background:rgba(255,255,255,0.35);}
-  .about p{margin:8px 0 0;font-size:15px;}
-  .jump{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 8px;}
-  .jump a{font-size:12px;letter-spacing:1px;text-transform:uppercase;font-weight:600;text-decoration:none;padding:7px 12px;border:1px solid var(--line);background:rgba(255,255,255,0.35);}
-  .jump a:hover,.jump a:focus-visible{border-color:var(--brass);}
-  section{margin-top:40px;scroll-margin-top:16px;}
-  .count{font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;color:var(--brass);}
-  .grid{list-style:none;padding:0;margin:16px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
-  .grid li{border:1px solid var(--line);background:rgba(255,255,255,0.35);display:flex;flex-direction:column;}
-  .grid img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#2b2c30;}
-  .info{padding:10px 12px 12px;}
-  .name{font-size:14px;font-weight:600;line-height:1.3;}
-  .desc{font-size:13px;color:var(--ivory-dim);line-height:1.45;margin-top:3px;}
-  @media (max-width:480px){.grid{grid-template-columns:repeat(2,1fr);gap:10px;}h1{font-size:28px;}}
-  .bottom{margin-top:48px;}
-  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--ivory-dim);}
+  a.navlink-btn,a.nav-cta,a.btn-primary{text-decoration:none;display:inline-flex;align-items:center;}
+  .logo-block a{display:block;}
+  .hero .fabric-about p.lead{max-width:500px;margin:0 0 14px;}
 </style>
+<script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <header><a href="./" aria-label="Scott Suits homepage"><img src="./assets/logo-full-new.png" alt="Scott Suits Custom Tailoring" width="779" height="420"></a></header>
-
-  <h1>Our Fabrics</h1>
-  <p class="dim">Fine wool suitings in solids, pinstripes, herringbones and plaids. Every fabric is included in the price, a full suit for $350 or a jacket for $250, with no upcharges. Pick yours when you design your suit.</p>
-
-  <div class="about">
-    <span class="count">Italian Super 120s Wool</span>
-    <p>Every Scott's Suits fabric is a fine Italian wool woven from Super 120s yarn. The "120s" grade measures how fine the wool fibers are, and at this level they are fine enough to give the cloth a soft hand and a smooth, rich drape, while staying strong enough for a suit you wear often.</p>
-    <p>The result is a fabric that feels light and comfortable, breathes well through the day, and recovers from creases so your suit keeps its clean lines from morning meetings to evening events. It is the kind of cloth found in fine tailoring, chosen so your made-to-measure suit looks and feels as good as it fits.</p>
+<nav>
+  <div class="nav-inner">
+    <div class="logo-block"><a href="./" aria-label="Scott Suits — back to the homepage" title="Back to the homepage">
+      <img class="logo-mark" src="./assets/logo-full-new.png" alt="Scott's Suits custom tailoring logo" width="779" height="420">
+    </a></div>
+    <div class="nav-right">
+      <div class="navlinks"><a class="navlink-btn nav-fabrics-link" href="./fabrics.html" aria-current="page">Fabrics</a><a class="navlink-btn nav-contact-link" href="./contact.html">Contact</a></div>
+      <a class="nav-cta" href="./">Start Designing</a>
+    </div>
   </div>
+</nav>
 
-  <a class="cta" href="./">Design Your Suit</a>
+<section class="hero">
+  <div class="hero-photo">
+    <img class="hero-photo-fg" src="./assets/hero-collage.jpg" alt="Wool fabric swatches, thread spool and tailor's shears on a table">
+  </div>
+  <div class="hero-grid">
+    <div class="hero-text">
+      <h1>Fine Italian wool, <em>Super 120s.</em></h1>
+      <div class="hero-rule"></div>
+      <div class="fabric-about">
+        <p class="lead">Every Scott's Suits fabric is a fine Italian wool woven from Super 120s yarn. The "120s" grade measures how fine the wool fibers are, and at this level they are fine enough to give the cloth a soft hand and a smooth, rich drape, while staying strong enough for a suit you wear often.</p>
+        <p class="lead">The result is a fabric that feels light and comfortable, breathes well through the day, and recovers from creases so your suit keeps its clean lines from morning meetings to evening events. It is the kind of cloth found in fine tailoring, chosen so your made-to-measure suit looks and feels as good as it fits.</p>
+      </div>
+      <div class="hero-cta">
+        <a class="btn-primary" id="heroStartDesigningBtn" href="./">Start Designing <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <nav class="jump" id="jump" aria-label="Fabric types"></nav>
-  <div id="fabrics"></div>
-  <noscript><p class="dim">Turn on JavaScript to see the fabric list.</p></noscript>
-
-  <div class="bottom"><a class="cta" href="./">Design Your Suit</a></div>
-
-  <footer><a href="./">Back to Scott's Suits</a> · <a href="./contact.html">Contact</a> · <a href="./privacy.html">Privacy Policy</a></footer>
-</div>
-<script src="./catalog.js"></script>
-<script>
-(function () {
-  var INTRO = {
-    "Solid": "Clean, smooth wool with no pattern. The most versatile choice, from the office to weddings.",
-    "Pinstripe": "A fine vertical stripe that reads sharp and lengthens the silhouette.",
-    "Herringbone": "A subtle chevron weave that adds texture and depth up close.",
-    "Plaid": "Windowpanes and glen checks, from quiet to bold."
-  };
-  var jump = document.getElementById("jump");
-  var root = document.getElementById("fabrics");
-  function el(tag, cls, text) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text) e.textContent = text;
-    return e;
-  }
-  FABRIC_PATTERN_TYPES.forEach(function (pt) {
-    var opts = [];
-    pt.colorFamilies.forEach(function (fam) { opts = opts.concat(fam.options); });
-    if (!opts.length) return;
-    var id = "fabrics-" + pt.name.toLowerCase();
-    var a = el("a", "", pt.name);
-    a.href = "#" + id;
-    jump.appendChild(a);
-
-    var sec = el("section");
-    sec.id = id;
-    sec.appendChild(el("h2", "", pt.name));
-    sec.appendChild(el("div", "count", opts.length + (opts.length === 1 ? " fabric" : " fabrics")));
-    if (INTRO[pt.name]) sec.appendChild(el("p", "dim", INTRO[pt.name]));
-    var ul = el("ul", "grid");
-    opts.forEach(function (o) {
-      var li = el("li");
-      var img = el("img");
-      img.src = o.img;
-      img.alt = (o.displayName || o.name) + " " + pt.name.toLowerCase() + " fabric swatch";
-      img.loading = "lazy";
-      img.width = 180;
-      img.height = 180;
-      li.appendChild(img);
-      var info = el("div", "info");
-      info.appendChild(el("div", "name", o.displayName || o.name));
-      if (o.description) info.appendChild(el("div", "desc", o.description));
-      li.appendChild(info);
-      ul.appendChild(li);
-    });
-    sec.appendChild(ul);
-    root.appendChild(sec);
-  });
-})();
-</script>
-<script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<footer>Scott's Suits — Custom Tailoring, Made Convenient. Made-to-measure men's suits and jackets, designed online and delivered to your door. <a href="./contact.html" style="color:inherit;">Contact</a> · <a href="./privacy.html" style="color:inherit;">Privacy Policy</a></footer>
 </body>
 </html>
