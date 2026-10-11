@@ -116,11 +116,11 @@ const JACKET_CATALOG = {
     // Slant Flap / Patch / High-Back Patch / No Pockets); within a family the
     // rows read plain -> + single ticket pocket -> + double/flap ticket pocket.
     options: [
-      { section: "Besom", name: "Single Besom Pocket", img: "./assets/jacket-lowerpocket-new-sb-v2.jpg" },
+      { section: "Besom", name: "Single Besom Pocket", img: "./assets/jacket-lowerpocket-new-sb.jpg" },
       { section: "Besom", name: "Double Besom Pocket", img: "./assets/jacket-lowerpocket-new-db.jpg" },
       { section: "Besom", name: "Single Besom Pocket + Single Besom Ticket Pocket", displayName: "Single Besom + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-sbsbt.jpg" },
       { section: "Besom", name: "Double Besom Pocket + Double Besom Ticket Pocket", displayName: "Double Besom + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-dbdbt.jpg" },
-      { section: "Welt", name: "Flat Welt Pocket", img: "./assets/jacket-lowerpocket-new-flatwelt.jpg" },
+      { section: "Welt", name: "Flat Welt Pocket", img: "./assets/jacket-lowerpocket-new-flatwelt-v2.jpg" },
       { section: "Slant Besom", name: "Single Besom Slant Pocket", img: "./assets/jacket-lowerpocket-new-sbslant.jpg" },
       { section: "Slant Besom", name: "Double Besom Slant Pocket", img: "./assets/jacket-lowerpocket-new-dbslant.jpg" },
       { section: "Flap", name: "Double Besom W/ Flap", displayName: "Flap Pockets", img: "./assets/jacket-lowerpocket-new-dbwflap.jpg" },
