@@ -5070,7 +5070,7 @@ async function updateDesignPreviewPanel() {
       if (designPreview !== preview) return;
       preview.status = r.status === "done" ? "done" : "failed";
       if (r.status === "done") preview.url = r.url;
-      updateProcessBar();
+      saveDraft();
       if (box.contains(ui.card)) {
         if (r.status === "done") showImage(r.url);
         else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
@@ -5102,6 +5102,7 @@ async function updateDesignPreviewPanel() {
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
       designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null };
+      saveDraft();
       watch(designPreview);
     } catch (e) {
       console.error(e);
@@ -5429,6 +5430,12 @@ function saveDraft() {
       cart: cartItems.map((it) => { const c = Object.assign({}, it); delete c.liningPhoto; return c; }),
       pendingCommitIndex: pendingCommitIndex,
       editingCartIndex: editingCartIndex,
+      // The suit picture already drawn (or still drawing) for this design,
+      // so a reload shows that same picture instead of offering a new one.
+      // The lining photo itself is saved with the photos below.
+      designPreview: designPreview && designPreview.status !== "failed"
+        ? { spec: designPreview.spec, hasPhoto: !!designPreview.photo, id: designPreview.id, status: designPreview.status, url: designPreview.url }
+        : null,
     };
     sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   } catch (e) {
@@ -5498,6 +5505,19 @@ function restoreDraft() {
   if (draft.pantsTexts) pantsDesigner.setTexts(draft.pantsTexts);
   if (draft.jacket) jacketDesigner.setSelections(draft.jacket);
   if (draft.pants) pantsDesigner.setSelections(draft.pants);
+
+  const dp = draft.designPreview;
+  if (dp && dp.id && dp.spec) {
+    designPreview = {
+      spec: dp.spec,
+      // A lining photo too big to save can't come back, so the picture
+      // drawn with it no longer matches the design (it can be redrawn).
+      photo: dp.hasPhoto ? jacketDesigner.getLiningPhoto() || "missing" : null,
+      id: dp.id,
+      status: dp.status === "done" && dp.url ? "done" : "pending",
+      url: dp.url || null,
+    };
+  }
 
   if (draft.measurements) {
     activeMeasurements().forEach((m) => {
