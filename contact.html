@@ -7,43 +7,55 @@
 <link rel="icon" href="./favicon.ico" sizes="any">
 <meta name="description" content="Contact Scott's Suits by email, phone, text or WhatsApp.">
 <link rel="canonical" href="https://scottssuits.com/contact.html">
-<!-- Standalone page (linked from the nav and the site footer). Same inline
-     styling approach as privacy.html so none of the designer's layout rules
-     apply here. -->
+<!-- Uses the site's own style.css (Montserrat, colors, nav, footer) so it
+     reads as part of the site. Only the small contact list below is
+     page-specific; no main.js, so the nav here is just the logo + a way
+     back to the designer. -->
+<link rel="stylesheet" href="./style.css?v=20261011preset">
 <style>
-  :root{--ink:#ECE4DD;--ivory:#221E19;--ivory-dim:rgba(34,30,25,0.62);--brass:#B08D57;--line:rgba(34,30,25,0.14);}
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--ink);color:var(--ivory);font-family:'Inter',system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65;font-size:16px;}
-  .wrap{max-width:760px;margin:0 auto;padding:28px 16px 64px;}
-  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:28px;}
-  header a img{width:170px;height:auto;display:block;}
-  h1{font-family:'Playfair Display',Georgia,serif;font-weight:600;font-size:32px;margin:0 0 6px;}
-  .dim{color:var(--ivory-dim);font-size:15px;margin:0 0 28px;}
-  a{color:var(--ivory);text-decoration-color:var(--brass);text-underline-offset:3px;}
-  .methods{list-style:none;padding:0;margin:0;display:grid;gap:12px;}
-  .methods a{display:flex;flex-direction:column;gap:2px;padding:16px 18px;border:1px solid var(--line);text-decoration:none;background:rgba(255,255,255,0.35);}
-  .methods a:hover,.methods a:focus-visible{border-color:var(--brass);}
-  .label{font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;color:var(--brass);}
-  .value{font-size:18px;}
-  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--ivory-dim);}
+  .contact-page{max-width:640px;margin:0 auto;padding:64px 32px 88px;}
+  .contact-page h1{font-size:40px;line-height:1.15;letter-spacing:-0.01em;}
+  .contact-page .lead{color:var(--ivory-dim);font-size:15px;line-height:1.7;}
+  .contact-list{list-style:none;margin:36px 0 0;padding:0;border-top:1px solid var(--line);}
+  .contact-list li{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);}
+  .contact-list .label{font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:500;color:var(--ivory-dim);}
+  .contact-list a{color:var(--ivory);font-size:15px;text-decoration:none;}
+  .contact-list a:hover,.contact-list a:focus-visible{color:var(--brass);}
+  .contact-list .phone-links{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end;}
+  .contact-list .phone-links a{font-size:13px;letter-spacing:1px;text-transform:uppercase;}
+  .contact-page .back{display:inline-block;margin-top:40px;font-size:13px;color:var(--ivory-dim);text-decoration:none;}
+  .contact-page .back:hover{color:var(--brass);}
+  @media(max-width:600px){
+    .contact-page{padding:40px 16px 64px;}
+    .contact-page h1{font-size:30px;}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header><a href="./" aria-label="Scott Suits homepage"><img src="./assets/logo-full-new.png" alt="Scott Suits Custom Tailoring" width="779" height="420"></a></header>
+<nav>
+  <div class="nav-inner">
+    <a class="logo-block" href="./" aria-label="Scott Suits — back to the homepage">
+      <img class="logo-mark" src="./assets/logo-full-new.png" alt="Scott's Suits custom tailoring logo" width="779" height="420">
+    </a>
+  </div>
+</nav>
 
-  <h1>Contact Us</h1>
-  <p class="dim">Questions about fabrics, fit or an order? Reach us any of these ways.</p>
+<main class="contact-page">
+  <div class="hero-eyebrow">Get in touch</div>
+  <h1>Contact</h1>
+  <div class="hero-rule"></div>
+  <p class="lead">Questions about fabrics, fit or an order? We're happy to help.</p>
 
-  <ul class="methods">
-    <li><a href="mailto:hello@scottssuits.com"><span class="label">Email</span><span class="value">hello@scottssuits.com</span></a></li>
-    <li><a href="tel:+19087833692"><span class="label">Call</span><span class="value">(908) 783-3692</span></a></li>
-    <li><a href="sms:+19087833692"><span class="label">Text</span><span class="value">(908) 783-3692</span></a></li>
-    <li><a href="https://wa.me/19087833692" target="_blank" rel="noopener"><span class="label">WhatsApp</span><span class="value">(908) 783-3692</span></a></li>
+  <ul class="contact-list">
+    <li><span class="label">Email</span><a href="mailto:hello@scottssuits.com">hello@scottssuits.com</a></li>
+    <li><span class="label">Phone</span><a href="tel:+19087833692">(908) 783-3692</a></li>
+    <li><span class="label">Reach us by</span><span class="phone-links"><a href="tel:+19087833692">Call</a><a href="sms:+19087833692">Text</a><a href="https://wa.me/19087833692" target="_blank" rel="noopener">WhatsApp</a></span></li>
   </ul>
 
-  <footer><a href="./">Back to Scott's Suits</a> · <a href="./privacy.html">Privacy Policy</a></footer>
-</div>
+  <a class="back" href="./">&larr; Back to Scott's Suits</a>
+</main>
+
+<footer>Scott's Suits — Custom Tailoring, Made Convenient. Made-to-measure men's suits and jackets, designed online and delivered to your door. <a href="./contact.html" style="color:inherit;">Contact</a> · <a href="./privacy.html" style="color:inherit;">Privacy Policy</a></footer>
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
