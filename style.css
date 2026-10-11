@@ -1018,7 +1018,7 @@ nav{position:sticky;top:0;}
 /* Phones: bring "How It Works" back in the top bar (the Fabrics/Contact placeholders stay hidden) */
 @media(max-width:600px){
   .navlinks{display:flex;gap:0;font-size:10.5px;letter-spacing:0.4px;}
-  .navlinks span,.navlinks .nav-contact-link{display:none;}
+  .navlinks span,.navlinks .nav-fabrics-link,.navlinks .nav-contact-link{display:none;}
   .navlinks .navlink-btn{white-space:nowrap;}
   .nav-right{gap:8px;}
   .nav-inner{gap:6px;}
