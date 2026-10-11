@@ -2524,15 +2524,16 @@ Object.keys(PANTS_STEP_TAGLINES).forEach((k) => { if (PANTS_CATALOG[k]) PANTS_CA
 //            Diamond lapel takes its own lapel buttonhole)
 const CLASSIC_SUIT_PRESET = {
   jacket: {
-    steps: ["fabric", "frontbutton", "collar"],
+    steps: ["fabric", "frontbutton", "collar", "lowerpocket"],
     allowed: {
+      // Single welt or flap, each straight or slanted (Daniel, 2026-10-11).
+      lowerpocket: ["Single Besom Pocket", "Single Besom Slant Pocket", "Double Besom W/ Flap", "Slant Pocket Flap"],
       fabric: ["26SU218.DBV3529", "26SU209.DLL0177", "26SU216.DBV3531", "26SU217.DBV3530"],
       frontbutton: ["Single Breasted Two Buttons", "Double Breasted 6X2"],
     },
     fixed: {
       lapelwidth: "9 cm",
       pockettype: "Normal Pocket",
-      lowerpocket: "Double Besom W/ Flap",
       backvent: "Side Vent",
       sleevecuffstyle: "Working Sleeve Cuff W/ Slant Type Button",
       cuffbuttons: "5 Slant Button",
