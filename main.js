@@ -4737,14 +4737,27 @@ const SUIT_IMAGE_MESSAGES = {
   network: "Sorry, we couldn't reach the picture service.",
 };
 
-// Cycled in bold under the loading video while a picture is drawn.
+// Cycled in bold under the loading video while a picture is drawn. Lines
+// marked pants are skipped when only a jacket is being made.
 const SUIT_LOADING_STEPS = [
-  "Cutting your fabric...",
-  "Stitching the lining...",
-  "Shaping the lapels...",
-  "Sewing on your buttons...",
-  "Pressing the trousers...",
-  "Adding the finishing touches...",
+  { text: "Cutting your fabric..." },
+  { text: "Matching the pattern at the seams..." },
+  { text: "Basting the canvas..." },
+  { text: "Stitching the lining..." },
+  { text: "Shaping the lapels..." },
+  { text: "Setting the shoulders..." },
+  { text: "Fitting the sleeves..." },
+  { text: "Hand-padding the collar..." },
+  { text: "Cutting the buttonholes..." },
+  { text: "Sewing on your buttons..." },
+  { text: "Adding the pockets..." },
+  { text: "Pressing the trousers...", pants: true },
+  { text: "Hemming the trouser legs...", pants: true },
+  { text: "Setting the waistband...", pants: true },
+  { text: "Steaming out every wrinkle..." },
+  { text: "Checking every stitch..." },
+  { text: "Giving the jacket a final press..." },
+  { text: "Adding the finishing touches..." },
 ];
 
 function buildSuitImageCard(labelText) {
@@ -4769,7 +4782,7 @@ function buildSuitImageCard(labelText) {
   const ui = {
     card,
     btn,
-    working() {
+    working(jacketOnly) {
       btn.hidden = true;
       btn.disabled = true;
       status.textContent = "";
@@ -4794,12 +4807,13 @@ function buildSuitImageCard(labelText) {
       caption.className = "suit-preview-loading-text";
       caption.innerHTML = "<strong></strong><span>This usually takes about a minute.</span>";
       const line = caption.querySelector("strong");
+      const steps = SUIT_LOADING_STEPS.filter((s) => !(jacketOnly && s.pants)).map((s) => s.text);
       let step = 0;
-      line.textContent = SUIT_LOADING_STEPS[0];
+      line.textContent = steps[0];
       const timer = setInterval(() => {
         if (!caption.isConnected) return clearInterval(timer);
-        step = (step + 1) % SUIT_LOADING_STEPS.length;
-        line.textContent = SUIT_LOADING_STEPS[step];
+        step = (step + 1) % steps.length;
+        line.textContent = steps[step];
       }, 3500);
       media.append(video, caption);
       video.play().catch(() => {});
@@ -4891,7 +4905,7 @@ async function updateDesignPreviewPanel() {
   box.hidden = false;
 
   const watch = (preview) => {
-    ui.working();
+    ui.working(currentSuitType === "jacketOnly");
     pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
       if (designPreview !== preview) return;
       preview.status = r.status === "done" ? "done" : "failed";
@@ -4911,7 +4925,7 @@ async function updateDesignPreviewPanel() {
   }
 
   ui.btn.addEventListener("click", async () => {
-    ui.working();
+    ui.working(currentSuitType === "jacketOnly");
     // On a phone, bring the whole card (video and caption) into view.
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
       smoothScrollWindowTo(window.scrollY + box.getBoundingClientRect().top - getNavClearance());
@@ -4959,7 +4973,7 @@ async function renderSuitPreview(suits) {
     const ui = buildSuitImageCard(suit.label);
     box.appendChild(ui.card);
     ui.btn.addEventListener("click", async () => {
-      ui.working();
+      ui.working(suit.jacketOnly);
       if (SUIT_IMAGES_PAUSED) return;
       try {
         const start = await callSuitImageFn(ids);
@@ -5126,7 +5140,7 @@ async function finalizeOrder(input) {
   // homepage. Built from the cart before returnHomeAfterOrder() clears it.
   if (visualSpecSaved) {
     renderSuitPreview(
-      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, jacketOnly: r.suit_type === "jacket_only", label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
     );
   }
   // The suit is done: close out the designer and take the customer back to
