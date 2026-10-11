@@ -602,7 +602,12 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
       const value = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
-      lines.push(`Image ${n++} is a reference illustration of the customer's chosen cuff buttons ("${value}"): copy EXACTLY how each buttonhole runs from its button diagonally UP and inward at this steep angle, the number of buttons and how they touch or overlap. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
+      const style = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
+      const vent = /slant/i.test(style);
+      const holes = /slant/i.test(value)
+        ? "how each buttonhole runs from its button diagonally UP and inward at this steep angle"
+        : "the straight horizontal buttonholes";
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ${vent ? `sleeve cuff ("${style}", "${value}"): copy EXACTLY how the row of buttons climbs DIAGONALLY along the slanted vent (lowest button furthest in, each higher button further toward the back seam; never a straight vertical column), ` : `cuff buttons ("${value}"): copy EXACTLY `}${holes}, the number of buttons and how they touch or overlap. The cuff is closed and buttoned. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
     } else if (r.label.startsWith("style ")) {
       const name = r.label.slice(6);
       const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -792,6 +797,15 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const cuffValue = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const slantRef = cuffValue.match(/^(\d) Slant (Flat|Overlap) Button$/);
   const cuffRefSrc = slantRef ? "./assets/jacket-cuffref-slant" + (slantRef[2] === "Overlap" ? "overlap" : "") + slantRef[1] + ".jpg" : "";
+  // "... With Slant Buttons" cuff styles: the buttons climb diagonally along a
+  // slanted vent. The catalog drawing alone came out as a straight column, so
+  // show one illustration of the whole cuff (vent, buttons and buttonholes)
+  // in place of both cuff drawings (falls back to the drawings if it can't load).
+  const cuffKey = cuffValue.match(/^(\d) (Slant )?(Flat|Overlap) Button$/);
+  const ventRefSrc = cuffKey && /slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")
+    ? "./assets/jacket-cuffref-vent-" + (cuffKey[2] ? "slant" : "") + (cuffKey[3] === "Overlap" ? "overlap" : cuffKey[2] ? "" : "flat") + cuffKey[1] + ".jpg"
+    : "";
+  const ventImg = ventRefSrc ? await loadRef({ label: "cuff reference", src: ventRefSrc }) : null;
   // Diamond lapel: the catalog drawing alone kept coming out as a notch or
   // peak lapel, so show a bolder filled-in illustration instead (falls back
   // to the drawing if that file can't be loaded).
@@ -803,6 +817,8 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
     .concat(swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   const loadOne = async (r: Ref) =>
+    ventImg && r.label === "style Buttons On Sleeve Cuff" ? null :
+    (ventImg && r.label === "style Sleeve Cuff Styles" && ventImg) ||
     (cuffRefSrc && r.label === "style Buttons On Sleeve Cuff" && (await loadRef({ label: "cuff reference", src: cuffRefSrc }))) ||
     (lapelRefSrc && r.label === "style Lapel Style" && (await loadRef({ label: "lapel reference", src: lapelRefSrc }))) ||
     loadRef(r);
