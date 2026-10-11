@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261011presetlink">
+<link rel="stylesheet" href="./style.css?v=20261011presetjacket">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -275,11 +275,11 @@
     </button>
   </div>
   <p class="suit-type-note">Every style option is included in the price. No upcharges.</p>
-  <!-- Classic Suit preset, kept low-key on purpose (Daniel, 2026-10-11): a
-       small text link, not a third card. Only fabric (4 dark solids),
-       single/double breasted and lapel style are asked; see
-       CLASSIC_SUIT_PRESET in catalog.js. -->
-  <p class="suit-type-preset-link"><button type="button" id="chooseClassicSuitBtn" data-suit-type="preset">Or choose a preset suit <span aria-hidden="true">&rarr;</span></button></p>
+  <!-- Preset Suit / Preset Jacket, kept low-key on purpose (Daniel,
+       2026-10-11): small text links, not extra cards. Only fabric (4 dark
+       solids), single/double breasted and lapel style are asked (plus hem or
+       cuff for the suit); see CLASSIC_SUIT_PRESET in catalog.js. -->
+  <p class="suit-type-preset-link">Or choose a preset: <button type="button" id="chooseClassicSuitBtn" data-suit-type="preset">Suit</button> &middot; <button type="button" id="choosePresetJacketBtn" data-suit-type="presetJacket">Jacket</button></p>
 </section>
 
 <section class="designer step" id="designer">
@@ -757,9 +757,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261007soon"></script>
-<script src="./catalog.js?v=20261011preset"></script>
+<script src="./catalog.js?v=20261011presetcuff"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261011presetbadge"></script>
+<script src="./main.js?v=20261011presetjacket"></script>
 
 </body>
 </html>
