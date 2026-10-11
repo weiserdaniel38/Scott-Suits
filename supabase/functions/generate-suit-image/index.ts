@@ -1,7 +1,7 @@
 // Scott Suits -- draws a picture sheet of a customer's finished suit.
 //
 // The sheet has five panels, described to the model in words only:
-// full suit front, full suit back, trousers front, a sleeve-cuff close-up and
+// full suit front, full suit back, trousers back close-up, a sleeve-cuff close-up and
 // a trouser-waistband close-up (jacket-only orders get jacket views instead).
 //
 // How it's called:
@@ -378,6 +378,9 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")" : "";
+  const backPocket = (OPTION_LOOKS["Back Pocket Style"] || {})[(spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || ""];
+  const backWaist = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
+  const backNote = [backWaist, backPocket].filter(Boolean).map((t) => "; " + t).join("");
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   return jacketOnly
@@ -385,7 +388,7 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
 Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket and fabric texture.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) the trousers alone, front view.
+Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
@@ -404,8 +407,10 @@ const SLANT_VENT =
 const DIAMOND_SHORT =
   "both lapels are DIAMOND lapels, a cross between a shawl and a peak lapel: one continuous piece from the neck with no notch, like a shawl, coming to one sharp outward point in the upper third, like a peak, so each lapel is a tall kite shape";
 
-// What each non-notch lapel must NOT look like.
+// What each lapel must NOT look like. Notch is here too: with nothing said,
+// the model drew double-breasted jackets with peak lapels.
 const LAPEL_NOT: Record<string, string> = {
+  "Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up toward the shoulder and has NO sharp upward point; a clear open V-shaped gap separates the collar from the lapel. This holds even on a double-breasted jacket, which here has NOTCH lapels, not the peak lapels double-breasted suits often have.",
   "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
@@ -432,7 +437,7 @@ function keyDetails(spec: string, ownLining = false): string {
   const out: string[] = [];
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const lapel = (OPTION_LOOKS["Lapel Style"] || {})[lapelStyle];
-  if (lapel && lapelStyle !== "Notch Lapel") {
+  if (lapel) {
     const width = (spec.match(/^Lapel Width: (.+)$/m) || [])[1] || "";
     const widthLook = (OPTION_LOOKS["Lapel Width"] || {})[width];
     out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : "") +
@@ -476,6 +481,15 @@ function fixedRules(spec: string): string {
     rules.push(
       "- The trousers are shown fully CLOSED in every panel: fly zipped and hidden under its fly shield, waistband fastened. Never show an open fly, a visible zipper, or the inside of the waistband.",
     );
+    const backPocket = (spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || "";
+    const backLook = (OPTION_LOOKS["Back Pocket Style"] || {})[backPocket];
+    if (backLook) {
+      rules.push("- Trouser back pockets, clearly visible in the trousers back close-up: " + backLook + ".");
+    }
+    const backWaistLook = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
+    if (backWaistLook) {
+      rules.push("- Back of the waistband, clearly visible in the trousers back close-up: " + backWaistLook + ".");
+    }
     rules.push(
       "- No exposed metal on the trouser front: no visible clasps, hooks, bars or zipper teeth. Any hook-and-eye is hidden inside the waistband." +
         (buckle ? " The only visible metal is the small side-adjuster buckles described below." : ""),
@@ -504,7 +518,7 @@ function fixedRules(spec: string): string {
       rules.push(
         "- Waistband front: " + extRule +
           (short ? (/no button/i.test(ext) ? " The tab has NO visible button or buttonhole (it fastens hidden underneath)." : " The tab is fastened with one button.") : "") +
-          " Show this clearly in the full-suit front, the trousers front and the waistband close-up.",
+          " Show this clearly in the full-suit front and the waistband close-up.",
       );
     }
     const styleRules: [RegExp, string][] = [
