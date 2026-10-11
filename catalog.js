@@ -2558,7 +2558,11 @@ const CLASSIC_SUIT_PRESET = {
     },
   },
   pants: {
-    steps: [],
+    // One pants question: hem or a classic cuff (Daniel, 2026-10-11).
+    steps: ["bottomStyle"],
+    allowed: {
+      bottomStyle: ["Turn Up Bottom", "W/ Cuff 4.0 cm"],
+    },
     fixed: {
       fabric: "__same_as__fabric",
       frontPleat: "No Pleat",
@@ -2569,7 +2573,6 @@ const CLASSIC_SUIT_PRESET = {
       frontPocket: "Slant Pocket",
       backPocket: "Besom Pocket W/ Button",
       watchPocket: "No Watch Pocket",
-      bottomStyle: "Turn Up Bottom",
       backWaistShape: "No V Open",
       hookEye: "Metal Hook And Eye",
       threadColor: "Match Fabric Color",

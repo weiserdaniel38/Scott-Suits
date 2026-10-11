@@ -41,16 +41,21 @@ const JACKET_ONLY_PRICE_USD = 250;
 // saved draft from before this feature existed) behaves exactly as before.
 let currentSuitType = "full";
 
-// The Classic Suit preset ("preset") is a full suit -- jacket + pants, full
-// price, all measurements -- but its pants are fixed, so it has no Pants
-// step to design. Use this for "is there a Pants step", and
-// currentSuitType === "jacketOnly" for "are there pants in the order".
+// Whether the order has a Pants step to design: the full suit, and the
+// Preset Suit (whose Pants step only asks hem or cuff). Use
+// isJacketOnlyType(currentSuitType) for "are there pants in the order".
 function hasPantsStep() {
-  return currentSuitType === "full";
+  return currentSuitType === "full" || currentSuitType === "preset";
+}
+
+// Suit types with no pants in the order: "jacketOnly" and the preset jacket
+// ("presetJacket", the jacket half of the Preset Suit -- see applySuitType).
+function isJacketOnlyType(type) {
+  return type === "jacketOnly" || type === "presetJacket";
 }
 
 function suitPriceForType(type) {
-  return type === "jacketOnly" ? JACKET_ONLY_PRICE_USD : SUIT_PRICE_USD;
+  return isJacketOnlyType(type) ? JACKET_ONLY_PRICE_USD : SUIT_PRICE_USD;
 }
 
 // Extra charge for the customer's own lining photo (catalog option
@@ -69,7 +74,7 @@ function itemPriceUsd(item) {
 // measurements, not the 8 pants ones nobody needs for an order with no
 // pants in it. See the "part" field on each MEASUREMENTS entry in catalog.js.
 function activeMeasurements() {
-  return currentSuitType === "jacketOnly" ? MEASUREMENTS.filter((m) => m.part === "jacket") : MEASUREMENTS;
+  return isJacketOnlyType(currentSuitType) ? MEASUREMENTS.filter((m) => m.part === "jacket") : MEASUREMENTS;
 }
 // Set true only once an order has actually been saved -- used solely to mark
 // the "Order" step in the progress bar as done; see updateProcessBar().
@@ -1616,7 +1621,7 @@ function orderProgressPct(stage) {
 // Which designers are finished -- drives the celebration line once every
 // design question is answered.
 function designProgressState() {
-  const jacketOnly = currentSuitType === "jacketOnly";
+  const jacketOnly = isJacketOnlyType(currentSuitType);
   const noPantsStep = !hasPantsStep();
   const j = wizProgressCounts.jacket || { done: 0, total: 0 };
   const p = wizProgressCounts.pants || { done: 0, total: 0 };
@@ -3474,13 +3479,13 @@ function clientFormGarmentLines(catalog, groups, sel, part, extras) {
   return lines;
 }
 function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measurements, extras) {
-  const isJacketOnly = suitType === "jacketOnly";
+  const isJacketOnly = isJacketOnlyType(suitType);
 
   const lines = [];
   lines.push("CLIENT FORM");
   lines.push("");
   lines.push("Customer name: " + customerName);
-  lines.push("Order type: " + (isJacketOnly ? "Jacket Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Preset Suit" : "Full Suit (Jacket + Pants)"));
+  lines.push("Order type: " + (suitType === "presetJacket" ? "Jacket Only, Preset Jacket" : isJacketOnly ? "Jacket Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Preset Suit" : "Full Suit (Jacket + Pants)"));
   lines.push("");
   lines.push("JACKET");
   clientFormGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
@@ -3520,7 +3525,7 @@ function renderMeasurementFields() {
   measureGrid.innerHTML = "";
   let lastMeasurePart = null;
   activeMeasurements().forEach((m) => {
-    if (currentSuitType !== "jacketOnly" && m.part !== lastMeasurePart) {
+    if (!isJacketOnlyType(currentSuitType) && m.part !== lastMeasurePart) {
       const h = document.createElement("h4");
       h.className = "measure-part-heading";
       h.textContent = m.part === "pants" ? "Pants" : "Jacket";
@@ -3599,7 +3604,7 @@ const sizeEstimatePantsFields = document.querySelectorAll(".size-estimate-pants-
 // either -- called from applySuitType() below whenever the suit type
 // changes (picking a card on suitTypeSection, or restoring a saved draft).
 function updateSizeEstimatePantsFieldsForSuitType() {
-  const hide = currentSuitType === "jacketOnly";
+  const hide = isJacketOnlyType(currentSuitType);
   sizeEstimatePantsFields.forEach((field) => {
     field.hidden = hide;
   });
@@ -4005,7 +4010,7 @@ function visualSpecOptionDetail(cat, rawValue) {
 const VISUAL_SPEC_STYLE_DRAWINGS = ["collar", "frontbutton", "sleevecuffstyle", "cuffbuttons", "waistbandExtension", "waistbandStyle", "bottomStyle"];
 
 function buildVisualSpecText(item, opts) {
-  const isJacketOnly = item.type === "jacketOnly";
+  const isJacketOnly = isJacketOnlyType(item.type);
   const lines = [];
   // Swatch photos the picture generator is shown alongside the text, so the
   // fabric, lining and buttons in the picture match the real ones. Site
@@ -4109,7 +4114,7 @@ function cartItemTitle(item) {
   const color = fabricColorFamily(sel.fabric);
   let lapel = shown(JACKET_CATALOG.collar, sel.collar);
   if (lapel && !/lapel|collar/i.test(lapel)) lapel += " Lapel";
-  const noun = item.type === "jacketOnly" ? "Jacket" : "Suit";
+  const noun = isJacketOnlyType(item.type) ? "Jacket" : "Suit";
   return [color, lapel, noun].filter(Boolean).join(" ");
 }
 
@@ -4145,7 +4150,7 @@ function renderCartBar() {
     // "Suit 1 -- Charcoal Gray" for a full suit with no hint of what's
     // actually in it -- now both cases say so, so the cart list reads the
     // same way (suit type, then fabric) no matter which was ordered.
-    const typeTag = item.type === "jacketOnly" ? "Jacket Only" : item.type === "preset" ? "Preset Suit" : "Full Suit";
+    const typeTag = item.type === "presetJacket" ? "Preset Jacket" : isJacketOnlyType(item.type) ? "Jacket Only" : item.type === "preset" ? "Preset Suit" : "Full Suit";
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML =
@@ -4422,7 +4427,7 @@ function loadCartItemIntoDesigner(index) {
   jacketDesigner.setTexts((item.texts && item.texts.jacket) || {});
   pantsDesigner.setTexts((item.texts && item.texts.pants) || {});
   jacketDesigner.setSelections(item.jacket || {});
-  if (item.type !== "jacketOnly" && item.pants) pantsDesigner.setSelections(item.pants);
+  if (!isJacketOnlyType(item.type) && item.pants) pantsDesigner.setSelections(item.pants);
   MEASUREMENTS.forEach((m) => {
     const el = document.getElementById("m_" + m.id);
     if (el) el.value = "";
@@ -4542,12 +4547,12 @@ function commitCurrentSuitToCart() {
   const item = {
     type: currentSuitType,
     jacket: jacketDesigner.getSelections(),
-    pants: currentSuitType === "jacketOnly" ? null : pantsDesigner.getSelections(),
+    pants: isJacketOnlyType(currentSuitType) ? null : pantsDesigner.getSelections(),
     measurements: measurementValues,
     // The customer's own lining photo (data URL) when they chose that option.
     liningPhoto: jacketDesigner.getLiningPhoto(),
     // Typed answers such as the monogram: { jacket: { monogram }, pants: { monogram } }.
-    texts: { jacket: jacketDesigner.getTexts(), pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getTexts() },
+    texts: { jacket: jacketDesigner.getTexts(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getTexts() },
     // A "Generate My Suit" picture of exactly this design, if one was drawn.
     previewId: currentDesignPreviewId() || editedSuitPreviewId(),
   };
@@ -4946,7 +4951,7 @@ function currentDesignSpec() {
     return buildVisualSpecText({
       type: currentSuitType,
       jacket: jacketDesigner.getSelections(),
-      pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getSelections(),
+      pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(),
     });
   } catch (e) {
     return "";
@@ -5002,7 +5007,7 @@ async function updateDesignPreviewPanel() {
   box.hidden = false;
 
   const watch = (preview) => {
-    ui.working(currentSuitType === "jacketOnly");
+    ui.working(isJacketOnlyType(currentSuitType));
     pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
       if (designPreview !== preview) return;
       preview.status = r.status === "done" ? "done" : "failed";
@@ -5022,7 +5027,7 @@ async function updateDesignPreviewPanel() {
   }
 
   ui.btn.addEventListener("click", async () => {
-    ui.working(currentSuitType === "jacketOnly");
+    ui.working(isJacketOnlyType(currentSuitType));
     // On a phone, bring the whole card (video and caption) into view.
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
       smoothScrollWindowTo(window.scrollY + box.getBoundingClientRect().top - getNavClearance());
@@ -5033,7 +5038,7 @@ async function updateDesignPreviewPanel() {
       // catalog linings (not part of `spec`, which only identifies the design).
       const photoUrl = await previewLiningPhotoUrl(liningPhoto);
       const sent = photoUrl
-        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: currentSuitType === "jacketOnly" ? {} : pantsDesigner.getSelections() }, { liningPhotoUrl: photoUrl })
+        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections() }, { liningPhotoUrl: photoUrl })
         : spec;
       const start = await callSuitImageFn({ preview: true, visual_spec: sent });
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
@@ -5136,7 +5141,7 @@ async function finalizeOrder(input, opts) {
     // without changing anything about how a guest order is saved.
     row.user_id = currentUser ? currentUser.id : null;
     row.suit_number = i + 1;
-    row.suit_type = item.type === "jacketOnly" ? "jacket_only" : "full_suit";
+    row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : "full_suit";
     row.item_price_usd = itemPriceUsd(item);
     if (adminNoPayment) row.admin_no_payment = true;
     Object.assign(row, item.measurements);
@@ -5913,8 +5918,9 @@ function updateContinueBackLabelsForSuitType() {
 // the progress bar, prices shown while designing, and the Continue/Back
 // button wording all in sync with the choice.
 function applySuitType(type) {
-  currentSuitType = type === "jacketOnly" || type === "preset" ? type : "full";
-  jacketDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.jacket : null);
+  currentSuitType = ["jacketOnly", "preset", "presetJacket"].indexOf(type) !== -1 ? type : "full";
+  const isPreset = type === "preset" || type === "presetJacket";
+  jacketDesigner.setPreset(isPreset ? CLASSIC_SUIT_PRESET.jacket : null);
   pantsDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.pants : null);
   renderMeasurementFields();
   updateSamePreviousMeasurementsBanner();
@@ -5937,6 +5943,8 @@ const chooseFullSuitBtn = document.getElementById("chooseFullSuitBtn");
 const chooseJacketOnlyBtn = document.getElementById("chooseJacketOnlyBtn");
 const chooseClassicSuitBtn = document.getElementById("chooseClassicSuitBtn");
 if (chooseClassicSuitBtn) chooseClassicSuitBtn.addEventListener("click", () => chooseSuitType("preset"));
+const choosePresetJacketBtn = document.getElementById("choosePresetJacketBtn");
+if (choosePresetJacketBtn) choosePresetJacketBtn.addEventListener("click", () => chooseSuitType("presetJacket"));
 if (chooseFullSuitBtn) chooseFullSuitBtn.addEventListener("click", () => chooseSuitType("full"));
 if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => chooseSuitType("jacketOnly"));
 
