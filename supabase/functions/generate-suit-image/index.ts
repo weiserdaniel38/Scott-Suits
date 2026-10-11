@@ -606,7 +606,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
   }
   for (const r of refs) {
     if (r.label === "pocket reference") {
-      lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pockets: copy EXACTLY their look in the front view and the top two close-ups: ${WELT_NOT_FLAP}, with no besom piping. Ignore the jacket's other details in this drawing (its lapel, buttons and cuffs come from the other references), and render the pockets photorealistically in the suit fabric, never as a drawing.`);
+      lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pocket, two close-ups: copy EXACTLY its look: ${WELT_NOT_FLAP}, with no besom piping. Render the pockets photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
