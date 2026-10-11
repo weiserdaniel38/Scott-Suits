@@ -2199,16 +2199,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       total: list.length,
     };
     wizHead.innerHTML =
+      '<div class="wiz-meta"><span class="wiz-step">Step ' + (idx + 1) + " of " + list.length + "</span>" +
+      (group ? '<span class="wiz-group">' + wizEsc(group) + "</span>" : "") +
+      '<button type="button" class="wiz-review-link">Review</button></div>' +
       '<div class="wiz-progress">' +
       list.map((k, i) =>
         '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") +
         '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '"></button>'
       ).join("") +
       '</div>' +
-      '<div class="wiz-status"><div class="wiz-cheer"></div><button type="button" class="wiz-pct" data-stage="design" title="Go to what\u2019s left"></button></div>' +
-      '<div class="wiz-meta"><span class="wiz-step">Step ' + (idx + 1) + " of " + list.length + "</span>" +
-      (group ? '<span class="wiz-group">' + wizEsc(group) + "</span>" : "") +
-      '<button type="button" class="wiz-review-link">Review</button></div>';
+      '<div class="wiz-status"><div class="wiz-cheer"></div><button type="button" class="wiz-pct" data-stage="design" title="Go to what\u2019s left"></button></div>';
     wizHead.querySelectorAll(".wiz-seg").forEach((b) => {
       b.onclick = () => { const k = b.getAttribute("data-k"); if (k !== activeTab) switchTab(k); };
     });
