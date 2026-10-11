@@ -2582,7 +2582,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // Optional short label (e.g. "Popular", "Extra Tall") shown as a small
     // gray banner across the top of the card -- a hint for a customer who
     // doesn't know what to pick, not part of the stored/printed value.
-    const badgeHtml = opt.badge ? '<div class="opt-badge">' + opt.badge + "</div>" : "";
+    // No badges (e.g. "Standard") on a step a preset narrows down.
+    const presetStep = !!(preset && preset.allowed && preset.allowed[activeTab]);
+    const badgeHtml = opt.badge && !presetStep ? '<div class="opt-badge">' + opt.badge + "</div>" : "";
     // The magnifier/zoom button is redundant on a zoom category (Fabric,
     // Lining, Felt Color): clicking the card itself now opens the same
     // (large) zoom view first -- see the onclick branch below -- so the
@@ -3204,7 +3206,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       // Optional small section divider (e.g. Single vs Double Breasted):
       // an option can carry a `section` label; a heading is drawn whenever
       // it changes from the previous option's.
-      if (opt.section && opt.section !== lastSection) {
+      if (opt.section && opt.section !== lastSection && !presetLimited) {
         const h = document.createElement("h4");
         h.className = "opt-section-divider";
         h.textContent = opt.section;
