@@ -1,8 +1,11 @@
 // Scott Suits -- draws a picture sheet of a customer's finished suit.
 //
-// The sheet has five panels, described to the model in words only:
-// full suit front, full suit back, trousers back close-up, a sleeve-cuff close-up and
-// a trouser-waistband close-up (jacket-only orders get jacket views instead).
+// The sheet's panels are described to the model in words only: full suit
+// front, full suit back, trousers back close-up, a sleeve-cuff close-up and a
+// trouser-waistband close-up. Jacket-only orders get a top row of three whole
+// jacket views (front, back, open) over a row of three close-ups (cuff, chest,
+// hip pockets), so the jackets keep their natural width instead of being
+// squeezed into narrow columns.
 //
 // How it's called:
 //   * From the designer, right after the customer finishes designing a suit
@@ -236,9 +239,9 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "No Lining Construction": "UNLINED jacket: no lining at all inside; the inside shows the suit fabric facings and neat bound seams",
   },
   "Inside Pocket Style": {
-    "Normal Inside Pocket W/ Pen Pocket": "inside: a welt pocket on each side of the chest (one with a pointed button tab) and a small pen pocket below",
-    "Normal Inside Pocket W/ Water Drop Pen Pocket": "inside: a welt pocket on each side of the chest (one with a pointed button tab) and a teardrop-shaped pen pocket below",
-    "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket": "inside: a welt pocket on each side of the chest (one with a pointed button tab), a small pen pocket and a slanted cigarette pocket lower down",
+    "Normal Inside Pocket W/ Pen Pocket": "inside: a welt pocket on each side of the chest (one closed by a small pointed tab and button that are sewn INSIDE, on the lining; the outside of the jacket has no tab or button at the chest) and a small pen pocket below",
+    "Normal Inside Pocket W/ Water Drop Pen Pocket": "inside: a welt pocket on each side of the chest (one closed by a small pointed tab and button that are sewn INSIDE, on the lining; the outside of the jacket has no tab or button at the chest) and a teardrop-shaped pen pocket below",
+    "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket": "inside: a welt pocket on each side of the chest (one closed by a small pointed tab and button that are sewn INSIDE, on the lining; the outside of the jacket has no tab or button at the chest), a small pen pocket and a slanted cigarette pocket lower down",
   },
   "Monogram Placement": {
     "No Monogram": NO_MONOGRAM,
@@ -386,12 +389,17 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const cuffCount = cuffCountText(spec) ? " (" + cuffCountText(spec) + ")" : "";
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
+  const vents = (OPTION_LOOKS["Back Vents"] || {})[(spec.match(/^Back Vents: (.+)$/m) || [])[1] || ""];
+  const ventNote = vents ? " showing the vents (" + vents + ")" : "";
+  const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
+  const lowerLooks = (OPTION_LOOKS["Lower Pockets"] || {})[lower];
+  const hipNote = (/Slant/.test(lower) ? " (" + SLANT_HIP + ")" : "") + (lowerLooks ? " (" + lowerLooks + ")" : "");
   return jacketOnly
-    ? `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture.`
+    ? `Layout: one landscape presentation sheet on a clean white background with six panels in two rows, like a tailor's lookbook.
+Top row, about two thirds of the sheet's height, three equal panels side by side, each about one third of the sheet wide and each showing the WHOLE jacket from shoulders to hem at its natural, real-life proportions (a normal jacket is about three quarters as wide as it is tall, sleeves included): never squeezed narrow, stretched tall or cropped. (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view${ventNote}; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
+Bottom row, three equal close-up panels side by side: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture; (6) a close-up of the lower front of the buttoned jacket showing both hip pockets${hipNote}.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side: (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
+Left side, three tall panels side by side, each garment at its natural, real-life proportions (never squeezed narrow or stretched tall): (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view${ventNote}; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
@@ -473,16 +481,18 @@ const WELT_NOT_FLAP =
   "single WELT pockets, NOT flap pockets: on each hip a narrow rectangular welt strip of the suit fabric stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like the chest pocket; nothing hangs down over the opening, there is no flap and no shadow under a flap";
 
 // Slanted hip pockets came out level (straight flaps), so the slant is spelled
-// out and a close-up crop of the option's catalog drawing is sent.
+// out and a reference picture with clearly slanted pockets is sent
+// (assets/jacket-hipref2-*, made by scripts/hipref_slant.py; the catalog
+// drawings were only faintly slanted and still came out level).
 const SLANT_HIP =
   "the hip pockets are SLANTED, not horizontal: each pocket opening (and its flap, if it has one) is tilted about 15 degrees, with the end nearest the front buttons clearly HIGHER and the end toward the side seam clearly LOWER, mirrored on both sides, like hacking pockets; never straight, level pockets";
 const HIP_REF: Record<string, string> = {
-  "Single Besom Slant Pocket": "./assets/jacket-hipref-sbslant.jpg",
-  "Double Besom Slant Pocket": "./assets/jacket-hipref-dbslant.jpg",
-  "Slant Flap Pocket": "./assets/jacket-hipref-slantflap.jpg",
-  "Slant Flap + Single Besom Ticket": "./assets/jacket-hipref-slantflapsbt.jpg",
-  "Slant Flap + Double Besom Ticket": "./assets/jacket-hipref-slantflapdbt.jpg",
-  "Slant Flap + Flap Ticket Pocket": "./assets/jacket-hipref-slantflapft.jpg",
+  "Single Besom Slant Pocket": "./assets/jacket-hipref2-sbslant.jpg",
+  "Double Besom Slant Pocket": "./assets/jacket-hipref2-dbslant.jpg",
+  "Slant Flap Pocket": "./assets/jacket-hipref2-slantflap.jpg",
+  "Slant Flap + Single Besom Ticket": "./assets/jacket-hipref2-slantflapsbt.jpg",
+  "Slant Flap + Double Besom Ticket": "./assets/jacket-hipref2-slantflapdbt.jpg",
+  "Slant Flap + Flap Ticket Pocket": "./assets/jacket-hipref2-slantflapft.jpg",
 };
 
 function keyDetails(spec: string, ownLining = false): string {
@@ -685,7 +695,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       lines.push(`Image ${n++} is a black-and-white line drawing, a close-up of the customer's chosen CHEST POCKET ("${chest}") on the wearer's left chest (the long line on the left is the lapel edge): copy EXACTLY the pocket's shape and proportions: ${CHEST_NOT[chest] || ""}. Render it photorealistically in the suit fabric, never as a drawing, in the front view and in any chest close-up.`);
     } else if (r.label === "hip pocket reference") {
       const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
-      lines.push(`Image ${n++} is a black-and-white catalog line drawing, a close-up of the lower front of the jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type and their SLANT: ${SLANT_HIP}. Copy only the pockets (ignore the button and lapel in the drawing). Render them photorealistically in the suit fabric, never as a drawing.`);
+      lines.push(`Image ${n++} is a reference illustration, a close-up of the lower front of a gray jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type, which side any ticket pocket is on (above the wearer's right hip pocket, the left one in the picture) and their SLANT: ${SLANT_HIP}. Copy only the pockets (not the gray color or the button). Render them photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "pocket reference") {
       lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pocket, two close-ups: copy EXACTLY its look: ${WELT_NOT_FLAP}, with no besom piping. Render the pockets photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "lapel reference") {
