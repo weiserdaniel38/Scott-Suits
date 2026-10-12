@@ -479,7 +479,10 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .past-order-total{color:var(--brass);font-family:'Playfair Display',serif;font-size:16px;font-weight:600;white-space:nowrap;}
 .past-order-imgs{flex-basis:100%;display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;}
 .past-order-img{display:block;width:120px;height:auto;max-height:180px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
-.past-order-ship{flex-basis:100%;font-size:12.5px;color:var(--ivory-dim);margin-top:-6px;}
+.past-order-ship{flex-basis:100%;font-size:12.5px;color:var(--ivory-dim);margin-top:-6px;display:flex;flex-direction:column;gap:6px;}
+.past-order-step b{color:var(--ivory);font-weight:600;}
+.past-order-progress{display:block;height:4px;border-radius:2px;background:var(--line);overflow:hidden;max-width:320px;}
+.past-order-progress span{display:block;height:100%;background:var(--brass);}
 .past-order-ship a{color:var(--brass);}
 /* Admin: all orders with shipping status + tracking (see loadAdminOrders). */
 .ship-live-toggle{margin:4px 0 8px;}

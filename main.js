@@ -781,13 +781,24 @@ async function loadOrderHistory() {
 // and tracking number under My Account; the customer sees it under Past
 // Orders and, if the admin ticks the box, gets an email and a text.
 // ============================================================
+// In order: each order moves through the factory, comes to the shop for a
+// final check, then goes out to the customer. Same keys as the SQL check in
+// admin_update_shipping and STATUS_TEXT in send-shipping-update.
 const SHIPPING_STATUSES = [
-  ["", "Received"],
-  ["in_production", "Being made"],
-  ["shipped", "Shipped"],
+  ["", "Order received"],
+  ["sent_to_factory", "Sent to the factory"],
+  ["cutting", "Fabric being cut"],
+  ["sewing", "Being sewn"],
+  ["finishing", "Finishing and quality check"],
+  ["factory_shipped", "On its way from the factory"],
+  ["final_check", "Final inspection with us"],
+  ["shipped", "Shipped to you"],
   ["out_for_delivery", "Out for delivery"],
   ["delivered", "Delivered"],
 ];
+// Tracking numbers are for the parcel to the customer, so they only show
+// from "Shipped to you" on.
+const SHIPPING_WITH_TRACKING = ["shipped", "out_for_delivery", "delivered"];
 const SHIPPING_CARRIERS = ["UPS", "USPS", "FedEx", "DHL", "Other"];
 const SHIPPING_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/send-shipping-update" : "";
 
@@ -807,15 +818,22 @@ function shippingLabel(status) {
   return hit ? hit[1] : "";
 }
 
-// "Shipped · UPS 1Z999 (Track)" under a customer's past order.
+// Under a customer's past order: "Step 4 of 10: Being sewn", a progress
+// bar, and "UPS 1Z999 · Track" once it has shipped. Nothing when the
+// shipping columns haven't been added yet (older database).
 function shippingLineHtml(row) {
-  if (!row || !row.shipping_status) return "";
-  let html = escapeAttr(shippingLabel(row.shipping_status));
-  if (row.tracking_number && row.shipping_status !== "in_production") {
+  if (!row || !("shipping_status" in row)) return "";
+  const i = Math.max(0, SHIPPING_STATUSES.findIndex((s) => s[0] === (row.shipping_status || "")));
+  const pct = Math.round(((i + 1) / SHIPPING_STATUSES.length) * 100);
+  let html =
+    '<span class="past-order-step">Step ' + (i + 1) + " of " + SHIPPING_STATUSES.length + ": <b>" + escapeAttr(SHIPPING_STATUSES[i][1]) + "</b></span>" +
+    '<span class="past-order-progress" role="progressbar" aria-valuemin="1" aria-valuemax="' + SHIPPING_STATUSES.length + '" aria-valuenow="' + (i + 1) + '"><span style="width:' + pct + '%"></span></span>';
+  if (row.tracking_number && SHIPPING_WITH_TRACKING.includes(row.shipping_status)) {
     const carrier = row.tracking_carrier && row.tracking_carrier !== "Other" ? row.tracking_carrier + " " : "";
-    html += " \u00b7 " + escapeAttr(carrier + row.tracking_number);
+    html += '<span class="past-order-step">' + escapeAttr(carrier + row.tracking_number);
     const url = trackingUrl(row.tracking_carrier, row.tracking_number);
-    if (url) html += ' <a href="' + escapeAttr(url) + '" target="_blank" rel="noopener">Track</a>';
+    if (url) html += ' \u00b7 <a href="' + escapeAttr(url) + '" target="_blank" rel="noopener">Track</a>';
+    html += "</span>";
   }
   return '<div class="past-order-ship">' + html + "</div>";
 }
