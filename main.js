@@ -782,7 +782,7 @@ async function loadOrderHistory() {
 // Orders and, if the admin ticks the box, gets an email and a text.
 // ============================================================
 const SHIPPING_STATUSES = [
-  ["", "Received (no update yet)"],
+  ["", "Received"],
   ["in_production", "Being made"],
   ["shipped", "Shipped"],
   ["out_for_delivery", "Out for delivery"],
