@@ -480,6 +480,11 @@ async function refreshAdminStatus() {
   currentIsAdmin = admin;
   const wrap = document.getElementById("adminOrderWrap");
   if (wrap) wrap.hidden = !admin;
+  const shipWrap = document.getElementById("adminShippingWrap");
+  if (shipWrap) {
+    shipWrap.hidden = !admin;
+    if (admin) loadAdminOrders();
+  }
 }
 
 const accountIconBtn = document.getElementById("accountIconBtn");
@@ -710,7 +715,8 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url");
+    let { data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number");
+    if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd"));
     if (error) {
       console.error("Failed to load order history:", error);
@@ -726,7 +732,7 @@ async function loadOrderHistory() {
     data.forEach((row) => {
       const key = row.order_id || row.created_at;
       if (!byOrder[key]) {
-        byOrder[key] = { created_at: row.created_at, suits: [], total: 0, images: [], completed: true };
+        byOrder[key] = { created_at: row.created_at, suits: [], total: 0, images: [], completed: true, ship: row };
         order.push(key);
       }
       byOrder[key].suits.push(row.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit");
@@ -757,6 +763,7 @@ async function loadOrderHistory() {
           '</span></div><span class="past-order-total">$' +
           o.total.toFixed(0) +
           "</span>" +
+          shippingLineHtml(o.ship) +
           (imgs ? '<div class="past-order-imgs">' + imgs + "</div>" : "") +
           "</div>"
         );
@@ -766,6 +773,166 @@ async function loadOrderHistory() {
     console.error(err);
     pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
   }
+}
+
+// ============================================================
+// Shipping updates (supabase/sql/8_shipping_updates.sql and the
+// send-shipping-update edge function). The admin sets each order's status
+// and tracking number under My Account; the customer sees it under Past
+// Orders and, if the admin ticks the box, gets an email and a text.
+// ============================================================
+const SHIPPING_STATUSES = [
+  ["", "Received"],
+  ["in_production", "Being made"],
+  ["shipped", "Shipped"],
+  ["out_for_delivery", "Out for delivery"],
+  ["delivered", "Delivered"],
+];
+const SHIPPING_CARRIERS = ["UPS", "USPS", "FedEx", "DHL", "Other"];
+const SHIPPING_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/send-shipping-update" : "";
+
+function trackingUrl(carrier, number) {
+  const n = encodeURIComponent(String(number || "").trim());
+  if (!n) return "";
+  const c = String(carrier || "").toLowerCase();
+  if (c === "ups") return "https://www.ups.com/track?tracknum=" + n;
+  if (c === "usps") return "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + n;
+  if (c === "fedex") return "https://www.fedex.com/fedextrack/?trknbr=" + n;
+  if (c === "dhl") return "https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=" + n;
+  return "";
+}
+
+function shippingLabel(status) {
+  const hit = SHIPPING_STATUSES.find((s) => s[0] === (status || ""));
+  return hit ? hit[1] : "";
+}
+
+// "Shipped · UPS 1Z999 (Track)" under a customer's past order.
+function shippingLineHtml(row) {
+  if (!row || !row.shipping_status) return "";
+  let html = escapeAttr(shippingLabel(row.shipping_status));
+  if (row.tracking_number && row.shipping_status !== "in_production") {
+    const carrier = row.tracking_carrier && row.tracking_carrier !== "Other" ? row.tracking_carrier + " " : "";
+    html += " \u00b7 " + escapeAttr(carrier + row.tracking_number);
+    const url = trackingUrl(row.tracking_carrier, row.tracking_number);
+    if (url) html += ' <a href="' + escapeAttr(url) + '" target="_blank" rel="noopener">Track</a>';
+  }
+  return '<div class="past-order-ship">' + html + "</div>";
+}
+
+const adminOrdersList = document.getElementById("adminOrdersList");
+const shippingLiveToggle = document.getElementById("shippingLiveToggle");
+
+async function loadAdminOrders() {
+  if (!adminOrdersList) return;
+  adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
+  try {
+    const client = getSupabase();
+    const [{ data, error }, live] = await Promise.all([client.rpc("admin_list_orders"), client.rpc("admin_shipping_live")]);
+    if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
+    if (error) {
+      console.error("Failed to load orders:", error);
+      adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
+      return;
+    }
+    if (!data || !data.length) {
+      adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      return;
+    }
+    adminOrdersList.innerHTML = "";
+    data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(o)));
+  } catch (err) {
+    console.error(err);
+    adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
+  }
+}
+
+function adminOrderRow(o) {
+  const row = document.createElement("div");
+  row.className = "admin-ship-row";
+  const date = o.created_at ? new Date(o.created_at).toLocaleDateString() : "";
+  const suits = o.suits > 1 ? o.suits + " suits" : "1 suit";
+  const contact = [o.customer_email, o.customer_phone].filter(Boolean).join(" \u00b7 ");
+  const statusOpts = SHIPPING_STATUSES.map((s) => '<option value="' + s[0] + '">' + s[1] + "</option>").join("");
+  const carrierOpts = '<option value="">Carrier</option>' + SHIPPING_CARRIERS.map((c) => '<option value="' + c + '">' + c + "</option>").join("");
+  row.innerHTML =
+    '<div class="admin-ship-head"><div><b></b><span class="admin-ship-contact"></span></div><span class="past-order-total"></span></div>' +
+    '<div class="admin-ship-fields">' +
+    '<div class="measure-input-wrap"><select aria-label="Shipping status" class="ship-status">' + statusOpts + "</select></div>" +
+    '<div class="measure-input-wrap"><select aria-label="Carrier" class="ship-carrier">' + carrierOpts + "</select></div>" +
+    '<div class="measure-input-wrap ship-tracking"><input type="text" aria-label="Tracking number" placeholder="Tracking number" class="ship-number" autocomplete="off"></div>' +
+    "</div>" +
+    '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
+    '<button type="button" class="btn-primary ship-save">Save</button><p class="admin-ship-result" hidden></p></div>';
+  // Customer-typed text goes in with textContent, never as HTML.
+  row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
+  row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "");
+  row.querySelector(".past-order-total").textContent = "$" + Number(o.total || 0).toFixed(0);
+  const statusSel = row.querySelector(".ship-status");
+  const carrierSel = row.querySelector(".ship-carrier");
+  const numberInput = row.querySelector(".ship-number");
+  const notifyBox = row.querySelector(".ship-notify");
+  const saveBtn = row.querySelector(".ship-save");
+  const result = row.querySelector(".admin-ship-result");
+  statusSel.value = o.shipping_status || "";
+  carrierSel.value = o.tracking_carrier || "";
+  numberInput.value = o.tracking_number || "";
+
+  saveBtn.addEventListener("click", async () => {
+    const status = statusSel.value || null;
+    saveBtn.disabled = true;
+    result.hidden = false;
+    result.textContent = "Saving...";
+    try {
+      const { error } = await getSupabase().rpc("admin_update_shipping", {
+        p_order_id: o.order_id,
+        p_status: status,
+        p_carrier: carrierSel.value || null,
+        p_tracking: numberInput.value.trim() || null,
+      });
+      if (error) throw error;
+      if (!notifyBox.checked || !status) {
+        result.textContent = "Saved." + (status && !notifyBox.checked ? " No message sent." : "");
+        return;
+      }
+      result.textContent = "Saved. Sending...";
+      const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
+      const res = await fetch(SHIPPING_FN_URL, { method: "POST", headers, body: JSON.stringify({ order_id: o.order_id }) });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        result.textContent = "Saved, but the update wasn\u2019t sent: " + (r.error || "error " + res.status);
+        return;
+      }
+      const part = (label, x) =>
+        x && x.ok ? label + " sent to " + x.to : label + " not sent" + (x && x.detail ? " (" + x.detail + ")" : "");
+      result.textContent = "Saved. " + (r.live ? "" : "Test mode: ") + part("Email", r.email) + ". " + part("Text", r.sms) + ".";
+    } catch (err) {
+      console.error(err);
+      result.textContent = "Couldn\u2019t save: " + (err.message || err);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+  return row;
+}
+
+if (shippingLiveToggle) {
+  shippingLiveToggle.addEventListener("change", async () => {
+    const want = shippingLiveToggle.checked;
+    if (want && !window.confirm("Send shipping updates to real customers from now on?")) {
+      shippingLiveToggle.checked = false;
+      return;
+    }
+    try {
+      const { data, error } = await getSupabase().rpc("admin_shipping_live", { p_live: want });
+      if (error) throw error;
+      shippingLiveToggle.checked = data === true;
+    } catch (err) {
+      console.error(err);
+      shippingLiveToggle.checked = !want;
+      alert("Couldn\u2019t change that right now.");
+    }
+  });
 }
 
 function refreshAccountData() {
