@@ -500,6 +500,11 @@ const loginEmailInput = document.getElementById("loginEmailInput");
 const loginPasswordInput = document.getElementById("loginPasswordInput");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
 const accountStatusMsg = document.getElementById("accountStatusMsg");
+const accountIntro = document.getElementById("accountIntro");
+const ACCOUNT_INTRO_DEFAULT = accountIntro ? accountIntro.textContent : "";
+let openAccountOverlay = null;
+let closeAccountOverlay = null;
+let pendingSignInAction = null;
 const accountNameDisplay = document.getElementById("accountNameDisplay");
 const accountLogoutBtn = document.getElementById("accountLogoutBtn");
 const profileMeasureGrid = document.getElementById("profileMeasureGrid");
@@ -788,6 +793,8 @@ function refreshAccountData() {
     document.addEventListener("keydown", onKeydown);
   }
   function close() {
+    pendingSignInAction = null;
+    if (accountIntro) accountIntro.textContent = ACCOUNT_INTRO_DEFAULT;
     accountOverlay.classList.remove("open");
     document.removeEventListener("keydown", onKeydown);
     if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
@@ -805,7 +812,21 @@ function refreshAccountData() {
   accountOverlay.addEventListener("click", (e) => {
     if (e.target === accountOverlay) close();
   });
+  openAccountOverlay = open;
+  closeAccountOverlay = close;
 })();
+
+// Signed-in-only actions (drawing a suit picture). A guest gets the account
+// popup with a line saying why; once they sign in or create an account the
+// popup closes and the action runs. Closing the popup instead drops it.
+// (Continue with Google leaves the page, so after it they tap again.)
+function requireSignIn(triggerEl, introText, action) {
+  if (currentUser) return action();
+  if (!openAccountOverlay) return;
+  openAccountOverlay(triggerEl);
+  pendingSignInAction = action;
+  if (accountIntro) accountIntro.textContent = introText;
+}
 
 function showAccountStatus(el, message) {
   if (!el) return;
@@ -1077,6 +1098,11 @@ if (isSupabaseConfigured()) {
     getSupabase().auth.onAuthStateChange((event, session) => {
       currentUser = session ? session.user : null;
       refreshAccountData();
+      if (currentUser && pendingSignInAction) {
+        const action = pendingSignInAction;
+        closeAccountOverlay();
+        action();
+      }
     });
   } catch (err) {
     console.error(err);
@@ -4857,6 +4883,9 @@ const SUIT_IMAGE_MESSAGES = {
   network: "Sorry, we couldn't reach the picture service.",
 };
 
+// Shown at the top of the account popup when a guest taps Generate My Suit.
+const SUIT_IMAGE_SIGN_IN = "Sign in or create a free account to see your suit drawn. You can still order without an account.";
+
 // Cycled in bold under the loading video while a picture is drawn. Lines
 // marked pants are skipped when only a jacket is being made.
 const SUIT_LOADING_STEPS = [
@@ -5090,7 +5119,8 @@ async function updateDesignPreviewPanel() {
     else if (designPreview.status === "pending") watch(designPreview);
   }
 
-  ui.btn.addEventListener("click", async () => {
+  ui.btn.addEventListener("click", () => requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing));
+  async function startDrawing() {
     ui.working(isJacketOnlyType(currentSuitType));
     // On a phone, bring the whole card (video and caption) into view.
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
@@ -5105,6 +5135,7 @@ async function updateDesignPreviewPanel() {
         ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections() }, { liningPhotoUrl: photoUrl })
         : spec;
       const start = await callSuitImageFn({ preview: true, visual_spec: sent });
+      if (start.status === 401) return signInAgain();
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
       designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null };
@@ -5114,7 +5145,14 @@ async function updateDesignPreviewPanel() {
       console.error(e);
       ui.fail(SUIT_IMAGE_MESSAGES.network, true);
     }
-  });
+  }
+  // The server said the sign-in is missing or expired: put the button back
+  // and ask them to sign in again.
+  function signInAgain() {
+    ui.fail("", true);
+    ui.btn.textContent = "Generate My Suit";
+    requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
+  }
 }
 
 // The finished preview for the suit being committed to the cart, if the
@@ -5139,12 +5177,17 @@ async function renderSuitPreview(suits) {
     const ids = { order_id: suit.orderId, suit_number: suit.suitNumber };
     const ui = buildSuitImageCard(suit.label);
     box.appendChild(ui.card);
-    ui.btn.addEventListener("click", async () => {
+    const startDrawing = async () => {
       ui.working(suit.jacketOnly);
       if (SUIT_IMAGES_PAUSED) return;
       try {
         const start = await callSuitImageFn(ids);
         if (start.data && start.data.status === "done" && start.data.image_url) return ui.showImage(start.data.image_url);
+        if (start.status === 401) {
+          ui.fail("", true);
+          ui.btn.textContent = "Generate My Suit";
+          return requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
+        }
         if (!start.ok && start.status !== 202) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
         const r = await pollSuitImage(Object.assign({ check: true }, ids));
         if (r.status === "done") ui.showImage(r.url);
@@ -5153,7 +5196,8 @@ async function renderSuitPreview(suits) {
         console.error(e);
         ui.fail(SUIT_IMAGE_MESSAGES.network, true);
       }
-    });
+    };
+    ui.btn.addEventListener("click", () => requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing));
     // A picture drawn before ordering is copied onto the order, no redraw.
     try {
       if (suit.previewId) await callSuitImageFn(Object.assign({ attach: suit.previewId }, ids));
