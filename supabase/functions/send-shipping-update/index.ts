@@ -13,7 +13,7 @@
 // Test mode (public.shipping_notify_settings.live = false, the default):
 // the email goes to the admin's own address and the text to
 // SHIPPING_TEST_PHONE, never to the customer. The admin turns test mode
-// off in My Account ("Send to customers").
+// off in My Account ("Send updates to customers").
 //
 // Email is sent through Resend (same account as send-welcome-email), texts
 // through Twilio. Without the Twilio secrets, texts are skipped and only the
@@ -194,7 +194,7 @@ async function sendSms(to: string, body: string) {
   return { ok: res.ok, skipped: false, detail: res.ok ? "sent" : res.status + " " + (await res.text()).slice(0, 300) };
 }
 
-if (import.meta.main) Deno.serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
