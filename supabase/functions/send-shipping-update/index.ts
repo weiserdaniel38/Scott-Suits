@@ -1,6 +1,6 @@
 // Scott Suits -- emails and texts a customer when the shop updates their
-// order's shipping status (being made, shipped, out for delivery,
-// delivered), with the tracking link once there is one.
+// order's progress (each factory step, final inspection, shipped, out for
+// delivery, delivered), with the tracking link once it ships.
 //
 // How it's called: by the shop admin's "Save" in My Account > Orders on
 // scottssuits.com, right after supabase/sql/8_shipping_updates.sql's
@@ -81,16 +81,42 @@ export function toE164(raw: string): string {
   return "";
 }
 
+// Same keys and order as SHIPPING_STATUSES in main.js.
 const STATUS_TEXT: Record<string, { subject: string; headline: string; body: string }> = {
-  in_production: {
-    subject: "Your Scott Suits order is being made",
-    headline: "Your suit is being made",
-    body: "Good news: your order is now with our tailors and being made to your measurements. We'll let you know as soon as it ships.",
+  sent_to_factory: {
+    subject: "Your Scott Suits order is at the factory",
+    headline: "Sent to the factory",
+    body: "Your order and measurements are now with our factory. We'll keep you posted as your suit is made.",
+  },
+  cutting: {
+    subject: "Your Scott Suits fabric is being cut",
+    headline: "Fabric being cut",
+    body: "Your fabric is being cut to your measurements.",
+  },
+  sewing: {
+    subject: "Your Scott Suits order is being sewn",
+    headline: "Being sewn",
+    body: "Our tailors are sewing your suit now.",
+  },
+  finishing: {
+    subject: "Your Scott Suits order is in finishing",
+    headline: "Finishing and quality check",
+    body: "Your suit is being finished, pressed and checked at the factory.",
+  },
+  factory_shipped: {
+    subject: "Your Scott Suits order has left the factory",
+    headline: "On its way from the factory",
+    body: "Your suit is done and on its way from the factory to us for a final inspection.",
+  },
+  final_check: {
+    subject: "Your Scott Suits order is with us",
+    headline: "Final inspection",
+    body: "Your suit has arrived with us and is getting a final inspection before we ship it to you.",
   },
   shipped: {
     subject: "Your Scott Suits order has shipped",
-    headline: "Your order has shipped",
-    body: "Your order is on its way.",
+    headline: "Shipped to you",
+    body: "Your order is on its way to you.",
   },
   out_for_delivery: {
     subject: "Your Scott Suits order is out for delivery",
@@ -103,6 +129,8 @@ const STATUS_TEXT: Record<string, { subject: string; headline: string; body: str
     body: "Your order has been delivered. We hope you love it. If anything about the fit isn't right, just reply to this email.",
   },
 };
+const STEPS = Object.keys(STATUS_TEXT);
+const WITH_TRACKING = ["shipped", "out_for_delivery", "delivered"];
 
 export type Shipping = { firstName: string; status: string; carrier: string; tracking: string };
 
@@ -113,12 +141,14 @@ export function shippingMessage(s: Shipping, siteUrl = SITE_URL) {
   const link = trackingUrl(s.carrier, s.tracking);
   const carrierName = s.carrier && s.carrier.toLowerCase() !== "other" ? s.carrier + " " : "";
   const trackLine = s.tracking ? "Tracking number: " + carrierName + s.tracking : "";
-  const showTracking = s.status !== "in_production" && !!s.tracking;
+  const showTracking = WITH_TRACKING.includes(s.status) && !!s.tracking;
+  // "Step 4 of 10" -- step 1 is "Order received", before any update.
+  const step = "Step " + (STEPS.indexOf(s.status) + 2) + " of " + (STEPS.length + 1);
 
   const text = [
     hello,
     "",
-    t.body,
+    t.body + " (" + step + ")",
     ...(showTracking ? ["", trackLine, ...(link ? ["Track it: " + link] : [])] : []),
     "",
     "Questions? Just reply to this email.",
@@ -144,6 +174,7 @@ export function shippingMessage(s: Shipping, siteUrl = SITE_URL) {
 <p style="margin:16px 0 0;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#B08D57;">Scott Suits</p>
 </td></tr>
 <tr><td style="padding:8px 32px 8px;">
+<p style="margin:0 0 6px;font-size:12px;letter-spacing:1px;text-transform:uppercase;text-align:center;color:rgba(34,30,25,0.62);">${step}</p>
 <h1 style="margin:0 0 16px;font-size:24px;font-weight:600;text-align:center;">${escapeHtml(t.headline)}</h1>
 <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escapeHtml(hello)}</p>
 <p style="margin:0 0 20px;font-size:15px;line-height:1.6;">${escapeHtml(t.body)}</p>
@@ -160,7 +191,7 @@ ${trackingHtml}
   const sms =
     "Scott Suits: " +
     t.headline +
-    "." +
+    " (" + step + ")." +
     (showTracking ? " " + trackLine + (link ? " " + link : "") : "") +
     " Reply STOP to opt out.";
 
