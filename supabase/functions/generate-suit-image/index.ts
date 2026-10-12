@@ -373,8 +373,17 @@ function describeSpec(spec: string): string {
 // ---------------------------------------------------------------------------
 // Prompt
 // ---------------------------------------------------------------------------
+// What the folded-open front in the jacket-only sheet shows inside. The model
+// scattered welts down the lining and put the button tab on the outside.
+const INSIDE_VIEW_EXTRA: Record<string, string> = {
+  "Normal Inside Pocket W/ Pen Pocket": "a small pointed fabric tab with one button hangs from the middle of that welt to close it; a small pen pocket (a short welt about 5 cm wide) sits on the facing a hand's width below it",
+  "Normal Inside Pocket W/ Water Drop Pen Pocket": "a small pointed fabric tab with one button hangs from the middle of that welt to close it; a small teardrop-shaped pen pocket sits on the facing a hand's width below it",
+  "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket": "a small pointed fabric tab with one button hangs from the middle of that welt to close it; a small pen pocket (a short welt about 5 cm wide) sits on the facing a hand's width below it, and a short slanted cigarette pocket welt sits on the facing at waist height",
+};
+
 function layoutFor(jacketOnly: boolean, spec = ""): string {
-  const inside = (OPTION_LOOKS["Inside Pocket Style"] || {})[(spec.match(/^Inside Pocket Style: (.+)$/m) || [])[1] || ""];
+  const insideStyle = (spec.match(/^Inside Pocket Style: (.+)$/m) || [])[1] || "";
+  const inside = (OPTION_LOOKS["Inside Pocket Style"] || {})[insideStyle];
   const insideNote = " (the inside pockets are horizontal welt pockets sewn on the INSIDE of the jacket, in the lining and facing at chest height, never on the outer fabric" +
     (inside ? "; " + inside : "") + ")";
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
@@ -394,9 +403,14 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
   const lowerLooks = (OPTION_LOOKS["Lower Pockets"] || {})[lower];
   const hipNote = (/Slant/.test(lower) ? " (" + SLANT_HIP + ")" : "") + (lowerLooks ? " (" + lowerLooks + ")" : "");
+  const extra = INSIDE_VIEW_EXTRA[insideStyle];
+  const openNote = ". The front that stays closed shows exactly the same outside pockets as that side of the front view (its hip pocket" +
+    (/Slant/.test(lower) ? ", SLANTED as in the front view" : "") + ", plus the ticket pocket or chest pocket if that side has one" +
+    ") and nothing else: no tab, button or extra pocket on the outside. The folded-open front shows its inside: exactly ONE horizontal inside welt pocket at chest height, level with the outside chest pocket, running from the fabric facing into the lining" +
+    (extra ? "; " + extra : "") + ". No other pockets, tabs or buttons anywhere on the lining, and nothing on the lower half of the lining";
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with six panels in two rows, like a tailor's lookbook.
-Top row, about two thirds of the sheet's height, three equal panels side by side, each about one third of the sheet wide and each showing the WHOLE jacket from shoulders to hem at its natural, real-life proportions (a normal jacket is about three quarters as wide as it is tall, sleeves included): never squeezed narrow, stretched tall or cropped. (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view${ventNote}; (3) the jacket front view with the front edge folded open to show the inside of the jacket and the inside pocket${insideNote}.
+Top row, about two thirds of the sheet's height, three equal panels side by side, each about one third of the sheet wide and each showing the WHOLE jacket from shoulders to hem at its natural, real-life proportions (a normal jacket is about three quarters as wide as it is tall, sleeves included): never squeezed narrow, stretched tall or cropped. (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view${ventNote}; (3) the jacket front view with one front edge folded open to show the inside of the jacket and the inside pocket${openNote}.
 Bottom row, three equal close-up panels side by side: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture; (6) a close-up of the lower front of the buttoned jacket showing both hip pockets${hipNote}.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side, each garment at its natural, real-life proportions (never squeezed narrow or stretched tall): (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view${ventNote}; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
