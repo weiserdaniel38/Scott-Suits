@@ -13,7 +13,7 @@
 // Test mode (public.shipping_notify_settings.live = false, the default):
 // the email goes to the admin's own address and the text to
 // SHIPPING_TEST_PHONE, never to the customer. The admin turns test mode
-// off in My Account ("Send to customers").
+// off in My Account ("Send updates to customers").
 //
 // Email is sent through Resend (same account as send-welcome-email), texts
 // through Twilio. Without the Twilio secrets, texts are skipped and only the
