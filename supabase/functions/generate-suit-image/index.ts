@@ -49,6 +49,8 @@
 //                      gray outline sheet (off by default: the panels are
 //                      described in words only)
 //   SITE_URL           optional, default https://scottssuits.com
+//   PREVIEW_PER_ACCOUNT_PER_DAY optional, default 3; pictures one signed-in
+//                      account can draw in 24 hours (0 = no limit)
 //   PREVIEW_PER_VISITOR_PER_DAY optional; unset means no per-visitor limit
 //   PREVIEW_PER_DAY    optional; unset means no daily limit (all visitors)
 //   ANTHROPIC_MODEL    optional, default claude-opus-5-5
@@ -1056,16 +1058,19 @@ async function startPreview(req: Request, raw: string): Promise<Response> {
   if (!userId) return SIGN_IN_NEEDED();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const visitor = await visitorKey(req);
-  // Limits are off unless set (turned off for now at Daniel's request), and
-  // never apply to the shop admin.
+  // Each account gets PREVIEW_PER_ACCOUNT_PER_DAY pictures (3 by default,
+  // Daniel's rule); the other limits are off unless set. None of them apply
+  // to the shop admin.
   const admin = await isAdmin(userId);
+  const perAccount = admin ? 0 : Number(env("PREVIEW_PER_ACCOUNT_PER_DAY", "3"));
+  if (perAccount > 0 && (await countSince({ user_id: userId }, since)) >= perAccount) return json({ status: "limit", scope: "account" }, 429);
   const perVisitor = admin ? 0 : Number(env("PREVIEW_PER_VISITOR_PER_DAY", "0"));
   const perDay = admin ? 0 : Number(env("PREVIEW_PER_DAY", "0"));
   if (perVisitor > 0 && (await countSince({ visitor }, since)) >= perVisitor) return json({ status: "limit", scope: "visitor" }, 429);
   if (perDay > 0 && (await countSince(null, since)) >= perDay) return json({ status: "limit", scope: "day" }, 429);
   const { data, error } = await supabase
     .from("suit_previews")
-    .insert({ visitor, visual_spec: raw, status: "pending" })
+    .insert({ visitor, user_id: userId, visual_spec: raw, status: "pending" })
     .select("id")
     .single();
   if (error || !data) return json({ error: "Could not start" }, 500);

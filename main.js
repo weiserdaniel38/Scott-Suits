@@ -4878,7 +4878,7 @@ async function pollSuitImage(checkPayload, isStillWanted) {
 const SUIT_IMAGE_MESSAGES = {
   failed: "Sorry, something went wrong drawing your suit.",
   timeout: "This is taking longer than usual.",
-  limit: "You've reached today's limit for suit pictures. Please try again tomorrow.",
+  limit: "You've drawn 3 suits today, the daily limit. Please try again tomorrow. You can still keep going and place your order.",
   start: "Sorry, we couldn't start the picture right now.",
   network: "Sorry, we couldn't reach the picture service.",
 };
