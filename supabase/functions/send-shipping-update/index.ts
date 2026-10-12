@@ -194,7 +194,7 @@ async function sendSms(to: string, body: string) {
   return { ok: res.ok, skipped: false, detail: res.ok ? "sent" : res.status + " " + (await res.text()).slice(0, 300) };
 }
 
-if (import.meta.main) Deno.serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
