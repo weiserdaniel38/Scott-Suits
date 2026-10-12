@@ -1,10 +1,11 @@
-"""Slanted hip pocket reference pictures for the suit image generator.
+"""Hip pocket reference pictures for the suit image generator.
 
-Writes assets/jacket-hipref2-<variant>.jpg: the lower front of a gray jacket
-with clearly SLANTED hip pockets (end nearest the front button higher, end
-toward the side seam lower, mirrored), plus a ticket pocket above the
-wearer's right pocket where chosen. The catalog drawings were only faintly
-slanted, so the image model kept drawing level pockets.
+Writes assets/jacket-hipref3-<variant>.jpg: the lower front of a gray jacket
+with the chosen hip pockets, plus a ticket pocket above the wearer's right
+pocket where chosen. Slant variants are clearly SLANTED (end nearest the
+front button higher, end toward the side seam lower, mirrored); the catalog
+drawings were only faintly slanted, so the image model kept drawing level
+pockets. (hipref2 was the same at 17 degrees and still came out level.)
 """
 import math
 import random
@@ -14,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFilter
 OUT = sys.argv[1]
 S = 3  # supersample
 W, H = 1000, 640
-ANGLE = 17  # degrees
+ANGLE = 22  # degrees
 
 BG = (244, 244, 244)
 CLOTH = (92, 99, 110)
@@ -39,6 +40,12 @@ def pocket(d, cx, cy, width, kind, deg):
     elif kind == "db":
         d.polygon(rot([(cx - hw, cy - 11 * S), (cx + hw, cy - 11 * S), (cx + hw, cy + 11 * S), (cx - hw, cy + 11 * S)], cx, cy, deg), fill=CLOTH_DARK)
         d.line(rot([(cx - hw, cy), (cx + hw, cy)], cx, cy, deg), fill=(25, 28, 32), width=3 * S)
+    elif kind == "patch":
+        ph = width * 0.85
+        box = rot([(cx - hw, cy), (cx + hw, cy), (cx + hw, cy + ph), (cx - hw, cy + ph)], cx, cy, deg)
+        d.polygon([(x + 4 * S, y + 5 * S) for x, y in box], fill=(70, 76, 85))
+        d.polygon(box, fill=FLAP, outline=CLOTH_DARK)
+        d.line(rot([(cx - hw, cy), (cx + hw, cy)], cx, cy, deg), fill=CLOTH_DARK, width=4 * S)
     else:
         fh = width * 0.36
         d.polygon(rot([(cx - hw, cy - 6 * S), (cx + hw, cy - 6 * S), (cx + hw, cy + 2 * S), (cx - hw, cy + 2 * S)], cx, cy, deg), fill=CLOTH_DARK)
@@ -54,7 +61,7 @@ def pocket(d, cx, cy, width, kind, deg):
                 d.line([x1 + (x2 - x1) * t0, y1 + (y2 - y1) * t0, x1 + (x2 - x1) * t1, y1 + (y2 - y1) * t1], fill=(78, 84, 94), width=2 * S)
 
 
-def draw(main, ticket):
+def draw(main, ticket, slant=True):
     w, h = W * S, H * S
     img = Image.new("RGB", (w, h), BG)
     d = ImageDraw.Draw(img)
@@ -73,23 +80,32 @@ def draw(main, ticket):
     d.ellipse([mid - 30 * S - r, 90 * S - r, mid - 30 * S + r, 90 * S + r], fill=BTN_RIM)
     d.ellipse([mid - 30 * S - r + 5 * S, 90 * S - r + 5 * S, mid - 30 * S + r - 5 * S, 90 * S + r - 5 * S], fill=BTN)
     pw = 250 * S
+    ang = ANGLE if slant else 0
     # viewer's left = wearer's right: end nearest the centre (right end) is higher -> negative angle
-    pocket(d, 270 * S, 330 * S, pw, main, -ANGLE)
-    pocket(d, w - 270 * S, 330 * S, pw, main, ANGLE)
+    pocket(d, 270 * S, 330 * S, pw, main, -ang)
+    pocket(d, w - 270 * S, 330 * S, pw, main, ang)
     if ticket:
-        pocket(d, 285 * S, 195 * S, pw * 0.68, ticket, -ANGLE)
+        # outer (side seam) end lined up over the hip pocket's outer end
+        pocket(d, 270 * S - pw * 0.16, 195 * S + pw * 0.16 * math.tan(math.radians(ang)), pw * 0.68, ticket, -ang)
     img = img.filter(ImageFilter.GaussianBlur(S * 0.6)).resize((W, H), Image.LANCZOS)
     return img
 
 
 VARIANTS = {
-    "sbslant": ("sb", None),
-    "dbslant": ("db", None),
-    "slantflap": ("flap", None),
-    "slantflapsbt": ("flap", "sb"),
-    "slantflapdbt": ("flap", "db"),
-    "slantflapft": ("flap", "flap"),
+    "sbslant": ("sb", None, True),
+    "dbslant": ("db", None, True),
+    "slantflap": ("flap", None, True),
+    "slantflapsbt": ("flap", "sb", True),
+    "slantflapdbt": ("flap", "db", True),
+    "slantflapft": ("flap", "flap", True),
+    "sbsbt": ("sb", "sb", False),
+    "dbdbt": ("db", "db", False),
+    "flapsbt": ("flap", "sb", False),
+    "flapdbt": ("flap", "db", False),
+    "flapft": ("flap", "flap", False),
+    "patchsbt": ("patch", "sb", False),
+    "patchdbt": ("patch", "db", False),
 }
-for name, (main, ticket) in VARIANTS.items():
-    draw(main, ticket).save(f"{OUT}/jacket-hipref2-{name}.jpg", quality=90)
+for name, (main, ticket, slant) in VARIANTS.items():
+    draw(main, ticket, slant).save(f"{OUT}/jacket-hipref3-{name}.jpg", quality=90)
 print("ok")

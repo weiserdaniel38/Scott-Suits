@@ -211,26 +211,26 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Lower Pockets": {
     "Single Besom Pocket": "two straight, horizontal single-besom hip pockets (one thin piped lip each), no flaps",
     "Double Besom Pocket": "two straight, horizontal double-besom hip pockets (two thin piped lips each), no flaps",
-    "Single Besom + Single Besom Ticket": "two horizontal single-besom hip pockets, plus a smaller single-besom ticket pocket just above the wearer's right hip pocket; no flaps",
-    "Double Besom + Double Besom Ticket": "two horizontal double-besom hip pockets, plus a smaller double-besom ticket pocket just above the wearer's right hip pocket; no flaps",
+    "Single Besom + Single Besom Ticket": "two straight, horizontal single-besom hip pockets (one thin piped lip each, no flaps), plus ONE smaller single-besom ticket pocket (one thin lip, no flap) about 4 cm above the wearer's right hip pocket only",
+    "Double Besom + Double Besom Ticket": "two straight, horizontal double-besom hip pockets (two thin piped lips each, no flaps), plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only",
     "Flat Welt Pocket": "two hip pockets that look exactly like the normal chest welt pocket, only lower (at hip level) and a little wider: each is a flat, upright rectangular welt strip of the suit fabric about 1.5 cm tall sewn over a straight horizontal opening, with neatly stitched ends. NO flaps and NO besom (thin piped) openings",
-    "Single Besom Slant Pocket": "two SLANTED single-besom hip pockets, angled about 15 degrees: the end nearest the front buttons is HIGHER and the end toward the side seam is LOWER; no flaps",
-    "Double Besom Slant Pocket": "two SLANTED double-besom hip pockets, angled about 15 degrees: the end nearest the front buttons is HIGHER and the end toward the side seam is LOWER; no flaps",
+    "Single Besom Slant Pocket": "two single-besom hip pockets (one thin piped lip each, no flaps) cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right)",
+    "Double Besom Slant Pocket": "two double-besom hip pockets (two thin piped lips each, no flaps) cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right)",
     "Flap Pockets": "two straight horizontal hip pockets with rectangular flaps",
-    "Flap Pockets + Single Besom Ticket": "two straight horizontal flap hip pockets, plus a smaller single-besom ticket pocket (no flap) just above the wearer's right hip pocket",
-    "Flap Pockets + Double Besom Ticket": "two straight horizontal flap hip pockets, plus a smaller double-besom ticket pocket (no flap) just above the wearer's right hip pocket",
-    "Flap Pockets + Flap Ticket Pocket": "two straight horizontal flap hip pockets, plus a smaller flapped ticket pocket just above the wearer's right hip pocket",
-    "Slant Flap Pocket": "two SLANTED hip pockets with flaps ('hacking' pockets), angled about 15 degrees: the end nearest the front buttons is HIGHER and the end toward the side seam is LOWER",
-    "Slant Flap + Single Besom Ticket": "two SLANTED flap hip pockets, angled about 15 degrees: the end nearest the front buttons is HIGHER and the end toward the side seam is LOWER, plus a smaller single-besom ticket pocket at the same slant just above the wearer's right hip pocket",
-    "Slant Flap + Double Besom Ticket": "two SLANTED flap hip pockets, angled about 15 degrees: the end nearest the front buttons is HIGHER and the end toward the side seam is LOWER, plus a smaller double-besom ticket pocket at the same slant just above the wearer's right hip pocket",
-    "Slant Flap + Flap Ticket Pocket": "two SLANTED flap hip pockets, angled about 15 degrees: the end nearest the front buttons is HIGHER and the end toward the side seam is LOWER, plus a smaller flapped ticket pocket at the same slant just above the wearer's right hip pocket",
+    "Flap Pockets + Single Besom Ticket": "two straight horizontal hip pockets with rectangular flaps, plus ONE smaller single-besom ticket pocket (one thin lip, no flap) about 4 cm above the wearer's right hip pocket only",
+    "Flap Pockets + Double Besom Ticket": "two straight horizontal hip pockets with rectangular flaps, plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only",
+    "Flap Pockets + Flap Ticket Pocket": "two straight horizontal hip pockets with rectangular flaps, plus ONE smaller flap ticket pocket (a two-thirds-size copy of a hip pocket, with its own flap) about 4 cm above the wearer's right hip pocket only",
+    "Slant Flap Pocket": "two hip pockets with rectangular flaps ('hacking' pockets) cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right)",
+    "Slant Flap + Single Besom Ticket": "two hip pockets with rectangular flaps cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right), plus ONE smaller single-besom ticket pocket (one thin lip, no flap) about 4 cm above the wearer's right hip pocket only, at the same slant as it",
+    "Slant Flap + Double Besom Ticket": "two hip pockets with rectangular flaps cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right), plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only, at the same slant as it",
+    "Slant Flap + Flap Ticket Pocket": "two hip pockets with rectangular flaps cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right), plus ONE smaller flap ticket pocket (a two-thirds-size copy of a hip pocket, with its own flap) about 4 cm above the wearer's right hip pocket only, at the same slant as it",
     "Patch Pocket": "two square patch pockets sewn on top of the jacket at the hips, open at the top, no flaps",
-    "Patch Pocket + Single Besom Ticket": "two patch hip pockets, plus a single-besom ticket pocket just above the wearer's right patch pocket",
-    "Patch Pocket + Double Besom Ticket": "two patch hip pockets, plus a double-besom ticket pocket just above the wearer's right patch pocket",
+    "Patch Pocket + Single Besom Ticket": "two patch hip pockets sewn on top of the jacket, open at the top, no flaps, plus ONE single-besom ticket pocket (one thin lip, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
+    "Patch Pocket + Double Besom Ticket": "two patch hip pockets sewn on top of the jacket, open at the top, no flaps, plus ONE double-besom ticket pocket (two thin lips, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
     "Curved Patch Pocket": "two patch hip pockets with generously ROUNDED bottom corners, open at the top, no flaps",
     "High-Back Patch Pocket": "two patch hip pockets whose top edge slopes, higher at the back (side) than at the front",
-    "High-Back Patch + Single Besom Ticket": "two high-back patch hip pockets, plus a single-besom ticket pocket just above the wearer's right patch pocket",
-    "High-Back Patch + Double Besom Ticket": "two high-back patch hip pockets, plus a double-besom ticket pocket just above the wearer's right patch pocket",
+    "High-Back Patch + Single Besom Ticket": "two high-back patch hip pockets (top edge higher at the side seam than at the front), plus ONE single-besom ticket pocket (one thin lip, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
+    "High-Back Patch + Double Besom Ticket": "two high-back patch hip pockets (top edge higher at the side seam than at the front), plus ONE double-besom ticket pocket (two thin lips, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
     "No Front Pocket": "NO hip pockets at all; the lower front of the jacket is plain",
   },
   "Button Nail Method": {
@@ -407,10 +407,10 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const ventNote = vents ? " showing the vents (" + vents + ")" : "";
   const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
   const lowerLooks = (OPTION_LOOKS["Lower Pockets"] || {})[lower];
-  const hipNote = (/Slant/.test(lower) ? " (" + SLANT_HIP + ")" : "") + (lowerLooks ? " (" + lowerLooks + ")" : "");
+  const hipNote = (lowerLooks ? " (" + lowerLooks + ")" : "") + (/Slant/.test(lower) ? " (" + SLANT_HIP + ")" : "");
   const extra = INSIDE_VIEW_EXTRA[insideStyle];
   const openNote = ". The front that stays closed shows exactly the same outside pockets as that side of the front view (its hip pocket" +
-    (/Slant/.test(lower) ? ", SLANTED as in the front view" : "") + ", plus the ticket pocket or chest pocket if that side has one" +
+    (/Slant/.test(lower) ? ", on the same diagonal as in the front view" : "") + ", plus the ticket pocket or chest pocket if that side has one" +
     ") and nothing else: no tab, button or extra pocket on the outside. The folded-open front shows its inside: exactly ONE horizontal inside welt pocket at chest height, level with the outside chest pocket, running from the fabric facing into the lining" +
     (extra ? "; " + extra : "") + ". No other pockets, tabs or buttons anywhere on the lining, and nothing on the lower half of the lining";
   return jacketOnly
@@ -499,23 +499,48 @@ const CHEST_REF: Record<string, string> = {
 const WELT_NOT_FLAP =
   "single WELT pockets, NOT flap pockets: on each hip a narrow rectangular welt strip of the suit fabric stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like the chest pocket; nothing hangs down over the opening, there is no flap and no shadow under a flap";
 
-// Slanted hip pockets came out level (straight flaps), so the slant is spelled
-// out and a reference picture with clearly slanted pockets is sent
-// (assets/jacket-hipref2-*, made by scripts/hipref_slant.py; the catalog
-// drawings were only faintly slanted and still came out level).
+// Slanted hip pockets came out level (straight flaps) even with the old
+// "end nearest the front buttons higher" wording and a 17 degree reference,
+// so the slant is now described as it looks in the picture ('/' and '\\')
+// and a bolder 22 degree reference is sent (assets/jacket-hipref3-*, made by
+// scripts/hipref_slant.py; the catalog drawings were only faintly slanted).
 const SLANT_HIP =
-  "the hip pockets are SLANTED, not horizontal: each pocket opening (and its flap, if it has one) is tilted about 15 degrees, with the end nearest the front buttons clearly HIGHER and the end toward the side seam clearly LOWER, mirrored on both sides, like hacking pockets; never straight, level pockets";
+  "the hip pockets are cut on a clear DIAGONAL, never level: in the front view the pocket on the LEFT of the picture rises from left to right (like '/') and the pocket on the RIGHT of the picture falls from left to right (like '\\'), so each pocket's end nearest the front buttons is clearly HIGHER than its end at the side seam and the two pockets lean in toward the buttons like the two sides of a wide upside-down V. Each opening (and its flap, if it has one) is tilted about 20 degrees, a slant obvious at a glance, like hacking pockets";
+// The ticket pocket: which side, how big and what kind, from the option name.
+function ticketText(lower: string): string {
+  if (!/Ticket/.test(lower)) return "";
+  const kind = /Flap Ticket/.test(lower)
+    ? "a smaller flap pocket with its own flap, a two-thirds-size copy of the hip pocket"
+    : /Double Besom Ticket/.test(lower)
+    ? "a double-besom slit (TWO thin piped lips, touching) with no flap"
+    : "a single-besom slit (ONE thin piped lip) with no flap";
+  return "there is exactly ONE ticket pocket, on the wearer's RIGHT side only (the LEFT side of the picture), about 4 cm directly above that hip pocket, about two thirds as wide as it, with its outer end lined up over the hip pocket's outer end" +
+    (/Slant/.test(lower) ? " and tilted at the same slant, parallel to it" : "") +
+    ". The ticket pocket is " + kind + (/Patch/.test(lower) ? " (it is NOT a patch pocket)" : "") +
+    ". The wearer's left side has only its hip pocket, no ticket pocket";
+}
 const HIP_REF: Record<string, string> = {
-  "Single Besom Slant Pocket": "./assets/jacket-hipref2-sbslant.jpg",
-  "Double Besom Slant Pocket": "./assets/jacket-hipref2-dbslant.jpg",
-  "Slant Flap Pocket": "./assets/jacket-hipref2-slantflap.jpg",
-  "Slant Flap + Single Besom Ticket": "./assets/jacket-hipref2-slantflapsbt.jpg",
-  "Slant Flap + Double Besom Ticket": "./assets/jacket-hipref2-slantflapdbt.jpg",
-  "Slant Flap + Flap Ticket Pocket": "./assets/jacket-hipref2-slantflapft.jpg",
+  "Single Besom Slant Pocket": "./assets/jacket-hipref3-sbslant.jpg",
+  "Double Besom Slant Pocket": "./assets/jacket-hipref3-dbslant.jpg",
+  "Slant Flap Pocket": "./assets/jacket-hipref3-slantflap.jpg",
+  "Slant Flap + Single Besom Ticket": "./assets/jacket-hipref3-slantflapsbt.jpg",
+  "Slant Flap + Double Besom Ticket": "./assets/jacket-hipref3-slantflapdbt.jpg",
+  "Slant Flap + Flap Ticket Pocket": "./assets/jacket-hipref3-slantflapft.jpg",
+  "Single Besom + Single Besom Ticket": "./assets/jacket-hipref3-sbsbt.jpg",
+  "Double Besom + Double Besom Ticket": "./assets/jacket-hipref3-dbdbt.jpg",
+  "Flap Pockets + Single Besom Ticket": "./assets/jacket-hipref3-flapsbt.jpg",
+  "Flap Pockets + Double Besom Ticket": "./assets/jacket-hipref3-flapdbt.jpg",
+  "Flap Pockets + Flap Ticket Pocket": "./assets/jacket-hipref3-flapft.jpg",
+  "Patch Pocket + Single Besom Ticket": "./assets/jacket-hipref3-patchsbt.jpg",
+  "Patch Pocket + Double Besom Ticket": "./assets/jacket-hipref3-patchdbt.jpg",
 };
 
 function keyDetails(spec: string, ownLining = false): string {
   const out: string[] = [];
+  // First: the image model kept drawing level hip pockets when this came later.
+  const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
+  if (/Slant/.test(lower)) out.push("- HIP POCKETS (" + lower + "): " + SLANT_HIP + ".");
+  if (ticketText(lower)) out.push("- TICKET POCKET: " + ticketText(lower) + ".");
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   const lapel = (OPTION_LOOKS["Lapel Style"] || {})[lapelStyle];
   if (lapel) {
@@ -540,9 +565,6 @@ function keyDetails(spec: string, ownLining = false): string {
   }
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     out.push("- HIP POCKETS: " + WELT_NOT_FLAP + ".");
-  }
-  if (/^Lower Pockets: .*Slant/m.test(spec)) {
-    out.push("- HIP POCKETS: " + SLANT_HIP + ".");
   }
   if (ownLining) {
     out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
@@ -652,8 +674,12 @@ function fixedRules(spec: string): string {
       "- The hip pockets are WELT pockets identical in style to the chest welt pocket, just lower: a flat rectangular fabric welt strip over each opening. They have NO flaps and are NOT besom (thin piped slit) pockets.",
     );
   }
-  if (/^Lower Pockets: .*Slant/m.test(spec)) {
-    rules.push("- MOST IMPORTANT: " + SLANT_HIP + ", in the front view and every view that shows them.");
+  const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
+  if (/Slant/.test(lower)) {
+    rules.push("- MOST IMPORTANT: " + SLANT_HIP + ". Draw them on this diagonal in the front view, the open-jacket view and the hip pocket close-up; level, horizontal hip pockets are wrong.");
+  }
+  if (ticketText(lower)) {
+    rules.push("- Ticket pocket, in every view that shows that side: " + ticketText(lower) + ".");
   }
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
   if (LAPEL_NOT[lapelStyle]) {
@@ -714,7 +740,8 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       lines.push(`Image ${n++} is a black-and-white line drawing, a close-up of the customer's chosen CHEST POCKET ("${chest}") on the wearer's left chest (the long line on the left is the lapel edge): copy EXACTLY the pocket's shape and proportions: ${CHEST_NOT[chest] || ""}. Render it photorealistically in the suit fabric, never as a drawing, in the front view and in any chest close-up.`);
     } else if (r.label === "hip pocket reference") {
       const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
-      lines.push(`Image ${n++} is a reference illustration, a close-up of the lower front of a gray jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type, which side any ticket pocket is on (above the wearer's right hip pocket, the left one in the picture) and their SLANT: ${SLANT_HIP}. Copy only the pockets (not the gray color or the button). Render them photorealistically in the suit fabric, never as a drawing.`);
+      const slanted = /Slant/.test(lower);
+      lines.push(`Image ${n++} is a reference illustration, a close-up of the lower front of a gray jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type${/Ticket/.test(lower) ? ", the ticket pocket (above the wearer's right hip pocket, the left one in the picture, and on that side only)" : ""} and their angle: ${slanted ? SLANT_HIP + ", exactly as steep as in this illustration" : "straight and level"}. Copy only the pockets (not the gray color or the button). Render them photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "pocket reference") {
       lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pocket, two close-ups: copy EXACTLY its look: ${WELT_NOT_FLAP}, with no besom piping. Render the pockets photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "lapel reference") {
@@ -952,7 +979,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const chestRefSrc = CHEST_REF[(spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || ""];
   const chestRef: Ref[] = chestRefSrc ? [{ label: "chest pocket reference", src: chestRefSrc }] : [];
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
-    .concat(chestRef, pocketRef, hipRef, swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
+    .concat(hipRef, chestRef, pocketRef, swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   const loadOne = async (r: Ref) =>
     ventImg && r.label === "style Buttons On Sleeve Cuff" ? null :
     (ventImg && r.label === "style Sleeve Cuff Styles" && ventImg) ||
