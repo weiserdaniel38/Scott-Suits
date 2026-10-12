@@ -21,6 +21,9 @@
 //       { order_id, suit_number }          draw for an order row (once per suit)
 //       { order_id, suit_number, check }   ask whether it's done yet
 //     order_id is the random UUID only the customer's browser knows.
+//     Starting a drawing (preview, or an order row) needs a signed-in
+//     customer's token (Authorization: Bearer); guests get 401
+//     { status: "signin" }. Checking and attaching don't.
 //   * { ping: true }                       is this feature switched on?
 //   * Optionally by the database when an order is marked completed
 //     (supabase/sql/2_suit_image_trigger.sql), or by hand to redraw:
@@ -1019,29 +1022,43 @@ async function countSince(filter: Record<string, string> | null, sinceIso: strin
   return count || 0;
 }
 
-// True when the request carries the sign-in token of an account listed in
-// public.admins (see supabase/sql/6_admin_account.sql). Admins skip the
-// picture limits. Any problem (no token, table not created yet) means "not admin".
-async function isAdminRequest(req: Request): Promise<boolean> {
+// The signed-in customer's account id from the request's sign-in token, or
+// null for a guest (no token, expired token, or the anon key). Only signed-in
+// customers can have a picture drawn; guests can still order without one.
+async function requestUserId(req: Request): Promise<string | null> {
   const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
-  if (!m) return false;
+  if (!m) return null;
   try {
     const { data, error } = await supabase.auth.getUser(m[1]);
-    if (error || !data?.user) return false;
-    const { data: row } = await supabase.from("admins").select("user_id").eq("user_id", data.user.id).maybeSingle();
+    return error || !data?.user ? null : data.user.id;
+  } catch {
+    return null;
+  }
+}
+
+// True when the account is listed in public.admins (see
+// supabase/sql/6_admin_account.sql). Admins skip the picture limits. Any
+// problem (table not created yet) means "not admin".
+async function isAdmin(userId: string): Promise<boolean> {
+  try {
+    const { data: row } = await supabase.from("admins").select("user_id").eq("user_id", userId).maybeSingle();
     return !!row;
   } catch {
     return false;
   }
 }
 
+const SIGN_IN_NEEDED = () => json({ status: "signin", error: "Sign in to have your suit drawn" }, 401);
+
 async function startPreview(req: Request, raw: string): Promise<Response> {
   if (!looksLikeSuitSpec(raw)) return json({ error: "Not a suit description" }, 400);
+  const userId = await requestUserId(req);
+  if (!userId) return SIGN_IN_NEEDED();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const visitor = await visitorKey(req);
   // Limits are off unless set (turned off for now at Daniel's request), and
   // never apply to the shop admin.
-  const admin = await isAdminRequest(req);
+  const admin = await isAdmin(userId);
   const perVisitor = admin ? 0 : Number(env("PREVIEW_PER_VISITOR_PER_DAY", "0"));
   const perDay = admin ? 0 : Number(env("PREVIEW_PER_DAY", "0"));
   if (perVisitor > 0 && (await countSince({ visitor }, since)) >= perVisitor) return json({ status: "limit", scope: "visitor" }, 429);
@@ -1171,6 +1188,7 @@ Deno.serve(async (req) => {
   }
 
   if (!env("OPENAI_API_KEY")) return json({ status: "unavailable" }, 503);
+  if (!(await requestUserId(req))) return SIGN_IN_NEEDED();
   const row = await claim(found.id, false);
   if (row) {
     const p = runInBackground(generate(row));
