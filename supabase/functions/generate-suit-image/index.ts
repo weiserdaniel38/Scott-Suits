@@ -501,9 +501,10 @@ const WELT_NOT_FLAP =
 
 // Slanted hip pockets came out level (straight flaps) even with the old
 // "end nearest the front buttons higher" wording and a 17 degree reference,
-// so the slant is now described as it looks in the picture ('/' and '\\')
-// and a bolder 22 degree reference is sent (assets/jacket-hipref3-*, made by
-// scripts/hipref_slant.py; the catalog drawings were only faintly slanted).
+// so the slant is now described as it looks in the picture ('/' and '\\').
+// The reference is always the website's own graphic (Daniel's rule), cropped
+// to the hip pockets and enlarged: assets/jacket-hipref-*, made by
+// scripts/hipref_crop.py from assets/jacket-lowerpocket-new-*.
 const SLANT_HIP =
   "the hip pockets are cut on a clear DIAGONAL, never level: in the front view the pocket on the LEFT of the picture rises from left to right (like '/') and the pocket on the RIGHT of the picture falls from left to right (like '\\'), so each pocket's end nearest the front buttons is clearly HIGHER than its end at the side seam and the two pockets lean in toward the buttons like the two sides of a wide upside-down V. Each opening (and its flap, if it has one) is tilted about 20 degrees, a slant obvious at a glance, like hacking pockets";
 // The ticket pocket: which side, how big and what kind, from the option name.
@@ -520,19 +521,21 @@ function ticketText(lower: string): string {
     ". The wearer's left side has only its hip pocket, no ticket pocket";
 }
 const HIP_REF: Record<string, string> = {
-  "Single Besom Slant Pocket": "./assets/jacket-hipref3-sbslant.jpg",
-  "Double Besom Slant Pocket": "./assets/jacket-hipref3-dbslant.jpg",
-  "Slant Flap Pocket": "./assets/jacket-hipref3-slantflap.jpg",
-  "Slant Flap + Single Besom Ticket": "./assets/jacket-hipref3-slantflapsbt.jpg",
-  "Slant Flap + Double Besom Ticket": "./assets/jacket-hipref3-slantflapdbt.jpg",
-  "Slant Flap + Flap Ticket Pocket": "./assets/jacket-hipref3-slantflapft.jpg",
-  "Single Besom + Single Besom Ticket": "./assets/jacket-hipref3-sbsbt.jpg",
-  "Double Besom + Double Besom Ticket": "./assets/jacket-hipref3-dbdbt.jpg",
-  "Flap Pockets + Single Besom Ticket": "./assets/jacket-hipref3-flapsbt.jpg",
-  "Flap Pockets + Double Besom Ticket": "./assets/jacket-hipref3-flapdbt.jpg",
-  "Flap Pockets + Flap Ticket Pocket": "./assets/jacket-hipref3-flapft.jpg",
-  "Patch Pocket + Single Besom Ticket": "./assets/jacket-hipref3-patchsbt.jpg",
-  "Patch Pocket + Double Besom Ticket": "./assets/jacket-hipref3-patchdbt.jpg",
+  "Single Besom Slant Pocket": "./assets/jacket-hipref-sbslant.jpg",
+  "Double Besom Slant Pocket": "./assets/jacket-hipref-dbslant.jpg",
+  "Slant Flap Pocket": "./assets/jacket-hipref-slantflap.jpg",
+  "Slant Flap + Single Besom Ticket": "./assets/jacket-hipref-slantflapsbt.jpg",
+  "Slant Flap + Double Besom Ticket": "./assets/jacket-hipref-slantflapdbt.jpg",
+  "Slant Flap + Flap Ticket Pocket": "./assets/jacket-hipref-slantflapft.jpg",
+  "Single Besom + Single Besom Ticket": "./assets/jacket-hipref-sbsbt.jpg",
+  "Double Besom + Double Besom Ticket": "./assets/jacket-hipref-dbdbt.jpg",
+  "Flap Pockets + Single Besom Ticket": "./assets/jacket-hipref-dbwflapsbt.jpg",
+  "Flap Pockets + Double Besom Ticket": "./assets/jacket-hipref-dbwflapdbt.jpg",
+  "Flap Pockets + Flap Ticket Pocket": "./assets/jacket-hipref-flapft.jpg",
+  "Patch Pocket + Single Besom Ticket": "./assets/jacket-hipref-patchsbt.jpg",
+  "Patch Pocket + Double Besom Ticket": "./assets/jacket-hipref-patchdbt.jpg",
+  "High-Back Patch + Single Besom Ticket": "./assets/jacket-hipref-patchhighbacksbt.jpg",
+  "High-Back Patch + Double Besom Ticket": "./assets/jacket-hipref-patchhighbackdbt.jpg",
 };
 
 function keyDetails(spec: string, ownLining = false): string {
@@ -741,7 +744,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
     } else if (r.label === "hip pocket reference") {
       const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
       const slanted = /Slant/.test(lower);
-      lines.push(`Image ${n++} is a reference illustration, a close-up of the lower front of a gray jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type${/Ticket/.test(lower) ? ", the ticket pocket (above the wearer's right hip pocket, the left one in the picture, and on that side only)" : ""} and their angle: ${slanted ? SLANT_HIP + ", exactly as steep as in this illustration" : "straight and level"}. Copy only the pockets (not the gray color or the button). Render them photorealistically in the suit fabric, never as a drawing.`);
+      lines.push(`Image ${n++} is a black-and-white catalog line drawing, a close-up of the lower front of the jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type${/Ticket/.test(lower) ? ", the ticket pocket (above the wearer's right hip pocket, the left one in the picture, and on that side only)" : ""} and their angle: ${slanted ? SLANT_HIP + ", at least as steep as in this drawing" : "exactly as drawn, not slanted"}. Copy only the pockets. Render them photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "pocket reference") {
       lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pocket, two close-ups: copy EXACTLY its look: ${WELT_NOT_FLAP}, with no besom piping. Render the pockets photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "lapel reference") {
