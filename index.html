@@ -103,8 +103,6 @@
             </div>
             <b id="cartBarTotal"></b>
           </div>
-          <!-- "Buy 9 suits, get a blazer free" progress; see renderFreeBlazerNote() in main.js. -->
-          <p class="nav-cart-promo" id="cartPromoNote">Buy 9 suits, get a blazer free.</p>
           <div class="nav-cart-items" id="cartBarList"></div>
           <!-- Jumps straight to Personal Info/shipping with whatever's
                already in the cart -- skips re-visiting Jacket/Pants/
@@ -174,7 +172,6 @@
         <button class="btn-primary" id="heroStartDesigningBtn" onclick="startDesigning()">Start Designing <span aria-hidden="true">&rarr;</span></button>
         <button class="btn-ghost" id="howItWorksHeroBtn">See how it works</button>
       </div>
-      <p class="hero-promo">Buy 9 suits, get a blazer free</p>
       <!-- A quick-scan row of the site's two core promises -- convenience and
            customization -- for anyone who won't read the full paragraph above,
            right on the first screen they see. -->
@@ -278,7 +275,6 @@
     </button>
   </div>
   <p class="suit-type-note">Every style option is included in the price. No upcharges.</p>
-  <p class="suit-type-promo">Buy 9 suits, get a blazer free.</p>
   <!-- Preset Suit / Preset Jacket, kept low-key on purpose (Daniel,
        2026-10-11): small text links, not extra cards. Only fabric (4 dark
        solids), single/double breasted and lapel style are asked (plus hem or
@@ -675,13 +671,6 @@
       <div class="measure-grid" id="profileMeasureGrid"></div>
       <button type="button" class="btn-primary" id="saveProfileMeasurementsBtn">Save Measurements</button>
       <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
-
-      <!-- Free blazer counter (buy 9 suits, get a blazer free); filled in by
-           renderFreeBlazerCounter() in main.js. -->
-      <div class="blazer-counter" id="freeBlazerCounter">
-        <div class="blazer-counter-head"><b class="blazer-counter-count">0 of 9 suits</b> <span class="blazer-counter-note">bought toward your next free blazer.</span></div>
-        <div class="blazer-counter-bar"><span></span></div>
-      </div>
 
       <h3>Past Orders</h3>
       <div id="pastOrdersList"></div>

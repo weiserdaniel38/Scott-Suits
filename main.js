@@ -65,51 +65,8 @@ function liningUploadSurcharge(jacketSel) {
 }
 // Price of one suit in the cart: the flat suit-type price plus any option
 // surcharge (currently only the custom lining photo).
-// Pass the item's cart index so the free-blazer promo (below) can apply.
-function itemPriceUsd(item, index) {
-  const base = isFreeBlazerIndex(index) ? 0 : suitPriceForType(item.type);
-  return base + liningUploadSurcharge(item.jacket);
-}
-
-// "Buy 9 suits, get a blazer free" (Daniel, 2026-10-13): every 9 suits in
-// the cart (full or preset, anything with pants) earns one free jacket-only
-// item. The earliest jacket-only items in the cart are the free ones; only
-// the $250 jacket price is waived, an option surcharge is still charged.
-const FREE_BLAZER_EVERY = 9;
-function cartSuitCount(items) {
-  return (items || cartItems).filter((it) => !isJacketOnlyType(it.type)).length;
-}
-// A signed-in customer's earlier orders count too (Daniel, 2026-10-13):
-// suits already bought, and free blazers already used. Filled in by
-// loadOrderHistory(); both stay 0 for a guest.
-let pastSuitCount = 0;
-let pastFreeBlazerCount = 0;
-function freeBlazersEarned(items) {
-  const total = Math.floor((pastSuitCount + cartSuitCount(items)) / FREE_BLAZER_EVERY);
-  return Math.max(0, total - pastFreeBlazerCount);
-}
-function freeBlazerIndexes(items) {
-  items = items || cartItems;
-  let earned = freeBlazersEarned(items);
-  const free = [];
-  items.forEach((it, i) => {
-    if (earned > 0 && isJacketOnlyType(it.type)) { free.push(i); earned--; }
-  });
-  return free;
-}
-function isFreeBlazerIndex(index) {
-  return typeof index === "number" && freeBlazerIndexes().includes(index);
-}
-// Whether the jacket now in the designer would be free once added (or is
-// free, when it's a cart item opened with Edit).
-function designerBlazerIsFree() {
-  if (!isJacketOnlyType(currentSuitType)) return false;
-  try { cartItems; pendingCommitIndex; editingCartIndex; } catch (e) { return false; }
-  const idx = editingCartIndex !== null ? editingCartIndex : pendingCommitIndex;
-  const items = cartItems.slice();
-  const at = idx !== null && idx !== undefined && idx < items.length ? idx : items.length;
-  items[at] = { type: currentSuitType };
-  return freeBlazerIndexes(items).includes(at);
+function itemPriceUsd(item) {
+  return suitPriceForType(item.type) + liningUploadSurcharge(item.jacket);
 }
 
 // The measurement fields relevant to the suit type currently being designed
@@ -741,19 +698,10 @@ function escapeAttr(str) {
 // Past orders are grouped back into one row per order_id (an order can have
 // several suits, several rows) -- same grouping idea as the multi-suit cart,
 // just read back out of Supabase instead of built live from cartItems.
-function setPastBlazerCounts(suits, usedBlazers) {
-  pastSuitCount = suits;
-  pastFreeBlazerCount = usedBlazers;
-  if (typeof renderCartBar === "function") {
-    try { renderCartBar(); updateOrderSummaryUI(); refreshDesignerPrice(); } catch (e) { /* page still starting up */ }
-  }
-}
-
 async function loadOrderHistory() {
   if (!pastOrdersList) return;
   if (!currentUser) {
     pastOrdersList.innerHTML = "";
-    setPastBlazerCounts(0, 0);
     return;
   }
   pastOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
@@ -775,12 +723,6 @@ async function loadOrderHistory() {
       pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
       return;
     }
-    // Suits bought (anything with pants) and free blazers used (a jacket
-    // saved below the $250 jacket price) count toward the free blazer promo.
-    setPastBlazerCounts(
-      (data || []).filter((r) => r.suit_type !== "jacket_only").length,
-      (data || []).filter((r) => r.suit_type === "jacket_only" && (Number(r.item_price_usd) || 0) < JACKET_ONLY_PRICE_USD).length
-    );
     if (!data || !data.length) {
       pastOrdersList.innerHTML = '<p class="account-section-note">No past orders yet.</p>';
       return;
@@ -4347,7 +4289,7 @@ function cartTotalUsd() {
     try { extra = liningUploadSurcharge(jacketDesigner.getSelections()); } catch (e) { extra = 0; }
     return suitPriceForType(currentSuitType) + extra;
   }
-  return cartItems.reduce((sum, item, i) => sum + itemPriceUsd(item, i), 0);
+  return cartItems.reduce((sum, item) => sum + itemPriceUsd(item), 0);
 }
 
 // Keeps the Submit/Pay button and the order-total note on the Personal Info
@@ -4362,7 +4304,6 @@ function updateOrderSummaryUI() {
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
   let text = "Total: $" + total + " (" + qty + (qty === 1 ? " suit" : " suits") + ")";
-  if (freeBlazerIndexes().length) text += ", free blazer included";
   if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
   orderTotalNote.textContent = text;
   orderTotalNote.hidden = false;
@@ -4406,39 +4347,6 @@ function cartItemTitle(item) {
   return [color, lapel, noun].filter(Boolean).join(" ");
 }
 
-// The "Buy 9 suits, get a blazer free" line in the cart dropdown: how many
-// more suits until the free blazer, how to claim it once earned, or that it
-// is in the cart.
-function freeBlazerPromoText() {
-  const earned = freeBlazersEarned();
-  const claimed = freeBlazerIndexes().length;
-  if (earned > claimed) {
-    return "You've earned a free blazer! Add a Jacket Only to your order and the jacket is on us.";
-  }
-  if (claimed) return claimed === 1 ? "Free blazer included in this order." : claimed + " free blazers included in this order.";
-  const suits = pastSuitCount + cartSuitCount();
-  if (!suits) return "Buy 9 suits, get a blazer free.";
-  const more = FREE_BLAZER_EVERY - (suits % FREE_BLAZER_EVERY);
-  return "Add " + more + " more " + (more === 1 ? "suit" : "suits") + " to get a free blazer.";
-}
-// The account page counter: suits bought so far toward the next free blazer.
-function renderFreeBlazerCounter() {
-  const el = document.getElementById("freeBlazerCounter");
-  if (!el) return;
-  const unused = Math.max(0, Math.floor(pastSuitCount / FREE_BLAZER_EVERY) - pastFreeBlazerCount);
-  const toward = pastSuitCount % FREE_BLAZER_EVERY;
-  el.querySelector(".blazer-counter-count").textContent = toward + " of " + FREE_BLAZER_EVERY + " suits";
-  el.querySelector(".blazer-counter-bar span").style.width = (toward / FREE_BLAZER_EVERY) * 100 + "%";
-  el.querySelector(".blazer-counter-note").textContent =
-    "bought toward your next free blazer." +
-    (unused ? " You have a free blazer waiting: add a Jacket Only to your next order and it's on us." : "");
-}
-function renderFreeBlazerNote() {
-  const el = document.getElementById("cartPromoNote");
-  if (el) el.textContent = freeBlazerPromoText();
-  renderFreeBlazerCounter();
-}
-
 function renderCartBar() {
   const cartBadge = document.getElementById("cartBadge");
   const cartBarCount = document.getElementById("cartBarCount");
@@ -4455,8 +4363,7 @@ function renderCartBar() {
   }
 
   cartBarCount.textContent = cartItems.length + (cartItems.length === 1 ? " suit" : " suits");
-  cartBarTotal.textContent = "$" + cartTotalUsd();
-  renderFreeBlazerNote();
+  cartBarTotal.textContent = "$" + cartItems.reduce((sum, item) => sum + itemPriceUsd(item), 0);
   if (cartCheckoutBtn) cartCheckoutBtn.hidden = !cartItems.length;
 
   cartBarList.innerHTML = "";
@@ -4478,11 +4385,9 @@ function renderCartBar() {
     row.innerHTML =
       '<div class="cart-item-info"><span class="cart-item-type"></span><span class="cart-item-label"></span>' +
       '<button type="button" class="cart-item-edit">Edit</button></div>' +
-      '<span class="cart-item-price">$' + itemPriceUsd(item, i) + "</span>" +
+      '<span class="cart-item-price">$' + itemPriceUsd(item) + "</span>" +
       '<button type="button" class="cart-item-remove" aria-label="Remove this suit">&times;</button>';
-    const free = isFreeBlazerIndex(i);
-    row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + (free ? "Free Blazer" : typeTag);
-    if (free) row.classList.add("cart-item-free");
+    row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + typeTag;
     row.querySelector(".cart-item-label").textContent = cartItemTitle(item);
     if (i === editingCartIndex) row.classList.add("editing");
     const editBtn = row.querySelector(".cart-item-edit");
@@ -5045,7 +4950,6 @@ function collectAndValidateOrderInput() {
 function monoText(item, part) {
   return (item && item.texts && item.texts[part] && item.texts[part].monogram) || "";
 }
-const FREE_BLAZER_LINE = "FREE BLAZER (Buy 9 suits, get a blazer free) -- $0";
 function buildAllSuitsClientFormText(customerName) {
   if (cartItems.length === 1) {
     const item = cartItems[0];
@@ -5053,8 +4957,7 @@ function buildAllSuitsClientFormText(customerName) {
   }
   return cartItems
     .map((item, i) => {
-      let text = buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
-      if (isFreeBlazerIndex(i)) text = FREE_BLAZER_LINE + "\n" + text;
+      const text = buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
       return "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + text;
     })
     .join("\n\n" + "=".repeat(40) + "\n\n");
@@ -5533,7 +5436,7 @@ async function finalizeOrder(input, opts) {
     row.user_id = currentUser ? currentUser.id : null;
     row.suit_number = i + 1;
     row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : "full_suit";
-    row.item_price_usd = itemPriceUsd(item, i);
+    row.item_price_usd = itemPriceUsd(item);
     if (adminNoPayment) row.admin_no_payment = true;
     Object.assign(row, item.measurements);
 
@@ -5544,8 +5447,7 @@ async function finalizeOrder(input, opts) {
     // only for the notification email below, in their own separate block,
     // so the shop still has a fast way to reach the customer without it
     // cluttering the spec sheet.
-    let suitText = buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrls[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
-    if (isFreeBlazerIndex(i)) suitText = FREE_BLAZER_LINE + "\n" + suitText;
+    const suitText = buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrls[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
     row.client_form_text = cartItems.length === 1 ? suitText : "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + suitText;
     // Plain-English, personal-data-free description of the suit -- read by
     // the AI that writes the "finished suit" image prompt once the shop marks
@@ -6297,7 +6199,7 @@ function updateProcessBarForSuitType() {
 function refreshDesignerPrice() {
   let extra = 0;
   try { extra = typeof jacketDesigner !== "undefined" ? liningUploadSurcharge(jacketDesigner.getSelections()) : 0; } catch (e) { extra = 0; }
-  const price = (designerBlazerIsFree() ? 0 : suitPriceForType(currentSuitType)) + extra;
+  const price = suitPriceForType(currentSuitType) + extra;
   ["totalPrice", "pantsTotalPrice"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = "$" + price;
