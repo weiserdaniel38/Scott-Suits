@@ -1674,3 +1674,9 @@ body:not(.designing) #suitTypeSection{display:none;}
 .nav-cart-promo{margin:0;padding:10px 22px;font-size:12.5px;line-height:1.45;color:var(--brass);border-bottom:1px solid var(--line);}
 .cart-item-free .cart-item-price{color:var(--brass);}
 .suit-type-promo{font-size:12.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--brass);text-align:center;margin-top:10px;font-weight:600;}
+.hero-promo{margin-top:18px;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--brass);}
+.blazer-counter{margin:4px 0 22px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;}
+.blazer-counter-head{font-size:13px;line-height:1.5;color:var(--ivory-dim);}
+.blazer-counter-count{color:var(--brass);font-size:15px;}
+.blazer-counter-bar{margin-top:10px;height:5px;border-radius:3px;background:var(--line);overflow:hidden;}
+.blazer-counter-bar span{display:block;height:100%;width:0;background:var(--brass);transition:width .4s ease;}

@@ -79,9 +79,18 @@ const FREE_BLAZER_EVERY = 9;
 function cartSuitCount(items) {
   return (items || cartItems).filter((it) => !isJacketOnlyType(it.type)).length;
 }
+// A signed-in customer's earlier orders count too (Daniel, 2026-10-13):
+// suits already bought, and free blazers already used. Filled in by
+// loadOrderHistory(); both stay 0 for a guest.
+let pastSuitCount = 0;
+let pastFreeBlazerCount = 0;
+function freeBlazersEarned(items) {
+  const total = Math.floor((pastSuitCount + cartSuitCount(items)) / FREE_BLAZER_EVERY);
+  return Math.max(0, total - pastFreeBlazerCount);
+}
 function freeBlazerIndexes(items) {
   items = items || cartItems;
-  let earned = Math.floor(cartSuitCount(items) / FREE_BLAZER_EVERY);
+  let earned = freeBlazersEarned(items);
   const free = [];
   items.forEach((it, i) => {
     if (earned > 0 && isJacketOnlyType(it.type)) { free.push(i); earned--; }
@@ -732,10 +741,19 @@ function escapeAttr(str) {
 // Past orders are grouped back into one row per order_id (an order can have
 // several suits, several rows) -- same grouping idea as the multi-suit cart,
 // just read back out of Supabase instead of built live from cartItems.
+function setPastBlazerCounts(suits, usedBlazers) {
+  pastSuitCount = suits;
+  pastFreeBlazerCount = usedBlazers;
+  if (typeof renderCartBar === "function") {
+    try { renderCartBar(); updateOrderSummaryUI(); refreshDesignerPrice(); } catch (e) { /* page still starting up */ }
+  }
+}
+
 async function loadOrderHistory() {
   if (!pastOrdersList) return;
   if (!currentUser) {
     pastOrdersList.innerHTML = "";
+    setPastBlazerCounts(0, 0);
     return;
   }
   pastOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
@@ -757,6 +775,12 @@ async function loadOrderHistory() {
       pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
       return;
     }
+    // Suits bought (anything with pants) and free blazers used (a jacket
+    // saved below the $250 jacket price) count toward the free blazer promo.
+    setPastBlazerCounts(
+      (data || []).filter((r) => r.suit_type !== "jacket_only").length,
+      (data || []).filter((r) => r.suit_type === "jacket_only" && (Number(r.item_price_usd) || 0) < JACKET_ONLY_PRICE_USD).length
+    );
     if (!data || !data.length) {
       pastOrdersList.innerHTML = '<p class="account-section-note">No past orders yet.</p>';
       return;
@@ -4386,20 +4410,33 @@ function cartItemTitle(item) {
 // more suits until the free blazer, how to claim it once earned, or that it
 // is in the cart.
 function freeBlazerPromoText() {
-  const suits = cartSuitCount();
-  const earned = Math.floor(suits / FREE_BLAZER_EVERY);
+  const earned = freeBlazersEarned();
   const claimed = freeBlazerIndexes().length;
   if (earned > claimed) {
     return "You've earned a free blazer! Add a Jacket Only to your order and the jacket is on us.";
   }
-  if (claimed) return "Free blazer included with your " + (earned * FREE_BLAZER_EVERY) + " suits.";
+  if (claimed) return claimed === 1 ? "Free blazer included in this order." : claimed + " free blazers included in this order.";
+  const suits = pastSuitCount + cartSuitCount();
   if (!suits) return "Buy 9 suits, get a blazer free.";
   const more = FREE_BLAZER_EVERY - (suits % FREE_BLAZER_EVERY);
   return "Add " + more + " more " + (more === 1 ? "suit" : "suits") + " to get a free blazer.";
 }
+// The account page counter: suits bought so far toward the next free blazer.
+function renderFreeBlazerCounter() {
+  const el = document.getElementById("freeBlazerCounter");
+  if (!el) return;
+  const unused = Math.max(0, Math.floor(pastSuitCount / FREE_BLAZER_EVERY) - pastFreeBlazerCount);
+  const toward = pastSuitCount % FREE_BLAZER_EVERY;
+  el.querySelector(".blazer-counter-count").textContent = toward + " of " + FREE_BLAZER_EVERY + " suits";
+  el.querySelector(".blazer-counter-bar span").style.width = (toward / FREE_BLAZER_EVERY) * 100 + "%";
+  el.querySelector(".blazer-counter-note").textContent =
+    "bought toward your next free blazer." +
+    (unused ? " You have a free blazer waiting: add a Jacket Only to your next order and it's on us." : "");
+}
 function renderFreeBlazerNote() {
   const el = document.getElementById("cartPromoNote");
   if (el) el.textContent = freeBlazerPromoText();
+  renderFreeBlazerCounter();
 }
 
 function renderCartBar() {
