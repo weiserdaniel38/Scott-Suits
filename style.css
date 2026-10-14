@@ -468,6 +468,14 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .account-tab:hover{color:var(--brass-light);}
 .account-form .measure-field{margin-bottom:18px;}
 .account-form .btn-primary{width:100%;justify-content:center;margin-top:6px;}
+.account-collapse{border-bottom:1px solid var(--line);padding-bottom:4px;}
+.account-collapse[open]{padding-bottom:22px;}
+.account-collapse summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:6px 0 10px;-webkit-tap-highlight-color:transparent;}
+.account-collapse summary::-webkit-details-marker{display:none;}
+.account-collapse summary h3{margin:28px 0 0;}
+.account-collapse-chevron{flex:none;width:10px;height:10px;margin-top:24px;margin-right:6px;border-right:2px solid var(--brass);border-bottom:2px solid var(--brass);transform:rotate(45deg);transition:transform .2s ease;}
+.account-collapse[open] .account-collapse-chevron{transform:rotate(-135deg);margin-top:30px;}
+@media(hover:hover){.account-collapse summary:hover h3{color:var(--brass-light);}}
 .account-section-note{color:var(--ivory-dim);font-size:13px;line-height:1.5;margin:0 0 18px;}
 .account-status-msg{color:var(--brass);font-size:13px;margin:14px 0 0;}
 #profileMeasureGrid{grid-template-columns:repeat(3,1fr);gap:16px;margin-top:0;}
