@@ -666,11 +666,15 @@
     <div id="accountLoggedInView" hidden>
       <p class="account-intro"><span id="accountGreetingWord">Welcome back</span>, <b id="accountNameDisplay"></b>. <button type="button" class="btn-ghost" id="accountLogoutBtn">Log out</button></p>
 
-      <h3>Saved Measurements</h3>
-      <p class="account-section-note">Fill these in once and reuse them any time you design a new suit.</p>
-      <div class="measure-grid" id="profileMeasureGrid"></div>
-      <button type="button" class="btn-primary" id="saveProfileMeasurementsBtn">Save Measurements</button>
-      <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
+      <!-- Collapsed by default (and again each time the popup closes) so the
+           long measurements grid doesn't push Past Orders off the screen. -->
+      <details class="account-collapse" id="savedMeasurementsSection">
+        <summary><h3>Saved Measurements</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <p class="account-section-note">Fill these in once and reuse them any time you design a new suit.</p>
+        <div class="measure-grid" id="profileMeasureGrid"></div>
+        <button type="button" class="btn-primary" id="saveProfileMeasurementsBtn">Save Measurements</button>
+        <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
+      </details>
 
       <h3>Past Orders</h3>
       <div id="pastOrdersList"></div>

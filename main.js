@@ -990,6 +990,8 @@ function refreshAccountData() {
     if (accountStatusMsg) hideAccountStatus(accountStatusMsg);
     if (signupForm) signupForm.reset();
     if (loginForm) loginForm.reset();
+    const savedMeasurements = document.getElementById("savedMeasurementsSection");
+    if (savedMeasurements) savedMeasurements.open = false;
   }
 
   if (accountIconBtn) accountIconBtn.addEventListener("click", (e) => open(e.currentTarget));
