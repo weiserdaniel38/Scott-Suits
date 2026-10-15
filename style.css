@@ -802,6 +802,8 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .suit-preview-loading-text{margin:0 0 8px;text-align:center;}
 .suit-preview-loading-text strong{display:block;font-size:18px;font-weight:700;}
 .suit-preview-loading-text span{display:block;margin-top:4px;font-size:14px;opacity:0.8;}
+.suit-preview-wait-notice{max-width:360px;margin:14px auto 6px;padding:10px 16px;border:1px solid var(--brass);border-radius:12px;background:rgba(176,141,87,0.10);font-size:14px;line-height:1.5;text-align:center;}
+.suit-preview-wait-notice strong{display:block;font-weight:700;color:var(--oxblood);}
 .suit-preview-img{display:block;width:100%;height:auto;margin-top:12px;border:1px solid var(--line);border-radius:6px;background:#fff;}
 .customer-name-field{margin-bottom:28px;max-width:360px;}
 .address-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;}

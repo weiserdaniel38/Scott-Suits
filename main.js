@@ -5151,7 +5151,11 @@ function buildSuitImageCard(labelText) {
         step = (step + 1) % steps.length;
         line.textContent = steps[step];
       }, 3500);
-      media.append(video, caption);
+      const notice = document.createElement("p");
+      notice.className = "suit-preview-wait-notice";
+      notice.setAttribute("role", "status");
+      notice.innerHTML = "<strong>Please don't refresh or click anywhere</strong> while your suit is being drawn.";
+      media.append(video, caption, notice);
       video.play().catch(() => {});
     },
     showImage(url) {
