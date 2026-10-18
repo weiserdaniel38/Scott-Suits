@@ -285,7 +285,7 @@ function smoothScrollContainerToX(container, targetX) {
 // straight past that header so they land right where they can start
 // selecting, instead of at the top of the page or the top of the section.
 const STEP_FOCUS_SELECTOR = {
-  designer: "#designerGrid",
+  designer: "#designerModeBar",
   pantsSection: "#pantsGrid",
   // A plain selector lands on the size estimator when neither shortcut
   // banner above it is showing. But when one IS showing (see
@@ -2221,6 +2221,22 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
 
   const tabsEl = document.getElementById(ids.tabs);
   const optionsEl = document.getElementById(ids.options);
+  // Interactive jacket (jacket-studio.js): while one of its panels is open,
+  // this very options element is moved into that panel, so the jacket's
+  // panel shows the designer's own cards for a question -- same pickers,
+  // same selections. embedHost is that panel's scroll box (null = the
+  // options are in their normal place in the step-by-step designer).
+  // embedQuiet: picks made on the homepage jacket don't flip the page into
+  // "designing" mode (that would hide the homepage under the customer).
+  let embedHost = null;
+  let embedQuiet = false;
+  const optionsHomeMarker = document.createComment("options home");
+  optionsEl.parentNode.insertBefore(optionsHomeMarker, optionsEl.nextSibling);
+  // Called after any change to the selections (see renderSummary).
+  const changeListeners = [];
+  // Set by the interactive jacket: a Review sheet row opens that question
+  // on the jacket instead of in the step-by-step designer.
+  let reviewRowHandler = null;
   const summaryRowsEl = document.getElementById(ids.summaryRows);
   // The tab strip's own hint line (see index.html -- a plain <p
   // class="tabs-hint"> right after the tabs div) isn't tracked by any id;
@@ -2515,10 +2531,19 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     sheet.addEventListener("click", (e) => { if (e.target === sheet) closeReview(); });
     sheet.querySelector(".wiz-close").onclick = closeReview;
     sheet.querySelectorAll(".wiz-row").forEach((b) => {
-      b.onclick = () => { const k = b.getAttribute("data-k"); closeReview(); if (k !== activeTab) switchTab(k); };
+      b.onclick = () => {
+        const k = b.getAttribute("data-k");
+        closeReview();
+        if (reviewRowHandler) { reviewRowHandler(k); return; }
+        if (k !== activeTab) switchTab(k);
+      };
     });
     sheet.querySelector(".wiz-continue").onclick = () => {
-      if (missingFirst) { closeReview(); switchTab(missingFirst); return; }
+      if (missingFirst) {
+        closeReview();
+        if (reviewRowHandler) reviewRowHandler(missingFirst); else switchTab(missingFirst);
+        return;
+      }
       closeReview();
       if (realBtn) realBtn.click();
     };
@@ -2536,6 +2561,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // every width, exactly like scrollToStepTop already does for step-to-step
   // navigation.
   function scrollTabsIntoViewOnMobile() {
+    if (embedHost) return; // the jacket's panel scrolls on its own
     // Wait for the DOM re-render above to actually be laid out, then kill
     // any residual native momentum scrolling outright (see
     // killScrollMomentum above) before reading positions or animating --
@@ -2641,6 +2667,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // Suit" summary instead of the 2 shades inside "Purple"). `doSwap` is
   // whatever state change + renderOptions() call this action needs to make.
   function scrollToTopThenSwap(doSwap) {
+    // Inside the interactive jacket's panel: swap, then show the panel's top.
+    if (embedHost) {
+      doSwap();
+      embedHost.scrollTop = 0;
+      return;
+    }
     // Used to bail out immediately on desktop (doSwap() with no scroll),
     // on the assumption that the full grid was always already in view
     // there. That assumption doesn't hold: .tabs is a sidebar on desktop,
@@ -2711,6 +2743,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   }
   function advanceToNextTab() {
     cancelAutoAdvance();
+    // On the interactive jacket the customer stays on the part they clicked
+    // and sees the jacket change; they pick the next part themselves.
+    if (embedHost) return;
     // Skip over any category that isn't currently applicable (e.g. Monogram
     // Thread Color when Monogram Placement is "No Monogram Need") -- it has
     // no tab to land on right now.
@@ -2856,7 +2891,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     }
     const applySelection = () => {
       order[activeTab] = opt.name;
-      markDesignStarted();
+      if (!embedQuiet) markDesignStarted();
       renderOptions();
       renderTabs();
       renderSummary();
@@ -2930,7 +2965,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       '<div class="opt-name">' + label + "</div>";
     card.onclick = () => {
       order[activeTab] = sentinel;
-      markDesignStarted();
+      if (!embedQuiet) markDesignStarted();
       renderOptions();
       renderTabs();
       renderSummary();
@@ -3456,6 +3491,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       row.innerHTML = "<span>" + catalog[key].label + "</span><span>" + (displayValue(key) || "—") + "</span>";
       summaryRowsEl.appendChild(row);
     });
+    changeListeners.forEach((fn) => { try { fn(); } catch (e) { /* a listener's problem never blocks the designer */ } });
   }
 
   renderTabs();
@@ -3563,6 +3599,40 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       renderTabs();
       renderOptions();
     },
+    // ---- Interactive jacket (jacket-studio.js) hooks ----
+    catalog: catalog,
+    keys: keys.slice(),
+    isShown: (k) => !!catalog[k] && isShown(k),
+    displayValue: (k) => (catalog[k] ? displayValue(k) : ""),
+    // Raw stored values (the same ones the order uses), without resolving
+    // or reconciling -- cheap enough to read on every jacket redraw.
+    rawSelections: () => Object.assign({}, order),
+    getTextsRaw: () => Object.assign({}, customTexts),
+    onChange: (fn) => { changeListeners.push(fn); },
+    openReview: () => openReview(),
+    setReviewRowHandler: (fn) => { reviewRowHandler = fn || null; },
+    // Moves this designer's own options element into hostEl (the jacket's
+    // panel) and shows question k there; unembedOptions() puts it back.
+    embedOptions: (hostEl, k, opts) => {
+      cancelAutoAdvance();
+      closeReview();
+      embedHost = hostEl;
+      embedQuiet = !!(opts && opts.quiet);
+      if (optionsEl.parentNode !== hostEl) hostEl.appendChild(optionsEl);
+      if (keys.indexOf(k) !== -1) activeTab = k;
+      renderTabs();
+      renderOptions();
+      hostEl.scrollTop = 0;
+    },
+    unembedOptions: () => {
+      if (!embedHost) return;
+      embedHost = null;
+      embedQuiet = false;
+      optionsHomeMarker.parentNode.insertBefore(optionsEl, optionsHomeMarker);
+      renderTabs();
+      renderOptions();
+    },
+    isEmbedded: () => !!embedHost,
     // Wipes every selection back to blank and returns to the first tab --
     // used by "Start Over", as opposed to setSelections (which only fills
     // in whatever a saved draft actually had).
