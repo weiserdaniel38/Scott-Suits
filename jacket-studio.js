@@ -47,6 +47,15 @@
     "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=1",
     "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=1",
   };
+  // Double breasted fronts use their own photo (peak lapels, the front
+  // crossing over; scripts/make_jacket_photo_db.py).
+  const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
+  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
+  const SHADE_DB_LAPEL = {
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
+    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
+  };
+  const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
   const TILE = 176;
 
@@ -299,22 +308,29 @@
     if (/^Single Breasted One/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }] };
     if (/^Single Breasted Three/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }, { x: 395, y: 607, fast: false }, { x: 381, y: 689, fast: false }] };
     if (/^Single Breasted/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }, { x: 387, y: 649, fast: false }] };
-    // Double breasted: rows of [y, half the gap, fastens].
+    // Double breasted (drawn on the double breasted photo, whose lapels roll
+    // to the fastening row at y 537): rows of [y, left x, right x]; the
+    // fastening button is the left one in the row marked true.
+    const R1 = [422, 293, 515], R2 = [537, 342, 478], R3 = [652, 342, 478];
     const DB = {
-      "Double Breasted 6X2": { rows: [[430, 104, false], [525, 70, true], [620, 70, false]] },
-      "Double Breasted 4X2": { rows: [[525, 70, true], [620, 70, false]] },
-      "Double Breasted 6X3": { rows: [[440, 70, true], [535, 70, false], [628, 70, false]] },
-      "Double Breasted 4X1": { rows: [[430, 150, false], [560, 70, true]] },
-      "Double Breasted One Button": { rows: [[586, 70, true]], leftOnly: true },
-      "Double Breasted 2X1": { rows: [[586, 70, true]] },
-      "Double Breasted 6X1": { rows: [[440, 112, false], [526, 84, false], [612, 58, true]] },
+      "Double Breasted 6X2": { rows: [R1, R2.concat(true), R3] },
+      "Double Breasted 4X2": { rows: [R2.concat(true), R3] },
+      "Double Breasted 6X3": { rows: [R2.concat(true), [612, 342, 478], [687, 342, 478]] },
+      "Double Breasted 4X1": { rows: [R1, R2.concat(true)] },
+      "Double Breasted One Button": { rows: [R2.concat(true)], leftOnly: true },
+      "Double Breasted 2X1": { rows: [R2.concat(true)] },
+      "Double Breasted 6X1": { rows: [[405, 285, 523], [471, 312, 500], R2.concat(true)] },
     };
     const d = DB[n] || DB["Double Breasted 6X2"];
     const buttons = [];
+    let fastY = 0;
     d.rows.forEach((r) => {
-      buttons.push({ x: 399 - r[1], y: r[0], fast: false, db: true });
-      if (!d.leftOnly) buttons.push({ x: 399 + r[1], y: r[0], fast: r[2], db: true });
+      if (r[3]) fastY = r[0];
+      buttons.push({ x: r[1], y: r[0], fast: !!r[3], db: true, left: true });
+      if (!d.leftOnly) buttons.push({ x: r[2], y: r[0], fast: false, db: true });
     });
+    // Buttonholes show beside the left buttons from the fastening row down.
+    buttons.forEach((b) => { b.holed = b.left && b.y >= fastY; });
     return { db: true, buttons: buttons };
   }
   function lapelHolesFor(v) {
@@ -565,17 +581,21 @@
     // Wearer's left lapel = viewer's right. Each hole runs across the lapel.
     const h = lapelHolesFor(v);
     const shawl = v.collar === "Shawl" || v.collar === "Diamond Lapel";
-    const base = shawl ? [[506, 176], [526, 183]] : [[515, 156], [536, 164]];
+    // On the double breasted photo the holes sit where its own one was.
+    const base = isDB(v) ? (shawl ? [[512, 196], [533, 189]] : [[525, 188], [547, 181]]) : shawl ? [[506, 176], [526, 183]] : [[515, 156], [536, 164]];
+    const st = isDB(v) ? [-6, 10] : [-4.2, 10.5];
+    const at = (i) => [[base[0][0] + st[0] * i, base[0][1] + st[1] * i], [base[1][0] + st[0] * i, base[1][1] + st[1] * i]];
     const out = [];
-    for (let i = 0; i < h.left; i++) out.push([[base[0][0] - 4.2 * i, base[0][1] + 10.5 * i], [base[1][0] - 4.2 * i, base[1][1] + 10.5 * i]]);
-    for (let i = 0; i < h.right; i++) out.push(mirrorPts([[base[0][0] - 4.2 * i, base[0][1] + 10.5 * i], [base[1][0] - 4.2 * i, base[1][1] + 10.5 * i]]));
+    for (let i = 0; i < h.left; i++) out.push(at(i));
+    for (let i = 0; i < h.right; i++) out.push(mirrorPts(at(i)));
     return out;
   }
 
   // ---- FRONT VIEW --------------------------------------------------------------
   function drawFront(g, v, anchors) {
-    const shadeUrl = SHADE_LAPEL[v.collar] || SHADE.front;
-    const photo = img(PHOTO), shade = img(shadeUrl);
+    const db = isDB(v);
+    const shadeUrl = db ? SHADE_DB_LAPEL[v.collar] || SHADE_DB : SHADE_LAPEL[v.collar] || SHADE.front;
+    const photo = img(db ? PHOTO_DB : PHOTO), shade = img(shadeUrl);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
     if (!photo || !shade || !fp.ready) return false;
@@ -589,7 +609,7 @@
 
     // The lapel's outer edge where the mockup's labels were painted out
     // (diamond and shawl lapels have their own edge in their shading).
-    if (v.collar !== "Diamond Lapel" && v.collar !== "Shawl") {
+    if (!db && v.collar !== "Diamond Lapel" && v.collar !== "Shawl") {
       line(g, [[541, 196], [482, 338]], "rgba(0,0,0,0.32)", 1.3);
       line(g, [[539.5, 196], [480.5, 338]], "rgba(255,255,255,0.07)", 0.9);
     }
@@ -640,8 +660,9 @@
     const threadV = threadHex("threadColor", v, fabricHex);
     const holeHex = threadHex("frontButtonholeThreadColor", v, fabricHex);
     lay.buttons.forEach((b) => {
-      if (!b.fast && !b.rolled && !(b.db && b.x < 399)) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHex, 2.4);
-      if (b.fast) hole(g, [b.x - 2, b.y], [b.x + 13, b.y], holeHex, 2.4);
+      if (lay.db) { if (b.holed) hole(g, [b.x + 14, b.y + 1], [b.x + 31, b.y + 1], holeHex, 2.4); }
+      else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + 13, b.y], holeHex, 2.4);
+      else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHex, 2.4);
       button(g, b.x, b.y, 11.5, look, { thread: threadV, nail: v.buttonNail });
     });
     const top = lay.buttons.find((b) => b.fast) || lay.buttons[0];
@@ -1134,8 +1155,7 @@
     chipsEl.querySelectorAll(".studio-chip").forEach((c) => { c.onclick = () => showKey(c.dataset.k); });
     const raw = D.rawSelections()[openKey];
     const nv = NON_VISUAL[openKey];
-    const dbNote = openKey === "frontbutton" && /^Double/.test(String(raw || "")) ? "The photo keeps a single breasted front; your buttons are placed to show the layout." : "";
-    const msg = nv || dbNote || (!raw ? "Not chosen yet. The jacket shows a classic look until you pick." : "");
+    const msg = nv || (!raw ? "Not chosen yet. The jacket shows a classic look until you pick." : "");
     noteEl.textContent = msg;
     noteEl.hidden = !msg;
   }
