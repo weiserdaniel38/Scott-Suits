@@ -180,10 +180,18 @@ GAMMA=0.8
 MED=5
 Lu=Image.fromarray(np.clip(L*3,0,255).astype(np.uint8))  # stretch dark range before 8-bit filtering
 Ls=np.asarray(Lu.filter(ImageFilter.MedianFilter(MED)).filter(ImageFilter.GaussianBlur(0.8))).astype(np.float32)/3
-# The shirt showed in a small wedge between the fronts below the bottom
-# button; fill it with the trousers' shading (the suit's own cloth) instead.
-_w=np.zeros(alpha.shape,bool); _w[704:770,384:418]=True; _w&=alpha<0.95
-Ls[_w]=np.median(Ls[772:780,390:412]); alpha=np.where(_w,1.0,alpha)
+# Between the fronts below the bottom button the photo showed the shirt and
+# dark trousers. Show the jacket's back instead: the same cloth, a little in
+# shadow, darkest right under the front edges, ending at the back's hem.
+OPENING=[(402,698),(395,730),(390,760),(388,770),(384,800),(372,830),(360,860),(348,890),(341,905),(339,911),
+         (463,911),(461,905),(456,890),(444,860),(432,830),(426,800),(422,770),(418,760),(413,730),(405,698)]
+_m=Image.new('L',(L.shape[1]*4,L.shape[0]*4),0); ImageDraw.Draw(_m).polygon([(x*4,y*4) for x,y in OPENING],fill=255)
+_m=_m.resize((L.shape[1],L.shape[0]),Image.BOX)
+_cov=np.asarray(_m).astype(np.float32)/255
+_in=np.asarray(_m.filter(ImageFilter.GaussianBlur(5))).astype(np.float32)/255
+_yy=np.arange(L.shape[0],dtype=np.float32)[:,None]
+_back=Lref*(0.62+0.18*np.clip((_yy-702)/200,0,1))*(0.7+0.3*np.clip(_in*1.6,0,1))
+Ls=Ls*(1-_cov)+_back*_cov; alpha=np.maximum(alpha,_cov)
 r=np.maximum(Ls,1)/Lref
 r=r**GAMMA
 M1=np.clip(r,0,1)*255; M2=np.clip(r-1,0,1)*255
