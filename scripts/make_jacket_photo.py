@@ -69,7 +69,7 @@ holes=[
  dict(m=shape_mask([(172,968,R)],[lbl(199,980,335,1013),(133,920,152,1010)]), dom=[('bg',sleeve_bg),('gap',gap),('body',body_right_of_gap)]),
  dict(m=shape_mask([(878,994,9)]), dom=[('bg',rsleeve_bg)]),
  # Where the photo's flaps stuck out past the body into the gap by the arms.
- dict(m=shape_mask(polys=[[(266,797),(302,797),(302,879),(266,879)]]), dom=[('bg',[(240,770),(320,770),(320,910),(240,910)])], flat=True),
+ dict(m=shape_mask(polys=[[(266,792),(302,792),(302,879),(266,879)]]), dom=[('bg',[(240,770),(320,770),(320,910),(240,910)])], flat=True),
  dict(m=shape_mask(polys=[[(725,797),(743,797),(757,881),(741,881)]]), dom=[('bg',[(700,770),(790,770),(790,910),(700,910)])], flat=True),
 ]
 out=a.copy()
@@ -180,6 +180,10 @@ GAMMA=0.8
 MED=5
 Lu=Image.fromarray(np.clip(L*3,0,255).astype(np.uint8))  # stretch dark range before 8-bit filtering
 Ls=np.asarray(Lu.filter(ImageFilter.MedianFilter(MED)).filter(ImageFilter.GaussianBlur(0.8))).astype(np.float32)/3
+# The shirt showed in a small wedge between the fronts below the bottom
+# button; fill it with the trousers' shading (the suit's own cloth) instead.
+_w=np.zeros(alpha.shape,bool); _w[704:770,384:418]=True; _w&=alpha<0.95
+Ls[_w]=np.median(Ls[772:780,390:412]); alpha=np.where(_w,1.0,alpha)
 r=np.maximum(Ls,1)/Lref
 r=r**GAMMA
 M1=np.clip(r,0,1)*255; M2=np.clip(r-1,0,1)*255

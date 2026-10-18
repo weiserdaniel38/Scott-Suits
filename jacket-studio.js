@@ -38,14 +38,14 @@
   const VBH = 952;
   const MODE_KEY = "scottSuitsDesignMode";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const PHOTO = "./assets/jacket-photo-front.webp?v=6";
-  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=4", back: "./assets/jacket-photo-shade-back.webp?v=3" };
+  const PHOTO = "./assets/jacket-photo-front.webp?v=7";
+  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=5", back: "./assets/jacket-photo-shade-back.webp?v=4" };
   // The photo has notch lapels; the other styles have their own front shading
   // with the lapels redrawn (scripts/make_jacket_photo.py).
   const SHADE_LAPEL = {
-    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=1",
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=1",
-    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=1",
+    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=2",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=2",
+    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=2",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
@@ -449,6 +449,19 @@
     }
     g.restore();
   }
+  // Draws fn's pieces, then keeps only what lands on the jacket's cloth, so a
+  // pocket never pokes out past the jacket's side.
+  function onCloth(g, fn) {
+    if (!curShade) { fn(g); return; }
+    const t = mk(g.canvas.width, g.canvas.height);
+    const tg = t.getContext("2d");
+    tg.setTransform(g.getTransform());
+    fn(tg);
+    tg.setTransform(1, 0, 0, 1, 0, 0);
+    tg.globalCompositeOperation = "destination-in";
+    tg.drawImage(curShade, 0, 0, VBW, VBH, 0, 0, t.width, t.height);
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(t, 0, 0); g.restore();
+  }
   function rotPath(pts, cx, cy, deg) {
     const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
     return pts.map((p) => [cx + p[0] * c - p[1] * s, cy + p[0] * s + p[1] * c]);
@@ -614,37 +627,31 @@
       line(g, [[539.5, 196], [480.5, 338]], "rgba(255,255,255,0.07)", 0.9);
     }
 
-    // Chest pocket and pocket square.
+    // Chest pocket, kept clear of the lapel's edge (further right on the
+    // double breasted photo, whose lapel is wider).
     const ck = chestKind(v.pockettype);
-    if (ck === "patch") patch(g, layer, 552, 268, 96, 96, -2, "roundpatch", 1);
-    else if (ck === "boat") clothPiece(g, layer, "M502,292 Q550,280 598,284 L598,308 Q550,304 502,316 Z", { shadow: 0.4, blur: 3, drop: 1.5, grad: [282, 316], stitch: "M506,295 Q550,284 594,288 L594,305 Q550,301 506,312 Z" });
-    else if (ck === "welt") clothPiece(g, layer, boxPath(549, 287, 100, 26, -2.5, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [287, 313], stitch: boxPath(549, 290, 94, 20, -2.5, 0) });
-    else if (ck === "sb" || ck === "db") besom(g, layer, 549, 296, 98, -2.5, ck === "db");
-    if (ck !== "none") {
-      g.save();
-      g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1 * RES;
-      const sqTop = ck === "patch" ? 262 : 277;
-      g.beginPath(); g.moveTo(560, sqTop + 9); g.lineTo(562, sqTop + 1); g.lineTo(604, sqTop - 2); g.lineTo(605, sqTop + 7); g.closePath();
-      const sg = g.createLinearGradient(0, sqTop - 2, 0, sqTop + 9);
-      sg.addColorStop(0, "#ffffff"); sg.addColorStop(1, "#d9d6d0");
-      g.fillStyle = sg; g.fill();
-      g.restore();
-    }
+    const L0 = db ? 522 : 512, R0 = 604, CW = R0 - L0, CX = (L0 + R0) / 2;
+    if (ck === "patch") patch(g, layer, CX, 268, CW, 92, -2, "roundpatch", 1);
+    else if (ck === "boat") clothPiece(g, layer, "M" + L0 + ",292 Q" + CX + ",280 " + R0 + ",284 L" + R0 + ",308 Q" + CX + ",304 " + L0 + ",316 Z", { shadow: 0.4, blur: 3, drop: 1.5, grad: [282, 316], stitch: "M" + (L0 + 4) + ",295 Q" + CX + ",284 " + (R0 - 4) + ",288 L" + (R0 - 4) + ",305 Q" + CX + ",301 " + (L0 + 4) + ",312 Z" });
+    else if (ck === "welt") clothPiece(g, layer, boxPath(CX, 287, CW, 26, -2.5, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [287, 313], stitch: boxPath(CX, 290, CW - 6, 20, -2.5, 0) });
+    else if (ck === "sb" || ck === "db") besom(g, layer, CX, 296, CW, -2.5, ck === "db");
 
     // Lower pockets (and the ticket pocket on the wearer's right).
     const lp = parseLowerPocket(v.lowerpocket);
-    // Slanted pockets rise toward the front buttons (about 20 degrees).
-    const sl = lp.slant ? -18 : 0;
-    if (lp.main !== "none") {
-      const inset = lp.slant ? 6 : 0;
-      lowerPocket(g, layer, lp.main, 231 + inset, 604, 102, 3 + sl, -1);
-      lowerPocket(g, layer, lp.main, 569 - inset, 606, 98, -3 - sl, 1);
-      if (lp.ticket) {
-        const ty = /patch/.test(lp.main) ? 548 : 560;
-        if (lp.ticket === "flap") flap(g, layer, 236, ty - 6, 78, 40, 3 + sl);
-        else besom(g, layer, 236, ty, 76, 3 + sl, lp.ticket === "db");
+    onCloth(g, (g) => {
+      // Slanted pockets rise toward the front buttons (about 20 degrees).
+      const sl = lp.slant ? -18 : 0;
+      if (lp.main !== "none") {
+        const inset = lp.slant ? 6 : 0;
+        lowerPocket(g, layer, lp.main, 235 + inset, 604, 96, 3 + sl, -1);
+        lowerPocket(g, layer, lp.main, 569 - inset, 606, 98, -3 - sl, 1);
+        if (lp.ticket) {
+          const ty = /patch/.test(lp.main) ? 548 : 560;
+          if (lp.ticket === "flap") flap(g, layer, 236, ty - 6, 78, 40, 3 + sl);
+          else besom(g, layer, 236, ty, 76, 3 + sl, lp.ticket === "db");
+        }
       }
-    }
+    });
     anchors.pocket = /patch/.test(lp.main) ? [229, 640] : [229, 636];
 
     // Lapel buttonholes.
