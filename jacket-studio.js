@@ -1245,7 +1245,17 @@
     if (context) { applyZoom(); draw(); }
   }
 
-  D.onChange(() => { if (context) scheduleDraw(); });
+  // Picking a fabric closes the fabric panel so the customer sees it on the
+  // jacket straight away.
+  let lastFabric = D.rawSelections().fabric;
+  D.onChange(() => {
+    if (context) scheduleDraw();
+    const f = D.rawSelections().fabric;
+    if (f !== lastFabric) {
+      lastFabric = f;
+      if (f && openArea === "fabric" && openKey === "fabric") setTimeout(closePanel, 0);
+    }
+  });
   renderModeBars();
   if (window.MutationObserver) {
     const mo = new MutationObserver(() => place());
