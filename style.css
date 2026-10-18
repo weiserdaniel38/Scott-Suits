@@ -1695,7 +1695,7 @@ body:not(.designing) #suitTypeSection{display:none;}
 .studio-modes button.active{background:var(--ivory);color:var(--ink);}
 .designer-mode-bar{display:flex;justify-content:center;max-width:820px;margin:0 auto 14px;}
 #designer:not(.studio-on) .studio-designer-host{display:none;}
-#designer.studio-on .designer-grid{display:none !important;}
+#designer.studio-on .designer-grid:not(.studio-options){display:none !important;}
 .studio-designer-host{max-width:1180px;margin:0 auto;}
 
 /* The jacket (left) and, while a part is open, its options panel (right). */
@@ -1785,9 +1785,7 @@ body:not(.designing) #suitTypeSection{display:none;}
   .studio-marker-label{font-size:9.5px;padding:2px 6px 3px;border-radius:3px;left:calc(100% + 5px);}
   .studio-marker.label-below .studio-marker-label{left:calc(100% - 6px);top:calc(100% + 2px);}
   .studio-marker.label-left .studio-marker-label{right:calc(100% + 6px);}
-  .studio-zoom{right:8px;bottom:6px;padding:3px;border-radius:12px;flex-direction:row;}
-  .studio-zoom button{width:34px;height:34px;}
-  .studio-zoom button svg{width:18px;height:18px;}
+  .studio-zoom{display:none;}
   .studio-panel{min-height:0;}
   .studio-shell:not(.sheet-open) .studio-panel{display:block;}
   /* An open part becomes a bottom sheet; the jacket stays in view above it. */
