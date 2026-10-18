@@ -29,7 +29,7 @@
   const designerHost = document.getElementById("studioDesignerHost");
   const designerModeBar = document.getElementById("designerModeBar");
   const homeModeBar = document.getElementById("homeModeBar");
-  if (!homeHost || !designerHost) return;
+  if (!designerHost) return;
 
   const D = jacketDesigner;
   const CAT = JACKET_CATALOG;
@@ -91,16 +91,12 @@
     { id: "collar", label: "Under Collar", view: "back", keys: ["feltundercollar", "feltColor"], at: { back: [400, 52], inside: [400, 52] } },
     { id: "facing", label: "Facing", view: "inside", keys: ["facing"], at: { inside: [222, 640] } },
     { id: "ipocket", label: "Inside Pockets", view: "inside", keys: ["insidepocket"], at: { inside: [270, 318] } },
-    { id: "shoulder", label: "Shoulders & Structure", view: "front", keys: ["sleevecrown", "construction"], at: {} },
+    { id: "shoulder", label: "Shoulders", view: "back", keys: ["sleevecrown", "construction"], at: { back: [160, 190] } },
   ];
   const mapped = {};
   AREAS.forEach((a) => a.keys.forEach((k) => { mapped[k] = true; }));
   const extraKeys = D.keys.filter((k) => !mapped[k]);
-  if (extraKeys.length) AREAS.push({ id: "more", label: "More Details", view: "front", keys: extraKeys, at: {} });
-  // The cards under the jacket (as in Daniel's mockup), then the rest as
-  // smaller links.
-  const CARD_AREAS = ["fabric", "lapel", "buttons", "pockets", "cuff", "lining", "lapelhole"];
-  const MORE_AREAS = ["vents", "monogram", "collar", "facing", "ipocket", "shoulder", "more"];
+  if (extraKeys.length) AREAS.push({ id: "more", label: "More Details", view: "front", keys: extraKeys, at: { front: [400, 905] } });
   // Questions the photo can't show: the panel says so instead of the picture
   // inventing a look for them.
   const NON_VISUAL = {
@@ -843,14 +839,6 @@
   }
 
   // ---- Studio UI ------------------------------------------------------------------
-  const ICONS = {
-    lapel: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 8 L32 22 L42 8"/><path d="M22 8 C16 10 12 12 9 14 L9 58"/><path d="M42 8 C48 10 52 12 55 14 L55 58"/><path d="M22 8 L17 16 L22 20 L19 24 L32 52 L45 24 L42 20 L47 16 L42 8"/></svg>',
-    buttons: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="21"/><circle cx="32" cy="32" r="15.5"/><circle cx="27" cy="27" r="2.2"/><circle cx="37" cy="27" r="2.2"/><circle cx="27" cy="37" r="2.2"/><circle cx="37" cy="37" r="2.2"/></svg>',
-    pockets: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M9 22 H55"/><path d="M9 19 H55 V22"/><path d="M9 19 V22"/><path d="M11 22 V38 Q11 42 15 42 H49 Q53 42 53 38 V22"/></svg>',
-    cuff: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 6 V52 Q20 56 24 56 H44"/><path d="M44 6 V56"/><path d="M38 20 V54"/><circle cx="41" cy="26" r="2.8"/><circle cx="41" cy="33" r="2.8"/><circle cx="41" cy="40" r="2.8"/><circle cx="41" cy="47" r="2.8"/></svg>',
-    lapelhole: '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="27" width="34" height="10" rx="2"/><path d="M13 32 H41"/><path d="M14 27 V37 M18 27 V37 M22 27 V37 M26 27 V37 M30 27 V37 M34 27 V37 M38 27 V37"/><circle cx="50" cy="32" r="6"/><circle cx="50" cy="32" r="2.5"/></svg>',
-    more: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="18" cy="32" r="3"/><circle cx="32" cy="32" r="3"/><circle cx="46" cy="32" r="3"/></svg>',
-  };
   const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const ICON_MINUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>';
   const ICON_RESET = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4v5h5"/></svg>';
@@ -889,13 +877,6 @@
         "</div>" +
       "</aside>" +
     "</div>" +
-    '<div class="studio-parts">' +
-      '<div class="studio-parts-eyebrow">Your jacket</div>' +
-      '<h3 class="studio-parts-title">Choose a part to change</h3>' +
-      '<span class="studio-parts-rule" aria-hidden="true"></span>' +
-      '<div class="studio-cards"></div>' +
-      '<div class="studio-more"></div>' +
-    "</div>" +
     '<div class="studio-foot"><div class="studio-price"><span>Estimated total</span><b class="studio-price-val"></b></div>' +
       '<button type="button" class="btn-primary studio-continue"></button></div>';
 
@@ -908,8 +889,6 @@
   const noteEl = shell.querySelector(".studio-note");
   const optsHost = shell.querySelector(".studio-options");
   const titleEl = shell.querySelector(".studio-sheet-title");
-  const cardsEl = shell.querySelector(".studio-cards");
-  const moreEl = shell.querySelector(".studio-more");
   const continueBtn = shell.querySelector(".studio-continue");
   const priceEl = shell.querySelector(".studio-price-val");
   photoCanvas.width = CW;
@@ -955,7 +934,6 @@
       canvasBox.classList.remove("loading");
     }
     renderMarkers();
-    renderCards();
     syncChips();
     syncFoot();
   }
@@ -1114,38 +1092,6 @@
   }, { passive: false });
 
   // -- the cards under the jacket --
-  function swatchHtml(src, hex) {
-    return '<span class="studio-card-swatch" style="background-color:' + esc(hex || "#333") + (src ? ";background-image:url('" + esc(src) + "')" : "") + '"></span>';
-  }
-  function cardVisual(area, v) {
-    if (area.id === "fabric") {
-      const f = opt("fabric", v._raw.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
-      return swatchHtml(f && f.img, f && f.hex);
-    }
-    if (area.id === "lining") {
-      const o = opt("lining", v._raw.lining);
-      if (o && o.img && !o.matchesFabric && !o.uploadPhoto) return swatchHtml(o.img, o.hex);
-      const f = opt("fabric", v._raw.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
-      return '<span class="studio-card-swatch drape" style="background-color:' + esc(o && o.uploadPhoto ? "#8a8378" : f ? mix(f.hex, "#ffffff", 0.1) : "#5C2430") + '"></span>';
-    }
-    return '<span class="studio-card-icon">' + (ICONS[area.id] || ICONS.more) + "</span>";
-  }
-  function renderCards() {
-    const v = current();
-    const cards = CARD_AREAS.map(areaById).filter((a) => a && shownKeys(a).length);
-    cardsEl.innerHTML = cards.map((a) => {
-      const k = shownKeys(a)[0];
-      const val = D.displayValue(k);
-      return '<button type="button" class="studio-card' + (openArea === a.id ? " active" : "") + '" data-area="' + a.id + '">' +
-        cardVisual(a, v) + '<span class="studio-card-name">' + esc(a.label) + '</span><span class="studio-card-val' + (val ? "" : " missing") + '">' + esc(val || "Choose") + "</span></button>";
-    }).join("");
-    const more = MORE_AREAS.map(areaById).filter((a) => a && shownKeys(a).length);
-    moreEl.innerHTML = more.length
-      ? '<span class="studio-more-label">More details</span>' + more.map((a) => '<button type="button" class="studio-more-link' + (openArea === a.id ? " active" : "") + '" data-area="' + a.id + '">' + esc(a.label) + "</button>").join("")
-      : "";
-    shell.querySelectorAll(".studio-card, .studio-more-link").forEach((b) => { b.onclick = () => openAreaPanel(b.dataset.area); });
-  }
-
   // -- the panel --
   function syncChips() {
     if (!openArea) return;
@@ -1195,7 +1141,6 @@
     }
     showKey(key && keys.indexOf(key) !== -1 ? key : keys[0]);
     renderMarkers();
-    renderCards();
     if (phone) {
       // Keep the jacket in sight above the sheet.
       const top = canvasBox.getBoundingClientRect().top + window.scrollY - (typeof getNavClearance === "function" ? getNavClearance() : 80) - 8;
@@ -1217,7 +1162,6 @@
     applyZoom();
     if (zoom.s > 1.01) resetZoom();
     renderMarkers();
-    renderCards();
   }
   shell.querySelector(".studio-sheet-close").onclick = closePanel;
   shell.querySelector(".studio-done").onclick = closePanel;
@@ -1237,7 +1181,7 @@
 
   // ---- Modes ------------------------------------------------------------------------
   function getMode() {
-    try { return sessionStorage.getItem(MODE_KEY) === "interactive" ? "interactive" : "browse"; } catch (e) { return "browse"; }
+    try { return sessionStorage.getItem(MODE_KEY) === "browse" ? "browse" : "interactive"; } catch (e) { return "interactive"; }
   }
   let mode = getMode();
   function setMode(m) {
@@ -1250,8 +1194,8 @@
   const ICON_CLICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2L8 5.1M2.2 7.2L5.1 8M12.5 3.8l-2.1 2.1M3.8 12.5l2.1-2.1"/></svg>';
   function modeBarHtml(active) {
     return '<div class="studio-modes" role="tablist" aria-label="How to customize">' +
-      '<button type="button" role="tab" data-mode="browse" class="' + (active === "browse" ? "active" : "") + '" aria-selected="' + (active === "browse") + '">' + ICON_LIST + "<span>Browse Options</span></button>" +
       '<button type="button" role="tab" data-mode="interactive" class="' + (active === "interactive" ? "active" : "") + '" aria-selected="' + (active === "interactive") + '">' + ICON_CLICK + "<span>Interactive Jacket</span></button>" +
+      '<button type="button" role="tab" data-mode="browse" class="' + (active === "browse" ? "active" : "") + '" aria-selected="' + (active === "browse") + '">' + ICON_LIST + "<span>Browse Options</span></button>" +
       "</div>";
   }
   function renderModeBars() {
@@ -1284,7 +1228,7 @@
     const designing = document.body.classList.contains("designing");
     const onJacketPage = designing && jacketSec && jacketSec.classList.contains("active");
     let next = null;
-    if (!designing) next = "home";
+    if (!designing && homeHost) next = "home";
     else if (onJacketPage && mode === "interactive") next = "designer";
     if (jacketSec) jacketSec.classList.toggle("studio-on", onJacketPage && mode === "interactive");
     if (next === context) return;

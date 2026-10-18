@@ -1681,17 +1681,11 @@ body:not(.designing) #suitTypeSection{display:none;}
 
 /* =====================================================================
    INTERACTIVE JACKET (jacket-studio.js)
-   The clickable jacket: on the homepage (#studioHome, before designing)
-   and on the Jacket page in "Interactive Jacket" mode (#designer.studio-on).
+   The clickable jacket on the Jacket page in "Interactive Jacket" mode
+   (#designer.studio-on).
    The option cards in its panel are the designer's own (.designer-grid
    styles apply), moved in while a part is open.
    ===================================================================== */
-.studio-home{max-width:1180px;margin:0 auto;padding:56px 32px 72px;border-top:1px solid var(--line);}
-body.designing .studio-home{display:none;}
-.studio-home-head{text-align:center;max-width:640px;margin:0 auto 26px;}
-.studio-home-head .hero-eyebrow{margin-bottom:12px;color:var(--brass);}
-.studio-home-head h2{font-size:34px;line-height:1.2;margin:0 0 12px;}
-.studio-home-head p{color:var(--ivory-dim);font-size:15.5px;line-height:1.6;margin:0 0 22px;}
 
 /* Mode switch: Browse Options / Interactive Jacket */
 .studio-modes{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,0.35);}
@@ -1737,7 +1731,7 @@ body.designing .studio-home{display:none;}
 .studio-marker:hover .studio-marker-dot,.studio-marker:focus-visible .studio-marker-dot{transform:scale(1.1);}
 .studio-marker.active .studio-marker-dot{background:var(--brass);border-color:#F5F0E7;}
 .studio-marker.active .studio-marker-dot::before,.studio-marker.active .studio-marker-dot::after{background:#fff;}
-.studio-marker-label{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);white-space:nowrap;background:#F1EBE1;color:#221E19;font-family:'Playfair Display',Georgia,serif;font-size:15px;font-weight:400;letter-spacing:0.1px;padding:5px 13px 6px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.22);pointer-events:none;}
+.studio-marker-label{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);white-space:nowrap;background:#F1EBE1;color:#221E19;font-family:'Playfair Display',Georgia,serif;font-size:11.5px;font-weight:400;letter-spacing:0.1px;padding:3px 8px 4px;border-radius:4px;box-shadow:0 1px 6px rgba(0,0,0,0.2);}
 .studio-marker.label-below .studio-marker-label{left:calc(100% - 8px);top:calc(100% + 4px);transform:none;}
 .studio-marker.label-left .studio-marker-label{left:auto;right:calc(100% + 10px);}
 .studio-marker.label-left.label-below .studio-marker-label{right:calc(100% - 8px);}
@@ -1771,26 +1765,6 @@ body.designing .studio-home{display:none;}
 .studio-sheet-foot{padding:12px 20px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;}
 
 /* "Choose a part to change" cards */
-.studio-parts{text-align:center;border-top:1px solid var(--line);padding:26px 0 8px;margin-top:4px;}
-.studio-parts-eyebrow{font-size:11.5px;letter-spacing:3.2px;text-transform:uppercase;color:var(--ivory-dim);font-weight:500;}
-.studio-parts-title{font-size:34px;font-weight:500;margin:8px 0 12px;}
-.studio-parts-rule{display:block;width:56px;height:1.5px;background:var(--brass);margin:0 auto 22px;}
-.studio-cards{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;max-width:1000px;margin:0 auto;}
-.studio-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 14px;border:1px solid var(--line);border-radius:4px;background:rgba(255,255,255,0.28);font-family:inherit;color:var(--ivory);cursor:pointer;transition:border-color 0.15s ease,background 0.15s ease,transform 0.15s ease;min-width:0;}
-.studio-card:hover{border-color:rgba(176,141,87,0.6);background:rgba(255,255,255,0.45);}
-.studio-card.active{border-color:var(--brass);background:rgba(176,141,87,0.1);}
-.studio-card-icon,.studio-card-swatch{display:block;width:76px;height:76px;flex-shrink:0;}
-.studio-card-icon svg{width:100%;height:100%;fill:none;stroke:#221E19;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
-.studio-card-swatch{width:68px;height:68px;margin:4px 0;background-size:cover;background-position:center;clip-path:polygon(0 4%,4% 0,8% 4%,12% 0,16% 4%,20% 0,24% 4%,28% 0,32% 4%,36% 0,40% 4%,44% 0,48% 4%,52% 0,56% 4%,60% 0,64% 4%,68% 0,72% 4%,76% 0,80% 4%,84% 0,88% 4%,92% 0,96% 4%,100% 0,100% 100%,96% 96%,92% 100%,88% 96%,84% 100%,80% 96%,76% 100%,72% 96%,68% 100%,64% 96%,60% 100%,56% 96%,52% 100%,48% 96%,44% 100%,40% 96%,36% 100%,32% 96%,28% 100%,24% 96%,20% 100%,16% 96%,12% 100%,8% 96%,4% 100%,0 96%);}
-.studio-card-swatch.drape{clip-path:none;border-radius:3px;background-image:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0) 40%,rgba(0,0,0,0.25) 70%,rgba(255,255,255,0.1) 100%);}
-.studio-card-name{font-family:'Playfair Display',Georgia,serif;font-size:15.5px;line-height:1.25;margin-top:4px;}
-.studio-card-val{font-size:11.5px;line-height:1.3;color:var(--ivory-dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.studio-card-val.missing{color:var(--brass);}
-.studio-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 8px;margin:16px auto 0;max-width:1000px;}
-.studio-more:empty{display:none;}
-.studio-more-label{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ivory-dim);font-weight:600;margin-right:4px;}
-.studio-more-link{border:1px solid var(--line);background:none;border-radius:999px;padding:7px 14px;font-family:inherit;font-size:12.5px;color:var(--ivory);cursor:pointer;}
-.studio-more-link:hover,.studio-more-link.active{border-color:var(--brass);}
 .studio-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding-top:18px;margin-top:14px;}
 .studio-price{display:flex;flex-direction:column;}
 .studio-price span{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ivory-dim);font-weight:600;}
@@ -1800,9 +1774,6 @@ body.designing .studio-home{display:none;}
   .studio-shell.sheet-open .studio-main{grid-template-columns:minmax(0,1fr) 360px;}
 }
 @media (max-width: 900px){
-  .studio-home{padding:40px 16px 56px;}
-  .studio-home-head h2{font-size:27px;}
-  .studio-home-head p{font-size:14.5px;}
   .studio-modes button{padding:9px 14px;font-size:12.5px;}
   .studio-shell.sheet-open .studio-main{grid-template-columns:1fr;}
   .studio-main{gap:0;}
@@ -1811,7 +1782,7 @@ body.designing .studio-home{display:none;}
   .studio-marker-dot{width:28px;height:28px;box-shadow:0 0 0 4px rgba(245,240,231,0.28),0 2px 8px rgba(0,0,0,0.38);}
   .studio-marker-dot::before{width:11px;}
   .studio-marker-dot::after{height:11px;}
-  .studio-marker-label{font-size:12.5px;padding:3px 9px 4px;border-radius:5px;left:calc(100% + 6px);}
+  .studio-marker-label{font-size:9.5px;padding:2px 6px 3px;border-radius:3px;left:calc(100% + 5px);}
   .studio-marker.label-below .studio-marker-label{left:calc(100% - 6px);top:calc(100% + 2px);}
   .studio-marker.label-left .studio-marker-label{right:calc(100% + 6px);}
   .studio-zoom{right:8px;bottom:6px;padding:3px;border-radius:12px;flex-direction:row;}
@@ -1829,16 +1800,7 @@ body.designing .studio-home{display:none;}
   .studio-sheet-foot{padding:10px 16px 12px;}
   .studio-shell.sheet-open .studio-canvas{aspect-ratio:auto;height:calc(44svh - var(--nav-height,70px) - 44px);min-height:220px;}
   .studio-shell.sheet-open .studio-marker:not(.active){display:none;}
-  .studio-shell.sheet-open .studio-parts,.studio-shell.sheet-open .studio-foot{visibility:hidden;}
-  .studio-parts{padding-top:22px;}
-  .studio-parts-title{font-size:26px;}
-  .studio-parts-rule{margin-bottom:16px;}
-  .studio-cards{display:flex;overflow-x:auto;scroll-snap-type:x proximity;gap:10px;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none;}
-  .studio-cards::-webkit-scrollbar{display:none;}
-  .studio-card{flex:0 0 112px;scroll-snap-align:start;padding:12px 6px 10px;}
-  .studio-card-icon{width:58px;height:58px;}
-  .studio-card-swatch{width:52px;height:52px;margin:3px 0;}
-  .studio-card-name{font-size:14px;}
+  .studio-shell.sheet-open .studio-foot{visibility:hidden;}
   .studio-foot .btn-primary{padding:14px 22px;}
 }
 /* The panel is narrower than the Jacket page, so the fabric tiles wrap sooner. */
