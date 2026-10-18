@@ -1694,6 +1694,7 @@ body:not(.designing) #suitTypeSection{display:none;}
 .studio-modes button:hover{color:var(--ivory);}
 .studio-modes button.active{background:var(--ivory);color:var(--ink);}
 .designer-mode-bar{display:flex;justify-content:center;max-width:820px;margin:0 auto 14px;}
+.designer-mode-bar:empty{margin:0;}
 #designer:not(.studio-on) .studio-designer-host{display:none;}
 #designer.studio-on .designer-grid:not(.studio-options){display:none !important;}
 .studio-designer-host{max-width:1180px;margin:0 auto;}
