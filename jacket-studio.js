@@ -39,13 +39,13 @@
   const MODE_KEY = "scottSuitsDesignMode";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const PHOTO = "./assets/jacket-photo-front.webp?v=7";
-  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=5", back: "./assets/jacket-photo-shade-back.webp?v=4" };
+  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=6", back: "./assets/jacket-photo-shade-back.webp?v=5" };
   // The photo has notch lapels; the other styles have their own front shading
   // with the lapels redrawn (scripts/make_jacket_photo.py).
   const SHADE_LAPEL = {
-    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=2",
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=2",
-    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=2",
+    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
+    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
@@ -494,20 +494,25 @@
     clothPiece(g, layer, boxPath(cx, top + 2, w, h, deg, r), { grad: [top, top + h], stitch: boxPath(cx, top + 5, w - 7, h - 7, deg, r - 2) });
   }
   function patch(g, layer, cx, top, w, h, deg, kind, outward) {
-    const r = kind === "curvedpatch" ? 26 : kind === "roundpatch" ? 16 : 8;
-    const back = kind === "highpatch" ? 9 * outward : 0;
+    const r = kind === "curvedpatch" ? 24 : kind === "roundpatch" ? 16 : 9;
+    const back = kind === "highpatch" ? 8 * outward : 0;
     const d = boxPath(cx, top, w, h, deg, r, back);
-    clothPiece(g, layer, d, { shadow: 0.35, blur: 4, drop: 1.5, stitch: boxPath(cx, top + 4, w - 8, h - 8, deg, r - 3, back) });
-    // The opening at the top.
-    const a = rotPath([[-w / 2 + 2, back < 0 ? back + 2 : 2], [w / 2 - 2, back > 0 ? -back + 2 : 2]], cx, top, deg);
-    g.save(); g.strokeStyle = edge(0.9); g.lineWidth = 1.4;
-    g.beginPath(); g.moveTo(a[0][0], a[0][1]); g.lineTo(a[1][0], a[1][1]); g.stroke(); g.restore();
+    clothPiece(g, layer, d, { shadow: 0.5, blur: 5, drop: 2, grad: [top, top + h], stitch: boxPath(cx, top + 3, w - 7, h - 6.5, deg, r - 3, back) });
+    // The turned-down hem across the top: a fold catching the light and a
+    // line of stitching under it.
+    const yA = back < 0 ? back : 0, yB = back > 0 ? -back : 0;
+    const fold = rotPath([[-w / 2 + 1, yA + 1], [w / 2 - 1, yB + 1]], cx, top, deg);
+    const hem = rotPath([[-w / 2 + 3.5, yA + 10], [w / 2 - 3.5, yB + 10]], cx, top, deg);
+    line(g, fold, "rgba(255,255,255,0.12)", 1.2);
+    line(g, hem, "rgba(255,255,255,0.09)", 0.7, [1.6, 1.7]);
+    line(g, hem.map((p) => [p[0], p[1] + 0.9]), edge(0.35), 0.7, [1.6, 1.7]);
   }
   function lowerPocket(g, layer, kind, cx, top, w, deg, outward) {
     if (kind === "flap") flap(g, layer, cx, top, w, 58, deg);
     else if (kind === "db" || kind === "sb") besom(g, layer, cx, top + 6, w, deg, kind === "db");
     else if (kind === "welt") clothPiece(g, layer, boxPath(cx, top - 4, w, 22, deg, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [top - 4, top + 18], stitch: boxPath(cx, top - 1, w - 6, 16, deg, 0) });
-    else if (/patch/.test(kind)) patch(g, layer, cx, top - 18, w + 2, 124, deg, kind, outward);
+    // Patch pockets sit fully on the front, clear of the side seam.
+    else if (/patch/.test(kind)) patch(g, layer, outward < 0 ? 244 : 559, 588, outward < 0 ? 92 : 88, 104, deg / 2, kind, outward);
   }
   // A button seen face on (front) or edge on (sleeves: squashed).
   function button(g, x, y, r, look, opts) {
@@ -639,8 +644,9 @@
     // Lower pockets (and the ticket pocket on the wearer's right).
     const lp = parseLowerPocket(v.lowerpocket);
     onCloth(g, (g) => {
-      // Slanted pockets rise toward the front buttons (about 20 degrees).
-      const sl = lp.slant ? -18 : 0;
+      // Slanted pockets run high at the back (side seam) and drop toward the
+      // front buttons, as in the catalog drawings (about 20 degrees).
+      const sl = lp.slant ? 15 : 0;
       if (lp.main !== "none") {
         const inset = lp.slant ? 6 : 0;
         lowerPocket(g, layer, lp.main, 235 + inset, 604, 96, 3 + sl, -1);
@@ -652,7 +658,7 @@
         }
       }
     });
-    anchors.pocket = /patch/.test(lp.main) ? [229, 640] : [229, 636];
+    anchors.pocket = /patch/.test(lp.main) ? [244, 640] : [229, 636];
 
     // Lapel buttonholes.
     const lapelHoleHex = threadHex("buttonholeThreadColor", v, fabricHex);
