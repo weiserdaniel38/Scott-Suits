@@ -1126,6 +1126,7 @@
     titleEl.textContent = area.label;
     sheetEl.hidden = false;
     shell.classList.add("sheet-open");
+    document.body.classList.add("studio-sheet-up");
     // Turn the jacket to where the part is, and lean in on small details.
     if (!(area.at && area.at[view]) && area.view !== view) setView(area.view);
     else if (id === "lining" && view !== "inside") setView("inside");
@@ -1159,6 +1160,7 @@
     openKey = null;
     sheetEl.hidden = true;
     shell.classList.remove("sheet-open");
+    document.body.classList.remove("studio-sheet-up");
     applyZoom();
     if (zoom.s > 1.01) resetZoom();
     renderMarkers();
