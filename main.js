@@ -2855,12 +2855,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // the magnifier stays there as the only way to preview an option
     // before choosing it. A gradient (matchesFabric) card has no real photo
     // to enlarge, so it never gets a magnifier either.
-    const zoomBtnHtml = isZoomCategory(activeTab) || gradientCss || opt.uploadPhoto
+    // In the interactive jacket's panel the card picks at once (the jacket
+    // itself is the preview), so zoom categories get the magnifier there.
+    const zoomBtnHtml = (isZoomCategory(activeTab) && !embedHost) || gradientCss || opt.uploadPhoto
       ? ""
       : '<button class="zoom-btn" title="Enlarge" aria-label="Enlarge image"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>';
     const swatchHtml = gradientCss
       ? '<div class="opt-swatch match-fabric-swatch" style="background:' + gradientCss + ';" role="img" aria-label="' + shownName + '"></div>'
-      : '<img class="opt-swatch" src="' + imgSrc + '" alt="' + shownName + '">';
+      : '<img class="opt-swatch" src="' + imgSrc + '" alt="' + shownName + '" loading="lazy">';
     const card = document.createElement("div");
     card.className = "opt-card" + (order[activeTab] === opt.name ? " selected" : "");
     // "Upload Your Own Photo": the swatch is an upload icon, or the customer's
@@ -2926,7 +2928,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     } else {
       const lbArgs = [imgSrc, shownName, cat.label, true, opt.name, applySelection, activeTab];
       if (isZoomCategory(activeTab) && !opt.matchesFabric) card._lb = lbArgs;
-      card.onclick = isZoomCategory(activeTab) && !opt.matchesFabric
+      card.onclick = isZoomCategory(activeTab) && !opt.matchesFabric && !embedHost
         ? () => {
             const root = card.closest(".options") || card.parentElement;
             const seq = Array.from(root.querySelectorAll(".opt-card")).filter((c) => c._lb).map((c) => c._lb);
@@ -3331,6 +3333,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       if (!card) return;
       card.classList.add("fabric-tile");
       card.style.background = tint;
+      card.style.setProperty("--tile", tint);
       card.style.color = L > 0.62 ? "#1c1814" : "#ffffff";
     });
   }
