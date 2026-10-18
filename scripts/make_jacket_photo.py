@@ -10,6 +10,9 @@ Writes, cropped to the jacket (800x952, source pixels x110-910, y196-1148):
                                         much darker than the average each
                                         pixel is (0-1), bottom half = how much
                                         brighter (0-1); alpha = where the cloth is
+  assets/jacket-photo-shade-front-{peak,diamond,shawl}.webp
+                                        the same with the lapels redrawn in
+                                        that style (the photo has notch lapels)
   assets/jacket-photo-shade-back.webp   the same for the back / inside views,
                                         made from the front with the opening
                                         closed and the body smoothed
@@ -184,6 +187,85 @@ print('Lref',Lref,'r pct',np.percentile(r[alpha>0.9],[1,10,50,90,99]))
 A=alpha*255
 top=np.dstack([M1,M1,M1,A]); bot=np.dstack([M2,M2,M2,A])
 Image.fromarray(np.concatenate([top,bot],0).astype(np.uint8),'RGBA').save(os.path.join(ROOT,'assets','jacket-photo-shade-front.webp'),quality=92,method=6)
+
+# ---- Lapel styles -----------------------------------------------------------
+# The photo has notch lapels. For peak, diamond and shawl lapels the shading
+# is redrawn around the gorge: the notch is filled in with smooth cloth
+# shading and the new lapel edge is drawn as a seam with a soft shadow on the
+# body side. Points are for the viewer's right lapel (crop pixels); the left
+# one is mirrored across x = 401.5.
+MX=803
+def mir(pts): return [(MX-x,y) for x,y in pts]
+SS=4
+def aa_mask(draw_fn):
+    H,W=Ls.shape
+    m=Image.new('L',(W*SS,H*SS),0); draw_fn(ImageDraw.Draw(m))
+    return np.asarray(m.resize((W,H),Image.LANCZOS)).astype(np.float32)/255
+def S(pts): return [(x*SS,y*SS) for x,y in pts]
+def fill_zone(v,zone):
+    ys,xs=np.where(zone); y0,y1,x0,x1=ys.min()-3,ys.max()+4,xs.min()-3,xs.max()+4
+    sub=v[y0:y1,x0:x1].copy(); hz=zone[y0:y1,x0:x1]
+    sub[hz]=sub[~hz].mean()
+    for _ in range(1500):
+        p=np.pad(sub,1,mode='edge')
+        nv=(p[:-2,1:-1]+p[2:,1:-1]+p[1:-1,:-2]+p[1:-1,2:])/4
+        sub[hz]=nv[hz]
+    v[y0:y1,x0:x1]=sub
+def cubic(p0,c1,c2,p3,n=40):
+    out=[]
+    for t in np.linspace(0,1,n):
+        a,b,c,d=(1-t)**3,3*(1-t)**2*t,3*(1-t)*t*t,t**3
+        out.append((a*p0[0]+b*c1[0]+c*c2[0]+d*p3[0],a*p0[1]+b*c1[1]+c*c2[1]+d*p3[1]))
+    return out
+# The photo's own lapel lines, wiped where a style changes them: the collar
+# piece with its gorge seam, the notch, and the lapel's outer edge.
+COLLAR=[(476,88),(522,76),(556,116),(527,135),(492,108)]
+NOTCH=[(522,127),(558,142),(563,152),(553,161),(523,137)]
+OLD_EDGE=[(559,150),(525,245),(490,332),(455,385),(402,465),(392,500)]
+# The shapes follow the lapel descriptions the AI suit preview uses
+# (supabase/functions/generate-suit-image, OPTION_LOOKS "Lapel Style").
+LAPEL={
+  # Upper edge sweeps up into a sharp point aimed at the shoulder, with only
+  # a narrow gap below the collar.
+  'peak': dict(polys=[[(523,131),(551,121),(579,99),(584,107),(562,161),(552,161),(555,148)]], lines=[],
+               edges=[([(556,158),(576,104)],(1.6,1.0)),([(576,104),(531,127)],None)],
+               gap=[(526,128.5),(549,117.5),(554,119.5),(531,128)]),
+  # Collar and lapel in one piece from the neck: a straight edge out to one
+  # sharp point level with the chest pocket's top, then a longer straight
+  # edge back in to the top button (a tall kite).
+  'diamond': dict(polys=[COLLAR,NOTCH], lines=[(OLD_EDGE,18)],
+                  edges=[([(515,74),(552,205),(392,500)],(1.6,1.2))]),
+  # One smooth rounded edge from the neck to the top button.
+  'shawl': dict(polys=[COLLAR,NOTCH], lines=[(OLD_EDGE,18)],
+                edges=[(cubic((515,74),(566,112),(566,250),(392,500)),(1.6,1.2))]),
+}
+def soft(m,r): return np.asarray(Image.fromarray((np.clip(m,0,1)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(r))).astype(np.float32)/255
+def lapel_variant(base,style):
+    v=base.copy()
+    d=LAPEL[style]
+    def zdraw(g):
+        for f in (lambda q:q, mir):
+            for z in d['polys']: g.polygon(S(f(z)),fill=255)
+            for pts,w in d['lines']: g.line(S(f(pts)),fill=255,width=int(w*SS),joint='curve')
+    zone=aa_mask(zdraw)>0.3
+    fill_zone(v,zone)
+    for f,sx in ((lambda q:q,1),(mir,-1)):
+        if d.get('gap'):
+            v*=1-0.45*soft(aa_mask(lambda g:g.polygon(S(f(d['gap'])),fill=255)),0.6)
+        for pts,sh in d['edges']:
+            P=f(pts)
+            if sh:
+                m=aa_mask(lambda g:g.line(S([(x+sx*sh[0],y+sh[1]) for x,y in P]),fill=255,width=int(3.2*SS),joint='curve'))
+                v*=1-0.3*soft(m,1.8)
+                hi=aa_mask(lambda g:g.line(S([(x-sx*1.3,y) for x,y in P]),fill=255,width=int(1.0*SS),joint='curve'))
+                v*=1+0.1*hi
+            v*=1-0.5*aa_mask(lambda g:g.line(S(P),fill=255,width=int(1.3*SS),joint='curve'))
+    return v
+for style in LAPEL:
+    vs=lapel_variant(Ls,style)
+    rv=(np.maximum(vs,1)/Lref)**GAMMA
+    t2=np.dstack([np.clip(rv,0,1)*255]*3+[A]); b2=np.dstack([np.clip(rv-1,0,1)*255]*3+[A])
+    Image.fromarray(np.concatenate([t2,b2],0).astype(np.uint8),'RGBA').save(os.path.join(ROOT,'assets','jacket-photo-shade-front-'+style+'.webp'),quality=92,method=6)
 # Replace the photo's backdrop (warm cream; the shirt is neutral white) with
 # a clean soft glow that fades to exactly the page color (#ECE4DD) at the
 # edges, so the picture has no visible edge on the page.
