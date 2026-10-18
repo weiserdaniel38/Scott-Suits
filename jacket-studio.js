@@ -109,7 +109,6 @@
   const NON_VISUAL = {
     construction: "Construction is the hidden structure inside the chest. It changes how the jacket drapes and wears in, not how it looks here.",
     feltundercollar: "The felt sits under the collar, against your shirt. Open the Inside view to see its color.",
-    sleevecrown: "This is where the sleeve meets the shoulder. Naples sleeves get small gathers at the top of the sleeve.",
     lapelwidth: "Your lapel is cut to the width you pick. The photo keeps a standard width so the jacket stays true to life.",
     buttonNail: "Shown on the front buttons up close. Use + to zoom in.",
   };
@@ -295,18 +294,20 @@
   // Picture pixels. The photo's own buttons sat at (409,525) and (387,649).
   function frontLayout(name) {
     const n = String(name || "");
-    if (/^Single Breasted One/.test(n)) return { db: false, buttons: [{ x: 402, y: 586, fast: true }] };
-    if (/^Single Breasted Three/.test(n)) return { db: false, buttons: [{ x: 413, y: 470, fast: false, rolled: true }, { x: 404, y: 560, fast: true }, { x: 389, y: 649, fast: false }] };
+    // One button at the waist (where the lapels end); three buttons with the
+    // lapels rolling to the top one.
+    if (/^Single Breasted One/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }] };
+    if (/^Single Breasted Three/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }, { x: 395, y: 607, fast: false }, { x: 381, y: 689, fast: false }] };
     if (/^Single Breasted/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }, { x: 387, y: 649, fast: false }] };
     // Double breasted: rows of [y, half the gap, fastens].
     const DB = {
       "Double Breasted 6X2": { rows: [[430, 104, false], [525, 70, true], [620, 70, false]] },
       "Double Breasted 4X2": { rows: [[525, 70, true], [620, 70, false]] },
       "Double Breasted 6X3": { rows: [[440, 70, true], [535, 70, false], [628, 70, false]] },
-      "Double Breasted 4X1": { rows: [[505, 96, false], [612, 70, true]] },
+      "Double Breasted 4X1": { rows: [[430, 150, false], [560, 70, true]] },
       "Double Breasted One Button": { rows: [[586, 70, true]], leftOnly: true },
       "Double Breasted 2X1": { rows: [[586, 70, true]] },
-      "Double Breasted 6X1": { rows: [[432, 104, false], [522, 70, false], [612, 70, true]] },
+      "Double Breasted 6X1": { rows: [[440, 112, false], [526, 84, false], [612, 58, true]] },
     };
     const d = DB[n] || DB["Double Breasted 6X2"];
     const buttons = [];
@@ -358,7 +359,9 @@
     const style = String(v.sleevecuffstyle || "");
     const count = parseInt(n, 10) || 4;
     const none = /Button Less/.test(n);
-    return { count: none ? 0 : count, overlap: /Overlap/.test(n), slant: /Slant/.test(n) || /Slant/.test(style), working: /^Working/.test(style) };
+    // holeTilt: the slits tilt up away from the buttons ("Slant" buttons);
+    // ventSlant: the vent is diagonal and the buttons climb along it.
+    return { count: none ? 0 : count, holes: none ? 4 : count, overlap: /Overlap/.test(n), holeTilt: /Slant/.test(n), ventSlant: /Slant/.test(style), working: /^Working/.test(style) };
   }
 
   // ---- Drawing pieces (canvas, picture pixels) -------------------------------
@@ -462,7 +465,7 @@
     clothPiece(g, layer, boxPath(cx, top + 2, w, h, deg, r), { grad: [top, top + h], stitch: boxPath(cx, top + 5, w - 7, h - 7, deg, r - 2) });
   }
   function patch(g, layer, cx, top, w, h, deg, kind, outward) {
-    const r = kind === "curvedpatch" ? 26 : 8;
+    const r = kind === "curvedpatch" ? 26 : kind === "roundpatch" ? 16 : 8;
     const back = kind === "highpatch" ? 9 * outward : 0;
     const d = boxPath(cx, top, w, h, deg, r, back);
     clothPiece(g, layer, d, { shadow: 0.35, blur: 4, drop: 1.5, stitch: boxPath(cx, top + 4, w - 8, h - 8, deg, r - 3, back) });
@@ -593,7 +596,7 @@
 
     // Chest pocket and pocket square.
     const ck = chestKind(v.pockettype);
-    if (ck === "patch") patch(g, layer, 552, 268, 96, 96, -2, "patch", 1);
+    if (ck === "patch") patch(g, layer, 552, 268, 96, 96, -2, "roundpatch", 1);
     else if (ck === "boat") clothPiece(g, layer, "M502,292 Q550,280 598,284 L598,308 Q550,304 502,316 Z", { shadow: 0.4, blur: 3, drop: 1.5, grad: [282, 316], stitch: "M506,295 Q550,284 594,288 L594,305 Q550,301 506,312 Z" });
     else if (ck === "welt") clothPiece(g, layer, boxPath(549, 287, 100, 26, -2.5, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [287, 313], stitch: boxPath(549, 290, 94, 20, -2.5, 0) });
     else if (ck === "sb" || ck === "db") besom(g, layer, 549, 296, 98, -2.5, ck === "db");
@@ -610,7 +613,8 @@
 
     // Lower pockets (and the ticket pocket on the wearer's right).
     const lp = parseLowerPocket(v.lowerpocket);
-    const sl = lp.slant ? 11 : 0;
+    // Slanted pockets rise toward the front buttons (about 20 degrees).
+    const sl = lp.slant ? -18 : 0;
     if (lp.main !== "none") {
       const inset = lp.slant ? 6 : 0;
       lowerPocket(g, layer, lp.main, 231 + inset, 604, 102, 3 + sl, -1);
@@ -645,14 +649,51 @@
 
     // Sleeve buttons: seen edge on at the back of each cuff.
     drawCuffs(g, v, look, holeHex, false);
+    sleeveHeads(g, v, [[141, 130], [150, 180], [163, 213], [170, 243], [180, 290]]);
     return true;
+  }
+  // Sleeve heads (pts: the viewer's left armhole seam from the shoulder down;
+  // mirrored for the right). Naples: small gathers at the top of the sleeve;
+  // close seam: a line of topstitching beside the seam.
+  function sleeveHeads(g, v, pts) {
+    const sc = v.sleevecrown;
+    if (sc !== "Naples Sleeve" && sc !== "Close Seam Sleeve") return;
+    [1, -1].forEach((s) => {
+      const P = pts.map((p) => [s > 0 ? p[0] : MIRROR_X - p[0], p[1]]);
+      if (sc === "Close Seam Sleeve") {
+        line(g, P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1]]), "rgba(255,255,255,0.32)", 0.9, [2.2, 2]);
+        line(g, P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1] + 0.8]), "rgba(0,0,0,0.3)", 0.7, [2.2, 2]);
+      } else {
+        // Puckers fanning out from the seam onto the sleeve.
+        for (let i = 0; i < 6; i++) {
+          const t = i / 5, k = Math.min(P.length - 2, Math.floor(t * 2));
+          const a = P[k], b = P[k + 1], f = t * 2 - k;
+          const x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f;
+          g.save(); g.lineCap = "round";
+          g.strokeStyle = "rgba(0,0,0,0.38)"; g.lineWidth = 1.1;
+          g.beginPath(); g.moveTo(x - 1 * s, y); g.quadraticCurveTo(x - 6 * s, y + 1, x - 10 * s, y + 5); g.stroke();
+          g.strokeStyle = "rgba(255,255,255,0.14)"; g.lineWidth = 0.9;
+          g.beginPath(); g.moveTo(x - 1 * s, y + 2); g.quadraticCurveTo(x - 6 * s, y + 3, x - 10 * s, y + 7); g.stroke();
+          g.restore();
+        }
+      }
+    });
   }
   function drawCuffs(g, v, look, holeHex, back) {
     const c = cuffLayout(v);
     const step = c.overlap ? 14.5 : 19;
-    for (let i = 0; i < c.count; i++) {
+    const n = c.holes;
+    for (let i = 0; i < n; i++) {
       const y = 796 - i * step;
-      const dx = c.slant ? i * 1.3 : 0;
+      // A diagonal vent: the lowest button sits furthest toward the middle of
+      // the sleeve, each higher one further toward the back seam.
+      const dx = c.ventSlant ? (n - 1 - i) * 3.2 : 0;
+      // The buttonhole beside each button on the sleeve's face (viewer's left
+      // sleeve), level or tilted up away from the button.
+      const a = c.holeTilt ? -0.61 : 0;
+      const hx = 32 + dx + (c.count ? 5 : 0);
+      hole(g, [hx, y], [hx + 11 * Math.cos(a), y + 11 * Math.sin(a)], holeHex, 1.8);
+      if (!c.count) continue;
       // Viewer's left sleeve: the button edge faces us.
       button(g, 32 + dx, y, 9.5, look, { sx: 0.62, rot: -0.04 });
       // Viewer's right sleeve: only a sliver shows.
@@ -703,9 +744,7 @@
     // Sleeve heads.
     line(g, [[150, 128], [160, 190], [170, 300]], "rgba(0,0,0,0.28)", 1.1);
     line(g, [[650, 128], [640, 190], [630, 300]], "rgba(0,0,0,0.28)", 1.1);
-    if (v.sleevecrown === "Naples Sleeve") {
-      [[148, 140], [152, 156], [156, 172], [652, 140], [648, 156], [644, 172]].forEach((p) => line(g, [[p[0] - 5, p[1]], [p[0] + 5, p[1] + 6]], "rgba(0,0,0,0.3)", 1));
-    }
+    sleeveHeads(g, v, [[150, 128], [155, 160], [160, 190], [165, 245], [170, 300]]);
     // Vents.
     const vent = v.backvent;
     const ventAt = (x, bend) => {
@@ -715,8 +754,11 @@
       gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(0.5, "rgba(0,0,0,0.22)"); gr.addColorStop(1, "rgba(0,0,0,0)");
       g.fillStyle = gr; g.fillRect(x - 10, top + 40, 20, HEM - top - 40);
       g.restore();
-      line(g, [[x + bend, top], [x, HEM - 1]], "rgba(0,0,0,0.6)", 1.6);
-      line(g, [[x + bend + 2.5, top], [x + 2.5, HEM - 1]], "rgba(255,255,255,0.07)", 1);
+      // The vent opens a little toward the hem.
+      g.save(); g.beginPath(); g.moveTo(x + bend * 0.2, top + 110); g.lineTo(x + 3.5, HEM); g.lineTo(x - 3.5, HEM); g.closePath();
+      g.fillStyle = "rgba(0,0,0,0.45)"; g.fill(); g.restore();
+      line(g, [[x + bend, top], [x, HEM - 1]], "rgba(0,0,0,0.7)", 1.8);
+      line(g, [[x + bend + 2.5, top], [x + 2.5, HEM - 1]], "rgba(255,255,255,0.16)", 1.2);
       line(g, [[x + bend - 9, top + 6], [x + bend + 9, top - 4]], "rgba(0,0,0,0.45)", 1.2);
     };
     if (vent === "Center Vent") ventAt(400, 0);
@@ -787,11 +829,17 @@
     const ip = String(v.insidepocket || "");
     besom(g, layer, 270, 318, 78, 0, true);
     besom(g, layer, 530, 318, 78, 0, true);
+    // A small pointed tab with a button closes the viewer's left one.
+    clothPiece(g, layer, "M263,321 L277,321 L277,335 L270,343 L263,335 Z", { shadow: 0.4, blur: 3, drop: 1.5, stitch: "M265,323 L275,323 L275,334 L270,340 L265,334 Z" });
+    button(g, 270, 334, 3.6, buttonLook(v, fp.hex));
+    // The pen pocket on the facing a hand's width below: a short welt or a
+    // teardrop.
     if (/Water Drop/.test(ip)) {
-      g.save(); g.beginPath(); g.moveTo(552, 352); g.quadraticCurveTo(560, 340, 568, 352); g.quadraticCurveTo(568, 366, 560, 368); g.quadraticCurveTo(552, 366, 552, 352); g.closePath();
-      g.strokeStyle = "rgba(0,0,0,0.55)"; g.lineWidth = 1.2; g.stroke(); g.restore();
-    } else besom(g, layer, 552, 356, 34, 0, false);
-    if (/Cigarette/.test(ip)) besom(g, layer, 278, 452, 48, 0, true);
+      clothPiece(g, layer, "M570,404 C579,416 582,426 582,432 C582,440 576,445 570,445 C564,445 558,440 558,432 C558,426 561,416 570,404 Z", { shadow: 0.35, blur: 3, drop: 1.5, stitch: "M570,409 C577,419 579,427 579,432 C579,438 575,442 570,442 C565,442 561,438 561,432 C561,427 563,419 570,409 Z" });
+      line(g, [[562, 418], [578, 418]], "rgba(0,0,0,0.55)", 1.2);
+    } else besom(g, layer, 570, 424, 40, 0, false);
+    // A short slanted cigarette pocket on the other facing at the waist.
+    if (/Cigarette/.test(ip)) besom(g, layer, 230, 524, 44, -20, true);
     // Felt under collar at the back of the neck.
     g.save();
     g.beginPath(); g.moveTo(320, 60); g.quadraticCurveTo(400, 34, 480, 60); g.lineTo(482, 78); g.quadraticCurveTo(400, 56, 318, 78); g.closePath();
