@@ -40,6 +40,13 @@
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const PHOTO = "./assets/jacket-photo-front.webp?v=6";
   const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=4", back: "./assets/jacket-photo-shade-back.webp?v=3" };
+  // The photo has notch lapels; the other styles have their own front shading
+  // with the lapels redrawn (scripts/make_jacket_photo.py).
+  const SHADE_LAPEL = {
+    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=1",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=1",
+    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=1",
+  };
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
   const TILE = 176;
 
@@ -547,41 +554,10 @@
     g.restore();
   }
 
-  // ---- Lapel shapes over the photo's notch lapels ---------------------------
-  // The photo has notch lapels. Peak, shawl and diamond lapels are drawn over
-  // the gorge (where collar meets lapel) with the same cloth.
-  // Points for the wearer's left lapel (viewer's right); the other side is
-  // mirrored across x = 401.5.
+  // Lapel buttonholes are placed for the wearer's left lapel (viewer's right)
+  // and mirrored across x = 401.5 for the other side.
   const MIRROR_X = 803;
   const mirrorPts = (pts) => pts.map((p) => [MIRROR_X - p[0], p[1]]);
-  const ptsPath = (pts) => "M" + pts.map(PT).join(" L") + " Z";
-  function lapelOverlay(g, layer, style) {
-    if (style !== "Peak Lapel" && style !== "Shawl" && style !== "Diamond Lapel") return;
-    // First cover the photo's notch with plain lapel cloth from just below it.
-    const cover = [[522, 100], [560, 94], [566, 134], [544, 146], [518, 128]];
-    [false, true].forEach((m) => {
-      const f = m ? mirrorPts : (p) => p;
-      clothPiece(g, layer, ptsPath(f(cover)), { shadow: 0, noStroke: true, offset: [m ? -12 : 12, -38] });
-      if (style === "Peak Lapel") {
-        // The point rises from the lapel edge, over the collar, toward the shoulder.
-        const peak = [[547, 134], [570, 98], [554, 104], [526, 112], [522, 124]];
-        clothPiece(g, layer, ptsPath(f(peak)), { shadow: 0.5, blur: 4, drop: 2, noStroke: true, offset: [m ? -12 : 12, -38] });
-        line(g, f([[540, 150], [547, 134], [570, 98], [554, 104], [526, 112]]), edge(0.9), 1.1);
-        line(g, f([[541.5, 150], [548.5, 134.5], [569, 100.5]]), "rgba(255,255,255,0.08)", 0.8);
-      } else if (style === "Diamond Lapel") {
-        const dia = [[548, 132], [572, 122], [556, 102], [526, 112], [522, 124]];
-        clothPiece(g, layer, ptsPath(f(dia)), { shadow: 0.5, blur: 4, drop: 2, noStroke: true, offset: [m ? -12 : 12, -38] });
-        line(g, f([[541, 150], [548, 132], [572, 122], [556, 102], [530, 86]]), edge(0.9), 1.1);
-      } else {
-        // Shawl: one smooth edge from the lapel up around the neck.
-        g.save();
-        g.lineWidth = 1.2; g.strokeStyle = edge(0.75);
-        const d = "M482,338 L541,196 C549,168 551,134 546,110 C538,84 510,60 476,46";
-        g.stroke(new Path2D(m ? d.replace(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g, (q, x, y) => (MIRROR_X - parseFloat(x)).toFixed(1) + "," + y) : d));
-        g.restore();
-      }
-    });
-  }
   function lapelHoleSpots(v) {
     // Wearer's left lapel = viewer's right. Each hole runs across the lapel.
     const h = lapelHolesFor(v);
@@ -595,22 +571,25 @@
 
   // ---- FRONT VIEW --------------------------------------------------------------
   function drawFront(g, v, anchors) {
-    const photo = img(PHOTO), shade = img(SHADE.front);
+    const shadeUrl = SHADE_LAPEL[v.collar] || SHADE.front;
+    const photo = img(PHOTO), shade = img(shadeUrl);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
     if (!photo || !shade || !fp.ready) return false;
     curShade = shade;
     edgeA = edgeFor(fp.hex);
-    const layer = cachedLayer("front|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
+    const layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     const fabricHex = fp.hex;
     g.drawImage(photo, 0, 0, VBW, VBH);
     floorShadow(g);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
 
-    // The lapel's outer edge where the mockup's labels were painted out.
-    line(g, [[541, 196], [482, 338]], "rgba(0,0,0,0.32)", 1.3);
-    line(g, [[539.5, 196], [480.5, 338]], "rgba(255,255,255,0.07)", 0.9);
-    lapelOverlay(g, layer, v.collar);
+    // The lapel's outer edge where the mockup's labels were painted out
+    // (diamond and shawl lapels have their own edge in their shading).
+    if (v.collar !== "Diamond Lapel" && v.collar !== "Shawl") {
+      line(g, [[541, 196], [482, 338]], "rgba(0,0,0,0.32)", 1.3);
+      line(g, [[539.5, 196], [480.5, 338]], "rgba(255,255,255,0.07)", 0.9);
+    }
 
     // Chest pocket and pocket square.
     const ck = chestKind(v.pockettype);
