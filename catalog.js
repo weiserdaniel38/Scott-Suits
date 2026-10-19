@@ -221,8 +221,6 @@ const JACKET_CATALOG = {
     options: [
       { name: "Working Sleeve Cuff", displayName: "Opening Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-working.jpg" },
       { name: "Imitation Button Hole On Sleeve Cuff", displayName: "Imitation Buttonhole Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-imitation.jpg" },
-      { name: "Working Sleeve Cuff W/ Slant Type Button", displayName: "Opening Sleeve Cuff With Slant Buttons", img: "./assets/jacket-sleevecuffstyle-new-workingws.jpg" },
-      { name: "Imitation Button Hole On Sleeve Cuff W/ Slant Type Button", displayName: "Imitation Buttonhole Cuff With Slant Buttons", img: "./assets/jacket-sleevecuffstyle-new-imitationws.jpg" },
     ],
   },
   cuffbuttons: {
@@ -2543,7 +2541,8 @@ const CLASSIC_SUIT_PRESET = {
       lapelwidth: "9 cm",
       pockettype: "Normal Pocket",
       backvent: "Side Vent",
-      sleevecuffstyle: "Working Sleeve Cuff W/ Slant Type Button",
+      // The slant cuff styles were removed from the site (Daniel, 2026-10-19).
+      sleevecuffstyle: "Working Sleeve Cuff",
       cuffbuttons: "5 Slant Overlap Button",
       buttoncolor: "Best Match to Fabric",
       lining: "Match Fabric",
