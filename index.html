@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261020fonts">
+<link rel="stylesheet" href="./style.css?v=20261020orderpage">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -118,6 +118,22 @@
   </div>
 </nav>
 
+<!-- Order confirmation page. Shown by returnHomeAfterOrder() in main.js once
+     an order is placed: the rest of the page is hidden (body.order-done-view)
+     so this reads as its own page. "Back to Home" (or the logo, or starting
+     a new design) closes it. -->
+<section class="order-done-page" id="orderDoneNotice" role="status" hidden>
+  <div class="order-done-card">
+    <div class="hero-eyebrow">Order confirmed</div>
+    <h2>Order received. Thank you!</h2>
+    <p id="orderDoneText"></p>
+    <!-- "Your finished suit": filled in by renderSuitPreview() in main.js,
+         only once the generate-suit-image function answers that it's set up. -->
+    <div class="suit-preview" id="suitPreview" hidden></div>
+    <button type="button" class="btn-primary order-done-home" id="orderDoneClose">Back to Home</button>
+  </div>
+</section>
+
 <section class="hero">
   <!-- Full-bleed background photo (desktop only -- see .hero-photo CSS):
        sits behind .hero-grid instead of boxed inside it, so the image reads
@@ -137,18 +153,6 @@
   <img class="hero-sketch-left" src="./assets/hero-sketch-left.png" alt="" aria-hidden="true">
   <div class="hero-grid">
     <div class="hero-text">
-      <!-- Shown by returnHomeAfterOrder() in main.js once an order is placed:
-           the customer lands back here on a fresh homepage, and this is their
-           "order received" receipt. Closed with its x, or by starting a new
-           design. -->
-      <div class="order-done-notice" id="orderDoneNotice" role="status" hidden>
-        <button type="button" class="order-done-close" id="orderDoneClose" aria-label="Dismiss">&times;</button>
-        <strong>Order received. Thank you!</strong>
-        <p id="orderDoneText"></p>
-        <!-- "Your finished suit": filled in by renderSuitPreview() in main.js,
-             only once the generate-suit-image function answers that it's set up. -->
-        <div class="suit-preview" id="suitPreview" hidden></div>
-      </div>
       <!-- Pre-launch notice: shown while ORDERS_OPENING_SOON is true in
            config.js (see main.js). Turn that flag off once orders open. -->
       <div class="opening-soon-notice" id="openingSoonNotice" role="note" hidden>
@@ -775,7 +779,7 @@
 <script src="./config.js?v=20261020stripe"></script>
 <script src="./catalog.js?v=20261020tiers"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261020stripe"></script>
+<script src="./main.js?v=20261020orderpage"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
