@@ -686,7 +686,7 @@ function fixedRules(spec: string): string {
     rules.push(
       "- Lapel buttonholes: " + ((OPTION_LOOKS["Lapel Buttonhole"] || {})[lapelHoles] || lapelHoles) + ". " +
         "Each lapel buttonhole is a short, slim buttonhole about 2.5 cm long: a narrow slit with tightly stitched thread edges (not an outlined box or rectangle), placed near the OUTER edge of the lapel about 3 cm below the lapel's top edge, angled to run parallel to that top edge (not horizontal). " +
-        (/two|three|four|4/i.test(lapelHoles)
+        (/two|three|four|4|double/i.test(lapelHoles)
           ? "Multiple buttonholes on one lapel are stacked tightly in a neat column directly below one another, only about 1 cm apart (centre to centre), all the same length and perfectly parallel, the column following the outer edge of the lapel; never spread out down the lapel. "
           : "") +
         "Stitch them in the lapel buttonhole thread color.",
