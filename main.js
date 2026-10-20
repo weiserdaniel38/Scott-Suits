@@ -529,7 +529,15 @@ const saveMeasurementsToProfileCheckbox = document.getElementById("saveMeasureme
 function renderProfileMeasureGrid(values) {
   if (!profileMeasureGrid) return;
   profileMeasureGrid.innerHTML = "";
+  let lastPart = null;
   MEASUREMENTS.forEach((m) => {
+    if (m.part !== lastPart) {
+      const h = document.createElement("h4");
+      h.className = "measure-part-heading";
+      h.textContent = m.part === "pants" ? "Pants" : "Jacket";
+      profileMeasureGrid.appendChild(h);
+    }
+    lastPart = m.part;
     const field = document.createElement("div");
     field.className = "measure-field";
     field.innerHTML =
