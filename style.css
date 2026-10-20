@@ -121,15 +121,6 @@ a.navlink-btn{text-decoration:none;}
    more page background, which is invisible. */
 .hero-grid::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg, var(--ink) 0%, var(--ink) 40%, rgba(236,228,221,0.6) 65%, rgba(236,228,221,0) 90%);pointer-events:none;}
 .hero-text{position:relative;padding:20px 0 40px;max-width:560px;display:flex;flex-direction:column;justify-content:center;}
-.order-done-notice{position:relative;margin:0 0 24px;padding:16px 44px 16px 18px;border:1px solid var(--brass);border-left-width:4px;border-radius:6px;background:var(--card-tint);}
-.order-done-notice[hidden]{display:none;}
-.order-done-notice strong{display:block;font-size:16px;margin-bottom:4px;}
-.order-done-notice p{margin:0;font-size:14px;line-height:1.5;color:var(--ivory-dim);}
-.order-done-notice .suit-preview{margin:16px 0 0;padding-top:16px;}
-.order-done-notice .suit-preview-head h3{font-size:18px;}
-.order-done-notice .suit-preview-head p{margin:0 0 12px;font-size:14px;}
-.order-done-notice .suit-preview-card{margin:0;}
-.order-done-close{position:absolute;top:8px;right:10px;background:none;border:0;font-size:22px;line-height:1;color:var(--ivory-dim);cursor:pointer;padding:4px;}
 .opening-soon-notice{margin:0 0 26px;padding:14px 18px 15px;border:1px solid rgba(176,141,87,0.55);border-left:3px solid var(--brass);background:var(--card-tint);max-width:460px;}
 .opening-soon-notice[hidden]{display:none;}
 .opening-soon-label{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:600;color:var(--brass);margin-bottom:6px;}
@@ -1819,3 +1810,24 @@ body.studio-sheet-up .lightbox{z-index:170;}
 .mono-font-tag{color:var(--brass);letter-spacing:0;}
 .mono-text-status{font-size:12px;color:var(--ivory-dim);margin-top:2px;min-height:0;}
 .mono-text-status.is-error{color:#a3352b;font-weight:600;}
+
+/* Order confirmation page (#orderDoneNotice). While it's showing, everything
+   else between the nav and the footer is hidden so it reads as its own page. */
+body.order-done-view > section:not(#orderDoneNotice),
+body.order-done-view > .process{display:none !important;}
+.order-done-page{padding:48px 16px 64px;}
+.order-done-page[hidden]{display:none;}
+.order-done-card{max-width:720px;margin:0 auto;padding:32px 28px;border:1px solid var(--brass);border-top-width:4px;border-radius:8px;background:var(--card-tint);}
+.order-done-card h2{font-size:30px;margin:6px 0 10px;}
+.order-done-card > p{margin:0;font-size:16px;line-height:1.6;color:var(--ivory-dim);}
+.order-done-card .suit-preview{margin:24px 0 0;padding-top:20px;border-top:1px solid var(--line);}
+.order-done-card .suit-preview-head h3{font-size:20px;}
+.order-done-card .suit-preview-head p{margin:0 0 12px;font-size:14px;}
+.order-done-card .suit-preview-card{margin:0;}
+.order-done-home{margin-top:28px;background:transparent;color:var(--ivory);border:1px solid var(--ivory);}
+.order-done-home:hover{background:var(--ivory);color:var(--ink);}
+@media (max-width:600px){
+  .order-done-page{padding:28px 16px 48px;}
+  .order-done-card{padding:24px 18px;}
+  .order-done-card h2{font-size:24px;}
+}

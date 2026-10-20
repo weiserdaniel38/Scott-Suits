@@ -6220,6 +6220,7 @@ window.startDesigning = startDesigning;
 // picks the suit type again and carries on with the same selections and
 // cart; the saved draft is left as it was.
 function goHome() {
+  hideOrderDoneNotice();
   resetDesignStarted();
   ALL_STEPS.forEach((el) => el.classList.remove("active"));
   suitTypeSection.classList.add("active");
@@ -6228,9 +6229,9 @@ function goHome() {
 // Once an order is placed the suit is complete, so the designer closes out
 // entirely: every selection, measurement, personal field, the cart and the
 // saved draft are cleared (a reload can't bring the finished order back
-// into the designer), and the customer lands on the homepage as if on a
-// brand-new visit, with an "order received" note at the top that also shows
-// the finished suit's picture (see renderSuitPreview).
+// into the designer), and the customer lands on the order confirmation page,
+// which also shows the finished suit's picture (see renderSuitPreview).
+// "Back to Home" from there is a brand-new visit.
 function returnHomeAfterOrder(message) {
   clearDesignerAndForm();
   cartItems = [];
@@ -6248,16 +6249,25 @@ function returnHomeAfterOrder(message) {
   if (notice) {
     document.getElementById("orderDoneText").textContent = message;
     notice.hidden = false;
+    document.body.classList.add("order-done-view");
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0 });
 }
 
+// Leaves the order confirmation page for the homepage.
 function hideOrderDoneNotice() {
   const notice = document.getElementById("orderDoneNotice");
-  if (notice) notice.hidden = true;
+  if (!notice || notice.hidden) return;
+  notice.hidden = true;
+  document.body.classList.remove("order-done-view");
 }
 const orderDoneClose = document.getElementById("orderDoneClose");
-if (orderDoneClose) orderDoneClose.addEventListener("click", hideOrderDoneNotice);
+if (orderDoneClose) {
+  orderDoneClose.addEventListener("click", () => {
+    hideOrderDoneNotice();
+    window.scrollTo({ top: 0 });
+  });
+}
 
 // Pre-launch "orders open next week" notice on the home page -- driven by
 // ORDERS_OPENING_SOON in config.js.
