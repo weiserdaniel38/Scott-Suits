@@ -353,7 +353,6 @@
     const m = parts[0], t = parts[1] || "";
     let main = "db";
     if (/Highly Back/.test(m)) main = "highpatch";
-    else if (/Curved Patch/.test(m)) main = "curvedpatch";
     else if (/^Patch/.test(m)) main = "patch";
     else if (/Slant Pocket Flap/.test(m)) main = "flap";
     else if (/W\/ Flap/.test(m)) main = "flap";
@@ -494,7 +493,7 @@
     clothPiece(g, layer, boxPath(cx, top + 2, w, h, deg, r), { grad: [top, top + h], stitch: boxPath(cx, top + 5, w - 7, h - 7, deg, r - 2) });
   }
   function patch(g, layer, cx, top, w, h, deg, kind, outward) {
-    const r = kind === "curvedpatch" ? 24 : kind === "roundpatch" ? 16 : 9;
+    const r = kind === "roundpatch" ? 16 : 9;
     const back = kind === "highpatch" ? 8 * outward : 0;
     const d = boxPath(cx, top, w, h, deg, r, back);
     clothPiece(g, layer, d, { shadow: 0.5, blur: 5, drop: 2, grad: [top, top + h], stitch: boxPath(cx, top + 3, w - 7, h - 6.5, deg, r - 3, back) });
