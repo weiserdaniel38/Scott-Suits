@@ -22,15 +22,15 @@ const MOBILE_BREAKPOINT = 900;
 
 // The flat price for one whole suit (jacket + pants together), and for a
 // jacket ordered on its own -- see the suitTypeSection fork right after
-// "Start Designing" (chooseSuitType() below). Kept as constants here so the
-// designer summary, cart total, and PayPal amount can never drift out of
-// sync with what the customer was actually shown while designing. Declared
-// up here (rather than down by the rest of the cart code) because
-// renderMeasurementFields() -- which runs immediately, right after it's
-// defined, further down this file -- already needs activeMeasurements()
-// below, which in turn needs currentSuitType to already exist.
-const SUIT_PRICE_USD = 350;
-const JACKET_ONLY_PRICE_USD = 250;
+// "Start Designing" (chooseSuitType() below). The price itself depends on
+// the fabric's price tier (FABRIC_PRICE_TIERS in catalog.js), so the designer
+// summary, cart total, and PayPal amount all go through suitPriceForType()
+// and can never drift out of sync with what the customer was shown while
+// designing. Declared up here (rather than down by the rest of the cart
+// code) because renderMeasurementFields() -- which runs immediately, right
+// after it's defined, further down this file -- already needs
+// activeMeasurements() below, which in turn needs currentSuitType to already
+// exist.
 
 // Which suit type is currently loaded into the jacket/pants/measurements
 // designer -- "full" (jacket + pants) or "jacketOnly". Set by chooseSuitType()
@@ -54,8 +54,35 @@ function isJacketOnlyType(type) {
   return type === "jacketOnly" || type === "presetJacket";
 }
 
-function suitPriceForType(type) {
-  return isJacketOnlyType(type) ? JACKET_ONLY_PRICE_USD : SUIT_PRICE_USD;
+// Price of a suit type in a fabric price tier (0 = the cheapest fabrics,
+// which is also the "from" price shown before a fabric is chosen).
+function suitPriceForType(type, tier) {
+  const t = FABRIC_PRICE_TIERS[tier || 0];
+  return isJacketOnlyType(type) ? t.jacketUsd : t.suitUsd;
+}
+
+// Price tier of one fabric code. No fabric yet means the cheapest tier; a
+// fabric missing from FABRIC_PRICE_TIER is charged at the top tier so it is
+// never sold below cost.
+function fabricTierOf(code) {
+  if (!code) return 0;
+  return code in FABRIC_PRICE_TIER ? FABRIC_PRICE_TIER[code] : FABRIC_PRICE_TIERS.length - 1;
+}
+
+// An item is priced by its dearest fabric: the jacket fabric, or the pants
+// fabric when the customer picked a different, pricier one for the pants.
+function fabricPriceTier(jacketSel, pantsSel) {
+  return Math.max(fabricTierOf(jacketSel && jacketSel.fabric), fabricTierOf(pantsSel && pantsSel.fabric));
+}
+
+// Fabric price tier of the suit being designed right now.
+function currentFabricTier() {
+  let jacketSel = null, pantsSel = null;
+  try { jacketSel = jacketDesigner.getSelections(); } catch (e) { jacketSel = null; }
+  if (!isJacketOnlyType(currentSuitType)) {
+    try { pantsSel = pantsDesigner.getSelections(); } catch (e) { pantsSel = null; }
+  }
+  return fabricPriceTier(jacketSel, pantsSel);
 }
 
 // Extra charge for the customer's own lining photo (catalog option
@@ -63,10 +90,10 @@ function suitPriceForType(type) {
 function liningUploadSurcharge(jacketSel) {
   return jacketSel && jacketSel.lining === LINING_UPLOAD_OPTION.name ? LINING_UPLOAD_OPTION.surchargeUsd : 0;
 }
-// Price of one suit in the cart: the flat suit-type price plus any option
-// surcharge (currently only the custom lining photo).
+// Price of one suit in the cart: the suit-type price for its fabric tier
+// plus any option surcharge (currently only the custom lining photo).
 function itemPriceUsd(item) {
-  return suitPriceForType(item.type) + liningUploadSurcharge(item.jacket);
+  return suitPriceForType(item.type, fabricPriceTier(item.jacket, item.pants)) + liningUploadSurcharge(item.jacket);
 }
 
 // The measurement fields relevant to the suit type currently being designed
@@ -3390,14 +3417,26 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const famL = {};
     tiles.forEach((t) => { (famL[t.fam] = famL[t.fam] || []).push(t.L); });
     const famRank = (f) => f === "dark" ? -1 : f === "light" ? 9 : famL[f].reduce((a, b) => a + b, 0) / famL[f].length;
-    tiles.sort((x, y) => famRank(x.fam) - famRank(y.fam) || x.L - y.L || (x.opt.displayName || x.opt.name).localeCompare(y.opt.displayName || y.opt.name));
+    // Fabrics are grouped by price first (cheapest tier on top, under a
+    // heading with that tier's price for the suit type being designed), then
+    // by color family and darkness within each price group.
+    tiles.forEach((t) => { t.tier = fabricTierOf(t.opt.name); });
+    tiles.sort((x, y) => x.tier - y.tier || famRank(x.fam) - famRank(y.fam) || x.L - y.L || (x.opt.displayName || x.opt.name).localeCompare(y.opt.displayName || y.opt.name));
     // Display: each tile shows the fabric's REAL color (hue + chroma from its
     // photo), only lifted in lightness so dark fabrics are distinguishable.
     // The lift is one monotonic curve over the real lightness, so the tile
     // order stays exactly the real dark -> light order, and chroma is scaled
     // with the lift so navy still reads navy, burgundy reads burgundy, etc.
     const Ls = tiles.map((t) => t.L), Lmin = Math.min.apply(null, Ls), Lmax = Math.max.apply(null, Ls);
+    let lastTier = null;
     tiles.forEach((t) => {
+      if (t.tier !== lastTier) {
+        lastTier = t.tier;
+        const h = document.createElement("h4");
+        h.className = "opt-section-divider";
+        h.textContent = (isJacketOnlyType(currentSuitType) ? "Jacket " : "Suit ") + "$" + suitPriceForType(currentSuitType, t.tier);
+        grid.appendChild(h);
+      }
       const u = Lmax > Lmin ? (t.L - Lmin) / (Lmax - Lmin) : 0;
       const L = 0.17 + 0.79 * Math.pow(u, 0.75);
       const C = Math.min(0.09, t.chroma * Math.pow(L / Math.max(t.L, 0.05), 0.7));
@@ -4459,7 +4498,7 @@ function cartTotalUsd() {
   if (!cartItems.length) {
     let extra = 0;
     try { extra = liningUploadSurcharge(jacketDesigner.getSelections()); } catch (e) { extra = 0; }
-    return suitPriceForType(currentSuitType) + extra;
+    return suitPriceForType(currentSuitType, currentFabricTier()) + extra;
   }
   return cartItems.reduce((sum, item) => sum + itemPriceUsd(item), 0);
 }
@@ -4468,7 +4507,7 @@ function cartTotalUsd() {
 // page in sync with how many suits are actually in the cart. Called
 // whenever the cart changes, and once at page load. Falls back to treating
 // the order as "1 suit" when the cart is still empty (nothing committed
-// yet) so a first-time visitor sees the same $350 they'd always see, with
+// yet) so a first-time visitor sees the price of the suit being designed, with
 // nothing looking unfinished before they've reached this page.
 function updateOrderSummaryUI() {
   const total = cartTotalUsd();
@@ -6369,13 +6408,13 @@ function updateProcessBarForSuitType() {
 // its intro blurb both mention a price as plain text (there's no per-option
 // pricing), so both need to be swapped by hand rather than computed from
 // selections.
-// Live price of the suit being designed: the flat price plus the $80 custom
-// lining photo when that is chosen. Called from every designer summary
-// refresh and whenever the suit type changes.
+// Live price of the suit being designed: the price for its fabric tier plus
+// the $80 custom lining photo when that is chosen. Called from every designer
+// summary refresh and whenever the suit type changes.
 function refreshDesignerPrice() {
   let extra = 0;
   try { extra = typeof jacketDesigner !== "undefined" ? liningUploadSurcharge(jacketDesigner.getSelections()) : 0; } catch (e) { extra = 0; }
-  const price = suitPriceForType(currentSuitType) + extra;
+  const price = suitPriceForType(currentSuitType, currentFabricTier()) + extra;
   ["totalPrice", "pantsTotalPrice"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = "$" + price;

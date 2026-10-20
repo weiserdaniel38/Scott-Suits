@@ -1496,7 +1496,7 @@ const FABRIC_PATTERN_TYPES = [
     options: [
       { name: "26SU207.DLL0175", displayName: "Sterling Cobalt", img: "./assets/jacket-fabric-26su207-dll0175.jpg", hex: "#0b101d" },
       { name: "26SU230.DZZ0129", displayName: "Deep Steel Blue", img: "./assets/jacket-fabric-26su230-dzz0129.jpg", hex: "#0f111d" },
-      { name: "26SU196.DLL0176", displayName: "Dark Slate Blue", img: "./assets/jacket-fabric-26su196-dll0176.jpg", hex: "#13151b" },
+      { name: "26SU208.DLL0176", displayName: "Dark Slate Blue", img: "./assets/jacket-fabric-26su196-dll0176.jpg", hex: "#13151b" },
       { name: "26SU185.DZZ0105", displayName: "Deep Slate Blue", img: "./assets/jacket-fabric-26su185-dzz0105.jpg", hex: "#12121e" },
       { name: "26SU229.DZZ0128", displayName: "Deepest Indigo Blue", img: "./assets/jacket-fabric-26su229-dzz0128.jpg", hex: "#12111e" },
       { name: "26SU247.DZZ0073", displayName: "Rich Steel Blue", img: "./assets/jacket-fabric-26su247-dzz0073.jpg", hex: "#141420" },
@@ -1606,7 +1606,7 @@ const FABRIC_PATTERN_TYPES = [
       { name: "26SU231.DZZ0130", displayName: "Sterling Jet", img: "./assets/jacket-fabric-26su231-dzz0130.jpg", hex: "#141717" },
       { name: "26SU233.DZZ0060", displayName: "Deepest Charcoal", img: "./assets/jacket-fabric-26su233-dzz0060.jpg", hex: "#1b1819" },
       { name: "26SU184.DZZ0103", displayName: "Deep Graphite", img: "./assets/jacket-fabric-26su184-dzz0103.jpg", hex: "#1a1a1a" },
-      { name: "DAT9758.DZZ0099", displayName: "Smoky Olive", img: "./assets/jacket-fabric-dat9758-dzz0099.jpg", hex: "#1b1c16" },
+      { name: "26SU195.DZZ0099", displayName: "Smoky Olive", img: "./assets/jacket-fabric-dat9758-dzz0099.jpg", hex: "#1b1c16" },
       { name: "26SU232.DZZ0131", displayName: "Deep Smoke", img: "./assets/jacket-fabric-26su232-dzz0131.jpg", hex: "#1d181d" },
       { name: "26SU191.DZZ0101", displayName: "Deep Raven", img: "./assets/jacket-fabric-26su191-dzz0101.jpg", hex: "#1f1c21" },
     ],
@@ -1928,7 +1928,7 @@ const FABRIC_COLOR_ASSIGN = {
   "26SU244.DZZ0071": "Jet Black",
   "26SU207.DLL0175": "Navy",
   "26SU230.DZZ0129": "Navy",
-  "26SU196.DLL0176": "Navy",
+  "26SU208.DLL0176": "Navy",
   "26SU185.DZZ0105": "Navy",
   "26SU229.DZZ0128": "Navy",
   "26SU247.DZZ0073": "Navy",
@@ -1964,7 +1964,7 @@ const FABRIC_COLOR_ASSIGN = {
   "26SU231.DZZ0130": "Jet Black",
   "26SU233.DZZ0060": "Jet Black",
   "26SU184.DZZ0103": "Jet Black",
-  "DAT9758.DZZ0099": "Jet Black",
+  "26SU195.DZZ0099": "Jet Black",
   "26SU232.DZZ0131": "Jet Black",
   "26SU191.DZZ0101": "Jet Black",
   "26SU186.DZZ0107": "Navy",
@@ -2024,13 +2024,13 @@ const FABRIC_DESCRIPTIONS = {
   "26SU231.DZZ0130": "Jet black herringbone with a cool cast. Sleek and modern.",
   "26SU233.DZZ0060": "Darkest charcoal herringbone. Dependable for meetings.",
   "26SU184.DZZ0103": "Graphite herringbone. Modern and easy year-round.",
-  "DAT9758.DZZ0099": "Dark olive herringbone. A quietly unusual fall pick.",
+  "26SU195.DZZ0099": "Dark olive herringbone. A quietly unusual fall pick.",
   "26SU232.DZZ0131": "Smoky gray-black herringbone. Relaxed yet sharp.",
   "26SU191.DZZ0101": "Raven-dark herringbone. Great for winter evenings.",
   "26SU226.DBV6494": "Graphite plaid with a tonal check. Dark and formal.",
   "26SU207.DLL0175": "Deep cobalt navy solid. Crisp for business.",
   "26SU230.DZZ0129": "Steel-toned navy solid. A sharp office suit.",
-  "26SU196.DLL0176": "Muted slate blue solid. Understated and versatile.",
+  "26SU208.DLL0176": "Muted slate blue solid. Understated and versatile.",
   "26SU185.DZZ0105": "Near-navy slate blue solid. Boardroom to wedding.",
   "26SU229.DZZ0128": "Darkest indigo solid. As formal as black, but richer.",
   "26SU247.DZZ0073": "Rich steel blue solid. Polished for daily wear.",
@@ -2103,6 +2103,98 @@ function fabricDescription(pattern, colorGroup, hex) {
   else use = "Year-round, from business to evening.";
   return (FABRIC_WEAVE_TEXT[pattern] || "Fine wool") + ". " + use;
 }
+// ---------------------------------------------------------------------
+// Fabric price tiers. Each fabric's factory cost per meter (USD, from the
+// factory's 26FW Swatch / LookBook fabric lists) puts it in one of three
+// tiers, priced so every suit or jacket clears about $100 after the
+// factory's fused-canvas CMT (suit $150 + 3.5 m of fabric, jacket $100 +
+// 2.2 m). Tier 0 is up to $28/m, tier 1 $30-38/m, tier 2 $39-45/m.
+// The price of an order item comes from fabricPriceTier() in main.js; a
+// fabric missing from FABRIC_PRICE_TIER falls back to the top tier so a
+// newly added fabric is never sold below cost.
+// ---------------------------------------------------------------------
+const FABRIC_PRICE_TIERS = [
+  { suitUsd: 350, jacketUsd: 265 },
+  { suitUsd: 385, jacketUsd: 285 },
+  { suitUsd: 400, jacketUsd: 300 },
+];
+const FABRIC_PRICE_TIER = {
+  "26SU210.DBP325A": 0, // $15/m Soft Ivory
+  "26SU212.DBQ796A": 0, // $15/m Rich Slate Blue
+  "26SU211.DBP323A": 0, // $17/m Deepest Mulberry Red
+  "26SU213.DEE1018": 0, // $17/m Sterling Indigo Blue
+  "26SU189.DPP0192": 0, // $20/m Muted Pewter
+  "26SU190.DPP0193": 0, // $20/m Rich Midnight Blue
+  "26SU221.DBV6499": 0, // $20/m Deepest Espresso
+  "26SU225.DBV6495": 0, // $20/m Deep Umber
+  "26SU226.DBV6494": 0, // $20/m Deepest Graphite
+  "26SU175.DGG1132": 0, // $21.5/m Antique Pewter
+  "26SU176.DGG1133": 0, // $21.5/m Antique Navy
+  "26SU182.DGG1119": 0, // $21.5/m Dark Graphite
+  "26SU183.DGG1120": 0, // $21.5/m Deep Cobalt
+  "26SU204.DPP0191": 0, // $24/m Rich Onyx
+  "26SU202.DBV3537": 0, // $25/m Deepest Forest
+  "26SU214.DBV3534": 0, // $25/m Light Fog
+  "26SU215.DBV3535": 0, // $25/m Muted Iron
+  "26SU216.DBV3531": 0, // $25/m Sterling Navy
+  "26SU217.DBV3530": 0, // $25/m Sterling Midnight Blue
+  "26SU218.DBV3529": 0, // $25/m Smoky Onyx
+  "26SU180.DGG1117": 0, // $26/m Muted Slate
+  "26SU181.DGG1118": 0, // $26/m Deep Midnight Blue
+  "26SU196.DLL0167": 0, // $27.5/m Warm Ivory
+  "26SU199.DLL0169": 0, // $27.5/m Sterling Crimson
+  "26SU200.DLL0170": 0, // $27.5/m Dark Terracotta
+  "26SU201.DLL0168": 0, // $27.5/m Deep Berry
+  "26SU203.DLL0160": 0, // $27.5/m Dark Smoke
+  "26SU197.DLL0171": 0, // $28/m Refined Stone
+  "26SU198.DLL0172": 0, // $28/m Rich Chestnut
+  "26SU205.DLL0173": 0, // $28/m Soft Steel Blue
+  "26SU206.DLL0174": 0, // $28/m Rich Cobalt
+  "26SU207.DLL0175": 0, // $28/m Sterling Cobalt
+  "26SU208.DLL0176": 0, // $28/m Dark Slate Blue
+  "26SU209.DLL0177": 0, // $28/m Rich Ink
+  "26SU233.DZZ0060": 1, // $30/m Deepest Charcoal
+  "26SU234.DZZ0061": 1, // $30/m Deepest Cobalt
+  "26SU173.DZZ0110": 1, // $35/m Rich Indigo Blue
+  "26SU187.DZZ0108": 1, // $35/m Dark Midnight Blue
+  "26SU188.DZZ0109": 1, // $35/m Smoky Eggplant
+  "26SU193.DZZ0098": 1, // $36/m Refined Gray
+  "26SU194.DZZ0100": 1, // $36/m Deep Walnut
+  "26SU195.DZZ0099": 1, // $36/m Smoky Olive
+  "26SU186.DZZ0107": 1, // $37/m Deep Indigo Blue
+  "26SU219.DZZ0062": 1, // $38/m Muted Espresso
+  "26SU220.DZZ0064": 1, // $38/m Deepest Navy
+  "26SU238.DZZ0053": 1, // $38/m Deepest Sienna
+  "26SU239.DZZ0055": 1, // $38/m Rich Charcoal
+  "26SU240.DZZ0056": 1, // $38/m Deepest Midnight Blue
+  "26SU241.DZZ0057": 1, // $38/m Smoky Plum
+  "26SU242.DZZ0054": 1, // $38/m Rich Black
+  "26SU179.DZZ0114": 2, // $39/m Dark Cobalt
+  "26SU177.DZZ0112": 2, // $40/m Deepest Teal
+  "26SU178.DZZ0113": 2, // $40/m Deep Navy
+  "26SU222.DZZ0123": 2, // $40/m Deepest Smoke
+  "26SU223.DZZ0125": 2, // $40/m Deepest Slate Blue
+  "26SU224.DZZ0124": 2, // $40/m Dark Steel Blue
+  "26SU243.DZZ0070": 2, // $40/m Deepest Brick
+  "26SU244.DZZ0071": 2, // $40/m Dark Charcoal
+  "26SU245.DZZ0072": 2, // $40/m Rich Raven
+  "26SU246.DZZ0069": 2, // $40/m Deepest Steel Blue
+  "26SU247.DZZ0073": 2, // $40/m Rich Steel Blue
+  "26SU184.DZZ0103": 2, // $42/m Deep Graphite
+  "26SU185.DZZ0105": 2, // $42/m Deep Slate Blue
+  "26SU191.DZZ0101": 2, // $42/m Deep Raven
+  "26SU192.DZZ0102": 2, // $42/m Dark Mulberry
+  "26SU227.DZZ0126": 2, // $45/m Rich Walnut
+  "26SU228.DZZ0127": 2, // $45/m Smoky Slate Blue
+  "26SU229.DZZ0128": 2, // $45/m Deepest Indigo Blue
+  "26SU230.DZZ0129": 2, // $45/m Deep Steel Blue
+  "26SU231.DZZ0130": 2, // $45/m Sterling Jet
+  "26SU232.DZZ0131": 2, // $45/m Deep Smoke
+  "26SU235.DZZ0132": 2, // $45/m Deepest Amethyst
+  "26SU236.DZZ0133": 2, // $45/m Smoky Mulberry
+  "26SU237.DZZ0134": 2, // $45/m Deepest Onyx
+};
+
 const FABRIC_COLOR_FIRST = (function () {
   const lum = (hex) => {
     const n = parseInt(String(hex || "#808080").replace("#", ""), 16);
@@ -2442,7 +2534,7 @@ const FABRIC_ZOOM_MAP = {
   "26SU193.DZZ0098": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 1, row: 3 },
   "26SU194.DZZ0100": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 2, row: 3 },
   "26SU196.DLL0167": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 3, row: 3 },
-  "26SU196.DLL0176": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 4, row: 3 },
+  "26SU208.DLL0176": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 4, row: 3 },
   "26SU197.DLL0171": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 5, row: 3 },
   "26SU198.DLL0172": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 0, row: 4 },
   "26SU199.DLL0169": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 1, row: 4 },
@@ -2493,7 +2585,7 @@ const FABRIC_ZOOM_MAP = {
   "26SU245.DZZ0072": { sprite: "./assets/fabric-zoom-sprite-01.avif", col: 4, row: 5 },
   "26SU246.DZZ0069": { sprite: "./assets/fabric-zoom-sprite-01.avif", col: 5, row: 5 },
   "26SU247.DZZ0073": { sprite: "./assets/fabric-zoom-sprite-02.avif", col: 0, row: 0 },
-  "DAT9758.DZZ0099": { sprite: "./assets/fabric-zoom-sprite-02.avif", col: 1, row: 0 }
+  "26SU195.DZZ0099": { sprite: "./assets/fabric-zoom-sprite-02.avif", col: 1, row: 0 }
 };
 // === FABRIC_ZOOM_MAP:END ===
 
