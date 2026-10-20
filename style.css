@@ -506,6 +506,9 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-ship-actions label{display:flex;align-items:center;gap:7px;cursor:pointer;}
 .admin-ship-actions input{accent-color:var(--brass);width:15px;height:15px;}
 .admin-ship-actions .btn-primary{padding:10px 20px;font-size:13px;}
+.admin-ship-delete{margin-left:auto;background:none;border:1px solid #b5553f;color:#e08a76;padding:9px 16px;font:inherit;font-size:13px;cursor:pointer;}
+.admin-ship-delete:hover{background:#b5553f;color:var(--ivory);}
+.admin-ship-delete:disabled{opacity:.5;cursor:default;}
 .admin-ship-result{flex-basis:100%;color:var(--brass);margin:0;}
 @media(max-width:640px){
   .admin-ship-fields{grid-template-columns:1fr 1fr;}

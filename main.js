@@ -881,7 +881,8 @@ function adminOrderRow(o) {
     '<div class="measure-input-wrap ship-tracking"><input type="text" aria-label="Tracking number" placeholder="Tracking number" class="ship-number" autocomplete="off"></div>' +
     "</div>" +
     '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
-    '<button type="button" class="btn-primary ship-save">Save</button><p class="admin-ship-result" hidden></p></div>';
+    '<button type="button" class="btn-primary ship-save">Save</button>' +
+    '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
   row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "");
@@ -928,6 +929,33 @@ function adminOrderRow(o) {
       console.error(err);
       result.textContent = "Couldn\u2019t save: " + (err.message || err);
     } finally {
+      saveBtn.disabled = false;
+    }
+  });
+  const deleteBtn = row.querySelector(".admin-ship-delete");
+  deleteBtn.addEventListener("click", async () => {
+    const name = o.customer_name || "No name";
+    const msg =
+      "Delete this order?\n\n" + name + " \u00b7 " + date + " \u00b7 " + suits + " \u00b7 $" + Number(o.total || 0).toFixed(0) +
+      "\nOrder " + o.order_id + "\n\nThis can\u2019t be undone.";
+    if (!window.confirm(msg)) return;
+    deleteBtn.disabled = true;
+    saveBtn.disabled = true;
+    result.hidden = false;
+    result.textContent = "Deleting...";
+    try {
+      const { data, error } = await getSupabase().rpc("admin_delete_order", { p_order_id: o.order_id });
+      if (error) throw error;
+      if (!data) throw new Error("order not found");
+      row.remove();
+      if (adminOrdersList && !adminOrdersList.querySelector(".admin-ship-row")) {
+        adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      }
+      loadOrderHistory();
+    } catch (err) {
+      console.error(err);
+      result.textContent = "Couldn\u2019t delete: " + (err.message || err);
+      deleteBtn.disabled = false;
       saveBtn.disabled = false;
     }
   });
