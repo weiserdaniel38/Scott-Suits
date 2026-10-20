@@ -51,6 +51,14 @@ const GEOAPIFY_API_KEY = "54de71427a894bd9b19dba08c690512d";
 // redirect PayPal sends back. That's a normal tradeoff for a small shop just
 // getting started, but it's not fraud-proof.
 const PAYPAL_BUSINESS_EMAIL = "";
+// Stripe checkout: true sends customers to Stripe's secure payment page
+// (cards, Apple Pay, Google Pay, Klarna -- whatever is turned on in the
+// Stripe dashboard) before their order is placed. The Stripe key lives only
+// in Supabase (Edge Functions > Secrets > STRIPE_SECRET_KEY): a sk_test_ key
+// takes test cards only, a sk_live_ key takes real money. Nothing here
+// changes when going live. The admin's "Place order without payment" button
+// always skips payment. false = orders are placed with no payment step.
+const STRIPE_CHECKOUT_ENABLED = true;
 // Pre-launch notice on the home page: "We can't accept orders just yet, but
 // we will next week -- come explore and design your suit." Shoppers can
 // still design and submit as normal; this is only a message. Set this to

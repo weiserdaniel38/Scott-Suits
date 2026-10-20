@@ -750,7 +750,8 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number");
+    let { data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status");
+    if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd"));
     if (error) {
@@ -758,6 +759,8 @@ async function loadOrderHistory() {
       pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
       return;
     }
+    // An order still waiting on Stripe isn't placed yet.
+    if (data) data = data.filter((row) => row.payment_status !== "awaiting_payment");
     if (!data || !data.length) {
       pastOrdersList.innerHTML = '<p class="account-section-note">No past orders yet.</p>';
       return;
@@ -881,7 +884,11 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live] = await Promise.all([client.rpc("admin_list_orders"), client.rpc("admin_shipping_live")]);
+    const [{ data, error }, live, pay] = await Promise.all([
+      client.rpc("admin_list_orders"),
+      client.rpc("admin_shipping_live"),
+      client.rpc("admin_order_payments"),
+    ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
       console.error("Failed to load orders:", error);
@@ -892,12 +899,23 @@ async function loadAdminOrders() {
       adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
       return;
     }
+    const payments = {};
+    if (!pay.error && pay.data) pay.data.forEach((p) => (payments[p.order_id] = p));
     adminOrdersList.innerHTML = "";
-    data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(o)));
+    data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
   } catch (err) {
     console.error(err);
     adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
   }
+}
+
+// Only "Paid" means Stripe confirmed the money. Orders from before Stripe,
+// or saved with the QA bar's skip button, say "Not paid".
+function adminPaymentLabel(o) {
+  if (o.admin_no_payment) return "No payment (admin)";
+  if (o.payment_status === "paid") return "Paid $" + Number(o.amount_paid_usd || 0).toFixed(2);
+  if (o.payment_status === "awaiting_payment") return "Awaiting payment";
+  return "Not paid";
 }
 
 function adminOrderRow(o) {
@@ -920,7 +938,7 @@ function adminOrderRow(o) {
     '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
-  row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "");
+  row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o);
   row.querySelector(".past-order-total").textContent = "$" + Number(o.total || 0).toFixed(0);
   const statusSel = row.querySelector(".ship-status");
   const carrierSel = row.querySelector(".ship-carrier");
@@ -4511,11 +4529,12 @@ function cartTotalUsd() {
 // nothing looking unfinished before they've reached this page.
 function updateOrderSummaryUI() {
   const total = cartTotalUsd();
-  submitBtn.textContent = PAYPAL_ENABLED ? "Pay $" + total + " & Submit Order" : "Submit Order";
+  submitBtn.textContent = PAYMENT_ENABLED ? "Pay $" + total + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
   let text = "Total: $" + total + " (" + qty + (qty === 1 ? " suit" : " suits") + ")";
-  if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
+  if (STRIPE_ENABLED) text += " -- you'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
+  else if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
   orderTotalNote.textContent = text;
   orderTotalNote.hidden = false;
   const persPriceEl = document.getElementById("persPrice");
@@ -5024,6 +5043,10 @@ const PAYPAL_ENABLED =
   typeof PAYPAL_BUSINESS_EMAIL !== "undefined" &&
   !!PAYPAL_BUSINESS_EMAIL &&
   !PAYPAL_BUSINESS_EMAIL.includes("PASTE_YOUR");
+// Stripe checkout -- see STRIPE_CHECKOUT_ENABLED in config.js. Takes over
+// from PayPal when both are on.
+const STRIPE_ENABLED = typeof STRIPE_CHECKOUT_ENABLED !== "undefined" && STRIPE_CHECKOUT_ENABLED === true;
+const PAYMENT_ENABLED = STRIPE_ENABLED || PAYPAL_ENABLED;
 
 // Builds a classic PayPal "Website Payments Standard" checkout link -- just
 // a plain URL, no API key or server needed, using only the shop's PayPal
@@ -5623,6 +5646,11 @@ function missingOrderColumn(error) {
 
 async function finalizeOrder(input, opts) {
   const adminNoPayment = !!(opts && opts.adminNoPayment);
+  // Stripe on: save the order as "awaiting payment", then send the customer
+  // to Stripe. The email and "order received" note wait until Stripe sends
+  // them back paid (see handleStripeReturn). The QA bar's skip button and
+  // admin orders never go to Stripe.
+  const payWithStripe = STRIPE_ENABLED && !adminNoPayment && !(opts && opts.skipPayment);
   const { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country } = input;
 
   const orderId =
@@ -5653,6 +5681,7 @@ async function finalizeOrder(input, opts) {
     row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : "full_suit";
     row.item_price_usd = itemPriceUsd(item);
     if (adminNoPayment) row.admin_no_payment = true;
+    else if (payWithStripe) row.payment_status = "awaiting_payment";
     Object.assign(row, item.measurements);
 
     // Phone/email are deliberately kept OUT of the Client Form text -- that
@@ -5716,57 +5745,167 @@ async function finalizeOrder(input, opts) {
     updateOrderSummaryUI();
   }
 
-  // Best-effort: email the completed Client Form(s) + shipping details. This
-  // never blocks the order -- the order is already saved in Supabase
-  // (including the full text, in client_form_text) even if the email fails
-  // or isn't configured yet.
-  if (typeof CLIENT_FORM_EMAIL_ENDPOINT !== "undefined" && CLIENT_FORM_EMAIL_ENDPOINT) {
-    try {
-      await fetch(CLIENT_FORM_EMAIL_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          _subject:
-            (adminNoPayment ? "[ADMIN, NO PAYMENT] " : "") +
-            "New Scott's Suits order \u2014 " +
-            customerName +
-            (cartItems.length > 1 ? " (" + cartItems.length + " suits)" : ""),
-          // "email" is a Formspree special field -- it sets the customer's
-          // address as the notification email's Reply-To, so replying to
-          // the order email goes straight to them.
-          email: customerEmail,
-          message: emailMessage,
-        }),
-      });
-    } catch (emailErr) {
-      console.error("Failed to email the Client Form (order was still saved):", emailErr);
-    }
+  const subject =
+    (adminNoPayment ? "[ADMIN, NO PAYMENT] " : "") +
+    "New Scott's Suits order \u2014 " +
+    customerName +
+    (cartItems.length > 1 ? " (" + cartItems.length + " suits)" : "");
+  const previewItems = visualSpecSaved
+    ? rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, jacketOnly: r.suit_type === "jacket_only", label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+    : null;
+
+  if (payWithStripe) {
+    return startStripeCheckout(orderId, { subject, customerEmail, emailMessage, previewItems });
   }
 
-  // Deliberately NOT shown to the customer -- fullMessage (the full garment
-  // spec + shipping address, in the same plain-text "Client Form" format
-  // sent to production) stays internal. It's already saved on every order
-  // row in Supabase (client_form_text) and included in the notification
-  // email above, so nothing about production is lost by not displaying it.
-  // So this order shows up right away in "Past Orders" if a signed-in
-  // customer checks their account immediately after ordering.
-  if (currentUser) loadOrderHistory();
-  // The finished suit's picture, shown in the "order received" note on the
-  // homepage. Built from the cart before returnHomeAfterOrder() clears it.
-  if (visualSpecSaved) {
-    renderSuitPreview(
-      rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, jacketOnly: r.suit_type === "jacket_only", label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
-    );
+  await sendOrderEmail(subject, customerEmail, emailMessage);
+  finishOrder(previewItems, PAYPAL_ENABLED && !adminNoPayment);
+  return true;
+}
+
+// Best-effort: email the completed Client Form(s) + shipping details. This
+// never blocks the order -- the order is already saved in Supabase
+// (including the full text, in client_form_text) even if the email fails
+// or isn't configured yet.
+async function sendOrderEmail(subject, customerEmail, message) {
+  if (typeof CLIENT_FORM_EMAIL_ENDPOINT === "undefined" || !CLIENT_FORM_EMAIL_ENDPOINT) return;
+  try {
+    await fetch(CLIENT_FORM_EMAIL_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        _subject: subject,
+        // "email" is a Formspree special field -- it sets the customer's
+        // address as the notification email's Reply-To, so replying to
+        // the order email goes straight to them.
+        email: customerEmail,
+        message,
+      }),
+    });
+  } catch (emailErr) {
+    console.error("Failed to email the Client Form (order was still saved):", emailErr);
   }
-  // The suit is done: close out the designer and take the customer back to
-  // the homepage, with an "order received" note at the top.
+}
+
+// The order is saved (and paid, when payment is on): show it in Past
+// Orders, show the finished suit's picture, and take the customer back to
+// the homepage with an "order received" note at the top.
+//
+// The full garment spec + shipping address (the "Client Form" text) is
+// deliberately NOT shown to the customer -- it's on every order row in
+// Supabase (client_form_text) and in the notification email.
+function finishOrder(previewItems, paid) {
+  if (currentUser) loadOrderHistory();
+  // Built from the cart before returnHomeAfterOrder() clears it.
+  if (previewItems) renderSuitPreview(previewItems);
   returnHomeAfterOrder(
-    (PAYPAL_ENABLED && !adminNoPayment
+    (paid
       ? "We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
       : "We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.") +
       (currentUser ? " You can see this order any time under Past Orders in My Account." : "")
   );
-  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Stripe checkout (STRIPE_CHECKOUT_ENABLED in config.js). The order is
+// already saved as "awaiting payment"; the stripe-checkout edge function
+// prices it from the saved order and returns Stripe's checkout page. What
+// the "order received" step needs afterwards is kept in this tab
+// (sessionStorage) for the trip to Stripe and back, next to the draft.
+// ---------------------------------------------------------------------------
+const STRIPE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/stripe-checkout" : "";
+const STRIPE_PENDING_KEY = "scottSuitsStripePending";
+
+async function callStripeFn(body) {
+  const res = await fetch(STRIPE_FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Payment error " + res.status);
+  return data;
+}
+
+async function startStripeCheckout(orderId, pending) {
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Opening secure checkout...";
+  try {
+    saveDraft();
+    try {
+      sessionStorage.setItem(STRIPE_PENDING_KEY, JSON.stringify(Object.assign({ orderId }, pending)));
+    } catch (e) {
+      // Without it the order is still saved and paid; only the email and
+      // picture on return are skipped.
+    }
+    const { url } = await callStripeFn({ action: "create", order_id: orderId });
+    if (!url) throw new Error("no checkout page came back");
+    window.location.href = url;
+    return true;
+  } catch (err) {
+    console.error(err);
+    // Don't leave an unpaid copy behind; trying again saves a fresh one.
+    callStripeFn({ action: "cancel", order_id: orderId }).catch(() => {});
+    try {
+      sessionStorage.removeItem(STRIPE_PENDING_KEY);
+    } catch (e) {
+      // ignore
+    }
+    alert("We couldn't open the payment page, so your order wasn't placed. Please try again in a moment.\n\n" + (err.message || err));
+    submitBtn.disabled = false;
+    updateOrderSummaryUI();
+    return false;
+  }
+}
+
+// Runs once at page load, after restoreDraft(): Stripe sends the customer
+// back with ?stripe_return=1&session_id=... (paid) or ?stripe_cancelled=1.
+async function handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+  const returned = params.get("stripe_return") === "1" && sessionId;
+  const cancelledOrder = params.get("stripe_cancelled") === "1" ? params.get("order") : null;
+  if (!returned && !cancelledOrder) return;
+  // Strip the query right away so a refresh never repeats this.
+  window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+
+  let pending = null;
+  try {
+    pending = JSON.parse(sessionStorage.getItem(STRIPE_PENDING_KEY) || "null");
+    sessionStorage.removeItem(STRIPE_PENDING_KEY);
+  } catch (e) {
+    pending = null;
+  }
+
+  if (cancelledOrder) {
+    try {
+      const r = await callStripeFn({ action: "cancel", order_id: cancelledOrder });
+      if (r.paid) return stripePaid(r, pending);
+    } catch (e) {
+      console.error(e);
+    }
+    alert("Payment was cancelled, so your order wasn't placed and you weren't charged. Everything you entered is still here, so you can try again whenever you're ready.");
+    return;
+  }
+
+  try {
+    const r = await callStripeFn({ action: "verify", session_id: sessionId });
+    if (r.paid) return stripePaid(r, pending);
+    alert("Stripe hasn't confirmed your payment yet. If you were charged, please contact us and we'll sort it out right away.");
+  } catch (e) {
+    console.error(e);
+    alert("We couldn't confirm your payment just now. If you were charged, please contact us and we'll sort it out right away.\n\n" + (e.message || e));
+  }
+}
+
+async function stripePaid(r, pending) {
+  if (pending && pending.orderId === r.order_id) {
+    const paidLine = "PAID $" + Number(r.amount || 0).toFixed(2) + " BY STRIPE\n\n";
+    await sendOrderEmail("[PAID] " + pending.subject, pending.customerEmail, paidLine + pending.emailMessage);
+    finishOrder(pending.previewItems, true);
+  } else {
+    finishOrder(null, true);
+  }
 }
 
 // Once someone is sent back here from PayPal (paid or cancelled), this picks
@@ -5795,14 +5934,14 @@ function handlePayPalReturn() {
     alert("It looks like you've paid, but we couldn't find your order details in this browser to finish submitting it. Please contact us with your PayPal receipt so we can complete your order manually.");
     return;
   }
-  finalizeOrder(input);
+  finalizeOrder(input, { skipPayment: true });
 }
 
 submitBtn.addEventListener("click", async () => {
   const input = collectAndValidateOrderInput();
   if (!input) return;
 
-  if (!PAYPAL_ENABLED) {
+  if (!PAYPAL_ENABLED || STRIPE_ENABLED) {
     await finalizeOrder(input);
     return;
   }
@@ -6047,6 +6186,7 @@ function resetDesignStarted() {
 
 if (restoreDraft()) markDesignStarted();
 handlePayPalReturn();
+handleStripeReturn();
 updateNavActionButtons();
 updateProcessBar();
 
@@ -6719,9 +6859,9 @@ document.querySelectorAll(".qa-nav-btn[data-qa-step]").forEach((el) => {
 // isn't there.
 const qaSkipPaymentBtn = document.getElementById("qaSkipPaymentBtn");
 if (qaSkipPaymentBtn) {
-  if (PAYPAL_ENABLED) {
+  if (PAYMENT_ENABLED) {
     qaSkipPaymentBtn.textContent = "Skip Payment & Submit";
-    qaSkipPaymentBtn.title = "Validate + save the order like normal, but skip PayPal";
+    qaSkipPaymentBtn.title = "Validate + save the order like normal, but skip payment (it shows as Not paid in the admin's Orders list)";
   } else {
     qaSkipPaymentBtn.textContent = "Submit (No Payment Configured)";
     qaSkipPaymentBtn.title = "No payment is configured (PAYPAL_BUSINESS_EMAIL is blank in config.js) -- this does exactly what the real Submit Order button already does.";
@@ -6729,7 +6869,7 @@ if (qaSkipPaymentBtn) {
   qaSkipPaymentBtn.addEventListener("click", async () => {
     const input = collectAndValidateOrderInput();
     if (!input) return;
-    await finalizeOrder(input);
+    await finalizeOrder(input, { skipPayment: true });
   });
 }
 
