@@ -1208,7 +1208,8 @@ nav{position:sticky;top:0;}
 /* measurement fields as cards */
 #measureGrid.measure-grid{grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px;}
 @media(max-width:900px){#measureGrid.measure-grid{grid-template-columns:repeat(2,1fr);gap:12px;}}
-.measure-part-heading{grid-column:1/-1;font:600 11px 'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--brass);margin:14px 0 0;}
+.measure-part-heading{grid-column:1/-1;display:flex;align-items:center;gap:12px;font:600 11px 'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--brass);margin:22px 0 0;}
+.measure-part-heading::after{content:"";flex:1;height:1px;background:var(--brass);opacity:.35;}
 .measure-part-heading:first-child{margin-top:4px;}
 #measureGrid .measure-field{gap:0;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,0.45);padding:14px 16px 10px;transition:border-color .15s ease,background .15s ease;}
 #measureGrid .measure-field:hover{border-color:var(--brass);}
@@ -1323,7 +1324,7 @@ nav{position:sticky;top:0;}
   #measureGrid .measure-field label{font-size:10.5px;letter-spacing:.3px;}
   #measureGrid .measure-input-wrap input{font-size:18px;padding:3px 0 2px;}
   #measureGrid .measure-input-wrap .unit{font-size:11px;}
-  .measure-part-heading{font-size:10px;margin-top:10px;}
+  .measure-part-heading{font-size:10px;margin-top:18px;}
   #measurementsSection .meas-intro h3{font-size:25px;margin:18px 0 8px;}
   #measurementsSection .meas-intro .sub{font-size:13px;margin-bottom:16px;}
 }
