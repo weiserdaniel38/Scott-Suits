@@ -1042,6 +1042,53 @@ function refreshAccountData() {
   loadProfile();
   loadOrderHistory();
   refreshAdminStatus();
+  prefillContactDetails();
+}
+
+// A signed-in customer who has ordered before gets the Personal Info page
+// filled in from their most recent order (name, phone, email, shipping
+// address); with no past order, just their name and email from the account.
+// Only empty fields are filled, so nothing typed (or restored from the
+// draft) is ever overwritten, and they can still change anything.
+async function prefillContactDetails() {
+  const user = currentUser;
+  if (!user) return;
+  let last = null;
+  try {
+    const { data } = await getSupabase()
+      .from("orders")
+      .select("customer_name, customer_phone, customer_email, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    last = data && data[0];
+  } catch (e) {
+    console.error(e);
+  }
+  if (user !== currentUser) return;
+  const meta = user.user_metadata || {};
+  const values = last
+    ? {
+        customerName: last.customer_name,
+        customerPhone: last.customer_phone,
+        customerEmail: last.customer_email,
+        shippingAddress1: last.shipping_address_line1,
+        shippingAddress2: last.shipping_address_line2,
+        shippingCity: last.shipping_city,
+        shippingState: last.shipping_state,
+        shippingZip: last.shipping_zip,
+        shippingCountry: last.shipping_country,
+      }
+    : {
+        customerName: (currentProfile && currentProfile.full_name) || meta.full_name || meta.name || "",
+        customerEmail: user.email || "",
+      };
+  Object.keys(values).forEach((id) => {
+    const el = document.getElementById(id);
+    // Country starts out as "United States", so that counts as empty.
+    const empty = !el || !el.value.trim() || (id === "shippingCountry" && el.value === "United States");
+    if (el && empty && values[id]) el.value = values[id];
+  });
 }
 
 // Accessible modal, same open()/close() shape as the How It Works overlay
@@ -6329,6 +6376,8 @@ function clearDesignerAndForm() {
   shippingStateInput.value = "";
   shippingZipInput.value = "";
   shippingCountryInput.value = "United States";
+  // A signed-in customer's details go straight back in for the next order.
+  prefillContactDetails();
   orderSubmitted = false;
 }
 
