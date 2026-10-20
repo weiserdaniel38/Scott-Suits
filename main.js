@@ -1922,6 +1922,40 @@ function refreshOrderProgress() {
   });
 }
 
+// ---- Monogram text and fonts ---------------------------------------------
+// The factory counts each capital letter as 2 of its 24 characters.
+function monogramTextUnits(text) {
+  return Array.from(String(text || "")).reduce((n, ch) => n + (ch !== ch.toLowerCase() ? 2 : 1), 0);
+}
+// "" when the factory can stitch this text, else a short reason.
+function monogramTextProblem(text) {
+  const t = String(text || "");
+  const bad = Array.from(new Set(Array.from(t).filter((ch) => MONOGRAM_TEXT_RULES.unsupported.indexOf(ch.toLowerCase()) !== -1)));
+  if (bad.length) return "The factory can't stitch " + bad.join(" ") + ". Please leave " + (bad.length > 1 ? "them" : "it") + " out.";
+  const units = monogramTextUnits(t);
+  if (units > MONOGRAM_TEXT_RULES.maxUnits) return "Too long: " + units + " of " + MONOGRAM_TEXT_RULES.maxUnits + " (capital letters count as 2).";
+  return "";
+}
+// Inline CSS that shows text in a Monogram Font option's look-alike web font
+// (!important to beat the site-wide Montserrat rule in style.css).
+function monogramFontStyle(opt) {
+  return "font-family:" + opt.css.replace(/'/g, "&#39;") + " !important;font-weight:" + (opt.weight || 400) + ";--mono-scale:" + (opt.size || 1) + ";";
+}
+// The typed monogram as HTML, with (/) shown as a line break.
+function monogramPreviewHtml(text) {
+  const t = String(text || "").trim() || "ABC";
+  return t.split("(/)").map((line) => line.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))).join("<br>");
+}
+// Loads the monogram look-alike fonts the first time they're needed.
+function ensureMonogramFonts() {
+  if (document.getElementById("monogramFontsCss")) return;
+  const link = document.createElement("link");
+  link.id = "monogramFontsCss";
+  link.rel = "stylesheet";
+  link.href = MONOGRAM_FONTS_CSS_URL;
+  document.head.appendChild(link);
+}
+
 function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // sameAsResolvers (optional): { categoryKey: () => "currently selected value elsewhere" }.
   // For any category listed here, an extra "Same as ___" card is added so the
@@ -1942,7 +1976,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   const customTexts = {};
   function textMissing(k) {
     const ti = catalog[k] && catalog[k].textInput;
-    return !!ti && !!order[k] && order[k] !== ti.skipWhen && !String(customTexts[k] || "").trim();
+    if (!ti || !order[k] || order[k] === ti.skipWhen) return false;
+    const t = String(customTexts[k] || "").trim();
+    return !t || (k === "monogram" && !!monogramTextProblem(t));
   }
   function textShown(k) {
     const ti = catalog[k] && catalog[k].textInput;
@@ -2891,10 +2927,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // the magnifier stays there as the only way to preview an option
     // before choosing it. A gradient (matchesFabric) card has no real photo
     // to enlarge, so it never gets a magnifier either.
-    const zoomBtnHtml = isZoomCategory(activeTab) || gradientCss || opt.uploadPhoto
+    const zoomBtnHtml = isZoomCategory(activeTab) || gradientCss || opt.uploadPhoto || cat.fontCards
       ? ""
       : '<button class="zoom-btn" title="Enlarge" aria-label="Enlarge image"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>';
-    const swatchHtml = gradientCss
+    // A font card (Monogram Font) shows the customer's own monogram, or
+    // "ABC" until they type one, in that font instead of a photo.
+    const swatchHtml = cat.fontCards
+      ? '<div class="opt-swatch font-swatch" style="' + monogramFontStyle(opt) + '">' + monogramPreviewHtml(customTexts.monogram) + "</div>"
+      : gradientCss
       ? '<div class="opt-swatch match-fabric-swatch" style="background:' + gradientCss + ';" role="img" aria-label="' + shownName + '"></div>'
       : '<img class="opt-swatch" src="' + imgSrc + '" alt="' + shownName + '">';
     const card = document.createElement("div");
@@ -3469,12 +3509,19 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       return;
     }
 
-    const ti = cat.textInput;
+    // The Monogram Font step shows the monogram's own text box too, so the
+    // customer can retype it and watch every font card update.
+    const textKey = cat.fontCards ? "monogram" : activeTab;
+    const ti = catalog[textKey] && catalog[textKey].textInput;
     // The box only appears once a real option (not "No Monogram") is picked.
-    const showTextBox = !!ti && !!order[activeTab] && order[activeTab] !== ti.skipWhen;
+    const showTextBox = !!ti && !!order[textKey] && order[textKey] !== ti.skipWhen;
+    if (cat.fontCards || textKey === "monogram") ensureMonogramFonts();
+    const fontOpt = textKey === "monogram" && catalog.monogramFont && isApplicable("monogramFont")
+      ? catalog.monogramFont.options.find((o) => o.name === order.monogramFont) : null;
     const textBoxHtml = showTextBox
-      ? '<div class="measure-field mono-text-card"><label for="catText">' + ti.label + "</label>" +
-        '<div class="measure-input-wrap"><input type="text" id="catText" maxlength="' + (ti.maxLength || 40) + '" placeholder="' + ti.placeholder + '" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>' +
+      ? '<div class="measure-field mono-text-card"><label for="catText">' + ti.label + (fontOpt ? ' <span class="mono-font-tag">in ' + (fontOpt.displayName || fontOpt.name) + "</span>" : "") + "</label>" +
+        '<div class="measure-input-wrap"><input type="text" id="catText" maxlength="' + (ti.maxLength || 40) + '" placeholder="' + ti.placeholder + '" autocomplete="off" autocapitalize="characters" spellcheck="false"' + (fontOpt ? ' class="mono-in-font" style="' + monogramFontStyle(fontOpt) + '"' : "") + "></div>" +
+        (textKey === "monogram" ? '<div class="mono-text-status" id="catTextStatus"></div>' : "") +
         (ti.hint ? '<div class="mono-text-hint">' + ti.hint + "</div>" : "") + "</div>"
       : "";
     optionsEl.innerHTML =
@@ -3483,10 +3530,25 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       gridId + '"></div>';
     if (showTextBox) {
       const textEl = document.getElementById("catText");
-      const tabAtText = activeTab;
+      const statusEl = document.getElementById("catTextStatus");
+      const tabAtText = textKey;
       textEl.value = customTexts[tabAtText] || "";
+      const showStatus = () => {
+        if (!statusEl) return;
+        const t = String(textEl.value || "").trim();
+        const problem = t ? monogramTextProblem(t) : "";
+        statusEl.className = "mono-text-status" + (problem ? " is-error" : "");
+        statusEl.textContent = problem || (t ? monogramTextUnits(t) + " of " + MONOGRAM_TEXT_RULES.maxUnits + " used" : "");
+      };
+      showStatus();
       textEl.addEventListener("input", () => {
         customTexts[tabAtText] = textEl.value;
+        showStatus();
+        // Font cards show the typed text live.
+        if (cat.fontCards) {
+          const html = monogramPreviewHtml(textEl.value);
+          optionsEl.querySelectorAll(".font-swatch").forEach((el) => { el.innerHTML = html; });
+        }
         renderSummary();
         saveDraft();
       });

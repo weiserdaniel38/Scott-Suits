@@ -103,7 +103,7 @@
     { id: "lining", label: "Lining", view: "inside", keys: ["lining", "facing", "insidepocket"], at: { inside: [400, 560] } },
     { id: "lapelhole", label: "Buttonhole", view: "front", keys: ["lapelbuttonhole", "buttonholeThreadColor"], at: { front: "lapelHole" }, zoom: { front: [520, 200, 2.2] } },
     { id: "vents", label: "Back Vents", view: "back", keys: ["backvent"], at: { back: [400, 820] } },
-    { id: "monogram", label: "Monogram", view: "inside", keys: ["monogram", "monogramThreadColor"], at: { inside: [520, 400] } },
+    { id: "monogram", label: "Monogram", view: "inside", keys: ["monogram", "monogramFont", "monogramThreadColor"], at: { inside: [520, 400] } },
     { id: "collar", label: "Under Collar", view: "back", keys: ["feltundercollar", "feltColor"], at: { back: [400, 52], inside: [400, 52] } },
     { id: "facing", label: "Facing", view: "inside", keys: ["facing"], at: { inside: [222, 640] } },
     { id: "ipocket", label: "Inside Pockets", view: "inside", keys: ["insidepocket"], at: { inside: [270, 318] } },
@@ -582,11 +582,12 @@
     g.save();
     g.translate(x, y);
     if (rot) g.rotate(rot);
-    g.font = "italic 600 " + size + "px 'Playfair Display', Georgia, serif";
+    const f = opt("monogramFont", v._raw.monogramFont);
+    g.font = f ? (f.weight || 400) + " " + Math.round(size * (f.size || 1)) + "px " + f.css : "italic 600 " + size + "px 'Playfair Display', Georgia, serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillStyle = (o && o.hex) || "#c9b48a";
-    g.fillText(t.slice(0, 12), 0, 0);
+    g.fillText(t.split("(/)")[0].slice(0, 12), 0, 0);
     g.restore();
   }
 

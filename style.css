@@ -1811,3 +1811,11 @@ body:not(.designing) #suitTypeSection{display:none;}
 @media (max-width: 900px){.studio-options.designer-grid .fabric-palette-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;}}
 /* The big fabric photo opens above the jacket's bottom sheet. */
 body.studio-sheet-up .lightbox{z-index:170;}
+/* Monogram Font step: each card shows the customer's typed monogram in that
+   font (look-alike web fonts, see MONOGRAM_FONT_OPTIONS in catalog.js). */
+.designer-grid .opt-swatch.font-swatch{aspect-ratio:2/1;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 10px;box-sizing:border-box;color:#1c1814;font-size:calc(22px * var(--mono-scale,1));line-height:1.15;overflow:hidden;overflow-wrap:anywhere;letter-spacing:0;}
+@media(min-width:700px){.designer-grid .opt-swatch.font-swatch{font-size:calc(26px * var(--mono-scale,1));}}
+.mono-text-card .measure-input-wrap input.mono-in-font{font-size:calc(24px * var(--mono-scale,1));letter-spacing:0;}
+.mono-font-tag{color:var(--brass);letter-spacing:0;}
+.mono-text-status{font-size:12px;color:var(--ivory-dim);margin-top:2px;min-height:0;}
+.mono-text-status.is-error{color:#a3352b;font-weight:600;}

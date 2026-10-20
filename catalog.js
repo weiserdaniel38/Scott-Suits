@@ -185,7 +185,7 @@ const JACKET_CATALOG = {
     // A "type your monogram" box shown above the placement cards (see
     // textInput handling in createDesigner, main.js); required once any
     // placement other than skipWhen is chosen.
-    textInput: { label: "Your monogram", placeholder: "Type your monogram (initials or name)", hint: "Type it exactly as you'd like it stitched.", maxLength: 24, skipWhen: "No Monogram Need" },
+    textInput: { label: "Your monogram", placeholder: "Type your monogram (initials or name)", hint: "Up to 24 characters; capital letters count as 2. For two lines, put (/) between them, e.g. Beijing(/)China.", maxLength: 24, skipWhen: "No Monogram Need" },
     options: [
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/jacket-monogram-new-nomonogram.jpg" },
       { name: "On Left Inside Pocket", displayName: "Left Inside Pocket", img: "./assets/jacket-monogram-new-onleftinsidepkt.jpg" },
@@ -384,7 +384,7 @@ const PANTS_CATALOG = {
     // A "type your monogram" box shown above the placement cards (see
     // textInput handling in createDesigner, main.js); required once any
     // placement other than skipWhen is chosen.
-    textInput: { label: "Your monogram", placeholder: "Type your monogram (initials or name)", hint: "Type it exactly as you'd like it stitched.", maxLength: 24, skipWhen: "No Monogram Need" },
+    textInput: { label: "Your monogram", placeholder: "Type your monogram (initials or name)", hint: "Up to 24 characters; capital letters count as 2. For two lines, put (/) between them, e.g. Beijing(/)China.", maxLength: 24, skipWhen: "No Monogram Need" },
     options: [
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/pants-monogram-new-none.jpg" },
       { name: "Monogram On Left Back Pocket", displayName: "Left Back Pocket", img: "./assets/pants-monogram-new-leftback.jpg" },
@@ -2348,6 +2348,47 @@ PANTS_CATALOG.monogramThreadColor = {
   requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
 };
 
+// Monogram fonts: the factory's 11 embroidery fonts (Kutetailor System
+// embroidery, codes RC01-RC11). The stored name is the factory's font name
+// and factoryCode is printed on the order form. The factory's fonts aren't
+// web fonts, so `css` is the closest free Google font, used only to show
+// the customer's typed monogram on the site (see MONOGRAM_FONTS_CSS_URL).
+const MONOGRAM_FONT_OPTIONS = [
+  { name: "Calligraphy", factoryCode: "RC01", css: "'Great Vibes', cursive", size: 1.25 },
+  { name: "Times Roman", factoryCode: "RC02", css: "'Tinos', 'Times New Roman', serif" },
+  { name: "Block", factoryCode: "RC03", css: "'Oswald', 'Arial Narrow', sans-serif", weight: 500 },
+  { name: "Script", factoryCode: "RC04", css: "'Allura', cursive", size: 1.3 },
+  { name: "Bradley", factoryCode: "RC05", css: "'Caveat', cursive", weight: 500, size: 1.2 },
+  { name: "Bank Gothic Light BT", displayName: "Bank Gothic", factoryCode: "RC06", css: "'Michroma', sans-serif", size: 0.8 },
+  { name: "Book Script", factoryCode: "RC07", css: "'Parisienne', cursive", size: 1.15 },
+  { name: "Old English", factoryCode: "RC08", css: "'UnifrakturMaguntia', serif", size: 1.1 },
+  { name: "Gradl", factoryCode: "RC09", css: "'Pinyon Script', cursive", size: 1.15 },
+  { name: "Kennerley Old Style Bold", displayName: "Kennerley Old Style", factoryCode: "RC10", css: "'Goudy Bookletter 1911', Georgia, serif", weight: 700 },
+  { name: "Cochin", factoryCode: "RC11", css: "'Cormorant Garamond', Georgia, serif", weight: 600, size: 1.1 },
+];
+const MONOGRAM_FONTS_CSS_URL = "https://fonts.googleapis.com/css2?family=Great+Vibes&family=Tinos&family=Oswald:wght@500&family=Allura&family=Caveat:wght@500&family=Michroma&family=Parisienne&family=UnifrakturMaguntia&family=Pinyon+Script&family=Goudy+Bookletter+1911&family=Cormorant+Garamond:wght@600&display=swap";
+// The factory's limits on the typed text, checked by monogramTextProblem().
+const MONOGRAM_TEXT_RULES = {
+  maxUnits: 24, // capital letters count as 2
+  unsupported: "?\u00e0\u00e2\u00ea\u00e8\u00eb\u00ee\u00ef\u00f4\u00fb\u00fc\u00f9\u00e7",
+};
+JACKET_CATALOG.monogramFont = {
+  label: "Monogram Font",
+  column: "jacket_monogram_font",
+  description: "The lettering style your jacket monogram is embroidered in.",
+  fontCards: true, // cards show the customer's own text in each font (see renderFontCards in main.js)
+  options: MONOGRAM_FONT_OPTIONS,
+  requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
+};
+PANTS_CATALOG.monogramFont = {
+  label: "Monogram Font",
+  column: "pants_monogram_font",
+  description: "The lettering style your pants monogram is embroidered in.",
+  fontCards: true,
+  options: MONOGRAM_FONT_OPTIONS,
+  requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
+};
+
 // Thread Color sits right after Button Nail Method (Sleeves group on the
 // jacket, Bottom & Details on pants). Buttonhole Thread Color is jacket-only
 // (removed from pants 2026-10-07): it sits right after Lapel Buttonhole
@@ -2356,8 +2397,9 @@ PANTS_CATALOG.monogramThreadColor = {
 // Monogram Thread Color is the exception: it stays in Personalization,
 // right after Monogram Placement, since it only ever applies once a real
 // monogram is chosen.
-JACKET_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monogramThreadColor");
-PANTS_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monogramThreadColor");
+// Monogram Font goes between them (placement, font, thread color).
+JACKET_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monogramFont", "monogramThreadColor");
+PANTS_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monogramFont", "monogramThreadColor");
 
 // Each thread step says plainly which thread it is for -- "Thread Color"
 // alone left customers guessing (seams? buttonholes? buttons?). Labels and
@@ -2482,6 +2524,7 @@ const JACKET_STEP_TAGLINES = {
   feltundercollar: "", // intentionally no one-liner
   feltColor: "A sneaky pop of color when you flip your collar.",
   monogramThreadColor: "Whisper tone-on-tone or shout in contrast.",
+  monogramFont: "Tap a style to see your monogram in it.",
   buttoncolor: "The little finishing touch (sparkle optional)."
 };
 const PANTS_STEP_TAGLINES = {
@@ -2500,7 +2543,8 @@ const PANTS_STEP_TAGLINES = {
   backPocket: "Your back pockets: buttons, flaps or none.",
   fabric: "Pick the cloth for your pants.",
   threadColor: "Blend in with your fabric or make it pop.",
-  monogramThreadColor: "Whisper tone-on-tone or shout in contrast."
+  monogramThreadColor: "Whisper tone-on-tone or shout in contrast.",
+  monogramFont: "Tap a style to see your monogram in it."
 };
 Object.keys(JACKET_STEP_TAGLINES).forEach((k) => { if (JACKET_CATALOG[k]) JACKET_CATALOG[k].tagline = JACKET_STEP_TAGLINES[k]; });
 Object.keys(PANTS_STEP_TAGLINES).forEach((k) => { if (PANTS_CATALOG[k]) PANTS_CATALOG[k].tagline = PANTS_STEP_TAGLINES[k]; });
