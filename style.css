@@ -1333,8 +1333,9 @@ nav{position:sticky;top:0;}
 #lightbox .lb-nav:disabled{opacity:.15;cursor:default;}
 @media(max-width:900px){#lightbox .lb-caprow{margin-top:16px;}}
 
-/* LIVE SITE: internal QA bar hidden */
-.qa-nav,#qaNavBar{display:none !important;}
+/* LIVE SITE: internal QA bar hidden except for the signed-in admin or a
+   ?qa=1 browser (main.js adds body.qa-allowed). */
+body:not(.qa-allowed) .qa-nav,body:not(.qa-allowed) #qaNavBar,body:not(.qa-allowed) #qaNavShowBtn{display:none !important;}
 
 /* === START OVER, START DESIGNING + SUIT-TYPE CARDS: matched to the step-by-step look ===
    Rounded cards (14px), soft white card fill, brass on hover/selection, pill buttons. */

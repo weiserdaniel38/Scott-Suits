@@ -491,6 +491,8 @@ let currentProfile = null;
 // without payment" button. This only decides what's shown: the database
 // itself refuses a no-payment order from anyone who isn't an admin.
 let currentIsAdmin = false;
+// Set by the QA nav bar code near the end of this file.
+let setQaNavAllowed = null;
 
 async function refreshAdminStatus() {
   const user = currentUser;
@@ -505,6 +507,7 @@ async function refreshAdminStatus() {
   }
   if (user !== currentUser) return;
   currentIsAdmin = admin;
+  if (setQaNavAllowed) setQaNavAllowed(admin);
   const wrap = document.getElementById("adminOrderWrap");
   if (wrap) wrap.hidden = !admin;
   const shipWrap = document.getElementById("adminShippingWrap");
@@ -6888,28 +6891,23 @@ if (qaSkipPaymentBtn) {
 // left in its place. Remembered in localStorage purely as a convenience so
 // it stays out of the way across reloads during a testing session; never
 // depended on for anything real.
-(function () {
+// Shown for this browser after opening the site once with ?qa=1 (?qa=0 opts
+// back out), and always while the shop admin is signed in -- see
+// refreshAdminStatus(). Customers never see it.
+setQaNavAllowed = (function () {
   const bar = document.getElementById("qaNavBar");
   const hideBtn = document.getElementById("qaNavHideBtn");
   const showBtn = document.getElementById("qaNavShowBtn");
-  if (!bar || !hideBtn || !showBtn) return;
+  if (!bar || !hideBtn || !showBtn) return null;
 
-  // Customers never see it: the bar and its pill stay hidden (markup ships
-  // with the bar hidden) unless this browser has opted in by opening the
-  // site once with ?qa=1. ?qa=0 opts back out.
-  let qaEnabled = false;
+  let optedIn = false;
   try {
     const qaParam = new URLSearchParams(location.search).get("qa");
     if (qaParam === "1") localStorage.setItem("qaNavEnabled", "1");
     if (qaParam === "0") localStorage.removeItem("qaNavEnabled");
-    qaEnabled = localStorage.getItem("qaNavEnabled") === "1";
+    optedIn = localStorage.getItem("qaNavEnabled") === "1";
   } catch (e) {
     // Ignore -- stays off.
-  }
-  if (!qaEnabled) {
-    bar.hidden = true;
-    showBtn.hidden = true;
-    return;
   }
 
   function setHidden(hidden) {
@@ -6925,15 +6923,29 @@ if (qaSkipPaymentBtn) {
   hideBtn.addEventListener("click", () => setHidden(true));
   showBtn.addEventListener("click", () => setHidden(false));
 
-  // Hidden by default (declutter) -- a stored "0" means it was deliberately
-  // shown, so keep it shown.
-  let startHidden = true;
-  try {
-    startHidden = localStorage.getItem("qaNavHidden") !== "0";
-  } catch (e) {
-    // Ignore -- default to hidden.
+  let showing = false;
+  function apply(admin) {
+    const allowed = optedIn || admin;
+    if (allowed === showing) return;
+    showing = allowed;
+    document.body.classList.toggle("qa-allowed", allowed);
+    if (!allowed) {
+      bar.hidden = true;
+      showBtn.hidden = true;
+      return;
+    }
+    // ?qa=1 browsers start tucked away (declutter) unless it was last left
+    // open; the admin gets it open unless they last tucked it away.
+    let stored = null;
+    try {
+      stored = localStorage.getItem("qaNavHidden");
+    } catch (e) {
+      // Ignore -- use the default.
+    }
+    setHidden(admin ? stored === "1" : stored !== "0");
   }
-  setHidden(startHidden);
+  apply(currentIsAdmin);
+  return apply;
 })();
 
 // "Raw Fabric Codes" toggle -- flips qaShowRawFabricNames (declared up near
