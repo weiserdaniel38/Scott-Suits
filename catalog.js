@@ -46,30 +46,22 @@ const JACKET_CATALOG = {
     // Peak keep the full list.
     allowedBySelection: {
       collar: {
-        "Shawl": ["No Lapel Buttonhole", "Buttonhole On Left, Only For Shawl And Diamond Lapel"],
-        "Diamond Lapel": ["No Lapel Buttonhole", "Buttonhole On Left, Only For Shawl And Diamond Lapel"],
+        "Shawl": ["No Lapel Buttonhole", "Standard"],
+        "Diamond Lapel": ["No Lapel Buttonhole", "Standard"],
       },
     },
-    // Ordered by buttonhole count (one, then two, then three-plus), each
-    // count grouped left/right/both -- rather than the style book's own
-    // arbitrary order -- with the shawl/diamond-only special case and "No
-    // Lapel Buttonhole" (the absence of one) both placed at the end.
+    // Exactly the factory's (Kutetailor) Jacket > Hole Position choices, in
+    // its order (Daniel, 2026-10-20). factoryCode is the factory's option
+    // code, printed on the order form. Stored names are kept from the older,
+    // longer list so saved designs still resolve.
     options: [
-      { name: "Standard", formNote: "1 buttonhole on left lapel", img: "./assets/jacket-lapelbuttonhole-left.jpg" },
-      { name: "Right", formNote: "1 buttonhole on right lapel", img: "./assets/jacket-lapelbuttonhole-right.jpg" },
-      { name: "Right & Left", formNote: "1 buttonhole on each lapel", img: "./assets/jacket-lapelbuttonhole-right-left.jpg" },
-      { name: "Left Two", formNote: "2 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
-      { name: "Right Two", formNote: "2 buttonholes on right lapel", img: "./assets/jacket-lapelbuttonhole-right-two.jpg" },
-      { name: "Left Three", formNote: "3 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-three.jpg" },
-      { name: "Left Three, Right Two", formNote: "3 buttonholes on left lapel, 2 on right lapel", img: "./assets/jacket-lapelbuttonhole-left-three-right-two.jpg" },
-      { name: "4 Buttonholes On Left", formNote: "4 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-four-left.jpg" },
-      { name: "Buttonhole On Left, Only For Shawl And Diamond Lapel", formNote: "1 buttonhole on left lapel", displayName: "Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg",
-        // Hidden unless the Lapel Style is Shawl or Diamond (Notch, Peak or
-        // no lapel picked yet -> not offered).
-        onlyWhen: { collar: ["Shawl", "Diamond Lapel"] } },
-      { name: "No Lapel Buttonhole", img: "./assets/jacket-lapelbuttonhole-none.jpg",
+      { name: "No Lapel Buttonhole", factoryCode: "0544", img: "./assets/jacket-lapelbuttonhole-none.jpg",
         // Shows the shawl drawing (no buttonhole) when the collar is Shawl or Diamond.
         imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg" } } },
+      { name: "Standard", displayName: "Left Buttonhole", factoryCode: "0541", formNote: "1 buttonhole on left lapel", img: "./assets/jacket-lapelbuttonhole-left.jpg",
+        imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg" } } },
+      { name: "Left Two", displayName: "Double Left Buttonhole", factoryCode: "0545", formNote: "2 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
+      { name: "Right & Left", displayName: "Right & Left Buttonhole", factoryCode: "0543", formNote: "1 buttonhole on each lapel", img: "./assets/jacket-lapelbuttonhole-right-left.jpg" },
     ],
   },
   frontbutton: {
@@ -2559,8 +2551,8 @@ const CLASSIC_SUIT_PRESET = {
     },
     fixedBySelection: {
       collar: {
-        "Shawl": { lapelbuttonhole: "Buttonhole On Left, Only For Shawl And Diamond Lapel" },
-        "Diamond Lapel": { lapelbuttonhole: "Buttonhole On Left, Only For Shawl And Diamond Lapel" },
+        "Shawl": { lapelbuttonhole: "Standard" },
+        "Diamond Lapel": { lapelbuttonhole: "Standard" },
       },
     },
   },

@@ -172,15 +172,9 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Extra Wide": "extra-wide statement lapels, about 11 cm at the widest, reaching close to the sleeve seam",
   },
   "Lapel Buttonhole": {
-    Standard: "one buttonhole on the wearer's LEFT lapel; none on the right",
-    Right: "one buttonhole on the wearer's RIGHT lapel; none on the left",
-    "Right & Left": "one buttonhole on EACH lapel, mirrored at the same height",
-    "Left Two": "TWO buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Right Two": "TWO buttonholes stacked on the wearer's RIGHT lapel; none on the left",
-    "Left Three": "THREE buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Left Three, Right Two": "THREE stacked buttonholes on the wearer's LEFT lapel and TWO on the RIGHT lapel, both stacks starting at the same height",
-    "4 Buttonholes On Left": "FOUR buttonholes stacked on the wearer's LEFT lapel; none on the right",
-    "Lapel Buttonhole": "one buttonhole on the wearer's LEFT lapel; none on the right",
+    "Left Buttonhole": "one buttonhole on the wearer's LEFT lapel; none on the right",
+    "Double Left Buttonhole": "TWO buttonholes stacked on the wearer's LEFT lapel; none on the right",
+    "Right & Left Buttonhole": "one buttonhole on EACH lapel, mirrored at the same height",
     "No Lapel Buttonhole": "NO buttonhole on either lapel; both lapels are plain",
   },
   "Front Button": {
