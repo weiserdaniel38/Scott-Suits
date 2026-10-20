@@ -3802,6 +3802,8 @@ function clientFormGarmentLines(catalog, groups, sel, part, extras) {
         // An option's `formNote` (e.g. Square Waistband: "Centered over
         // zipper") is added to the factory form only.
         if (opt && opt.formNote) text += " -- " + opt.formNote.toUpperCase();
+        // The factory's own option code, where the catalog records one.
+        if (opt && opt.factoryCode) text += " (code " + opt.factoryCode + ")";
       }
       groupLines.push(cat.label + ": " + text);
       const monogramText = extras && (part === "jacket" ? extras.jacketMonogramText : extras.pantsMonogramText);
