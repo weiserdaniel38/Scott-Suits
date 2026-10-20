@@ -134,7 +134,6 @@ const JACKET_CATALOG = {
       { section: "Patch", name: "Patch Pocket", displayName: "Patch Pocket", img: "./assets/jacket-lowerpocket-new-patch.jpg" },
       { section: "Patch", name: "Patch Pocket + Single Besom Ticket Pocket", displayName: "Patch Pocket + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchsbt.jpg" },
       { section: "Patch", name: "Patch Pocket + Double Besom Ticket Pocket", displayName: "Patch Pocket + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchdbt.jpg" },
-      { section: "Patch", name: "Curved Patch Pocket", img: "./assets/jacket-lowerpocket-new-curvedpatch.jpg" },
       { section: "High-Back Patch", name: "Patch Pocket With Highly Back", displayName: "High-Back Patch Pocket", img: "./assets/jacket-lowerpocket-new-patchhighback.jpg" },
       { section: "High-Back Patch", name: "Patch Pocket With Highly Back + Single Besom Pocket", displayName: "High-Back Patch + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchhighbacksbt.jpg" },
       { section: "High-Back Patch", name: "Patch Pocket With Highly Back + Double Besom Ticket", displayName: "High-Back Patch + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchhighbackdbt.jpg" },

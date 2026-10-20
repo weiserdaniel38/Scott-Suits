@@ -227,7 +227,6 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Patch Pocket": "two square patch pockets sewn on top of the jacket at the hips, open at the top, no flaps",
     "Patch Pocket + Single Besom Ticket": "two patch hip pockets sewn on top of the jacket, open at the top, no flaps, plus ONE single-besom ticket pocket (one thin lip, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
     "Patch Pocket + Double Besom Ticket": "two patch hip pockets sewn on top of the jacket, open at the top, no flaps, plus ONE double-besom ticket pocket (two thin lips, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
-    "Curved Patch Pocket": "two patch hip pockets with generously ROUNDED bottom corners, open at the top, no flaps",
     "High-Back Patch Pocket": "two patch hip pockets whose top edge slopes, higher at the back (side) than at the front",
     "High-Back Patch + Single Besom Ticket": "two high-back patch hip pockets (top edge higher at the side seam than at the front), plus ONE single-besom ticket pocket (one thin lip, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
     "High-Back Patch + Double Besom Ticket": "two high-back patch hip pockets (top edge higher at the side seam than at the front), plus ONE double-besom ticket pocket (two thin lips, no flap; not a patch) about 4 cm above the wearer's right patch pocket only",
