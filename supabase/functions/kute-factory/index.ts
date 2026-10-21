@@ -111,23 +111,32 @@ async function save(list: string, category: string, data: unknown) {
   if (error) throw new Error("saving " + list + ": " + error.message);
 }
 
+// Code lists that don't depend on the garment, and those fetched once per
+// garment category (categoryCode), e.g. MXF jacket, MXK trousers.
+const GLOBAL_LISTS = ["categories", "sizeTypes"];
+const PER_CATEGORY = ["crafts", "specials", "fits", "bodyMeasurements", "finishedMeasurements", "standardSizes", "embroideries"];
+
 async function syncCodes() {
   const counts: Record<string, unknown> = {};
-  for (const name of ARCHIVES) {
-    if (name === "crafts") continue;
+  const count = (r: { httpStatus: number; data: unknown }) => {
+    const d = (r.data as Record<string, unknown>)?.data;
+    return r.httpStatus === 200 && Array.isArray(d) ? walk(d).length : { httpStatus: r.httpStatus };
+  };
+  let categories: Record<string, unknown>[] = [];
+  for (const name of GLOBAL_LISTS) {
     const r = await kute("GET", "/craft/openApi/archives/" + name);
     await save(name, "", r.data);
-    const d = (r.data as Record<string, unknown>)?.data;
-    counts[name] = r.httpStatus === 200 && Array.isArray(d) ? walk(d).length : { httpStatus: r.httpStatus, data: r.data };
+    counts[name] = count(r);
+    if (name === "categories") categories = walk((r.data as Record<string, unknown>)?.data);
   }
-  const cats = walk(((await supabase.from("factory_codes").select("data").eq("list", "categories").single()).data?.data as Record<string, unknown>)?.data);
-  for (const c of cats) {
+  for (const c of categories) {
     const code = String(c.code || "");
     if (!code) continue;
-    const r = await kute("GET", "/craft/openApi/archives/crafts", { categoryCode: code });
-    await save("crafts", code, r.data);
-    const d = (r.data as Record<string, unknown>)?.data;
-    counts["crafts " + code] = Array.isArray(d) ? walk(d).length : { httpStatus: r.httpStatus };
+    await Promise.all(PER_CATEGORY.map(async (name) => {
+      const r = await kute("GET", "/craft/openApi/archives/" + name, { categoryCode: code });
+      await save(name, code, r.data);
+      counts[name + " " + code] = count(r);
+    }));
   }
   return counts;
 }
