@@ -5,6 +5,7 @@
 //   Authorization: Bearer <admin's sign-in token>   (the shop admin's page)
 // or
 //   x-webhook-secret: <WEBHOOK_SECRET>              (server-side jobs/tests)
+// or the service role key as the Bearer token (Supabase dashboard tests)
 // and a JSON body naming one action:
 //   { action: "archive", name: "crafts", params: { ... } }
 //       one of the factory's code lists (categories, crafts, specials, fits,
@@ -13,6 +14,10 @@
 //   { action: "fabric", code: "DZZ0110" }   fabric photo, stock and price
 //   { action: "stock", code: "DZZ0110" }    fabric stock only
 //   { action: "status", orderNo: "..." }    production status + waybill
+//   { action: "sync" }   saves every code list (crafts for each garment
+//       category) into public.factory_codes and returns row counts. Can be
+//       run from the Supabase dashboard's function "Test" button (service
+//       role key).
 // Everything here only reads from the factory; nothing is ordered or changed.
 //
 // Signing (the factory's "Signature Authentication"): each request carries
@@ -89,11 +94,50 @@ export async function kute(method: string, path: string, query: Record<string, s
   return { httpStatus: res.status, data };
 }
 
+// Every code in a code list tree (records nest under `children`).
+function walk(nodes: unknown, out: Record<string, unknown>[] = []) {
+  if (Array.isArray(nodes)) {
+    for (const n of nodes as Record<string, unknown>[]) {
+      out.push(n);
+      walk(n.children, out);
+    }
+  }
+  return out;
+}
+
+async function save(list: string, category: string, data: unknown) {
+  const { error } = await supabase.from("factory_codes")
+    .upsert({ list, category, data, fetched_at: new Date().toISOString() });
+  if (error) throw new Error("saving " + list + ": " + error.message);
+}
+
+async function syncCodes() {
+  const counts: Record<string, unknown> = {};
+  for (const name of ARCHIVES) {
+    if (name === "crafts") continue;
+    const r = await kute("GET", "/craft/openApi/archives/" + name);
+    await save(name, "", r.data);
+    const d = (r.data as Record<string, unknown>)?.data;
+    counts[name] = r.httpStatus === 200 && Array.isArray(d) ? walk(d).length : { httpStatus: r.httpStatus, data: r.data };
+  }
+  const cats = walk(((await supabase.from("factory_codes").select("data").eq("list", "categories").single()).data?.data as Record<string, unknown>)?.data);
+  for (const c of cats) {
+    const code = String(c.code || "");
+    if (!code) continue;
+    const r = await kute("GET", "/craft/openApi/archives/crafts", { categoryCode: code });
+    await save("crafts", code, r.data);
+    const d = (r.data as Record<string, unknown>)?.data;
+    counts["crafts " + code] = Array.isArray(d) ? walk(d).length : { httpStatus: r.httpStatus };
+  }
+  return counts;
+}
+
 async function allowed(req: Request): Promise<boolean> {
   const hook = env("WEBHOOK_SECRET");
   if (hook && req.headers.get("x-webhook-secret") === hook) return true;
   const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
   if (!m) return false;
+  if (m[1] === env("SUPABASE_SERVICE_ROLE_KEY")) return true;
   const { data: who } = await supabase.auth.getUser(m[1]);
   if (!who?.user) return false;
   const { data: adminRow } = await supabase.from("admins").select("user_id").eq("user_id", who.user.id).maybeSingle();
@@ -103,14 +147,13 @@ async function allowed(req: Request): Promise<boolean> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
-  if (!(await allowed(req))) return json({ error: "only the shop admin can use this" }, 403);
-
   let input: Record<string, unknown> = {};
   try {
     input = await req.json();
   } catch {
     return json({ error: "send a JSON body" }, 400);
   }
+  if (!(await allowed(req))) return json({ error: "only the shop admin can use this" }, 403);
   const str = (v: unknown) => String(v ?? "").trim();
   const params: Record<string, string> = {};
   for (const [k, v] of Object.entries((input.params as Record<string, unknown>) || {})) params[k] = str(v);
@@ -126,6 +169,8 @@ Deno.serve(async (req) => {
         return json(await kute("GET", "/fabric/fabric/queryFabric", { fabricCode: str(input.code) }));
       case "stock":
         return json(await kute("GET", "/order/stock/" + encodeURIComponent(str(input.code))));
+      case "sync":
+        return json(await syncCodes());
       case "status":
         return json(await kute("GET", "/order/status/" + encodeURIComponent(str(input.orderNo))));
       default:
