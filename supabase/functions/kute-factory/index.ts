@@ -14,11 +14,20 @@
 //   { action: "fabric", code: "DZZ0110" }   fabric photo, stock and price
 //   { action: "stock", code: "DZZ0110" }    fabric stock only
 //   { action: "status", orderNo: "..." }    production status + waybill
+//   { action: "factory_preview", id, height, heightUnit, weight, weightUnit }
+//       the factory order one suit (orders row id) would make, with
+//       warnings; nothing is sent
+//   { action: "factory_draft", ...same }  saves that suit as a DRAFT order
+//       on the factory site (submit is always false; the admin submits it
+//       there) and keeps the factory's order number on the row. Sending
+//       again updates the same draft.
+//   { action: "factory_status", id }  the suit's factory status; moves the
+//       order's shipping step forward to match
 //   { action: "sync" }   saves every code list (crafts for each garment
 //       category) into public.factory_codes and returns row counts. Can be
 //       run from the Supabase dashboard's function "Test" button (service
 //       role key).
-// Everything here only reads from the factory; nothing is ordered or changed.
+// Nothing here submits an order: factory_draft only saves drafts.
 //
 // Signing (the factory's "Signature Authentication"): each request carries
 // X-OPENAPI-CLIENT-ID, -TIMESTAMP (ms), -NONCE and -SIGNATURE, where the
@@ -33,6 +42,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { buildFactoryOrder, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes } from "./order.ts";
 
 const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
 const BASE = "https://platform.kutetailor.com/api";
@@ -141,6 +151,96 @@ async function syncCodes() {
   return counts;
 }
 
+// The live site's catalog.js (option names and their factory codes).
+async function loadCatalog(): Promise<{ jacket: Catalog; pants: Catalog }> {
+  const url = env("SITE_URL", "https://scottssuits.com").replace(/\/$/, "") + "/catalog.js?t=" + Date.now();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("couldn't load the site catalog (" + res.status + ")");
+  const src = await res.text();
+  const got = new Function("window", "document", src + "\n;return { jacket: JACKET_CATALOG, pants: PANTS_CATALOG };")({}, {});
+  return got as { jacket: Catalog; pants: Catalog };
+}
+
+async function loadEmbCodes(): Promise<{ MXF?: EmbCodes; MXK?: EmbCodes }> {
+  const { data } = await supabase.from("factory_codes").select("category, data").eq("list", "embroideries").in("category", ["MXF", "MXK"]);
+  const out: Record<string, EmbCodes> = {};
+  for (const r of data || []) {
+    const d = (r.data as Record<string, any>)?.data || {};
+    out[r.category] = { fonts: d.fonts || [], colors: d.colors || [] };
+  }
+  return out;
+}
+
+async function loadRow(id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("unknown suit");
+  const { data, error } = await supabase.from("orders").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("unknown suit");
+  return data as Record<string, unknown>;
+}
+
+async function factoryOrder(input: Record<string, unknown>) {
+  const row = await loadRow(String(input.id || ""));
+  const [{ jacket, pants }, emb] = await Promise.all([loadCatalog(), loadEmbCodes()]);
+  const built = buildFactoryOrder({
+    row, jacket, pants, emb,
+    height: Number(input.height) || 0,
+    heightUnit: input.heightUnit === "in" ? "in" : "cm",
+    weight: Number(input.weight) || 0,
+    weightUnit: input.weightUnit === "lb" ? "lb" : "kg",
+    orderNo: String(row.factory_order_no || ""),
+  });
+  return { row, ...built };
+}
+
+async function saveDraft(input: Record<string, unknown>) {
+  const { row, body, warnings, blocking } = await factoryOrder(input);
+  if (blocking.length) return { ok: false, blocking, warnings };
+  body.submit = false; // never submit from here
+  const r = await kute("POST", "/order/saveOrder", {}, body);
+  const res = (r.data || {}) as Record<string, any>;
+  const d = res.data || {};
+  const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  const err = ok ? (d.errorMessage || null) : (d.errorMessage || res.msg || res.message || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300));
+  const update: Record<string, unknown> = { factory_error: err, factory_sent_at: new Date().toISOString() };
+  if (ok) {
+    update.factory_order_no = d.orderNo;
+    update.factory_status = "Draft";
+    update.factory_delivery_date = d.deliveryDate || null;
+  }
+  await supabase.from("orders").update(update).eq("id", row.id);
+  return { ok, orderNo: d.orderNo || row.factory_order_no || null, deliveryDate: d.deliveryDate || null, error: err, warnings };
+}
+
+async function factoryStatus(id: string) {
+  const row = await loadRow(id);
+  const orderNo = String(row.factory_order_no || "");
+  if (!orderNo) return { ok: false, error: "not sent to the factory yet" };
+  const r = await kute("GET", "/order/status/" + encodeURIComponent(orderNo));
+  const res = (r.data || {}) as Record<string, any>;
+  const d = res.data || {};
+  if (r.httpStatus !== 200 || String(res.code) !== "0") {
+    return { ok: false, error: res.msg || res.message || "factory said " + r.httpStatus };
+  }
+  const update: Record<string, unknown> = {
+    factory_status: d.statusName || String(d.status || ""),
+    factory_delivery_date: d.deliveryDate || row.factory_delivery_date || null,
+    factory_waybill: d.waybillNo || null,
+  };
+  // Move the customer's shipping step forward (never back) to match.
+  const stage = FACTORY_STAGE[String(d.status)];
+  const current = String(row.shipping_status || "");
+  // Like the admin's own shipping updates, the step is set for the whole
+  // order. No email or text goes out; the admin's Save button does that.
+  const moved = !!stage && SHIPPING_ORDER.indexOf(stage) > SHIPPING_ORDER.indexOf(current);
+  await supabase.from("orders").update(update).eq("id", row.id);
+  if (moved) {
+    await supabase.from("orders").update({ shipping_status: stage, shipping_updated_at: new Date().toISOString() })
+      .eq("order_id", row.order_id);
+  }
+  return { ok: true, status: update.factory_status, deliveryDate: update.factory_delivery_date, waybill: update.factory_waybill, shippingStatus: moved ? stage : current || null };
+}
+
 // The project's server-only keys: the legacy service role key and any new
 // "sb_secret_..." keys (SUPABASE_SECRET_KEYS is a JSON object of them).
 function serverKeys(): string[] {
@@ -205,6 +305,14 @@ Deno.serve(async (req) => {
         return json(await syncCodes());
       case "status":
         return json(await kute("GET", "/order/status/" + encodeURIComponent(str(input.orderNo))));
+      case "factory_preview": {
+        const { body, warnings, blocking } = await factoryOrder(input);
+        return json({ body, warnings, blocking });
+      }
+      case "factory_draft":
+        return json(await saveDraft(input));
+      case "factory_status":
+        return json(await factoryStatus(str(input.id)));
       default:
         return json({ error: "unknown action" }, 400);
     }

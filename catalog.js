@@ -310,20 +310,20 @@ const PANTS_CATALOG = {
     label: "Belt Loops",
     column: "belt_loops",
     options: [
-      { name: "Belt Loops", img: "./assets/pants-beltloop-new-yes.jpg" },
-      { name: "X Loops", img: "./assets/pants-beltloop-new-x.jpg" },
-      { name: "No Belt Loop", img: "./assets/pants-beltloop-new-no.jpg" },
+      { name: "Belt Loops", factoryCode: "3330", img: "./assets/pants-beltloop-new-yes.jpg" },
+      { name: "X Loops", factoryCode: "333E", img: "./assets/pants-beltloop-new-x.jpg" },
+      { name: "No Belt Loop", factoryCode: "3329", img: "./assets/pants-beltloop-new-no.jpg" },
     ],
   },
   frontPocket: {
     label: "Front Pocket Style",
     column: "front_pocket_style",
     options: [
-      { name: "Slant Pocket", img: "./assets/pants-fpocket-new-slant.jpg" },
-      { name: "Double Besom", displayName: "Besom", img: "./assets/pants-fpocket-new-double-besom.jpg" },
-      { name: "On Seam Pocket", img: "./assets/pants-fpocket-new-onseam.jpg" },
-      { name: "Moon Shape Pocket", img: "./assets/pants-fpocket-new-moon.jpg" },
-      { name: "Moon Shape Pocket + Coin Pocket", img: "./assets/pants-fpocket-new-moon-coin.jpg" },
+      { name: "Slant Pocket", factoryCode: "3104,3533", img: "./assets/pants-fpocket-new-slant.jpg" },
+      { name: "Double Besom", displayName: "Besom", factoryCode: "3131,3533", img: "./assets/pants-fpocket-new-double-besom.jpg" },
+      { name: "On Seam Pocket", factoryCode: "3130,3533", img: "./assets/pants-fpocket-new-onseam.jpg" },
+      { name: "Moon Shape Pocket", factoryCode: "3135,3533", img: "./assets/pants-fpocket-new-moon.jpg" },
+      { name: "Moon Shape Pocket + Coin Pocket", factoryCode: "3135,3530", img: "./assets/pants-fpocket-new-moon-coin.jpg" },
     ],
   },
   bottomStyle: {
