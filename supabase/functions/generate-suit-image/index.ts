@@ -411,7 +411,7 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
 Top row, about two thirds of the sheet's height, three equal panels side by side, each about one third of the sheet wide and each showing the WHOLE jacket from shoulders to hem at its natural, real-life proportions (a normal jacket is about three quarters as wide as it is tall, sleeves included): never squeezed narrow, stretched tall or cropped. (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view${ventNote}; (3) the jacket front view with one front edge folded open to show the inside of the jacket and the inside pocket${openNote}.
 Bottom row, three equal close-up panels side by side: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture; (6) a close-up of the lower front of the buttoned jacket showing both hip pockets${hipNote}.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
-Left side, three tall panels side by side, each garment at its natural, real-life proportions (never squeezed narrow or stretched tall): (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view${ventNote}; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
+Left side, three tall panels side by side, each garment at its natural, real-life proportions (never squeezed narrow or stretched tall): (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view${ventNote}. In both full suit views the trousers are ${TROUSER_LENGTH}; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
 Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
 }
 
@@ -463,6 +463,12 @@ const LAPEL_NOT: Record<string, string> = {
 // ends, like an overcoat). They are cut the same length as single-breasted.
 const JACKET_LENGTH =
   "a standard suit-jacket length, exactly like a normal single-breasted suit jacket: the hem ends just below the seat, about level with the ends of the sleeves when the arms hang straight; never longer, never a long coat, frock coat or overcoat length";
+
+// Trousers came out far too long in the full suit views (endless legs under a
+// short jacket). Real suit trousers below the jacket hem are a little SHORTER
+// than the jacket itself, collar to hem.
+const TROUSER_LENGTH =
+  "a normal, real-life suit-trouser length: the legs below the jacket hem are slightly SHORTER than the jacket itself measured from collar to hem (about 4/5 of it), and the hems end at the ankle where the top of a shoe would be, with at most a slight break. Never stretch the legs to fill a tall panel: keep the whole suit at real human proportions and leave white space above and below it instead";
 
 // The image model drew a besom chest pocket as a stack of piped lines above a
 // second, separate welt slit. There is only ever one chest pocket.
@@ -552,6 +558,9 @@ function keyDetails(spec: string, ownLining = false): string {
   if (/slant/i.test((spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "")) {
     out.push("- CUFF BUTTONS: " + SLANT_VENT + ".");
   }
+  if (!/^Suit type: Jacket only/m.test(spec)) {
+    out.push("- TROUSER LENGTH: " + TROUSER_LENGTH + ".");
+  }
   if (/^Front Button: Double Breasted/im.test(spec)) {
     out.push("- JACKET LENGTH: the double-breasted jacket is " + JACKET_LENGTH + ".");
   }
@@ -583,6 +592,9 @@ function fixedRules(spec: string): string {
     const ext = (spec.match(/^Waistband Extension Style: (.+)$/m) || [])[1] || "";
     const wstyle = (spec.match(/^Waistband Style: (.+)$/m) || [])[1] || "";
     const buckle = /buckle/i.test(wstyle);
+    rules.push(
+      "- Trouser length, in both full suit views: " + TROUSER_LENGTH + ".",
+    );
     rules.push(
       "- The trousers are shown fully CLOSED in every panel: fly zipped and hidden under its fly shield, waistband fastened. Never show an open fly, a visible zipper, or the inside of the waistband.",
     );
