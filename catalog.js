@@ -95,8 +95,7 @@ const JACKET_CATALOG = {
     options: [
       { name: "Normal Pocket", img: "./assets/jacket-pockettype-new-normal.jpg" },
       { name: "Boat Shape Pocket", img: "./assets/jacket-pockettype-new-boatshape.jpg" },
-      { name: "Single Besom Pocket", img: "./assets/jacket-pockettype-new-singlebesom.jpg" },
-      { name: "Double Besom Pocket", img: "./assets/jacket-pockettype-new-doublebesom.jpg" },
+      { name: "Double Besom Pocket", displayName: "Besom Pocket", factoryCode: "0110", img: "./assets/jacket-pockettype-new-doublebesom.jpg" },
       { name: "Patch Pocket No Flap", img: "./assets/jacket-pockettype-new-patchnoflap.jpg" },
       { name: "No Pocket", img: "./assets/jacket-pockettype-new-nohandkerchief.jpg" },
     ],
@@ -104,31 +103,25 @@ const JACKET_CATALOG = {
   lowerpocket: {
     label: "Lower Pockets",
     column: "lower_pocket",
-    // 23 options grouped under small headings (Besom / Welt / Slant Besom / Flap /
+    // 17 options grouped under small headings (Besom / Welt / Slant Besom / Flap /
     // Slant Flap / Patch / High-Back Patch / No Pockets); within a family the
-    // rows read plain -> + single ticket pocket -> + double/flap ticket pocket.
+    // rows read plain -> + besom ticket pocket -> + flap ticket pocket. Single besom
+    // options were removed (Daniel, 2026-10-21); "Double Besom" is shown as "Besom".
     options: [
-      { section: "Besom", name: "Single Besom Pocket", img: "./assets/jacket-lowerpocket-new-sb.jpg" },
-      { section: "Besom", name: "Double Besom Pocket", img: "./assets/jacket-lowerpocket-new-db.jpg" },
-      { section: "Besom", name: "Single Besom Pocket + Single Besom Ticket Pocket", displayName: "Single Besom + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-sbsbt.jpg" },
-      { section: "Besom", name: "Double Besom Pocket + Double Besom Ticket Pocket", displayName: "Double Besom + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-dbdbt.jpg" },
+      { section: "Besom", name: "Double Besom Pocket", displayName: "Besom Pocket", img: "./assets/jacket-lowerpocket-new-db.jpg" },
+      { section: "Besom", name: "Double Besom Pocket + Double Besom Ticket Pocket", displayName: "Besom + Besom Ticket", img: "./assets/jacket-lowerpocket-new-dbdbt.jpg" },
       { section: "Welt", name: "Flat Welt Pocket", img: "./assets/jacket-lowerpocket-new-flatwelt-v2.jpg" },
-      { section: "Slant Besom", name: "Single Besom Slant Pocket", img: "./assets/jacket-lowerpocket-new-sbslant.jpg" },
-      { section: "Slant Besom", name: "Double Besom Slant Pocket", img: "./assets/jacket-lowerpocket-new-dbslant.jpg" },
+      { section: "Slant Besom", name: "Double Besom Slant Pocket", displayName: "Besom Slant Pocket", img: "./assets/jacket-lowerpocket-new-dbslant.jpg" },
       { section: "Flap", name: "Double Besom W/ Flap", displayName: "Flap Pockets", img: "./assets/jacket-lowerpocket-new-dbwflap.jpg" },
-      { section: "Flap", name: "Double Besom W/ Flap And Single Besom Ticket Pocket", displayName: "Flap Pockets + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-dbwflapsbt.jpg" },
-      { section: "Flap", name: "Double Besom W/ Flap And Double Besom Ticket Pocket", displayName: "Flap Pockets + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-dbwflapdbt.jpg" },
+      { section: "Flap", name: "Double Besom W/ Flap And Double Besom Ticket Pocket", displayName: "Flap Pockets + Besom Ticket", img: "./assets/jacket-lowerpocket-new-dbwflapdbt.jpg" },
       { section: "Flap", name: "Double Besom W/ Flap And Ticket Pocket W/ Flap", displayName: "Flap Pockets + Flap Ticket Pocket", img: "./assets/jacket-lowerpocket-new-flapft.jpg" },
       { section: "Slant Flap", name: "Slant Pocket Flap", displayName: "Slant Flap Pocket", img: "./assets/jacket-lowerpocket-new-slantflap.jpg" },
-      { section: "Slant Flap", name: "Slant Pocket Flap + Single Besom Ticket Pocket", displayName: "Slant Flap + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-slantflapsbt.jpg" },
-      { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom Ticket Pocket", displayName: "Slant Flap + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-slantflapdbt.jpg" },
+      { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom Ticket Pocket", displayName: "Slant Flap + Besom Ticket", img: "./assets/jacket-lowerpocket-new-slantflapdbt.jpg" },
       { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom W/ Flat Ticket Pocket", displayName: "Slant Flap + Flap Ticket Pocket", img: "./assets/jacket-lowerpocket-new-slantflapft.jpg" },
       { section: "Patch", name: "Patch Pocket", displayName: "Patch Pocket", img: "./assets/jacket-lowerpocket-new-patch.jpg" },
-      { section: "Patch", name: "Patch Pocket + Single Besom Ticket Pocket", displayName: "Patch Pocket + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchsbt.jpg" },
-      { section: "Patch", name: "Patch Pocket + Double Besom Ticket Pocket", displayName: "Patch Pocket + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchdbt.jpg" },
+      { section: "Patch", name: "Patch Pocket + Double Besom Ticket Pocket", displayName: "Patch Pocket + Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchdbt.jpg" },
       { section: "High-Back Patch", name: "Patch Pocket With Highly Back", displayName: "High-Back Patch Pocket", img: "./assets/jacket-lowerpocket-new-patchhighback.jpg" },
-      { section: "High-Back Patch", name: "Patch Pocket With Highly Back + Single Besom Pocket", displayName: "High-Back Patch + Single Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchhighbacksbt.jpg" },
-      { section: "High-Back Patch", name: "Patch Pocket With Highly Back + Double Besom Ticket", displayName: "High-Back Patch + Double Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchhighbackdbt.jpg" },
+      { section: "High-Back Patch", name: "Patch Pocket With Highly Back + Double Besom Ticket", displayName: "High-Back Patch + Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchhighbackdbt.jpg" },
       { section: "No Pockets", name: "No Front Pocket", img: "./assets/jacket-lowerpocket-new-nofront.jpg" },
     ],
   },
@@ -327,8 +320,7 @@ const PANTS_CATALOG = {
     column: "front_pocket_style",
     options: [
       { name: "Slant Pocket", img: "./assets/pants-fpocket-new-slant.jpg" },
-      { name: "Single Besom", img: "./assets/pants-fpocket-new-single-besom.jpg" },
-      { name: "Double Besom", img: "./assets/pants-fpocket-new-double-besom.jpg" },
+      { name: "Double Besom", displayName: "Besom", img: "./assets/pants-fpocket-new-double-besom.jpg" },
       { name: "On Seam Pocket", img: "./assets/pants-fpocket-new-onseam.jpg" },
       { name: "Moon Shape Pocket", img: "./assets/pants-fpocket-new-moon.jpg" },
       { name: "Moon Shape Pocket + Coin Pocket", img: "./assets/pants-fpocket-new-moon-coin.jpg" },
@@ -396,12 +388,11 @@ const PANTS_CATALOG = {
     label: "Back Pocket Style",
     column: "back_pocket_style",
     options: [
-      { section: "Besom (Both Sides)", name: "Besom Pocket W/ Button", displayName: "Single Besom With Buttons", img: "./assets/pants-bpocket-new-single-besom-buttons.jpg" },
-      { section: "Besom (Both Sides)", name: "Double Besom Pocket", displayName: "Double Besom With Buttons", img: "./assets/pants-bpocket-new-db-buttons.jpg" },
-      { section: "Besom (Both Sides)", name: "Double Besom Pocket Left W/ Button", displayName: "Double Besom, Left Button", img: "./assets/pants-bpocket-new-db-leftbutton.jpg" },
-      { section: "Besom (Both Sides)", name: "Double Besom Pocket W/ No Button", displayName: "Double Besom, No Buttons", img: "./assets/pants-bpocket-new-db-nobuttons.jpg" },
-      { section: "Right Side Only", name: "Right Side Double Besom Pocket W/ Button", displayName: "Right Double Besom With Button", img: "./assets/pants-bpocket-new-right-db-button.jpg" },
-      { section: "Right Side Only", name: "Right Side Double Besom Pocket No Button", displayName: "Right Double Besom, No Button", img: "./assets/pants-bpocket-new-right-db-nobutton.jpg" },
+      { section: "Besom (Both Sides)", name: "Double Besom Pocket", displayName: "Besom With Buttons", img: "./assets/pants-bpocket-new-db-buttons.jpg" },
+      { section: "Besom (Both Sides)", name: "Double Besom Pocket Left W/ Button", displayName: "Besom, Left Button", img: "./assets/pants-bpocket-new-db-leftbutton.jpg" },
+      { section: "Besom (Both Sides)", name: "Double Besom Pocket W/ No Button", displayName: "Besom, No Buttons", img: "./assets/pants-bpocket-new-db-nobuttons.jpg" },
+      { section: "Right Side Only", name: "Right Side Double Besom Pocket W/ Button", displayName: "Right Besom With Button", img: "./assets/pants-bpocket-new-right-db-button.jpg" },
+      { section: "Right Side Only", name: "Right Side Double Besom Pocket No Button", displayName: "Right Besom, No Button", img: "./assets/pants-bpocket-new-right-db-nobutton.jpg" },
       { section: "Flap", name: "Rhombus Shape Pocket Flap", displayName: "Rhombus Pocket Flap", img: "./assets/pants-bpocket-new-rhombus.jpg" },
       { section: "Flap", name: "Peach Shape Pocket Flap", img: "./assets/pants-bpocket-new-peach.jpg" },
       { section: "Flap", name: "Slant Corner Pocket Flap", img: "./assets/pants-bpocket-new-slantcorner.jpg" },
@@ -2660,7 +2651,7 @@ const CLASSIC_SUIT_PRESET = {
     steps: ["fabric", "frontbutton", "collar", "lowerpocket"],
     allowed: {
       // Single welt or flap, each straight or slanted (Daniel, 2026-10-11).
-      lowerpocket: ["Single Besom Pocket", "Single Besom Slant Pocket", "Double Besom W/ Flap", "Slant Pocket Flap"],
+      lowerpocket: ["Double Besom Pocket", "Double Besom Slant Pocket", "Double Besom W/ Flap", "Slant Pocket Flap"],
       fabric: ["26SU218.DBV3529", "26SU209.DLL0177", "26SU216.DBV3531", "26SU217.DBV3530"],
       frontbutton: ["Single Breasted Two Buttons", "Double Breasted 6X2"],
     },
@@ -2706,7 +2697,7 @@ const CLASSIC_SUIT_PRESET = {
       waistbandExtension: "Round Shape 5cm",
       beltLoops: "Belt Loops",
       frontPocket: "Slant Pocket",
-      backPocket: "Besom Pocket W/ Button",
+      backPocket: "Double Besom Pocket",
       watchPocket: "No Watch Pocket",
       backWaistShape: "No V Open",
       hookEye: "Metal Hook And Eye",
