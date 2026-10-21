@@ -297,8 +297,8 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   },
   "Front Pleat": {
     "No Pleat": "flat-front trousers: NO pleats, only a pressed crease down each leg",
-    "Single Pleat": "ONE forward-facing pleat on each side of the front, just below the waistband, flowing into the crease",
-    "Double Pleat": "TWO pleats on each side of the front, just below the waistband",
+    "Single Pleat": "ONE reverse pleat on each side of the front (folding toward the side pocket), just below the waistband, flowing into the crease",
+    "Double Pleat": "TWO reverse pleats on each side of the front (folding toward the side pocket), just below the waistband",
   },
   "Belt Loops": {
     "Belt Loops": "standard straight vertical belt loops around the waistband",
@@ -337,8 +337,6 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Right Besom, No Button": "ONE double-besom back pocket on the wearer's RIGHT only, no button; no pocket on the left",
     "Rhombus Pocket Flap": "TWO back pockets with flaps whose lower edge comes to a shallow V point (rhombus), each with one button",
     "Peach Shape Pocket Flap": "TWO back pockets with flaps that have rounded corners and a soft point in the middle of the lower edge, each with one button",
-    "Slant Corner Pocket Flap": "TWO back pockets with flaps whose lower edge slants to one pointed corner, each with one button near that corner",
-    "Wave Pocket Flap": "TWO back pockets with flaps whose lower edge is a wavy curve, no buttons",
     "No Pocket": "NO back pockets",
   },
 };
