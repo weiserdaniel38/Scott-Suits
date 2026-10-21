@@ -221,11 +221,9 @@
       <span class="step-label">Order</span>
     </div>
     <span class="process-divider"></span>
-    <!-- Still data-milestone="ship" under the hood -- updateProcessBar()'s
-         completion check for this milestone is isShippingInfoComplete(), so
-         the attribute value has to stay "ship" even though the step now
-         reads "Complete", which reads better than "Ship" as the actual
-         last step in the bar. -->
+    <!-- Still data-milestone="ship" under the hood (updateProcessBar() keys
+         on it) even though the step reads "Complete". It stays plain until
+         the order is placed. -->
     <div class="process-step" data-step="personalInfoSection" data-milestone="ship">
       <span class="step-num">05</span>
       <img class="step-icon" src="./assets/step-ship-v2.png" alt="">
@@ -825,7 +823,7 @@
 <script src="./config.js?v=20261021shippo"></script>
 <script src="./catalog.js?v=20261021pick"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261021pick"></script>
+<script src="./main.js?v=20261021complete"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
