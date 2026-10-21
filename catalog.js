@@ -354,10 +354,10 @@ const PANTS_CATALOG = {
     label: "Watch Pocket Placement",
     column: "watch_pocket_placement",
     options: [
-      { name: "Right Waist Sewn Up", img: "./assets/pants-watch-new-rightsewn.jpg" },
-      { name: "Peach-Shaped Pocket", img: "./assets/pants-watch-new-peach.jpg" },
-      { name: "Top Of Right Waist", displayName: "Top of Right Waist", img: "./assets/pants-watch-new-topright.jpg" },
-      { name: "No Watch Pocket", img: "./assets/pants-watch-new-no.jpg" },
+      { name: "Right Waist Sewn Up", displayName: "Welt Pocket Below Waistband", factoryCode: "3181", img: "./assets/pants-watch-new-rightsewn.jpg" },
+      { name: "Peach-Shaped Pocket", displayName: "Flap Pocket With Button", factoryCode: "3186", img: "./assets/pants-watch-new-peach.jpg" },
+      { name: "Top Of Right Waist", displayName: "Pocket In Top Of Waistband", factoryCode: "3180", img: "./assets/pants-watch-new-topright.jpg" },
+      { name: "No Watch Pocket", factoryCode: "3169", img: "./assets/pants-watch-new-no.jpg" },
     ],
   },
   backWaistShape: {
