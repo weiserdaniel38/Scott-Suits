@@ -140,7 +140,9 @@ async function loadRef(ref: Ref): Promise<{ label: string; blob: Blob } | null> 
 // from the catalog line drawings in assets/. "Wearer's left" is on the RIGHT
 // of the picture in front views and on the LEFT in back views.
 //
-// When a catalog option is added or renamed, add or rename it here too.
+// When a catalog option is added, add it here too. When a step or option is
+// renamed on the site, catalog.js keeps its old name as specLabel / specName
+// and buildVisualSpecText() still writes that, so nothing here has to change.
 
 const HIDDEN_OPTION_LABELS = [
   // Inside the garment, never visible in any panel.

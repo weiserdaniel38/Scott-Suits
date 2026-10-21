@@ -20,7 +20,7 @@ const JACKET_CATALOG = {
         hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
         replaceWith: "Peak Lapel" },
       { name: "Peak Lapel", factoryCode: "0002", img: "./assets/jacket-collar-new-peak.jpg" },
-      { name: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl.jpg" },
+      { name: "Shawl", displayName: "Shawl Collar", specName: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl.jpg" },
       { name: "Diamond Lapel", factoryCode: "001R", img: "./assets/jacket-collar-new-diamond.jpg" },
     ],
   },
@@ -55,49 +55,53 @@ const JACKET_CATALOG = {
     // code, printed on the order form. Stored names are kept from the older,
     // longer list so saved designs still resolve.
     options: [
-      { name: "No Lapel Buttonhole", factoryCode: "0544", img: "./assets/jacket-lapelbuttonhole-none.jpg",
+      { name: "No Lapel Buttonhole", displayName: "No Buttonhole", specName: "No Lapel Buttonhole", factoryCode: "0544", img: "./assets/jacket-lapelbuttonhole-none.jpg",
         // Shows the shawl drawing (no buttonhole) when the collar is Shawl or Diamond.
         imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg" } } },
-      { name: "Standard", displayName: "Left Buttonhole", factoryCode: "0541", formNote: "1 buttonhole on left lapel", img: "./assets/jacket-lapelbuttonhole-left.jpg",
+      { name: "Standard", displayName: "One on Left Lapel", specName: "Left Buttonhole", factoryCode: "0541", formNote: "1 buttonhole on left lapel", img: "./assets/jacket-lapelbuttonhole-left.jpg",
         imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg" } } },
-      { name: "Left Two", displayName: "Double Left Buttonhole", factoryCode: "0545", formNote: "2 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
-      { name: "Right & Left", displayName: "Right & Left Buttonhole", factoryCode: "0543", formNote: "1 buttonhole on each lapel", img: "./assets/jacket-lapelbuttonhole-right-left.jpg" },
+      { name: "Left Two", displayName: "Two on Left Lapel", specName: "Double Left Buttonhole", factoryCode: "0545", formNote: "2 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
+      { name: "Right & Left", displayName: "One on Each Lapel", specName: "Right & Left Buttonhole", factoryCode: "0543", formNote: "1 buttonhole on each lapel", img: "./assets/jacket-lapelbuttonhole-right-left.jpg" },
     ],
   },
   frontbutton: {
-    label: "Front Button",
+    label: "Front Buttons",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Front Button",
     column: "front_button_request",
     options: [
-      { section: "Single Breasted", name: "Single Breasted One Button", factoryCode: "0011", img: "./assets/jacket-frontbutton-new-sb1b.jpg" },
-      { section: "Single Breasted", name: "Single Breasted Two Buttons", factoryCode: "0012", img: "./assets/jacket-frontbutton-new-sb2b.jpg" },
-      { section: "Single Breasted", name: "Single Breasted Three Buttons", factoryCode: "0013", img: "./assets/jacket-frontbutton-new-sb3b.jpg" },
-      { section: "Double Breasted", name: "Double Breasted 6X2", factoryCode: "0016", badge: "Standard", img: "./assets/jacket-frontbutton-new-db6x2.jpg" },
-      { section: "Double Breasted", name: "Double Breasted 4X2", factoryCode: "0015", img: "./assets/jacket-frontbutton-new-db4x2.jpg" },
-      { section: "Double Breasted", name: "Double Breasted 6X3", factoryCode: "0019", img: "./assets/jacket-frontbutton-new-db6x3.jpg" },
-      { section: "Double Breasted", name: "Double Breasted 4X1", factoryCode: "0017", img: "./assets/jacket-frontbutton-new-db4x1.jpg" },
-      { section: "Double Breasted", name: "Double Breasted One Button", img: "./assets/jacket-frontbutton-new-db1b.jpg" },
-      { section: "Double Breasted", name: "Double Breasted 2X1", factoryCode: "002F", img: "./assets/jacket-frontbutton-new-db2x1.jpg" },
-      { section: "Double Breasted", name: "Double Breasted 6X1", factoryCode: "0018", img: "./assets/jacket-frontbutton-new-db6x1.jpg" },
+      { section: "Single Breasted", name: "Single Breasted One Button", displayName: "Single Breasted, 1 Button", specName: "Single Breasted One Button", factoryCode: "0011", img: "./assets/jacket-frontbutton-new-sb1b.jpg" },
+      { section: "Single Breasted", name: "Single Breasted Two Buttons", displayName: "Single Breasted, 2 Buttons", specName: "Single Breasted Two Buttons", factoryCode: "0012", img: "./assets/jacket-frontbutton-new-sb2b.jpg" },
+      { section: "Single Breasted", name: "Single Breasted Three Buttons", displayName: "Single Breasted, 3 Buttons", specName: "Single Breasted Three Buttons", factoryCode: "0013", img: "./assets/jacket-frontbutton-new-sb3b.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 6X2", displayName: "Double Breasted, 6 Buttons (2 Fasten)", specName: "Double Breasted 6X2", factoryCode: "0016", badge: "Standard", img: "./assets/jacket-frontbutton-new-db6x2.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 4X2", displayName: "Double Breasted, 4 Buttons (2 Fasten)", specName: "Double Breasted 4X2", factoryCode: "0015", img: "./assets/jacket-frontbutton-new-db4x2.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 6X3", displayName: "Double Breasted, 6 Buttons (3 Fasten)", specName: "Double Breasted 6X3", factoryCode: "0019", img: "./assets/jacket-frontbutton-new-db6x3.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 4X1", displayName: "Double Breasted, 4 Buttons (1 Fastens)", specName: "Double Breasted 4X1", factoryCode: "0017", img: "./assets/jacket-frontbutton-new-db4x1.jpg" },
+      { section: "Double Breasted", name: "Double Breasted One Button", displayName: "Double Breasted, 1 Button", specName: "Double Breasted One Button", img: "./assets/jacket-frontbutton-new-db1b.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 2X1", displayName: "Double Breasted, 2 Buttons (1 Fastens)", specName: "Double Breasted 2X1", factoryCode: "002F", img: "./assets/jacket-frontbutton-new-db2x1.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 6X1", displayName: "Double Breasted, 6 Buttons (1 Fastens)", specName: "Double Breasted 6X1", factoryCode: "0018", img: "./assets/jacket-frontbutton-new-db6x1.jpg" },
     ],
   },
   sleevecrown: {
-    label: "Top Sleeve Crown Type",
+    label: "Shoulder Style",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Top Sleeve Crown Type",
     column: "sleeve_crown_type",
     options: [
-      { name: "Regular Armhole", factoryCode: "0601", img: "./assets/jacket-sleevecrown-regulararmhole.jpg", badge: "Standard" },
-      { name: "Naples Sleeve", factoryCode: "060N", img: "./assets/jacket-sleevecrown-naplessleeve.jpg" },
-      { name: "Close Seam Sleeve", factoryCode: "0603", img: "./assets/jacket-sleevecrown-closeseam.jpg" },
+      { name: "Regular Armhole", displayName: "Smooth Shoulder", specName: "Regular Armhole", factoryCode: "0601", img: "./assets/jacket-sleevecrown-regulararmhole.jpg", badge: "Standard" },
+      { name: "Naples Sleeve", displayName: "Gathered Shoulder (Neapolitan)", specName: "Naples Sleeve", factoryCode: "060N", img: "./assets/jacket-sleevecrown-naplessleeve.jpg" },
+      { name: "Close Seam Sleeve", displayName: "Topstitched Shoulder", specName: "Close Seam Sleeve", factoryCode: "0603", img: "./assets/jacket-sleevecrown-closeseam.jpg" },
     ],
   },
   pockettype: {
     label: "Chest Pocket",
     column: "pocket_type",
     options: [
-      { name: "Normal Pocket", factoryCode: "0101", img: "./assets/jacket-pockettype-new-normal.jpg" },
-      { name: "Boat Shape Pocket", factoryCode: "0103", img: "./assets/jacket-pockettype-new-boatshape.jpg" },
-      { name: "Double Besom Pocket", displayName: "Besom Pocket", factoryCode: "0110", img: "./assets/jacket-pockettype-new-doublebesom.jpg" },
-      { name: "Patch Pocket No Flap", factoryCode: "0150", img: "./assets/jacket-pockettype-new-patchnoflap.jpg" },
-      { name: "No Pocket", factoryCode: "0100", img: "./assets/jacket-pockettype-new-nohandkerchief.jpg" },
+      { name: "Normal Pocket", displayName: "Classic Welt Pocket", specName: "Normal Pocket", factoryCode: "0101", img: "./assets/jacket-pockettype-new-normal.jpg" },
+      { name: "Boat Shape Pocket", displayName: "Curved Welt Pocket", specName: "Boat Shape Pocket", factoryCode: "0103", img: "./assets/jacket-pockettype-new-boatshape.jpg" },
+      { name: "Double Besom Pocket", displayName: "Slit Pocket", specName: "Besom Pocket", factoryCode: "0110", img: "./assets/jacket-pockettype-new-doublebesom.jpg" },
+      { name: "Patch Pocket No Flap", displayName: "Patch Pocket (Sewn On)", specName: "Patch Pocket No Flap", factoryCode: "0150", img: "./assets/jacket-pockettype-new-patchnoflap.jpg" },
+      { name: "No Pocket", displayName: "No Chest Pocket", specName: "No Pocket", factoryCode: "0100", img: "./assets/jacket-pockettype-new-nohandkerchief.jpg" },
     ],
   },
   lowerpocket: {
@@ -109,53 +113,58 @@ const JACKET_CATALOG = {
     // options were removed (Daniel, 2026-10-21); "Double Besom" is shown as "Besom".
     // factoryCode is two factory codes: lower pocket, then ticket pocket (027H = none).
     options: [
-      { section: "Besom", name: "Double Besom Pocket", displayName: "Besom Pocket", factoryCode: "0231,027H", img: "./assets/jacket-lowerpocket-new-db.jpg" },
-      { section: "Besom", name: "Double Besom Pocket + Double Besom Ticket Pocket", displayName: "Besom + Besom Ticket", factoryCode: "0231,027A", img: "./assets/jacket-lowerpocket-new-dbdbt.jpg" },
-      { section: "Welt", name: "Flat Welt Pocket", factoryCode: "0267,027H", img: "./assets/jacket-lowerpocket-new-flatwelt-v2.jpg" },
-      { section: "Slant Besom", name: "Double Besom Slant Pocket", displayName: "Besom Slant Pocket", factoryCode: "02B6,027H", img: "./assets/jacket-lowerpocket-new-dbslant.jpg" },
+      { section: "Slit", name: "Double Besom Pocket", displayName: "Slit Pockets", specName: "Besom Pocket", factoryCode: "0231,027H", img: "./assets/jacket-lowerpocket-new-db.jpg" },
+      { section: "Slit", name: "Double Besom Pocket + Double Besom Ticket Pocket", displayName: "Slit Pockets + Small Slit Pocket", specName: "Besom + Besom Ticket", factoryCode: "0231,027A", img: "./assets/jacket-lowerpocket-new-dbdbt.jpg" },
+      { section: "Welt", name: "Flat Welt Pocket", displayName: "Welt Pockets", specName: "Flat Welt Pocket", factoryCode: "0267,027H", img: "./assets/jacket-lowerpocket-new-flatwelt-v2.jpg" },
+      { section: "Slanted Slit", name: "Double Besom Slant Pocket", displayName: "Slanted Slit Pockets", specName: "Besom Slant Pocket", factoryCode: "02B6,027H", img: "./assets/jacket-lowerpocket-new-dbslant.jpg" },
       { section: "Flap", name: "Double Besom W/ Flap", displayName: "Flap Pockets", factoryCode: "0201,027H", img: "./assets/jacket-lowerpocket-new-dbwflap.jpg" },
-      { section: "Flap", name: "Double Besom W/ Flap And Double Besom Ticket Pocket", displayName: "Flap Pockets + Besom Ticket", factoryCode: "0201,027A", img: "./assets/jacket-lowerpocket-new-dbwflapdbt.jpg" },
-      { section: "Flap", name: "Double Besom W/ Flap And Ticket Pocket W/ Flap", displayName: "Flap Pockets + Flap Ticket Pocket", factoryCode: "0201,0270", img: "./assets/jacket-lowerpocket-new-flapft.jpg" },
-      { section: "Slant Flap", name: "Slant Pocket Flap", displayName: "Slant Flap Pocket", factoryCode: "02A1,027H", img: "./assets/jacket-lowerpocket-new-slantflap.jpg" },
-      { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom Ticket Pocket", displayName: "Slant Flap + Besom Ticket", factoryCode: "02A1,02R4", img: "./assets/jacket-lowerpocket-new-slantflapdbt.jpg" },
-      { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom W/ Flat Ticket Pocket", displayName: "Slant Flap + Flap Ticket Pocket", factoryCode: "02A1,02A2", img: "./assets/jacket-lowerpocket-new-slantflapft.jpg" },
-      { section: "Diamond Flap", name: "Diamond Flap", factoryCode: "0237,027H", img: "./assets/jacket-lowerpocket-new-diamondflap-v2.jpg" },
-      { section: "Diamond Flap", name: "Diamond Flap With Buttons", factoryCode: "0211,027H", img: "./assets/jacket-lowerpocket-new-diamondflapbtn-v2.jpg" },
-      { section: "Patch", name: "Patch Pocket", displayName: "Patch Pocket", factoryCode: "02J1,027H", img: "./assets/jacket-lowerpocket-new-patch.jpg" },
-      { section: "Patch", name: "Patch Pocket + Double Besom Ticket Pocket", displayName: "Patch Pocket + Besom Ticket", factoryCode: "02J1,027A", img: "./assets/jacket-lowerpocket-new-patchdbt.jpg" },
-      { section: "High-Back Patch", name: "Patch Pocket With Highly Back", displayName: "High-Back Patch Pocket", factoryCode: "02J0,027H", img: "./assets/jacket-lowerpocket-new-patchhighback.jpg" },
-      { section: "High-Back Patch", name: "Patch Pocket With Highly Back + Double Besom Ticket", displayName: "High-Back Patch + Besom Ticket", factoryCode: "02J0,027A", img: "./assets/jacket-lowerpocket-new-patchhighbackdbt.jpg" },
-      { section: "No Pockets", name: "No Front Pocket", factoryCode: "0200,027H", img: "./assets/jacket-lowerpocket-new-nofront.jpg" },
+      { section: "Flap", name: "Double Besom W/ Flap And Double Besom Ticket Pocket", displayName: "Flap Pockets + Small Slit Pocket", specName: "Flap Pockets + Besom Ticket", factoryCode: "0201,027A", img: "./assets/jacket-lowerpocket-new-dbwflapdbt.jpg" },
+      { section: "Flap", name: "Double Besom W/ Flap And Ticket Pocket W/ Flap", displayName: "Flap Pockets + Small Flap Pocket", specName: "Flap Pockets + Flap Ticket Pocket", factoryCode: "0201,0270", img: "./assets/jacket-lowerpocket-new-flapft.jpg" },
+      { section: "Slanted Flap", name: "Slant Pocket Flap", displayName: "Slanted Flap Pockets", specName: "Slant Flap Pocket", factoryCode: "02A1,027H", img: "./assets/jacket-lowerpocket-new-slantflap.jpg" },
+      { section: "Slanted Flap", name: "Slant Pocket Flap + Double Besom Ticket Pocket", displayName: "Slanted Flap Pockets + Small Slit Pocket", specName: "Slant Flap + Besom Ticket", factoryCode: "02A1,02R4", img: "./assets/jacket-lowerpocket-new-slantflapdbt.jpg" },
+      { section: "Slanted Flap", name: "Slant Pocket Flap + Double Besom W/ Flat Ticket Pocket", displayName: "Slanted Flap Pockets + Small Flap Pocket", specName: "Slant Flap + Flap Ticket Pocket", factoryCode: "02A1,02A2", img: "./assets/jacket-lowerpocket-new-slantflapft.jpg" },
+      { section: "Pointed Flap", name: "Diamond Flap", displayName: "Pointed Flap Pockets", specName: "Diamond Flap", factoryCode: "0237,027H", img: "./assets/jacket-lowerpocket-new-diamondflap-v2.jpg" },
+      { section: "Pointed Flap", name: "Diamond Flap With Buttons", displayName: "Pointed Flap Pockets With Buttons", specName: "Diamond Flap With Buttons", factoryCode: "0211,027H", img: "./assets/jacket-lowerpocket-new-diamondflapbtn-v2.jpg" },
+      { section: "Patch", name: "Patch Pocket", displayName: "Patch Pockets", specName: "Patch Pocket", factoryCode: "02J1,027H", img: "./assets/jacket-lowerpocket-new-patch.jpg" },
+      { section: "Patch", name: "Patch Pocket + Double Besom Ticket Pocket", displayName: "Patch Pockets + Small Slit Pocket", specName: "Patch Pocket + Besom Ticket", factoryCode: "02J1,027A", img: "./assets/jacket-lowerpocket-new-patchdbt.jpg" },
+      { section: "Sloped Patch", name: "Patch Pocket With Highly Back", displayName: "Sloped Patch Pockets", specName: "High-Back Patch Pocket", factoryCode: "02J0,027H", img: "./assets/jacket-lowerpocket-new-patchhighback.jpg" },
+      { section: "Sloped Patch", name: "Patch Pocket With Highly Back + Double Besom Ticket", displayName: "Sloped Patch Pockets + Small Slit Pocket", specName: "High-Back Patch + Besom Ticket", factoryCode: "02J0,027A", img: "./assets/jacket-lowerpocket-new-patchhighbackdbt.jpg" },
+      { section: "No Pockets", name: "No Front Pocket", displayName: "No Lower Pockets", specName: "No Front Pocket", factoryCode: "0200,027H", img: "./assets/jacket-lowerpocket-new-nofront.jpg" },
     ],
   },
   buttonNail: {
-    label: "Button Nail Method",
+    label: "Button Stitching",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Button Nail Method",
     column: "jacket_button_nail_method",
     options: [
-      { name: "X Shape Sewing Button", displayName: "X Shape Sewing", factoryCode: "0644", img: "./assets/buttonnail-new-x.jpg" },
-      { name: "II Shape Sewing Button", displayName: "Parallel Sewing", factoryCode: "0643", img: "./assets/buttonnail-new-parallel.jpg" },
-      { name: "Square Shape Sewing Button", displayName: "Square Sewing", factoryCode: "0646", img: "./assets/buttonnail-square-sewing.jpg" },
+      { name: "X Shape Sewing Button", displayName: "X Stitch", specName: "X Shape Sewing", factoryCode: "0644", img: "./assets/buttonnail-new-x.jpg" },
+      { name: "II Shape Sewing Button", displayName: "Parallel Stitch", specName: "Parallel Sewing", factoryCode: "0643", img: "./assets/buttonnail-new-parallel.jpg" },
+      { name: "Square Shape Sewing Button", displayName: "Square Stitch", specName: "Square Sewing", factoryCode: "0646", img: "./assets/buttonnail-square-sewing.jpg" },
     ],
   },
   construction: {
     label: "Construction",
     column: "jacket_construction",
+    description: "What's inside the front of your jacket that gives it shape. Fused: a light inner layer bonded to the cloth, crisp and easy to care for. Full canvas: a sewn-in canvas layer that shapes to your chest over time. Unconstructed: no inner layer, soft and relaxed.",
     options: [
       // The factory only makes an unlined jacket unconstructed (Daniel,
       // 2026-10-21): picking "No Lining Construction" moves fused or full
       // canvas to Unconstructed.
-      { name: "Fused Construction", factoryCode: "00C1", img: "./assets/jacket-construction-new-fused-v2.jpg", badge: "Standard", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
-      { name: "Full Canvas Construction", displayName: "Full Canvas Construction (+$200)", surchargeUsd: 200, factoryCode: "000A", img: "./assets/jacket-construction-new-canvas-v2.jpg", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
-      { name: "Unconstructed", factoryCode: "00D1", img: "./assets/jacket-construction-new-unconstructed-v2.jpg" },
+      { name: "Fused Construction", displayName: "Fused", specName: "Fused Construction", factoryCode: "00C1", img: "./assets/jacket-construction-new-fused-v2.jpg", badge: "Standard", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
+      { name: "Full Canvas Construction", displayName: "Full Canvas (+$200)", specName: "Full Canvas Construction (+$200)", surchargeUsd: 200, factoryCode: "000A", img: "./assets/jacket-construction-new-canvas-v2.jpg", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
+      { name: "Unconstructed", displayName: "Unconstructed (Soft)", specName: "Unconstructed", factoryCode: "00D1", img: "./assets/jacket-construction-new-unconstructed-v2.jpg" },
     ],
   },
   facing: {
-    label: "Facing Style",
+    label: "Lining Style",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Facing Style",
     column: "facing_style",
     // Shown on the options page as a brief explainer -- most customers
     // won't know this tailoring term on sight the way they might "collar"
     // or "pocket".
-    description: "Choose how the lining inside your jacket is shaped when you open it.",
+    description: "How much of the inside of your jacket is lined.",
     // Options taken off the designer. A draft saved while one of these was
     // picked has it cleared on reload (see reconcileSelections in main.js)
     // so the customer is asked again instead of ordering a retired style.
@@ -165,13 +174,15 @@ const JACKET_CATALOG = {
       "No Lining Light Construction W/ Piping Seam",
     ],
     options: [
-      { name: "Round Shape Facing", factoryCode: "0702", img: "./assets/jacket-facing-new-round.jpg", badge: "Standard" },
-      { name: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-new-halflwfabric.jpg" },
-      { name: "No Lining Construction", img: "./assets/jacket-facing-new-nolining.jpg" },
+      { name: "Round Shape Facing", displayName: "Full Lining", specName: "Round Shape Facing", factoryCode: "0702", img: "./assets/jacket-facing-new-round.jpg", badge: "Standard" },
+      { name: "Half Lining W/ Fabric Facing", displayName: "Half Lining", specName: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-new-halflwfabric.jpg" },
+      { name: "No Lining Construction", displayName: "No Lining", specName: "No Lining Construction", img: "./assets/jacket-facing-new-nolining.jpg" },
     ],
   },
   insidepocket: {
-    label: "Inside Pocket Style",
+    label: "Inside Pockets",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Inside Pocket Style",
     column: "inside_pocket_style",
     // The factory's basic inner pocket shapes only (Daniel, 2026-10-21).
     // A draft saved with an older style is asked again.
@@ -181,10 +192,10 @@ const JACKET_CATALOG = {
       "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket",
     ],
     options: [
-      { name: "Regular Inner Pocket", factoryCode: "0801", img: "./assets/jacket-insidepocket-factory-regular.jpg", badge: "Standard" },
-      { name: "Fashion Inner Pocket", factoryCode: "0803", img: "./assets/jacket-insidepocket-factory-fashion.jpg" },
-      { name: "Combination Inner Pocket", factoryCode: "080X", img: "./assets/jacket-insidepocket-factory-combination.jpg" },
-      { name: "No Inner Pockets", factoryCode: "0806", img: "./assets/jacket-insidepocket-factory-none.jpg" },
+      { name: "Regular Inner Pocket", displayName: "Standard Inside Pockets", specName: "Regular Inner Pocket", factoryCode: "0801", img: "./assets/jacket-insidepocket-factory-regular.jpg", badge: "Standard" },
+      { name: "Fashion Inner Pocket", displayName: "Extra Lower Pocket", specName: "Fashion Inner Pocket", factoryCode: "0803", img: "./assets/jacket-insidepocket-factory-fashion.jpg" },
+      { name: "Combination Inner Pocket", displayName: "Extra Pen Pockets", specName: "Combination Inner Pocket", factoryCode: "080X", img: "./assets/jacket-insidepocket-factory-combination.jpg" },
+      { name: "No Inner Pockets", displayName: "No Inside Pockets", specName: "No Inner Pockets", factoryCode: "0806", img: "./assets/jacket-insidepocket-factory-none.jpg" },
     ],
   },
 
@@ -199,9 +210,9 @@ const JACKET_CATALOG = {
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/jacket-monogram-new-nomonogram.jpg" },
       { name: "On Left Inside Pocket", displayName: "Left Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onleftinsidepkt.jpg" },
       { name: "On Right Inside Pocket", displayName: "Right Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onrightinsidepkt.jpg" },
-      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-pocketsatin.jpg" },
-      { name: "Monogram On Middle Under Collar", displayName: "Middle Under Collar", img: "./assets/jacket-monogram-new-middlecollar.jpg" },
-      { name: "Monogram Placement On Left Button", displayName: "Left Lapel Placement", img: "./assets/jacket-monogram-new-lapel.jpg" },
+      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Satin Label by Right Inside Pocket", specName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-pocketsatin.jpg" },
+      { name: "Monogram On Middle Under Collar", displayName: "Under the Collar", specName: "Middle Under Collar", img: "./assets/jacket-monogram-new-middlecollar.jpg" },
+      { name: "Monogram Placement On Left Button", displayName: "Left Lapel", specName: "Left Lapel Placement", img: "./assets/jacket-monogram-new-lapel.jpg" },
       { name: "Above Left Sleeve Cuff 2cm", displayName: "Above Left Sleeve Cuff", img: "./assets/jacket-monogram-new-leftcuff.jpg" },
       { name: "Above Right Sleeve Cuff 2cm", displayName: "Above Right Sleeve Cuff", img: "./assets/jacket-monogram-new-rightcuff.jpg" },
     ],
@@ -210,37 +221,41 @@ const JACKET_CATALOG = {
     label: "Back Vents",
     column: "back_vents",
     options: [
-      { name: "Side Vent", factoryCode: "04N2", img: "./assets/jacket-backvent-new-side.jpg" },
-      { name: "Center Vent", factoryCode: "04N1", img: "./assets/jacket-backvent-new-center.jpg" },
-      { name: "No Vent", factoryCode: "04N0", img: "./assets/jacket-backvent-new-no.jpg" },
+      { name: "Side Vent", displayName: "Two Side Vents", specName: "Side Vent", factoryCode: "04N2", img: "./assets/jacket-backvent-new-side.jpg" },
+      { name: "Center Vent", displayName: "One Center Vent", specName: "Center Vent", factoryCode: "04N1", img: "./assets/jacket-backvent-new-center.jpg" },
+      { name: "No Vent", displayName: "No Vents", specName: "No Vent", factoryCode: "04N0", img: "./assets/jacket-backvent-new-no.jpg" },
     ],
   },
   sleevecuffstyle: {
-    label: "Sleeve Cuff Styles",
+    label: "Sleeve Buttonholes",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Sleeve Cuff Styles",
     column: "sleeve_cuff_style",
     options: [
-      { name: "Working Sleeve Cuff", displayName: "Opening Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-working.jpg" },
-      { name: "Imitation Button Hole On Sleeve Cuff", displayName: "Imitation Buttonhole Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-imitation.jpg" },
+      { name: "Working Sleeve Cuff", displayName: "Working Buttonholes", specName: "Opening Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-working.jpg" },
+      { name: "Imitation Button Hole On Sleeve Cuff", displayName: "Decorative Buttonholes (Sewn Shut)", specName: "Imitation Buttonhole Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-imitation.jpg" },
     ],
   },
   cuffbuttons: {
-    label: "Buttons On Sleeve Cuff",
+    label: "Sleeve Buttons",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Buttons On Sleeve Cuff",
     column: "sleeve_cuff_buttons",
     compactCards: true,  // smaller picture cards (more per row) -- 13 options
 
     options: [
-      { section: "Flat", name: "3 Flat Button", img: "./assets/jacket-cuffbuttons-new-flat3.jpg" },
-      { section: "Flat", name: "4 Flat Button", img: "./assets/jacket-cuffbuttons-new-flat4.jpg" },
-      { section: "Flat", name: "5 Flat Button", img: "./assets/jacket-cuffbuttons-new-flat5.jpg" },
-      { section: "Overlap", name: "4 Overlap Button", img: "./assets/jacket-cuffbuttons-new-overlap4.jpg" },
-      { section: "Overlap", name: "5 Overlap Button", img: "./assets/jacket-cuffbuttons-new-overlap5.jpg" },
-      { section: "Overlap", name: "6 Overlap Button", img: "./assets/jacket-cuffbuttons-new-overlap6.jpg" },
-      { section: "Slant Flat", name: "4 Slant Button", displayName: "4 Slant Flat Button", img: "./assets/jacket-cuffbuttons-new-slant4.jpg" },
-      { section: "Slant Flat", name: "5 Slant Button", displayName: "5 Slant Flat Button", img: "./assets/jacket-cuffbuttons-new-slant5.jpg" },
-      { section: "Slant Overlap", name: "4 Slant Overlap Button", img: "./assets/jacket-cuffbuttons-new-slantoverlap4.jpg" },
-      { section: "Slant Overlap", name: "5 Slant Overlap Button", img: "./assets/jacket-cuffbuttons-new-slantoverlap5.jpg" },
-      { section: "Slant Overlap", name: "6 Slant Overlap Button", img: "./assets/jacket-cuffbuttons-new-slantoverlap6.jpg" },
-      { section: "No Buttons", name: "Button Less Sleeve (4 Buttons)", img: "./assets/jacket-cuffbuttons-new-less.jpg" },
+      { section: "Spaced", name: "3 Flat Button", displayName: "3 Buttons, Spaced", specName: "3 Flat Button", img: "./assets/jacket-cuffbuttons-new-flat3.jpg" },
+      { section: "Spaced", name: "4 Flat Button", displayName: "4 Buttons, Spaced", specName: "4 Flat Button", img: "./assets/jacket-cuffbuttons-new-flat4.jpg" },
+      { section: "Spaced", name: "5 Flat Button", displayName: "5 Buttons, Spaced", specName: "5 Flat Button", img: "./assets/jacket-cuffbuttons-new-flat5.jpg" },
+      { section: "Overlapping", name: "4 Overlap Button", displayName: "4 Buttons, Overlapping", specName: "4 Overlap Button", img: "./assets/jacket-cuffbuttons-new-overlap4.jpg" },
+      { section: "Overlapping", name: "5 Overlap Button", displayName: "5 Buttons, Overlapping", specName: "5 Overlap Button", img: "./assets/jacket-cuffbuttons-new-overlap5.jpg" },
+      { section: "Overlapping", name: "6 Overlap Button", displayName: "6 Buttons, Overlapping", specName: "6 Overlap Button", img: "./assets/jacket-cuffbuttons-new-overlap6.jpg" },
+      { section: "Spaced & Slanted", name: "4 Slant Button", displayName: "4 Buttons, Spaced & Slanted", specName: "4 Slant Flat Button", img: "./assets/jacket-cuffbuttons-new-slant4.jpg" },
+      { section: "Spaced & Slanted", name: "5 Slant Button", displayName: "5 Buttons, Spaced & Slanted", specName: "5 Slant Flat Button", img: "./assets/jacket-cuffbuttons-new-slant5.jpg" },
+      { section: "Overlapping & Slanted", name: "4 Slant Overlap Button", displayName: "4 Buttons, Overlapping & Slanted", specName: "4 Slant Overlap Button", img: "./assets/jacket-cuffbuttons-new-slantoverlap4.jpg" },
+      { section: "Overlapping & Slanted", name: "5 Slant Overlap Button", displayName: "5 Buttons, Overlapping & Slanted", specName: "5 Slant Overlap Button", img: "./assets/jacket-cuffbuttons-new-slantoverlap5.jpg" },
+      { section: "Overlapping & Slanted", name: "6 Slant Overlap Button", displayName: "6 Buttons, Overlapping & Slanted", specName: "6 Slant Overlap Button", img: "./assets/jacket-cuffbuttons-new-slantoverlap6.jpg" },
+      { section: "No Buttons", name: "Button Less Sleeve (4 Buttons)", displayName: "No Buttons (4 Buttonholes Only)", specName: "Button Less Sleeve (4 Buttons)", img: "./assets/jacket-cuffbuttons-new-less.jpg" },
     ],
   },
 };
@@ -266,7 +281,9 @@ const JACKET_CATALOG_GROUPS = [
 const PANTS_CATALOG = {
   // Fabric wired in below via PANTS_CATALOG.fabric = {...}, same as jacket.
   waistLineHeight: {
-    label: "Waist Line Height",
+    label: "Waistband Height",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Waist Line Height",
     column: "waist_line_height",
     options: [
       // The factory's waist widths (Daniel, 2026-10-21): Standard 4.0 cm,
@@ -276,36 +293,40 @@ const PANTS_CATALOG = {
     ],
   },
   waistbandExtension: {
-    label: "Waistband Extension Style",
+    label: "Waistband Closure Tab",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Waistband Extension Style",
     column: "waistband_extension_style",
     compactCards: true,  // smaller picture cards (3 per row on phone)
     options: [
-      { section: "Round", name: "Round Shape 5cm", factoryCode: "3413", displayName: "Round Shape", img: "./assets/pants-wext-new-round.jpg" },
-      { section: "Round", name: "Round Shape 5cm (No Button/Hole)", factoryCode: "342R", displayName: "Round Shape (No Button/Hole)", img: "./assets/pants-wext-new-round-nobh.jpg" },
-      { section: "Round", name: "Long Round Shape", factoryCode: "3415", img: "./assets/pants-wext-new-longround.jpg" },
-      { section: "Arrow", name: "Arrow Shape 5cm", factoryCode: "3412", displayName: "Arrow Shape", img: "./assets/pants-wext-new-arrow.jpg" },
-      { section: "Arrow", name: "Arrow Shape 5cm (No Button/Hole)", factoryCode: "342T", displayName: "Arrow Shape (No Button/Hole)", img: "./assets/pants-wext-new-arrow-nobh.jpg" },
-      { section: "Square", name: "Square Shape 5cm", factoryCode: "342A", displayName: "Square Shape", img: "./assets/pants-wext-new-square.jpg" },
-      { section: "Square", name: "Square Shape 5cm (No Button/Hole)", factoryCode: "3414", displayName: "Square Shape (No Button/Hole)", img: "./assets/pants-wext-new-square-nobh.jpg" },
-      { section: "Square", name: "Square Waistband (No Button/Hole)", factoryCode: "3410", displayName: "Square Waistband Centered", formNote: "Centered over zipper", img: "./assets/pants-wext-new-squarewb-nobh.jpg" },
-      { section: "Square", name: "Square Shape W/ Long Extension", factoryCode: "3417", img: "./assets/pants-wext-new-square-longext.jpg" },
+      { section: "Rounded", name: "Round Shape 5cm", factoryCode: "3413", displayName: "Rounded Tab", specName: "Round Shape", img: "./assets/pants-wext-new-round.jpg" },
+      { section: "Rounded", name: "Round Shape 5cm (No Button/Hole)", factoryCode: "342R", displayName: "Rounded Tab, No Visible Button", specName: "Round Shape (No Button/Hole)", img: "./assets/pants-wext-new-round-nobh.jpg" },
+      { section: "Rounded", name: "Long Round Shape", displayName: "Long Rounded Tab", specName: "Long Round Shape", factoryCode: "3415", img: "./assets/pants-wext-new-longround.jpg" },
+      { section: "Pointed", name: "Arrow Shape 5cm", factoryCode: "3412", displayName: "Pointed Tab", specName: "Arrow Shape", img: "./assets/pants-wext-new-arrow.jpg" },
+      { section: "Pointed", name: "Arrow Shape 5cm (No Button/Hole)", factoryCode: "342T", displayName: "Pointed Tab, No Visible Button", specName: "Arrow Shape (No Button/Hole)", img: "./assets/pants-wext-new-arrow-nobh.jpg" },
+      { section: "Square", name: "Square Shape 5cm", factoryCode: "342A", displayName: "Square Tab", specName: "Square Shape", img: "./assets/pants-wext-new-square.jpg" },
+      { section: "Square", name: "Square Shape 5cm (No Button/Hole)", factoryCode: "3414", displayName: "Square Tab, No Visible Button", specName: "Square Shape (No Button/Hole)", img: "./assets/pants-wext-new-square-nobh.jpg" },
+      { section: "Square", name: "Square Waistband (No Button/Hole)", factoryCode: "3410", displayName: "No Tab (Meets at Center)", specName: "Square Waistband Centered", formNote: "Centered over zipper", img: "./assets/pants-wext-new-squarewb-nobh.jpg" },
+      { section: "Square", name: "Square Shape W/ Long Extension", displayName: "Long Square Tab", specName: "Square Shape W/ Long Extension", factoryCode: "3417", img: "./assets/pants-wext-new-square-longext.jpg" },
     ],
   },
   waistbandStyle: {
-    label: "Waistband Style",
+    label: "Waistband Adjusters",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Waistband Style",
     column: "waistband_style",
     options: [
-      { name: "Normal Waistband", factoryCode: "3349", img: "./assets/pants-wstyle-new-normal.jpg" },
-      { name: "Elastic Waistband On Side Buttons", factoryCode: "3351", img: "./assets/pants-wstyle-new-sidetabs.jpg" },
-      { name: "Arrow Shape Belt W/ Adjustable Buckle", factoryCode: "3352", img: "./assets/pants-wstyle-new-arrowbelt.jpg" },
-      { name: "Adjustable Waistband On Side W/ Buckle", factoryCode: "33TG", img: "./assets/pants-wstyle-new-adjside.jpg" },
+      { name: "Normal Waistband", displayName: "No Adjusters (Plain Waistband)", specName: "Normal Waistband", factoryCode: "3349", img: "./assets/pants-wstyle-new-normal.jpg" },
+      { name: "Elastic Waistband On Side Buttons", displayName: "Side Button Tabs", specName: "Elastic Waistband On Side Buttons", factoryCode: "3351", img: "./assets/pants-wstyle-new-sidetabs.jpg" },
+      { name: "Arrow Shape Belt W/ Adjustable Buckle", displayName: "Pointed Side Straps With Buckle", specName: "Arrow Shape Belt W/ Adjustable Buckle", factoryCode: "3352", img: "./assets/pants-wstyle-new-arrowbelt.jpg" },
+      { name: "Adjustable Waistband On Side W/ Buckle", displayName: "Side Buckle Tabs", specName: "Adjustable Waistband On Side W/ Buckle", factoryCode: "33TG", img: "./assets/pants-wstyle-new-adjside.jpg" },
     ],
   },
   frontPleat: {
     label: "Front Pleat",
     column: "front_pleat",
     options: [
-      { name: "No Pleat", factoryCode: "302L", img: "./assets/pants-pleat-new-no.jpg" },
+      { name: "No Pleat", displayName: "Flat Front (No Pleats)", specName: "No Pleat", factoryCode: "302L", img: "./assets/pants-pleat-new-no.jpg" },
       { name: "Single Pleat", factoryCode: "3021", img: "./assets/pants-pleat-new-single.jpg" },
       { name: "Double Pleat", factoryCode: "3023", img: "./assets/pants-pleat-new-double.jpg" },
     ],
@@ -314,31 +335,35 @@ const PANTS_CATALOG = {
     label: "Belt Loops",
     column: "belt_loops",
     options: [
-      { name: "Belt Loops", factoryCode: "3330", img: "./assets/pants-beltloop-new-yes.jpg" },
-      { name: "X Loops", factoryCode: "333E", img: "./assets/pants-beltloop-new-x.jpg" },
-      { name: "No Belt Loop", factoryCode: "3329", img: "./assets/pants-beltloop-new-no.jpg" },
+      { name: "Belt Loops", displayName: "Standard Belt Loops", specName: "Belt Loops", factoryCode: "3330", img: "./assets/pants-beltloop-new-yes.jpg" },
+      { name: "X Loops", displayName: "Crossed (X) Belt Loops", specName: "X Loops", factoryCode: "333E", img: "./assets/pants-beltloop-new-x.jpg" },
+      { name: "No Belt Loop", displayName: "No Belt Loops", specName: "No Belt Loop", factoryCode: "3329", img: "./assets/pants-beltloop-new-no.jpg" },
     ],
   },
   frontPocket: {
-    label: "Front Pocket Style",
+    label: "Front Pockets",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Front Pocket Style",
     column: "front_pocket_style",
     options: [
-      { name: "Slant Pocket", factoryCode: "3104,3533", img: "./assets/pants-fpocket-new-slant.jpg" },
-      { name: "Double Besom", displayName: "Besom", factoryCode: "3131,3533", img: "./assets/pants-fpocket-new-double-besom.jpg" },
-      { name: "On Seam Pocket", factoryCode: "3130,3533", img: "./assets/pants-fpocket-new-onseam.jpg" },
-      { name: "Moon Shape Pocket", factoryCode: "3135,3533", img: "./assets/pants-fpocket-new-moon.jpg" },
-      { name: "Moon Shape Pocket + Coin Pocket", factoryCode: "3135,3530", img: "./assets/pants-fpocket-new-moon-coin.jpg" },
+      { name: "Slant Pocket", displayName: "Slanted Pockets", specName: "Slant Pocket", factoryCode: "3104,3533", img: "./assets/pants-fpocket-new-slant.jpg" },
+      { name: "Double Besom", displayName: "Slit Pockets", specName: "Besom", factoryCode: "3131,3533", img: "./assets/pants-fpocket-new-double-besom.jpg" },
+      { name: "On Seam Pocket", displayName: "Side Seam Pockets", specName: "On Seam Pocket", factoryCode: "3130,3533", img: "./assets/pants-fpocket-new-onseam.jpg" },
+      { name: "Moon Shape Pocket", displayName: "Curved Pockets (Jeans Style)", specName: "Moon Shape Pocket", factoryCode: "3135,3533", img: "./assets/pants-fpocket-new-moon.jpg" },
+      { name: "Moon Shape Pocket + Coin Pocket", displayName: "Curved Pockets + Coin Pocket", specName: "Moon Shape Pocket + Coin Pocket", factoryCode: "3135,3530", img: "./assets/pants-fpocket-new-moon-coin.jpg" },
     ],
   },
   bottomStyle: {
-    label: "Bottom Style",
+    label: "Pant Bottoms",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Bottom Style",
     column: "bottom_style",
     options: [
       // displayName "Hem" is the customer-facing label; the underlying name
       // stays "Turn Up Bottom" because that's still what should print on the
       // Client Form / order data (see friendlyName/displayValue vs.
       // resolvedValue in main.js).
-      { name: "Turn Up Bottom", factoryCode: "3600", displayName: "Hem", img: "./assets/pants-bottom-new-hem.jpg", badge: "Standard" },
+      { name: "Turn Up Bottom", factoryCode: "3600", displayName: "Plain Hem (No Cuff)", specName: "Hem", img: "./assets/pants-bottom-new-hem.jpg", badge: "Standard" },
       // Customer-facing names only; the stored names ("W/ Cuff 3.5 cm" etc.)
       // stay as the supplier values for the Client Form / order data.
       { name: "W/ Cuff 3.5 cm", factoryCode: "3602", displayName: "Thin Cuff", img: "./assets/pants-bottom-new-thin.jpg" },
@@ -347,20 +372,24 @@ const PANTS_CATALOG = {
     ],
   },
   buttonNail: {
-    label: "Button Nail Method",
+    label: "Button Stitching",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Button Nail Method",
     column: "button_nail_method",
     options: [
-      { name: "X Shape Sewing Button", displayName: "X Shape Sewing", factoryCode: "345B", img: "./assets/buttonnail-new-x.jpg" },
-      { name: "II Shape Sewing Button", displayName: "Parallel Sewing", factoryCode: "345A", img: "./assets/buttonnail-new-parallel.jpg" },
-      { name: "Square Shape Sewing Button", displayName: "Square Sewing", factoryCode: "34Y1", img: "./assets/buttonnail-square-sewing.jpg" },
+      { name: "X Shape Sewing Button", displayName: "X Stitch", specName: "X Shape Sewing", factoryCode: "345B", img: "./assets/buttonnail-new-x.jpg" },
+      { name: "II Shape Sewing Button", displayName: "Parallel Stitch", specName: "Parallel Sewing", factoryCode: "345A", img: "./assets/buttonnail-new-parallel.jpg" },
+      { name: "Square Shape Sewing Button", displayName: "Square Stitch", specName: "Square Sewing", factoryCode: "34Y1", img: "./assets/buttonnail-square-sewing.jpg" },
     ],
   },
   watchPocket: {
-    label: "Watch Pocket Placement",
+    label: "Watch Pocket",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Watch Pocket Placement",
     column: "watch_pocket_placement",
     options: [
-      { name: "Right Waist Sewn Up", displayName: "Welt Pocket Below Waistband", factoryCode: "3181", img: "./assets/pants-watch-new-rightsewn.jpg" },
-      { name: "Peach-Shaped Pocket", displayName: "Flap Pocket With Button", factoryCode: "3186", img: "./assets/pants-watch-new-peach.jpg" },
+      { name: "Right Waist Sewn Up", displayName: "Small Pocket Below Waistband", specName: "Welt Pocket Below Waistband", factoryCode: "3181", img: "./assets/pants-watch-new-rightsewn.jpg" },
+      { name: "Peach-Shaped Pocket", displayName: "Small Flap Pocket With Button", specName: "Flap Pocket With Button", factoryCode: "3186", img: "./assets/pants-watch-new-peach.jpg" },
       { name: "Top Of Right Waist", displayName: "Pocket In Top Of Waistband", factoryCode: "3180", img: "./assets/pants-watch-new-topright.jpg" },
       { name: "No Watch Pocket", factoryCode: "3169", img: "./assets/pants-watch-new-no.jpg" },
     ],
@@ -375,22 +404,24 @@ const PANTS_CATALOG = {
     options: [
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/pants-monogram-new-none.jpg" },
       { name: "Monogram On Left Back Pocket", displayName: "Left Back Pocket", img: "./assets/pants-monogram-new-leftback.jpg" },
-      { name: "On Right Side Below Waistband Seam", displayName: "Right Side Below Waistband Seam", img: "./assets/pants-monogram-new-rightbelow.jpg" },
-      { name: "Monogram Inside Left Waist", displayName: "Inside Left Waist", img: "./assets/pants-monogram-new-insideleft.jpg" },
+      { name: "On Right Side Below Waistband Seam", displayName: "Front Right, Below Waistband", specName: "Right Side Below Waistband Seam", img: "./assets/pants-monogram-new-rightbelow.jpg" },
+      { name: "Monogram Inside Left Waist", displayName: "Inside the Waistband", specName: "Inside Left Waist", img: "./assets/pants-monogram-new-insideleft.jpg" },
     ],
   },
   backPocket: {
-    label: "Back Pocket Style",
+    label: "Back Pockets",
+    // The suit picture generator still knows this step by its old name.
+    specLabel: "Back Pocket Style",
     column: "back_pocket_style",
     options: [
-      { section: "Besom (Both Sides)", name: "Double Besom Pocket", factoryCode: "3201", displayName: "Besom With Buttons", img: "./assets/pants-bpocket-new-db-buttons.jpg" },
-      { section: "Besom (Both Sides)", name: "Double Besom Pocket Left W/ Button", factoryCode: "320B", displayName: "Besom, Left Button", img: "./assets/pants-bpocket-new-db-leftbutton.jpg" },
-      { section: "Besom (Both Sides)", name: "Double Besom Pocket W/ No Button", factoryCode: "3200", displayName: "Besom, No Buttons", img: "./assets/pants-bpocket-new-db-nobuttons.jpg" },
-      { section: "Right Side Only", name: "Right Side Double Besom Pocket W/ Button", factoryCode: "320G", displayName: "Right Besom With Button", img: "./assets/pants-bpocket-new-right-db-button.jpg" },
-      { section: "Right Side Only", name: "Right Side Double Besom Pocket No Button", factoryCode: "320F", displayName: "Right Besom, No Button", img: "./assets/pants-bpocket-new-right-db-nobutton.jpg" },
-      { section: "Flap", name: "Rhombus Shape Pocket Flap", factoryCode: "3213", displayName: "Rhombus Pocket Flap", img: "./assets/pants-bpocket-new-rhombus.jpg" },
-      { section: "Flap", name: "Peach Shape Pocket Flap", factoryCode: "3215", img: "./assets/pants-bpocket-new-peach.jpg" },
-      { section: "No Pocket", name: "No Pocket", factoryCode: "31A0", img: "./assets/pants-bpocket-new-none.jpg" },
+      { section: "Both Sides", name: "Double Besom Pocket", factoryCode: "3201", displayName: "Two Slit Pockets With Buttons", specName: "Besom With Buttons", img: "./assets/pants-bpocket-new-db-buttons.jpg" },
+      { section: "Both Sides", name: "Double Besom Pocket Left W/ Button", factoryCode: "320B", displayName: "Two Slit Pockets, Button on Left", specName: "Besom, Left Button", img: "./assets/pants-bpocket-new-db-leftbutton.jpg" },
+      { section: "Both Sides", name: "Double Besom Pocket W/ No Button", factoryCode: "3200", displayName: "Two Slit Pockets, No Buttons", specName: "Besom, No Buttons", img: "./assets/pants-bpocket-new-db-nobuttons.jpg" },
+      { section: "Right Side Only", name: "Right Side Double Besom Pocket W/ Button", factoryCode: "320G", displayName: "Right Slit Pocket With Button", specName: "Right Besom With Button", img: "./assets/pants-bpocket-new-right-db-button.jpg" },
+      { section: "Right Side Only", name: "Right Side Double Besom Pocket No Button", factoryCode: "320F", displayName: "Right Slit Pocket, No Button", specName: "Right Besom, No Button", img: "./assets/pants-bpocket-new-right-db-nobutton.jpg" },
+      { section: "Flap", name: "Rhombus Shape Pocket Flap", factoryCode: "3213", displayName: "Pointed Flap Pockets", specName: "Rhombus Pocket Flap", img: "./assets/pants-bpocket-new-rhombus.jpg" },
+      { section: "Flap", name: "Peach Shape Pocket Flap", displayName: "Curved Flap Pockets", specName: "Peach Shape Pocket Flap", factoryCode: "3215", img: "./assets/pants-bpocket-new-peach.jpg" },
+      { section: "None", name: "No Pocket", displayName: "No Back Pockets", specName: "No Pocket", factoryCode: "31A0", img: "./assets/pants-bpocket-new-none.jpg" },
     ],
   },
 };
@@ -2290,10 +2321,12 @@ PANTS_CATALOG.fabric = {
 //   (+$80 on that suit). `uploadPhoto` makes the picker open a file chooser
 //   instead of the zoom view; `surchargeUsd` is added to that suit's price
 //   (see itemPriceUsd in main.js).
-const LINING_MATCH_OPTION = { name: "Match Fabric", img: "./assets/match-fabric-color-icon.jpg", matchesFabric: true };
+const LINING_MATCH_OPTION = { name: "Match Fabric", displayName: "Match Suit Fabric", specName: "Match Fabric", img: "./assets/match-fabric-color-icon.jpg", matchesFabric: true };
 const LINING_UPLOAD_OPTION = { name: "Customer's Own Photo", displayName: "Upload Your Own Photo (+$80)", img: "./assets/match-fabric-color-icon.jpg", uploadPhoto: true, surchargeUsd: 80 };
 JACKET_CATALOG.lining = {
-  label: "Lining",
+  label: "Lining Fabric",
+  // The suit picture generator still knows this step by its old name.
+  specLabel: "Lining",
   column: "jacket_lining",
   patternTypes: LINING_PATTERN_TYPES,
   // Back from a color's linings returns to that pattern type's color boxes,
@@ -2353,12 +2386,14 @@ JACKET_CATALOG.frontButtonholeThreadColor = {
 // A 4th option (C-0679, "Reverse Side Of Selected Fabric") was on the same
 // spec sheet but was dropped from this catalog at Daniel's request.
 JACKET_CATALOG.feltundercollar = {
-  label: "Felt Under Collar",
+  label: "Under-Collar Felt",
+  // The suit picture generator still knows this step by its old name.
+  specLabel: "Felt Under Collar",
   column: "felt_under_collar",
   description: "The felt under collar is a hidden layer sewn beneath the outer collar fabric, on the underside against your shirt -- it's never visible when worn, but its material affects the collar's structure and cost.",
   options: [
-    { name: "Match Felt Undercollar", img: "./assets/jacket-felt-new-match.jpg", badge: "Standard" },
-    { name: "Customer-Appointed Felt", displayName: "Choose Your Felt", img: "./assets/jacket-felt-new-customer.jpg" },
+    { name: "Match Felt Undercollar", displayName: "Matching Felt", specName: "Match Felt Undercollar", img: "./assets/jacket-felt-new-match.jpg", badge: "Standard" },
+    { name: "Customer-Appointed Felt", displayName: "Choose a Felt Color", specName: "Choose Your Felt", img: "./assets/jacket-felt-new-customer.jpg" },
   ],
 };
 // Felt color: the actual felt swatch choices, used when "Customer-Appointed
@@ -2424,7 +2459,9 @@ const BUTTON_TYPES = BUTTON_TYPE_ORDER.map((t) => {
   return { name: t.name, representativeImg: t.representativeImg, options, colorSections };
 });
 JACKET_CATALOG.buttoncolor = {
-  label: "Button Color",
+  label: "Buttons",
+  // The suit picture generator still knows this step by its old name.
+  specLabel: "Button Color",
   column: "button_color",
   colorFamilies: BUTTON_TYPES,
   // Wording for the family-picker UI, since these groups are materials
