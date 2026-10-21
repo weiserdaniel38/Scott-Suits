@@ -938,6 +938,7 @@ function adminOrderRow(o) {
     "</div>" +
     '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
     '<button type="button" class="btn-primary ship-save">Save</button>' +
+    '<button type="button" class="admin-ship-factory">Send to factory</button>' +
     '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
@@ -988,6 +989,17 @@ function adminOrderRow(o) {
       saveBtn.disabled = false;
     }
   });
+  const factoryBtn = row.querySelector(".admin-ship-factory");
+  let factoryPanel = null;
+  factoryBtn.addEventListener("click", () => {
+    if (factoryPanel) {
+      factoryPanel.remove();
+      factoryPanel = null;
+      return;
+    }
+    factoryPanel = adminFactoryPanel(o);
+    row.appendChild(factoryPanel);
+  });
   const deleteBtn = row.querySelector(".admin-ship-delete");
   deleteBtn.addEventListener("click", async () => {
     const name = o.customer_name || "No name";
@@ -1016,6 +1028,143 @@ function adminOrderRow(o) {
     }
   });
   return row;
+}
+
+// "Send to factory": one block per suit of the order. Check shows the
+// factory order the suit would make (codes, measurements, anything to fix
+// by hand); Save draft saves it as a DRAFT on the factory site through the
+// kute-factory edge function, which never submits it. The admin checks and
+// submits it there. Factory status reads the factory's progress back and
+// moves the order's shipping step forward to match (no message is sent).
+const KUTE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/kute-factory" : "";
+
+async function callKuteFn(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
+  const res = await fetch(KUTE_FN_URL, { method: "POST", headers, body: JSON.stringify(payload) });
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(r.error || "error " + res.status);
+  return r;
+}
+
+function adminFactoryPanel(o) {
+  const panel = document.createElement("div");
+  panel.className = "admin-factory";
+  panel.innerHTML = '<p class="account-section-note">Loading suits...</p>';
+  (async () => {
+    const { data, error } = await getSupabase().rpc("admin_order_suits", { p_order_id: o.order_id });
+    if (error || !data || !data.length) {
+      panel.innerHTML = '<p class="account-section-note">Couldn\u2019t load this order\u2019s suits' + (error ? ": " + escapeAttr(error.message) : "") + ".</p>";
+      return;
+    }
+    panel.innerHTML = "";
+    data.forEach((suit) => panel.appendChild(adminFactorySuit(suit, data.length)));
+  })();
+  return panel;
+}
+
+function adminFactorySuitState(suit) {
+  if (!suit.factory_order_no) return suit.factory_error ? "Not saved: " + suit.factory_error : "Not sent yet";
+  return (
+    "Factory order " + suit.factory_order_no + " \u00b7 " + (suit.factory_status || "Draft") +
+    (suit.factory_delivery_date ? " \u00b7 due " + suit.factory_delivery_date : "") +
+    (suit.factory_waybill ? " \u00b7 waybill " + suit.factory_waybill : "") +
+    (suit.factory_error ? " \u00b7 " + suit.factory_error : "")
+  );
+}
+
+function adminFactorySuit(suit, count) {
+  const box = document.createElement("div");
+  box.className = "admin-factory-suit";
+  box.innerHTML =
+    '<div class="admin-factory-head"><b></b><span class="admin-factory-state"></span></div>' +
+    '<div class="admin-ship-fields">' +
+    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-height" placeholder="Height" aria-label="Customer height"></div>' +
+    '<div class="measure-input-wrap"><select class="fac-height-unit" aria-label="Height unit"><option value="in">in</option><option value="cm">cm</option></select></div>' +
+    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-weight" placeholder="Weight" aria-label="Customer weight"></div>' +
+    '<div class="measure-input-wrap"><select class="fac-weight-unit" aria-label="Weight unit"><option value="lb">lb</option><option value="kg">kg</option></select></div>' +
+    "</div>" +
+    '<div class="admin-ship-actions">' +
+    '<button type="button" class="admin-ship-factory fac-check">Check</button>' +
+    '<button type="button" class="btn-primary fac-draft">Save draft at factory</button>' +
+    '<button type="button" class="admin-ship-factory fac-status">Factory status</button>' +
+    "</div>" +
+    '<pre class="admin-factory-out" hidden></pre>';
+  box.querySelector("b").textContent = (count > 1 ? "Suit " + suit.suit_number + " \u00b7 " : "") + (suit.suit_type === "jacket_only" ? "Jacket only" : "Full suit");
+  const state = box.querySelector(".admin-factory-state");
+  const out = box.querySelector(".admin-factory-out");
+  const draftBtn = box.querySelector(".fac-draft");
+  const statusBtn = box.querySelector(".fac-status");
+  const buttons = box.querySelectorAll("button");
+  const showState = () => {
+    state.textContent = adminFactorySuitState(suit);
+    statusBtn.hidden = !suit.factory_order_no;
+    draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
+  };
+  showState();
+  const params = () => ({
+    id: suit.id,
+    height: Number(box.querySelector(".fac-height").value) || 0,
+    heightUnit: box.querySelector(".fac-height-unit").value,
+    weight: Number(box.querySelector(".fac-weight").value) || 0,
+    weightUnit: box.querySelector(".fac-weight-unit").value,
+  });
+  const run = async (label, fn) => {
+    buttons.forEach((b) => (b.disabled = true));
+    out.hidden = false;
+    out.textContent = label;
+    try {
+      out.textContent = await fn();
+    } catch (err) {
+      console.error(err);
+      out.textContent = "Couldn\u2019t reach the factory link: " + (err.message || err);
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  };
+  const lines = (title, list) => (list && list.length ? title + "\n" + list.map((w) => "\u2022 " + w).join("\n") + "\n\n" : "");
+
+  box.querySelector(".fac-check").addEventListener("click", () =>
+    run("Checking...", async () => {
+      const r = await callKuteFn(Object.assign({ action: "factory_preview" }, params()));
+      return (
+        lines("Fix before sending:", r.blocking) +
+        lines("Check on the factory site:", r.warnings) +
+        (r.blocking && r.blocking.length ? "" : "Ready to save as a draft.\n\n") +
+        "What the factory gets:\n" + JSON.stringify(r.body, null, 2)
+      );
+    })
+  );
+  draftBtn.addEventListener("click", () =>
+    run("Saving the draft at the factory...", async () => {
+      const r = await callKuteFn(Object.assign({ action: "factory_draft" }, params()));
+      if (r.blocking) return lines("Not sent. Fix first:", r.blocking) + lines("Also check:", r.warnings);
+      suit.factory_error = r.error || null;
+      if (r.ok) {
+        suit.factory_order_no = r.orderNo;
+        suit.factory_status = "Draft";
+        suit.factory_delivery_date = r.deliveryDate || suit.factory_delivery_date;
+      }
+      showState();
+      return (
+        (r.ok
+          ? "Saved as a draft: factory order " + r.orderNo + ". Check it on the factory site and submit it there.\n\n"
+          : "The factory didn\u2019t take it: " + r.error + "\n\n") + lines("Check on the factory site:", r.warnings)
+      );
+    })
+  );
+  statusBtn.addEventListener("click", () =>
+    run("Asking the factory...", async () => {
+      const r = await callKuteFn({ action: "factory_status", id: suit.id });
+      if (!r.ok) return "Couldn\u2019t get the status: " + r.error;
+      suit.factory_status = r.status;
+      suit.factory_delivery_date = r.deliveryDate;
+      suit.factory_waybill = r.waybill;
+      showState();
+      const step = shippingLabel(r.shippingStatus);
+      return "Factory status: " + r.status + (step ? "\nCustomer sees: " + step + " (no message sent; use Save above to notify them)." : "");
+    })
+  );
+  return box;
 }
 
 if (shippingLiveToggle) {
@@ -5737,6 +5886,9 @@ async function finalizeOrder(input, opts) {
     if (adminNoPayment) row.admin_no_payment = true;
     else if (payWithStripe) row.payment_status = "awaiting_payment";
     Object.assign(row, item.measurements);
+    // The monogram text itself, for the factory order (kute-factory).
+    row.jacket_monogram_text = monoText(item, "jacket") || null;
+    row.pants_monogram_text = item.pants ? monoText(item, "pants") || null : null;
 
     // Phone/email are deliberately kept OUT of the Client Form text -- that
     // text is meant to be the garment spec + shipping address only (it's
