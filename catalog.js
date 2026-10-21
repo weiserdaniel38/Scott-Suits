@@ -138,7 +138,7 @@ const JACKET_CATALOG = {
     options: [
       { name: "X Shape Sewing Button", displayName: "X Shape Sewing", img: "./assets/buttonnail-new-x.jpg" },
       { name: "II Shape Sewing Button", displayName: "Parallel Sewing", img: "./assets/buttonnail-new-parallel.jpg" },
-      { name: "Square Shape Sewing Button", displayName: "Square Sewing", factoryCode: "0646", img: "./assets/buttonnail-new-square.jpg" },
+      { name: "Square Shape Sewing Button", displayName: "Square Sewing", factoryCode: "0646", img: "./assets/buttonnail-square-sewing.jpg" },
     ],
   },
   construction: {
@@ -356,7 +356,7 @@ const PANTS_CATALOG = {
     options: [
       { name: "X Shape Sewing Button", displayName: "X Shape Sewing", img: "./assets/buttonnail-new-x.jpg" },
       { name: "II Shape Sewing Button", displayName: "Parallel Sewing", img: "./assets/buttonnail-new-parallel.jpg" },
-      { name: "Square Shape Sewing Button", displayName: "Square Sewing", factoryCode: "34Y1", img: "./assets/buttonnail-new-square.jpg" },
+      { name: "Square Shape Sewing Button", displayName: "Square Sewing", factoryCode: "34Y1", img: "./assets/buttonnail-square-sewing.jpg" },
     ],
   },
   watchPocket: {
