@@ -869,7 +869,7 @@
     button(g, 270, 334, 3.6, buttonLook(v, fp.hex));
     // The pen pocket on the facing a hand's width below: a short welt or a
     // teardrop.
-    if (/Water Drop/.test(ip)) {
+    if (/Water Drop|Combination/.test(ip)) {
       clothPiece(g, layer, "M570,404 C579,416 582,426 582,432 C582,440 576,445 570,445 C564,445 558,440 558,432 C558,426 561,416 570,404 Z", { shadow: 0.35, blur: 3, drop: 1.5, stitch: "M570,409 C577,419 579,427 579,432 C579,438 575,442 570,442 C565,442 561,438 561,432 C561,427 563,419 570,409 Z" });
       line(g, [[562, 418], [578, 418]], "rgba(0,0,0,0.55)", 1.2);
     } else besom(g, layer, 570, 424, 40, 0, false);

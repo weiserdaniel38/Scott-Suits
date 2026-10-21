@@ -178,6 +178,7 @@ const JACKET_CATALOG = {
     options: [
       { name: "Regular Inner Pocket", factoryCode: "0801", img: "./assets/jacket-insidepocket-factory-regular.jpg", badge: "Standard" },
       { name: "Fashion Inner Pocket", factoryCode: "0803", img: "./assets/jacket-insidepocket-factory-fashion.jpg" },
+      { name: "Combination Inner Pocket", factoryCode: "080X", img: "./assets/jacket-insidepocket-factory-combination.jpg" },
       { name: "No Inner Pockets", factoryCode: "0806", img: "./assets/jacket-insidepocket-factory-none.jpg" },
     ],
   },
