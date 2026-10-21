@@ -1880,3 +1880,7 @@ body.order-done-view > .process{display:none !important;}
 .admin-notif-total{font-weight:600;white-space:nowrap;}
 .admin-notif-new{border-left:4px solid #b3261e;background:rgba(179,38,30,0.05);}
 .nav-cart-badge.nav-account-badge-alert{background:#b3261e;}
+.admin-notif-clear-all{margin:0 0 10px;}
+.admin-notif-clear-all[hidden]{display:none;}
+.admin-notif-clear{background:none;border:0;font-size:20px;line-height:1;padding:0 2px;cursor:pointer;opacity:0.55;color:inherit;}
+.admin-notif-clear:hover,.admin-notif-clear:focus-visible{opacity:1;}

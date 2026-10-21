@@ -731,8 +731,9 @@ async function loadAdminNotifications() {
     if (error) throw error;
     const rows = data || [];
     setAdminUnread(rows.filter((n) => !n.read_at).length);
+    if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length;
     if (!rows.length) {
-      adminNotificationsList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      adminNotificationsList.innerHTML = '<p class="account-section-note">No notifications.</p>';
       return;
     }
     adminNotificationsList.innerHTML = "";
@@ -741,7 +742,9 @@ async function loadAdminNotifications() {
       item.className = "admin-notif" + (n.read_at ? "" : " admin-notif-new");
       const when = n.created_at ? new Date(n.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
       const suits = n.suits > 1 ? n.suits + " suits" : "1 suit";
-      item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>';
+      item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>' +
+        '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
+      item.querySelector(".admin-notif-clear").addEventListener("click", () => clearAdminNotifications(n.id));
       // Customer-typed text goes in with textContent, never as HTML.
       item.querySelector("b").textContent = "New order from " + (n.customer_name || "a customer");
       item.querySelector(".admin-notif-meta").textContent = when + " \u00b7 " + suits + " \u00b7 " +
@@ -754,6 +757,19 @@ async function loadAdminNotifications() {
     adminNotificationsList.innerHTML = '<p class="account-section-note">Couldn\u2019t load notifications right now.</p>';
   }
 }
+
+const adminNotifClearAll = document.getElementById("adminNotifClearAll");
+// Clears one notification (id) or all of them, then reloads the list.
+async function clearAdminNotifications(id) {
+  try {
+    const { error } = await getSupabase().rpc("admin_clear_notifications", id ? { p_id: id } : {});
+    if (error) throw error;
+  } catch (e) {
+    console.error("Failed to clear notifications:", e);
+  }
+  loadAdminNotifications();
+}
+if (adminNotifClearAll) adminNotifClearAll.addEventListener("click", () => clearAdminNotifications(null));
 
 // Opening the list marks everything read; the "new" marks stay until it is
 // closed so the admin can see which ones they were.
