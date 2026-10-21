@@ -689,6 +689,7 @@ async function refreshAdminStatus() {
   }
   if (user !== currentUser) return;
   currentIsAdmin = admin;
+  document.body.classList.toggle("admin-skip", admin);
   if (setQaNavAllowed) setQaNavAllowed(admin);
   const wrap = document.getElementById("adminOrderWrap");
   if (wrap) wrap.hidden = !admin;
@@ -2979,6 +2980,19 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const g = groups.find((x) => x.keys.indexOf(key) !== -1);
     return g ? g.label : "";
   }
+  // Index of the furthest step a customer may jump to from the progress
+  // bar or the Review sheet: the current step, or the first unanswered one
+  // if that's further (e.g. after going Back to change something).
+  function wizReachIndex(list, idx) {
+    if (currentIsAdmin) return list.length - 1;
+    const firstOpen = list.findIndex((k) => !order[k] || textMissing(k));
+    return firstOpen === -1 ? list.length - 1 : Math.max(idx, firstOpen);
+  }
+  function wizCanReach(key) {
+    const list = wizList();
+    const i = list.indexOf(key);
+    return i !== -1 && i <= wizReachIndex(list, Math.max(list.indexOf(activeTab), 0));
+  }
   function wizEsc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"); }
 
   function wizGoBack() {
@@ -3040,19 +3054,23 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       done: list.filter((k) => order[k]).length,
       total: list.length,
     };
+    // Customers can only jump back, or forward as far as the first step
+    // they haven't answered yet -- never skip ahead (Daniel, 2026-10-21).
+    // Only the signed-in shop admin can jump anywhere.
+    const reachIdx = wizReachIndex(list, idx);
     wizHead.innerHTML =
       '<div class="wiz-meta"><span class="wiz-step">Step ' + (idx + 1) + " of " + list.length + "</span>" +
       (group ? '<span class="wiz-group">' + wizEsc(group) + "</span>" : "") +
       '<button type="button" class="wiz-review-link">Review</button></div>' +
       '<div class="wiz-progress">' +
       list.map((k, i) =>
-        '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") +
+        '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") + (i > reachIdx ? " locked" : "") +
         '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '"></button>'
       ).join("") +
       '</div>' +
       '<div class="wiz-status"><div class="wiz-cheer"></div><button type="button" class="wiz-pct" data-stage="design" title="Go to what\u2019s left"></button></div>';
     wizHead.querySelectorAll(".wiz-seg").forEach((b) => {
-      b.onclick = () => { const k = b.getAttribute("data-k"); if (k !== activeTab) switchTab(k); };
+      b.onclick = () => { const k = b.getAttribute("data-k"); if (k !== activeTab && wizCanReach(k)) switchTab(k); };
     });
     wizHead.querySelector(".wiz-review-link").onclick = openReview;
     refreshOrderProgress();
@@ -3110,16 +3128,17 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const noteEl = wizSummaryEl ? wizSummaryEl.querySelector(".summary-note") : null;
     const realBtn = document.getElementById(ids.continueBtn);
     const missingFirst = list.find((k) => !order[k] || textMissing(k));
+    const reachIdx = wizReachIndex(list, Math.max(list.indexOf(activeTab), 0));
     const sheet = document.createElement("div");
     sheet.className = "wiz-sheet";
     sheet.innerHTML =
       '<div class="wiz-sheet-card" role="dialog" aria-modal="true" aria-label="' + wizEsc(title) + '">' +
       '<div class="wiz-sheet-head"><h3>' + wizEsc(title) + '</h3><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
       '<div class="wiz-rows">' +
-      list.map((k) => {
+      list.map((k, i) => {
         const v = displayValue(k);
         const needText = !!v && textMissing(k);
-        return '<button type="button" class="wiz-row" data-k="' + k + '"><span>' + wizEsc(catalog[k].label) +
+        return '<button type="button" class="wiz-row' + (i > reachIdx ? " locked" : "") + '" data-k="' + k + '"' + (i > reachIdx ? " disabled" : "") + '><span>' + wizEsc(catalog[k].label) +
           '</span><span class="' + (v && !needText ? "" : "missing") + '">' + wizEsc(needText ? "Add your monogram" : v || "Choose") + "</span></button>";
       }).join("") +
       "</div>" +
@@ -3137,6 +3156,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     sheet.querySelectorAll(".wiz-row").forEach((b) => {
       b.onclick = () => {
         const k = b.getAttribute("data-k");
+        if (!wizCanReach(k)) return;
         closeReview();
         if (reviewRowHandler) { reviewRowHandler(k); return; }
         if (k !== activeTab) switchTab(k);
