@@ -211,6 +211,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   // ---- Jacket ----
   const jc = catalogCodes(jacket, row, JACKET_BY_HAND, "Jacket", warnings);
   jc.push(...JACKET_FIXED);
+  // Orders from before the pick stitching step: no pick stitch.
+  if (!s(row.jacket_pick_stitch)) jc.push("0570");
 
   // Lining style and facing.
   const facing = s(row.facing_style);
@@ -300,6 +302,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   if (isSuit) {
     const pc = catalogCodes(pants, row, PANTS_BY_HAND, "Trousers", warnings);
     pc.push(...PANTS_FIXED);
+    if (!s(row.pants_pick_stitch)) pc.push("31A6");
     const pleat = s(row.front_pleat);
     if (pleat && pleat !== "No Pleat") pc.push("302F");
     const pThread = s(row.pants_thread_color);
