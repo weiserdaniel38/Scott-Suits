@@ -132,12 +132,24 @@ async function syncCodes() {
   return counts;
 }
 
+// The project's server-only keys: the legacy service role key and any new
+// "sb_secret_..." keys (SUPABASE_SECRET_KEYS is a JSON object of them).
+function serverKeys(): string[] {
+  const keys = [env("SUPABASE_SERVICE_ROLE_KEY")];
+  try {
+    keys.push(...Object.values(JSON.parse(env("SUPABASE_SECRET_KEYS", "{}")) as string[]));
+  } catch {
+    // not set
+  }
+  return keys.filter(Boolean);
+}
+
 async function allowed(req: Request): Promise<boolean> {
   const hook = env("WEBHOOK_SECRET");
   if (hook && req.headers.get("x-webhook-secret") === hook) return true;
   const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
+  if (serverKeys().some((k) => k === m?.[1] || k === req.headers.get("apikey"))) return true;
   if (!m) return false;
-  if (m[1] === env("SUPABASE_SERVICE_ROLE_KEY")) return true;
   const { data: who } = await supabase.auth.getUser(m[1]);
   if (!who?.user) return false;
   const { data: adminRow } = await supabase.from("admins").select("user_id").eq("user_id", who.user.id).maybeSingle();
@@ -153,7 +165,12 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "send a JSON body" }, 400);
   }
-  if (!(await allowed(req))) return json({ error: "only the shop admin can use this" }, 403);
+  if (!(await allowed(req))) {
+    // Which kind of key was sent (never the key itself), to debug dashboard tests.
+    const a = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+    console.log("kute-factory 403, key kind:", a.startsWith("eyJ") ? "jwt" : a.slice(0, 10), "apikey kind:", (req.headers.get("apikey") || "").slice(0, 10));
+    return json({ error: "only the shop admin can use this" }, 403);
+  }
   const str = (v: unknown) => String(v ?? "").trim();
   const params: Record<string, string> = {};
   for (const [k, v] of Object.entries((input.params as Record<string, unknown>) || {})) params[k] = str(v);
