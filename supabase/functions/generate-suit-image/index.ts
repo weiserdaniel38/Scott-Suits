@@ -319,9 +319,9 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Tall Cuff": "trouser bottoms with a tall turn-up (cuff) about 5 cm tall",
   },
   "Watch Pocket Placement": {
-    "Right Waist Sewn Up": "a small welt watch pocket just below the waistband on the wearer's right front",
-    "Peach-Shaped Pocket": "a small pointed (peach-shaped) flap watch pocket with one button, just below the waistband on the wearer's right front",
-    "Top of Right Waist": "a small watch pocket opening set into the top edge of the waistband on the wearer's right",
+    "Welt Pocket Below Waistband": "a small welt watch pocket just below the waistband on the wearer's right front",
+    "Flap Pocket With Button": "a small pointed flap watch pocket with one button, just below the waistband on the wearer's right front",
+    "Pocket In Top Of Waistband": "a small watch pocket opening set into the top edge of the waistband on the wearer's right",
     "No Watch Pocket": "no watch pocket",
   },
   "Back Waist Shape": {

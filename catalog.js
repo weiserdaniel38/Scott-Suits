@@ -333,12 +333,12 @@ const PANTS_CATALOG = {
       // stays "Turn Up Bottom" because that's still what should print on the
       // Client Form / order data (see friendlyName/displayValue vs.
       // resolvedValue in main.js).
-      { name: "Turn Up Bottom", displayName: "Hem", img: "./assets/pants-bottom-new-hem.jpg", badge: "Standard" },
+      { name: "Turn Up Bottom", factoryCode: "3600", displayName: "Hem", img: "./assets/pants-bottom-new-hem.jpg", badge: "Standard" },
       // Customer-facing names only; the stored names ("W/ Cuff 3.5 cm" etc.)
       // stay as the supplier values for the Client Form / order data.
-      { name: "W/ Cuff 3.5 cm", displayName: "Thin Cuff", img: "./assets/pants-bottom-new-thin.jpg" },
-      { name: "W/ Cuff 4.0 cm", displayName: "Classic Cuff", img: "./assets/pants-bottom-new-classic.jpg" },
-      { name: "W/ Cuff 5.0 cm", displayName: "Tall Cuff", img: "./assets/pants-bottom-new-tall.jpg" },
+      { name: "W/ Cuff 3.5 cm", factoryCode: "3602", displayName: "Thin Cuff", img: "./assets/pants-bottom-new-thin.jpg" },
+      { name: "W/ Cuff 4.0 cm", factoryCode: "3603", displayName: "Classic Cuff", img: "./assets/pants-bottom-new-classic.jpg" },
+      { name: "W/ Cuff 5.0 cm", factoryCode: "3605", displayName: "Tall Cuff", img: "./assets/pants-bottom-new-tall.jpg" },
     ],
   },
   buttonNail: {
@@ -354,10 +354,10 @@ const PANTS_CATALOG = {
     label: "Watch Pocket Placement",
     column: "watch_pocket_placement",
     options: [
-      { name: "Right Waist Sewn Up", img: "./assets/pants-watch-new-rightsewn.jpg" },
-      { name: "Peach-Shaped Pocket", img: "./assets/pants-watch-new-peach.jpg" },
-      { name: "Top Of Right Waist", displayName: "Top of Right Waist", img: "./assets/pants-watch-new-topright.jpg" },
-      { name: "No Watch Pocket", img: "./assets/pants-watch-new-no.jpg" },
+      { name: "Right Waist Sewn Up", displayName: "Welt Pocket Below Waistband", factoryCode: "3181", img: "./assets/pants-watch-new-rightsewn.jpg" },
+      { name: "Peach-Shaped Pocket", displayName: "Flap Pocket With Button", factoryCode: "3186", img: "./assets/pants-watch-new-peach.jpg" },
+      { name: "Top Of Right Waist", displayName: "Pocket In Top Of Waistband", factoryCode: "3180", img: "./assets/pants-watch-new-topright.jpg" },
+      { name: "No Watch Pocket", factoryCode: "3169", img: "./assets/pants-watch-new-no.jpg" },
     ],
   },
   backWaistShape: {
