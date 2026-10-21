@@ -341,9 +341,9 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
 
 // The factory's production status -> the site's shipping step (only ever
 // moves an order forward; see SHIPPING_STATUSES in main.js).
-// 10035 "Saving" is a draft not yet submitted, so it changes nothing.
+// 10035 "Saving" and 10039 "Stay Payments" change nothing: a draft saved
+// from here already shows "Stay Payments" before the admin submits it.
 export const FACTORY_STAGE: Record<string, string> = {
-  "10039": "sent_to_factory", // Stay Payments: submitted, waiting for payment
   "10030": "cutting", // Pattern Making
   "10031": "sewing", // Production
   "10032": "finishing", // Stocked
