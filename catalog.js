@@ -407,7 +407,12 @@ const PANTS_CATALOG_GROUPS = [
 // require only the jacket measurements for a "Jacket Only" order (see
 // activeMeasurements() in main.js) instead of also asking for pants
 // measurements nobody's ordering.
+// Height and weight ("body") come first and are asked on every order: the
+// factory needs both. Every other field is in cm; height is in inches and
+// weight in pounds (`unit`), and kute-factory sends them in those units.
 const MEASUREMENTS = [
+  { id: "height", label: "Height", part: "body", unit: "in", step: "0.5" },
+  { id: "weight", label: "Weight", part: "body", unit: "lb", step: "1" },
   { id: "shoulder", label: "Shoulder", part: "jacket" },
   { id: "sleeve_length", label: "Sleeve Length", part: "jacket" },
   { id: "wrist", label: "Wrist", part: "jacket" },

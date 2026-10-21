@@ -98,10 +98,113 @@ function itemPriceUsd(item) {
 
 // The measurement fields relevant to the suit type currently being designed
 // -- a "Jacket Only" order only asks for (and only requires) the 8 jacket
-// measurements, not the 8 pants ones nobody needs for an order with no
-// pants in it. See the "part" field on each MEASUREMENTS entry in catalog.js.
+// measurements (plus height and weight), not the 8 pants ones nobody needs
+// for an order with no pants in it. See the "part" field on each
+// MEASUREMENTS entry in catalog.js.
 function activeMeasurements() {
-  return isJacketOnlyType(currentSuitType) ? MEASUREMENTS.filter((m) => m.part === "jacket") : MEASUREMENTS;
+  return isJacketOnlyType(currentSuitType) ? MEASUREMENTS.filter((m) => m.part !== "pants") : MEASUREMENTS;
+}
+// Height and weight. Height is stored in inches and weight in pounds, in a
+// hidden input with the usual "m_"/"pm_" id, so drafts, saved profiles and
+// the order row keep working unchanged; the customer types feet + inches or
+// centimeters, and pounds or kilograms. bindBodyMeasure() ties the two.
+function bodyMeasureHtml(prefix, m) {
+  const box = (cls, unit, ph, label, extra) =>
+    '<div class="measure-input-wrap ' + cls + '"' + (extra || "") + '><input type="number" min="0" step="' +
+    (cls === "mb-ft-wrap" ? "1" : "0.5") + '" class="' + cls.replace("-wrap", "") + '" placeholder="' + ph + '" aria-label="' +
+    label + '">' + (unit ? '<span class="unit">' + unit + "</span>" : "") + "</div>";
+  const pick = (cls, label, opts) =>
+    '<div class="measure-input-wrap measure-unit-pick"><select class="' + cls + '" aria-label="' + label + '">' +
+    opts.map((o) => '<option value="' + o[0] + '">' + o[1] + "</option>").join("") + "</select></div>";
+  if (m.id === "height") {
+    return (
+      '<div class="measure-body-row"><input type="hidden" id="' + prefix + m.id + '">' +
+      box("mb-ft-wrap", "ft", "5", "Height, feet") + box("mb-in-wrap", "in", "10", "Height, inches") +
+      box("mb-cm-wrap", "cm", "178", "Height, centimeters", " hidden") +
+      pick("mb-unit", "Height unit", [["ft", "ft / in"], ["cm", "cm"]]) + "</div>"
+    );
+  }
+  return (
+    '<div class="measure-body-row"><input type="hidden" id="' + prefix + m.id + '">' +
+    box("mb-w-wrap", "", "180", "Weight") + pick("mb-unit", "Weight unit", [["lb", "lb"], ["kg", "kg"]]) + "</div>"
+  );
+}
+function bindBodyMeasure(field, prefix, m) {
+  if (m.part !== "body") return;
+  const hidden = field.querySelector("#" + prefix + m.id);
+  const unit = field.querySelector(".mb-unit");
+  const num = (el) => {
+    const v = parseFloat(el.value);
+    return isNaN(v) ? null : v;
+  };
+  const round1 = (v) => Math.round(v * 10) / 10;
+  // The unit the boxes are showing (the select already holds the new one
+  // when its change event runs).
+  let shown = unit.value;
+  let get, set, show;
+  if (m.id === "height") {
+    const ft = field.querySelector(".mb-ft");
+    const inch = field.querySelector(".mb-in");
+    const cm = field.querySelector(".mb-cm");
+    show = () => {
+      const isCm = unit.value === "cm";
+      field.querySelector(".mb-ft-wrap").hidden = isCm;
+      field.querySelector(".mb-in-wrap").hidden = isCm;
+      field.querySelector(".mb-cm-wrap").hidden = !isCm;
+    };
+    get = () => {
+      if (shown === "cm") {
+        const c = num(cm);
+        return c === null ? "" : String(round1(c / 2.54));
+      }
+      const f = num(ft);
+      const i = num(inch);
+      return f === null && i === null ? "" : String(round1((f || 0) * 12 + (i || 0)));
+    };
+    set = (v) => {
+      const n = parseFloat(v);
+      if (v === "" || v === null || v === undefined || isNaN(n)) {
+        ft.value = inch.value = cm.value = "";
+        return;
+      }
+      const whole = Math.floor(n / 12);
+      ft.value = whole;
+      inch.value = round1(n - whole * 12);
+      cm.value = Math.round(n * 2.54);
+    };
+  } else {
+    const w = field.querySelector(".mb-w");
+    show = () => {};
+    get = () => {
+      const v = num(w);
+      return v === null ? "" : String(round1(shown === "kg" ? v * 2.20462 : v));
+    };
+    set = (v) => {
+      const n = parseFloat(v);
+      w.value = v === "" || v === null || v === undefined || isNaN(n) ? "" : round1(shown === "kg" ? n / 2.20462 : n);
+    };
+  }
+  Object.defineProperty(hidden, "value", { get, set, configurable: true });
+  unit.addEventListener("change", () => {
+    const current = get();
+    shown = unit.value;
+    show();
+    set(current);
+  });
+}
+
+// Heading over each group of measurement fields.
+function measurePartHeading(part) {
+  return part === "pants" ? "Pants" : part === "body" ? "Height & Weight" : "Jacket";
+}
+// One measurement's number input (unit after it; cm unless the field says).
+// Height and weight are composite: see bodyMeasureHtml.
+function measureInputHtml(prefix, m) {
+  if (m.part === "body") return bodyMeasureHtml(prefix, m);
+  return (
+    '<div class="measure-input-wrap"><input type="number" step="' + (m.step || "0.1") + '" min="0" id="' + prefix +
+    m.id + '" placeholder="' + (m.step === "1" ? "0" : "0.0") + '"><span class="unit">' + (m.unit || "cm") + "</span></div>"
+  );
 }
 // Set true only once an order has actually been saved -- used solely to mark
 // the "Order" step in the progress bar as done; see updateProcessBar().
@@ -564,17 +667,15 @@ function renderProfileMeasureGrid(values) {
     if (m.part !== lastPart) {
       const h = document.createElement("h4");
       h.className = "measure-part-heading";
-      h.textContent = m.part === "pants" ? "Pants" : "Jacket";
+      h.textContent = measurePartHeading(m.part);
       profileMeasureGrid.appendChild(h);
     }
     lastPart = m.part;
     const field = document.createElement("div");
-    field.className = "measure-field";
+    field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
     field.innerHTML =
-      '<label for="pm_' + m.id + '">' + m.label + "</label>" +
-      '<div class="measure-input-wrap"><input type="number" step="0.1" min="0" id="pm_' +
-      m.id +
-      '" placeholder="0.0"><span class="unit">cm</span></div>';
+      '<label for="pm_' + m.id + '">' + m.label + "</label>" + measureInputHtml("pm_", m);
+    bindBodyMeasure(field, "pm_", m);
     profileMeasureGrid.appendChild(field);
   });
   if (values) {
@@ -1030,7 +1131,9 @@ function adminOrderRow(o) {
   return row;
 }
 
-// "Send to factory": one block per suit of the order. Check shows the
+// "Send to factory": one block per suit of the order. Height and weight
+// come from the order (the customer enters them with their measurements);
+// the admin only types them for older orders or to change them. Check shows the
 // factory order the suit would make (codes, measurements, anything to fix
 // by hand); Save draft saves it as a DRAFT on the factory site through the
 // kute-factory edge function, which never submits it. The admin checks and
@@ -1078,9 +1181,9 @@ function adminFactorySuit(suit, count) {
   box.innerHTML =
     '<div class="admin-factory-head"><b></b><span class="admin-factory-state"></span></div>' +
     '<div class="admin-ship-fields">' +
-    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-height" placeholder="Height" aria-label="Customer height"></div>' +
+    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-height" placeholder="Height (from order)" aria-label="Customer height"></div>' +
     '<div class="measure-input-wrap"><select class="fac-height-unit" aria-label="Height unit"><option value="in">in</option><option value="cm">cm</option></select></div>' +
-    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-weight" placeholder="Weight" aria-label="Customer weight"></div>' +
+    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-weight" placeholder="Weight (from order)" aria-label="Customer weight"></div>' +
     '<div class="measure-input-wrap"><select class="fac-weight-unit" aria-label="Weight unit"><option value="lb">lb</option><option value="kg">kg</option></select></div>' +
     "</div>" +
     '<div class="admin-ship-actions">' +
@@ -3884,7 +3987,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       return keys.filter(isApplicable).map((k) => ({ label: catalog[k].label, value: displayValue(k) || "" }));
     },
     // Selected option display names, keyed by catalog key (e.g. "collar" -> "Notch Lapel").
-    // Used to fill in the printable Client Form. Any "same as jacket" links are
+    // Used to fill in the order summary. Any "same as jacket" links are
     // resolved to the real fabric name here, not left as an internal marker.
     getSelections: () => {
       reconcileSelections();
@@ -4046,9 +4149,10 @@ const pantsDesigner = createDesigner(
   PANTS_CATALOG_GROUPS
 );
 
-// Exact labels used on the shop's printed Client Form for each measurement
-// (a couple of them intentionally don't say "finished", matching the paper form).
+// Labels for each measurement in the order summary.
 const MEASUREMENT_FORM_LABELS = {
+  height: "Height:",
+  weight: "Weight:",
   shoulder: "Shoulder-finished-",
   sleeve_length: "Sleeve length-finished-",
   wrist: "Wrist-finished-",
@@ -4067,34 +4171,20 @@ const MEASUREMENT_FORM_LABELS = {
   cuff: "Cuff-finished-",
 };
 
-// Builds the full plain-text Client Form used in production. The customer's
-// choices are listed step by step exactly as the designer offers them: same
-// section headings and step names as JACKET_CATALOG_GROUPS /
-// PANTS_CATALOG_GROUPS, so any step added, renamed, hidden or removed on the
-// site shows up (or drops off) here automatically. Each choice prints its
-// stored factory value; for style options whose site name differs (e.g.
-// "Double Besom W/ Flap" shown as "Flap Pockets") the site name follows in
-// brackets. Fabric, lining, button, felt and thread choices print their
-// codes exactly as stored. A step the site skipped for this suit (e.g. Felt
-// Color without a chosen felt, Monogram Thread Color without a monogram) is
-// left off. The shop's fixed specs that aren't customer choices follow each
-// garment under their own heading. suitType is "full" or "jacketOnly" -- for
-// a Jacket Only item the whole PANTS section (and pants measurements) is
-// left out.
-// On the factory form, a "match the fabric" choice is left to the factory's
-// judgement -- say so explicitly instead of naming any specific color.
-function factoryMatchText(v) {
-  return v === "Match Fabric Color" || v === "Best Match to Fabric" ? v + " (factory to match)" : v;
-}
+// Builds the plain-text order summary for the shop: saved on each order row
+// (client_form_text) and sent in the order email. Orders go to the factory
+// through "Send to factory" (the kute-factory edge function), so this is
+// only for reading. The customer's choices are listed step by step as the
+// designer offers them (JACKET_CATALOG_GROUPS / PANTS_CATALOG_GROUPS), so any
+// step added, renamed or removed shows up (or drops off) here on its own.
+// Style choices print the name the customer saw, with the stored value in
+// brackets when it differs; fabric, lining, button, felt and thread choices
+// print their codes as stored. Steps the site skipped are left off, and for
+// a Jacket Only item the PANTS section and pants measurements are too.
 // Steps whose values are supplier codes -- printed as stored, never renamed.
-const CLIENT_FORM_CODE_KEYS = ["fabric", "lining", "buttoncolor", "feltColor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "monogramThreadColor"];
-// Fixed shop specs per garment (not customer choices on the site).
-const CLIENT_FORM_SHOP_SPECS = {
-  jacket: ["AMF stitching: .5cm", "Armhole shield: no", "Label placement: no", "Shoulder type: normal"],
-  pants: ["Sewing stitch/ AMF stitch: no", "Pant lining: no", "Heel guards: no", "Label placement: no"],
-};
-// One garment's step-by-step lines (see buildClientFormText).
-function clientFormGarmentLines(catalog, groups, sel, part, extras) {
+const ORDER_SUMMARY_CODE_KEYS = ["fabric", "lining", "buttoncolor", "feltColor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "monogramThreadColor"];
+// One garment's step-by-step lines (see buildOrderSummaryText).
+function orderSummaryGarmentLines(catalog, groups, sel, part, extras) {
   const lines = [];
   groups.forEach((group) => {
     const groupLines = [];
@@ -4108,9 +4198,9 @@ function clientFormGarmentLines(catalog, groups, sel, part, extras) {
         text = "CUSTOMER'S OWN PHOTO (+$" + LINING_UPLOAD_OPTION.surchargeUsd + ") -- " +
           (photoUrl ? "photo: " + photoUrl : "photo NOT attached (upload failed) -- contact the customer for it");
       } else if (key === "lining" && value === LINING_MATCH_OPTION.name) {
-        text = "Match fabric (factory to match)";
-      } else if (CLIENT_FORM_CODE_KEYS.indexOf(key) !== -1) {
-        text = factoryMatchText(value);
+        text = "Match fabric";
+      } else if (ORDER_SUMMARY_CODE_KEYS.indexOf(key) !== -1) {
+        text = value;
       } else {
         const opt = (cat.options || []).find((o) => o.name === value);
         let siteName = opt && opt.displayName;
@@ -4120,12 +4210,7 @@ function clientFormGarmentLines(catalog, groups, sel, part, extras) {
             if (alt) siteName = alt;
           });
         }
-        text = value + (siteName && siteName !== value ? " [" + siteName + "]" : "");
-        // An option's `formNote` (e.g. Square Waistband: "Centered over
-        // zipper") is added to the factory form only.
-        if (opt && opt.formNote) text += " -- " + opt.formNote.toUpperCase();
-        // The factory's own option code, where the catalog records one.
-        if (opt && opt.factoryCode) text += " (code " + opt.factoryCode + ")";
+        text = siteName && siteName !== value ? siteName + " [" + value + "]" : value;
       }
       groupLines.push(cat.label + ": " + text);
       const monogramText = extras && (part === "jacket" ? extras.jacketMonogramText : extras.pantsMonogramText);
@@ -4135,34 +4220,34 @@ function clientFormGarmentLines(catalog, groups, sel, part, extras) {
     lines.push("- " + group.label + " -");
     groupLines.forEach((l) => lines.push(l));
   });
-  lines.push("- Shop standard specs -");
-  CLIENT_FORM_SHOP_SPECS[part].forEach((l) => lines.push(l));
   return lines;
 }
-function buildClientFormText(customerName, suitType, jacketSel, pantsSel, measurements, extras) {
+function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, measurements, extras) {
   const isJacketOnly = isJacketOnlyType(suitType);
 
   const lines = [];
-  lines.push("CLIENT FORM");
+  lines.push("ORDER SUMMARY");
   lines.push("");
   lines.push("Customer name: " + customerName);
   lines.push("Order type: " + (suitType === "presetJacket" ? "Jacket Only, Preset Jacket" : isJacketOnly ? "Jacket Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Preset Suit" : "Full Suit (Jacket + Pants)"));
   lines.push("");
   lines.push("JACKET");
-  clientFormGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
+  orderSummaryGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
   lines.push("");
   if (!isJacketOnly) {
     lines.push("PANTS");
-    clientFormGarmentLines(PANTS_CATALOG, PANTS_CATALOG_GROUPS, pantsSel || {}, "pants", extras).forEach((l) => lines.push(l));
+    orderSummaryGarmentLines(PANTS_CATALOG, PANTS_CATALOG_GROUPS, pantsSel || {}, "pants", extras).forEach((l) => lines.push(l));
     lines.push("");
   }
 
   lines.push("MEASUREMENTS");
-  const measurementList = isJacketOnly ? MEASUREMENTS.filter((m) => m.part === "jacket") : MEASUREMENTS;
+  const measurementList = isJacketOnly ? MEASUREMENTS.filter((m) => m.part !== "pants") : MEASUREMENTS;
   measurementList.forEach((m) => {
     const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + "-");
     const val = measurements[m.id];
-    lines.push(label + " " + (val === undefined ? "" : val + " cm"));
+    let shown = val === undefined ? "" : val + " " + (m.unit || "cm");
+    if (m.id === "height" && val !== undefined) shown = Math.floor(val / 12) + " ft " + Math.round((val % 12) * 10) / 10 + " in (" + val + " in)";
+    lines.push(label + " " + shown);
   });
 
   return lines.join("\n");
@@ -4186,21 +4271,22 @@ function renderMeasurementFields() {
   measureGrid.innerHTML = "";
   let lastMeasurePart = null;
   activeMeasurements().forEach((m) => {
-    if (!isJacketOnlyType(currentSuitType) && m.part !== lastMeasurePart) {
+    if (m.part !== lastMeasurePart && (m.part === "body" || !isJacketOnlyType(currentSuitType) || lastMeasurePart === "body")) {
       const h = document.createElement("h4");
       h.className = "measure-part-heading";
-      h.textContent = m.part === "pants" ? "Pants" : "Jacket";
+      h.textContent = measurePartHeading(m.part);
       measureGrid.appendChild(h);
     }
     lastMeasurePart = m.part;
     const field = document.createElement("div");
-    field.className = "measure-field";
+    field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
     field.innerHTML =
-      '<label for="m_' + m.id + '">' + m.label + "</label>" +
-      '<div class="measure-input-wrap"><input type="number" step="0.1" min="0" id="m_' +
-      m.id +
-      '" placeholder="0.0"><span class="unit">cm</span></div>';
-    field.querySelector("input").addEventListener("input", saveDraft);
+      '<label for="m_' + m.id + '">' + m.label + "</label>" + measureInputHtml("m_", m);
+    bindBodyMeasure(field, "m_", m);
+    field.querySelectorAll("input, select").forEach((el) => {
+      el.addEventListener("input", saveDraft);
+      el.addEventListener("change", saveDraft);
+    });
     measureGrid.appendChild(field);
   });
 
@@ -4435,9 +4521,8 @@ document.getElementById("backToMeasurementsBtn").addEventListener("click", () =>
   goToStep(personalInfoSection, measurementsSection);
 });
 
-// Formats the shipping details as a short block that goes above the Client
-// Form in the email/on-screen summary (kept separate from the Client Form
-// text itself, which follows the shop's fixed printed-form layout).
+// Formats the shipping details as a short block that goes above the order
+// summary in the email (kept separate from the summary text itself).
 function buildShippingBlock(customerName, addr) {
   const lines = [];
   lines.push("SHIP TO");
@@ -4451,9 +4536,9 @@ function buildShippingBlock(customerName, addr) {
   return lines.join("\n");
 }
 
-// Phone/email, kept separate from buildShippingBlock/buildClientFormText on
+// Phone/email, kept separate from buildShippingBlock/buildOrderSummaryText on
 // purpose -- see the comment where this is called in the submit handler.
-// Only used to build the order notification email, never the Client Form
+// Only used to build the order notification email, never the order summary
 // text shown on the confirmation page or saved as client_form_text.
 function buildContactBlock(phone, email) {
   const lines = [];
@@ -5378,7 +5463,7 @@ function collectAndValidateOrderInput() {
   };
 }
 
-// Builds the "CLIENT FORM" text for every suit in the cart and stitches them
+// Builds the order summary text for every suit in the cart and stitches them
 // together into one block. A single-suit order (the common case) skips the
 // "SUIT 1 OF 1" header -- nothing changes structurally for the customer who
 // only ever orders one suit. With more than one suit, each gets its own
@@ -5387,14 +5472,14 @@ function collectAndValidateOrderInput() {
 function monoText(item, part) {
   return (item && item.texts && item.texts[part] && item.texts[part].monogram) || "";
 }
-function buildAllSuitsClientFormText(customerName) {
+function buildAllSuitsOrderSummaryText(customerName) {
   if (cartItems.length === 1) {
     const item = cartItems[0];
-    return buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+    return buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
   }
   return cartItems
     .map((item, i) => {
-      const text = buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+      const text = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
       return "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + text;
     })
     .join("\n\n" + "=".repeat(40) + "\n\n");
@@ -5890,14 +5975,14 @@ async function finalizeOrder(input, opts) {
     row.jacket_monogram_text = monoText(item, "jacket") || null;
     row.pants_monogram_text = item.pants ? monoText(item, "pants") || null : null;
 
-    // Phone/email are deliberately kept OUT of the Client Form text -- that
+    // Phone/email are deliberately kept OUT of the order summary text -- that
     // text is meant to be the garment spec + shipping address only (it's
     // what gets shown on the confirmation page and copied to send to
     // production), not a place for contact details. They're added back in
     // only for the notification email below, in their own separate block,
     // so the shop still has a fast way to reach the customer without it
     // cluttering the spec sheet.
-    const suitText = buildClientFormText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrls[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+    const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrls[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
     row.client_form_text = cartItems.length === 1 ? suitText : "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + suitText;
     // Plain-English, personal-data-free description of the suit -- read by
     // the AI that writes the "finished suit" image prompt once the shop marks
@@ -5906,7 +5991,7 @@ async function finalizeOrder(input, opts) {
     return row;
   });
 
-  const clientFormText = buildAllSuitsClientFormText(customerName);
+  const clientFormText = buildAllSuitsOrderSummaryText(customerName);
   const shippingBlock = buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
   const fullMessage = shippingBlock + "\n\n" + clientFormText;
   const contactBlock = buildContactBlock(customerPhone, customerEmail);
@@ -5969,7 +6054,7 @@ async function finalizeOrder(input, opts) {
   return true;
 }
 
-// Best-effort: email the completed Client Form(s) + shipping details. This
+// Best-effort: email the order summary + shipping details. This
 // never blocks the order -- the order is already saved in Supabase
 // (including the full text, in client_form_text) even if the email fails
 // or isn't configured yet.
@@ -5989,7 +6074,7 @@ async function sendOrderEmail(subject, customerEmail, message) {
       }),
     });
   } catch (emailErr) {
-    console.error("Failed to email the Client Form (order was still saved):", emailErr);
+    console.error("Failed to email the order summary (order was still saved):", emailErr);
   }
 }
 
@@ -5997,7 +6082,7 @@ async function sendOrderEmail(subject, customerEmail, message) {
 // Orders, show the finished suit's picture, and take the customer back to
 // the homepage with an "order received" note at the top.
 //
-// The full garment spec + shipping address (the "Client Form" text) is
+// The full garment spec + shipping address (the order summary text) is
 // deliberately NOT shown to the customer -- it's on every order row in
 // Supabase (client_form_text) and in the notification email.
 function finishOrder(previewItems, paid) {

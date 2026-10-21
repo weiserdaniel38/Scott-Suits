@@ -182,12 +182,16 @@ async function loadRow(id: string) {
 async function factoryOrder(input: Record<string, unknown>) {
   const row = await loadRow(String(input.id || ""));
   const [{ jacket, pants }, emb] = await Promise.all([loadCatalog(), loadEmbCodes()]);
+  // The customer's own height (inches) and weight (pounds) from the order,
+  // unless the admin typed others in.
+  const typedHeight = Number(input.height) || 0;
+  const typedWeight = Number(input.weight) || 0;
   const built = buildFactoryOrder({
     row, jacket, pants, emb,
-    height: Number(input.height) || 0,
-    heightUnit: input.heightUnit === "in" ? "in" : "cm",
-    weight: Number(input.weight) || 0,
-    weightUnit: input.weightUnit === "lb" ? "lb" : "kg",
+    height: typedHeight || Number(row.height) || 0,
+    heightUnit: typedHeight ? (input.heightUnit === "cm" ? "cm" : "in") : "in",
+    weight: typedWeight || Number(row.weight) || 0,
+    weightUnit: typedWeight ? (input.weightUnit === "kg" ? "kg" : "lb") : "lb",
     orderNo: String(row.factory_order_no || ""),
   });
   return { row, ...built };
