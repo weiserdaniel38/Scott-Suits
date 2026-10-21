@@ -80,7 +80,7 @@
     cuffbuttons: "4 Flat Button",
     backvent: "Side Vent",
     facing: "Round Shape Facing",
-    insidepocket: "Normal Inside Pocket W/ Pen Pocket",
+    insidepocket: "Regular Inner Pocket",
     monogram: "No Monogram Need",
     buttonNail: "X Shape Sewing Button",
     sleevecrown: "Regular Armhole",
