@@ -266,12 +266,26 @@ const JACKET_CATALOG = {
 // unchanged, this just clusters related ones under a heading so the tab list
 // reads as organized rather than a wall of options. Every JACKET_CATALOG key
 // must appear in exactly one group here, in the order it should be offered.
+// Pick stitching: a row of small hand-look stitches 0.6 cm in from the
+// edge, in thread matching the fabric. Daniel offers only the classic 0.6 cm
+// width; the customer picks where it goes (2026-10-21).
+JACKET_CATALOG.pickStitch = {
+  label: "Pick Stitching",
+  column: "jacket_pick_stitch",
+  description: "Pick stitching is a row of small stitches just inside the edges, a classic hand-tailored detail.",
+  options: [
+    { name: "No Pick Stitching", displayName: "None", factoryCode: "0570", img: "./assets/jacket-pickstitch-none.jpg", badge: "Standard" },
+    { name: "Pick Stitch Edges", displayName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg" },
+    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg" },
+  ],
+};
+
 const JACKET_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
   { label: "Shape & Lapel", keys: ["frontbutton", "collar", "lapelwidth"] },
   { label: "Pockets & Vents", keys: ["pockettype", "lowerpocket", "backvent"] },
   { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
-  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "frontButtonholeThreadColor", "feltundercollar", "feltColor", "threadColor", "buttonNail", "insidepocket"] },
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "frontButtonholeThreadColor", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
   // Technical tailoring questions go last so they don't slow down the
   // visible style choices above.
@@ -430,11 +444,21 @@ const PANTS_CATALOG = {
 // categories into labeled sections instead of one long flat tab list. Every
 // PANTS_CATALOG key must appear in exactly one group here, in the order it
 // should be offered.
+PANTS_CATALOG.pickStitch = {
+  label: "Pick Stitching",
+  column: "pants_pick_stitch",
+  description: "A row of small stitches along the front pocket openings, to match a pick stitched jacket.",
+  options: [
+    { name: "No Pick Stitching", displayName: "None", factoryCode: "31A6", img: "./assets/pants-pickstitch-none.jpg", badge: "Standard" },
+    { name: "Pick Stitch Front Pockets", displayName: "Front Pockets", factoryCode: "31A5", img: "./assets/pants-pickstitch-pockets.jpg" },
+  ],
+};
+
 const PANTS_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
   { label: "Front & Waistband", keys: ["frontPleat", "waistLineHeight", "waistbandStyle", "waistbandExtension", "beltLoops"] },
   { label: "Pockets", keys: ["frontPocket", "backPocket", "watchPocket"] },
-  { label: "Bottom & Details", keys: ["bottomStyle", "threadColor", "buttonNail"] },
+  { label: "Bottom & Details", keys: ["bottomStyle", "threadColor", "pickStitch", "buttonNail"] },
   { label: "Personalization", keys: ["monogram"] },
 ];
 
@@ -2733,6 +2757,7 @@ const CLASSIC_SUIT_PRESET = {
       construction: "Fused Construction",
       facing: "Round Shape Facing",
       sleevecrown: "Regular Armhole",
+      pickStitch: "No Pick Stitching",
     },
     fixedBySelection: {
       collar: {
@@ -2760,6 +2785,7 @@ const CLASSIC_SUIT_PRESET = {
       threadColor: "Match Fabric Color",
       buttonNail: "X Shape Sewing Button",
       monogram: "No Monogram Need",
+      pickStitch: "No Pick Stitching",
     },
   },
 };
