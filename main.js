@@ -1058,10 +1058,11 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay] = await Promise.all([
+    const [{ data, error }, live, pay, extras] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
+      client.rpc("admin_order_extras"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1075,6 +1076,7 @@ async function loadAdminOrders() {
     }
     const payments = {};
     if (!pay.error && pay.data) pay.data.forEach((p) => (payments[p.order_id] = p));
+    if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     adminOrdersList.innerHTML = "";
     data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
   } catch (err) {
@@ -1087,9 +1089,15 @@ async function loadAdminOrders() {
 // or saved with the QA bar's skip button, say "Not paid".
 function adminPaymentLabel(o) {
   if (o.admin_no_payment) return "No payment (admin)";
-  if (o.payment_status === "paid") return "Paid $" + Number(o.amount_paid_usd || 0).toFixed(2);
-  if (o.payment_status === "awaiting_payment") return "Awaiting payment";
-  return "Not paid";
+  const pickup = o.fulfillment === "pickup" ? "In-store pickup \u00b7 " : "";
+  if (o.payment_status === "paid") {
+    const extra = [];
+    if (Number(o.shipping_usd)) extra.push("shipping $" + Number(o.shipping_usd).toFixed(2));
+    if (Number(o.tax_usd)) extra.push("tax $" + Number(o.tax_usd).toFixed(2));
+    return pickup + "Paid $" + Number(o.amount_paid_usd || 0).toFixed(2) + (extra.length ? " (incl. " + extra.join(", ") + ")" : "");
+  }
+  if (o.payment_status === "awaiting_payment") return pickup + "Awaiting payment";
+  return pickup + "Not paid";
 }
 
 function adminOrderRow(o) {
@@ -4896,12 +4904,18 @@ function cartTotalUsd() {
 // yet) so a first-time visitor sees the price of the suit being designed, with
 // nothing looking unfinished before they've reached this page.
 function updateOrderSummaryUI() {
-  const total = cartTotalUsd();
-  submitBtn.textContent = PAYMENT_ENABLED ? "Pay $" + total + " & Submit Order" : "Submit Order";
+  const suits = cartTotalUsd();
+  // Shipped Stripe orders add flat shipping here and sales tax at checkout.
+  const shipped = STRIPE_ENABLED && fulfillmentChoice() === "ship";
+  const shipping = shipped ? shippingUsd() : 0;
+  const total = suits + shipping;
+  submitBtn.textContent = PAYMENT_ENABLED ? "Pay $" + total + (shipped ? " + tax" : "") + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
-  let text = "Total: $" + total + " (" + qty + (qty === 1 ? " suit" : " suits") + ")";
-  if (STRIPE_ENABLED) text += " -- you'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
+  let text = "Total: $" + total + " (" + qty + (qty === 1 ? " suit" : " suits") + (shipping ? " + $" + shipping + " shipping" : "") + ")";
+  if (shipped) text += " plus sales tax, worked out at checkout from your address.";
+  else if (STRIPE_ENABLED) text += ", in-store pickup: no shipping, no tax.";
+  if (STRIPE_ENABLED) text += " You'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
   else if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
   orderTotalNote.textContent = text;
   orderTotalNote.hidden = false;
@@ -5515,15 +5529,17 @@ function collectAndValidateOrderInput() {
   const state = shippingStateInput.value.trim();
   const zip = shippingZipInput.value.trim();
   const country = shippingCountryInput.value.trim();
+  const fulfillment = fulfillmentChoice();
+  const shipping = fulfillment === "ship";
 
   const missingContact = [];
   if (!customerName) missingContact.push("Full name");
   if (!customerPhone) missingContact.push("Phone number");
   if (!customerEmail) missingContact.push("Email");
-  if (!address1) missingContact.push("Street address");
-  if (!city) missingContact.push("City");
-  if (!state) missingContact.push("State/Province");
-  if (!zip) missingContact.push("ZIP/Postal code");
+  if (shipping && !address1) missingContact.push("Street address");
+  if (shipping && !city) missingContact.push("City");
+  if (shipping && !state) missingContact.push("State/Province");
+  if (shipping && !zip) missingContact.push("ZIP/Postal code");
   if (missingContact.length) {
     alert("Please fill in: " + missingContact.join(", "));
     return null;
@@ -5533,18 +5549,54 @@ function collectAndValidateOrderInput() {
     return null;
   }
 
-  return {
-    customerName,
-    customerPhone,
-    customerEmail,
-    address1,
-    address2,
-    city,
-    state,
-    zip,
-    country,
-  };
+  // A pickup order keeps no address, so nothing is ever shipped to one by
+  // mistake.
+  return shipping
+    ? { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country, fulfillment }
+    : { customerName, customerPhone, customerEmail, address1: "", address2: "", city: "", state: "", zip: "", country: "", fulfillment };
 }
+
+// "ship" or "pickup" -- the Ship to me / Pick up in store choice at the top
+// of the Personal Info step.
+function fulfillmentChoice() {
+  const el = document.querySelector('input[name="fulfillment"]:checked');
+  return el && el.value === "pickup" ? "pickup" : "ship";
+}
+function setFulfillmentChoice(value) {
+  const el = document.querySelector('input[name="fulfillment"][value="' + (value === "pickup" ? "pickup" : "ship") + '"]');
+  if (el) el.checked = true;
+  applyFulfillmentChoice();
+}
+// Pickup hides the address fields and drops shipping from the total.
+function applyFulfillmentChoice() {
+  const pickup = fulfillmentChoice() === "pickup";
+  const fields = document.getElementById("shipAddressFields");
+  if (fields) fields.hidden = pickup;
+  const title = document.getElementById("persIntroTitle");
+  if (title) title.textContent = pickup ? "Your contact details" : "Where should we send it?";
+  const sub = document.getElementById("persIntroSub");
+  if (sub) {
+    sub.textContent = pickup
+      ? "We'll use these to let you know when your suit is ready to pick up."
+      : "Start typing your street address and pick it from the list \u2014 the fastest way to get your suit to the right door.";
+  }
+  updateOrderSummaryUI();
+  updateProcessBar();
+}
+// Flat shipping for "Ship to me" (config.js), charged only with Stripe on.
+function shippingUsd() {
+  return STRIPE_ENABLED && typeof SHIPPING_FLAT_USD !== "undefined" ? Number(SHIPPING_FLAT_USD) || 0 : 0;
+}
+(function () {
+  const sub = document.getElementById("fulfillShipSub");
+  if (sub && STRIPE_ENABLED) sub.textContent = (shippingUsd() ? "$" + shippingUsd() + " shipping" : "Free shipping") + " + sales tax, added at checkout";
+  document.querySelectorAll('input[name="fulfillment"]').forEach((el) =>
+    el.addEventListener("change", () => {
+      applyFulfillmentChoice();
+      saveDraft();
+    })
+  );
+})();
 
 // Builds the order summary text for every suit in the cart and stitches them
 // together into one block. A single-suit order (the common case) skips the
@@ -6043,6 +6095,7 @@ async function finalizeOrder(input, opts) {
     row.shipping_state = state;
     row.shipping_zip = zip;
     row.shipping_country = country;
+    row.fulfillment = input.fulfillment === "pickup" ? "pickup" : "ship";
     row.order_id = orderId;
     // null for a guest checkout -- see add_customer_profiles_migration.sql.
     // Lets a signed-in customer's past orders be looked back up later
@@ -6075,7 +6128,10 @@ async function finalizeOrder(input, opts) {
   });
 
   const clientFormText = buildAllSuitsOrderSummaryText(customerName);
-  const shippingBlock = buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
+  const shippingBlock =
+    input.fulfillment === "pickup"
+      ? "IN-STORE PICKUP (no shipping, no tax)\n" + customerName
+      : buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
   const fullMessage = shippingBlock + "\n\n" + clientFormText;
   const contactBlock = buildContactBlock(customerPhone, customerEmail);
   const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") + contactBlock + "\n\n" + fullMessage;
@@ -6274,7 +6330,10 @@ async function handleStripeReturn() {
 
 async function stripePaid(r, pending) {
   if (pending && pending.orderId === r.order_id) {
-    const paidLine = "PAID $" + Number(r.amount || 0).toFixed(2) + " BY STRIPE\n\n";
+    const parts = [];
+    if (Number(r.shipping)) parts.push("shipping $" + Number(r.shipping).toFixed(2));
+    if (Number(r.tax)) parts.push("tax $" + Number(r.tax).toFixed(2));
+    const paidLine = "PAID $" + Number(r.amount || 0).toFixed(2) + " BY STRIPE" + (parts.length ? " (incl. " + parts.join(", ") + ")" : "") + "\n\n";
     await sendOrderEmail("[PAID] " + pending.subject, pending.customerEmail, paidLine + pending.emailMessage);
     finishOrder(pending.previewItems, true);
   } else {
@@ -6390,6 +6449,7 @@ function saveDraft() {
       shippingState: shippingStateInput.value,
       shippingZip: shippingZipInput.value,
       shippingCountry: shippingCountryInput.value,
+      fulfillment: fulfillmentChoice(),
       // Photos are big, so they are kept out of the draft itself (below).
       cart: cartItems.map((it) => { const c = Object.assign({}, it); delete c.liningPhoto; return c; }),
       pendingCommitIndex: pendingCommitIndex,
@@ -6500,6 +6560,7 @@ function restoreDraft() {
   if (draft.shippingState) shippingStateInput.value = draft.shippingState;
   if (draft.shippingZip) shippingZipInput.value = draft.shippingZip;
   if (draft.shippingCountry) shippingCountryInput.value = draft.shippingCountry;
+  if (draft.fulfillment) setFulfillmentChoice(draft.fulfillment);
 
   // Never resume straight onto the confirmation screen -- that only happens
   // right after a real submission, which already clears the draft anyway.
@@ -6704,6 +6765,7 @@ function clearDesignerAndForm() {
   shippingStateInput.value = "";
   shippingZipInput.value = "";
   shippingCountryInput.value = "United States";
+  setFulfillmentChoice("ship");
   // A signed-in customer's details go straight back in for the next order.
   prefillContactDetails();
   orderSubmitted = false;
@@ -6859,6 +6921,7 @@ function isStepComplete(stepId) {
 // Same required-field check used at final submit, without the alert -- just
 // "is everything filled in yet" for the progress bar.
 function isShippingInfoComplete() {
+  if (fulfillmentChoice() === "pickup") return Boolean(customerNameInput.value.trim());
   return Boolean(
     customerNameInput.value.trim() &&
     shippingAddress1Input.value.trim() &&
@@ -7093,7 +7156,7 @@ function goToFirstIncomplete() {
   if (active === measurementsSection) { focusFirstEmpty(measureInputs()); return; }
   if (active === personalInfoSection) {
     if (collectMeasurements().missing.length) { goToStep(active, measurementsSection); return; }
-    focusFirstEmpty([customerNameInput, shippingAddress1Input, shippingCityInput, shippingStateInput, shippingZipInput]);
+    focusFirstEmpty(fulfillmentChoice() === "pickup" ? [customerNameInput, customerPhoneInput, customerEmailInput] : [customerNameInput, shippingAddress1Input, shippingCityInput, shippingStateInput, shippingZipInput]);
   }
 }
 document.addEventListener("click", (e) => {
