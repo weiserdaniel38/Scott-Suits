@@ -349,15 +349,6 @@ const PANTS_CATALOG = {
       { name: "No Watch Pocket", factoryCode: "3169", img: "./assets/pants-watch-new-no.jpg" },
     ],
   },
-  backWaistShape: {
-    label: "Back Waist Shape",
-    column: "back_waist_shape",
-    options: [
-      { name: "No V Open", img: "./assets/pants-backwaist-new-no-v.jpg" },
-      { name: "Back Waist Seam V Shape", img: "./assets/pants-backwaist-new-v-shape.jpg" },
-      { name: "Back Seam W/ Straight 3/8 Top Open", img: "./assets/pants-backwaist-new-straight-38.jpg" },
-    ],
-  },
   monogram: {
     label: "Monogram Placement",
     column: "monogram_placement",
@@ -396,7 +387,7 @@ const PANTS_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
   { label: "Front & Waistband", keys: ["frontPleat", "waistLineHeight", "waistbandStyle", "waistbandExtension", "beltLoops"] },
   { label: "Pockets", keys: ["frontPocket", "backPocket", "watchPocket"] },
-  { label: "Bottom & Details", keys: ["bottomStyle", "backWaistShape", "threadColor", "buttonNail"] },
+  { label: "Bottom & Details", keys: ["bottomStyle", "threadColor", "buttonNail"] },
   { label: "Personalization", keys: ["monogram"] },
 ];
 
@@ -2606,7 +2597,6 @@ const PANTS_STEP_TAGLINES = {
   bottomStyle: "Clean hem or folded-up cuff.",
   buttonNail: "A stitch only you will know about.",
   watchPocket: "A tiny pocket for a watch or a spare coin.",
-  backWaistShape: "The back seam that helps pants hug your waist.",
   monogram: "Your initials, discreetly on your pants.",
   backPocket: "Your back pockets: buttons, flaps or none.",
   fabric: "Pick the cloth for your pants.",
@@ -2684,7 +2674,6 @@ const CLASSIC_SUIT_PRESET = {
       frontPocket: "Slant Pocket",
       backPocket: "Double Besom Pocket",
       watchPocket: "No Watch Pocket",
-      backWaistShape: "No V Open",
       threadColor: "Match Fabric Color",
       buttonNail: "X Shape Sewing Button",
       monogram: "No Monogram Need",
