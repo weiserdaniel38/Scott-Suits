@@ -288,7 +288,6 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Square Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly with a SQUARE end, no visible button",
     "Square Waistband Centered": "no tab: the two waistband ends meet edge to edge exactly at the centre front above the fly, no visible button",
     "Square Shape W/ Long Extension": "a LONG extension: the waistband runs across the front past the front belt loop and ends near the hip in a SQUARE end with one button",
-    "No Waistband + String": "no separate waistband: a soft drawstring waist tied in a small bow at the centre front, no belt loops",
   },
   "Waistband Style": {
     "Normal Waistband": "a plain, straight waistband with no side adjusters",
