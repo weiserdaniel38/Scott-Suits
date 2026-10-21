@@ -4938,7 +4938,9 @@ function selectionsToRow(catalog, selections) {
 function visualSpecOptionDetail(cat, rawValue) {
   if (!cat || rawValue === undefined || rawValue === null || rawValue === "") return null;
   const opt = (cat.options || []).find((o) => o.name === rawValue);
-  const shown = (opt && (opt.displayName || opt.name)) || rawValue;
+  // specName: the name the picture generator knows an option by, kept when
+  // the customer-facing name changes (see OPTION_LOOKS in generate-suit-image).
+  const shown = (opt && (opt.specName || opt.displayName || opt.name)) || rawValue;
   if (opt && opt.matchesFabric) return { opt, text: shown, matchesFabric: true };
   // Pattern type / color family, when the category is organized that way.
   let pattern = "";
@@ -4992,13 +4994,15 @@ function buildVisualSpecText(item, opts) {
         // Stored value is the "match the fabric" marker; describe what that means visually.
         text = "matched to the fabric color" + (fabricHex ? " (approx. color " + fabricHex + ")" : "");
       }
-      lines.push(cat.label + ": " + text);
+      // specLabel: the step's older name, which the picture generator matches on.
+      const specLabel = cat.specLabel || cat.label;
+      lines.push(specLabel + ": " + text);
       if (!d.opt || d.matchesFabric || d.opt.uploadPhoto) return;
       const part = title === "PANTS" ? "pants " : "";
       if (key === "fabric") addSwatch(part + "fabric", d.opt.img);
       else if (key === "lining") addSwatch("lining", (typeof LINING_ZOOM_MAP !== "undefined" && LINING_ZOOM_MAP[d.opt.name]) || d.opt.img);
       else if (key === "buttoncolor") addSwatch("button", d.opt.img);
-      else if (VISUAL_SPEC_STYLE_DRAWINGS.includes(key)) addSwatch("style " + cat.label, d.opt.img);
+      else if (VISUAL_SPEC_STYLE_DRAWINGS.includes(key)) addSwatch("style " + specLabel, d.opt.img);
     });
   });
   if (opts && opts.liningPhotoUrl) addSwatch("lining (customer's own photo)", opts.liningPhotoUrl);
