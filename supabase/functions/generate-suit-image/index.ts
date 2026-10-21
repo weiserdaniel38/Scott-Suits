@@ -291,7 +291,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   },
   "Waistband Style": {
     "Normal Waistband": "a plain, straight waistband with no side adjusters",
-    "Elastic Waistband On Side Buttons": "a plain waistband with hidden side elastic and a small button adjuster on each side; no buckles",
+    "Elastic Waistband On Side Buttons": "on each side of the waistband a small square fabric tab buttoned onto the waistband, with a second button beside it to let it out; no buckles",
     "Arrow Shape Belt W/ Adjustable Buckle": "no belt loops at the sides; on each side of the waistband a pointed, arrow-shaped fabric strap threaded through a small metal buckle",
     "Adjustable Waistband On Side W/ Buckle": "on each side of the waistband a short fabric side-adjuster tab closing through a small metal buckle, with a button beside it",
   },

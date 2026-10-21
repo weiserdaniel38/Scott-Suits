@@ -279,10 +279,10 @@ const PANTS_CATALOG = {
     label: "Waistband Style",
     column: "waistband_style",
     options: [
-      { name: "Normal Waistband", img: "./assets/pants-wstyle-new-normal.jpg" },
-      { name: "Elastic Waistband On Side Buttons", img: "./assets/pants-wstyle-new-elastic.jpg" },
-      { name: "Arrow Shape Belt W/ Adjustable Buckle", img: "./assets/pants-wstyle-new-arrowbelt.jpg" },
-      { name: "Adjustable Waistband On Side W/ Buckle", img: "./assets/pants-wstyle-new-adjside.jpg" },
+      { name: "Normal Waistband", factoryCode: "3349", img: "./assets/pants-wstyle-new-normal.jpg" },
+      { name: "Elastic Waistband On Side Buttons", factoryCode: "3351", img: "./assets/pants-wstyle-new-sidetabs.jpg" },
+      { name: "Arrow Shape Belt W/ Adjustable Buckle", factoryCode: "3352", img: "./assets/pants-wstyle-new-arrowbelt.jpg" },
+      { name: "Adjustable Waistband On Side W/ Buckle", factoryCode: "33TG", img: "./assets/pants-wstyle-new-adjside.jpg" },
     ],
   },
   frontPleat: {
