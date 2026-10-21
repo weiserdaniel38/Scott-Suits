@@ -547,7 +547,7 @@
       g.strokeStyle = opts.thread; g.lineWidth = Math.max(0.9, r * 0.13); g.lineCap = "round";
       g.beginPath();
       if (opts.nail === "II Shape Sewing Button") { g.moveTo(-h, -h); g.lineTo(-h, h); g.moveTo(h, -h); g.lineTo(h, h); }
-      else if (opts.nail === "Hand Shape Sewing Button") { g.moveTo(-h, h); g.lineTo(0, -h); g.lineTo(h, h); g.moveTo(0, -h); g.lineTo(0, h); }
+      else if (opts.nail === "Square Shape Sewing Button") { g.rect(-h, -h, 2 * h, 2 * h); }
       else { g.moveTo(-h, -h); g.lineTo(h, h); g.moveTo(h, -h); g.lineTo(-h, h); }
       g.stroke();
     }
