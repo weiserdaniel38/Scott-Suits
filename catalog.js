@@ -253,10 +253,10 @@ const PANTS_CATALOG = {
     label: "Waist Line Height",
     column: "waist_line_height",
     options: [
-      // Stored names stay "5.0 cm" / "5.5 cm" (what the factory form prints);
-      // customers see Standard / Tall.
-      { name: "5.0 cm", displayName: "Standard", img: "./assets/pants-waist-new-standard.jpg" },
-      { name: "5.5 cm", displayName: "Tall", img: "./assets/pants-waist-new-tall.jpg" },
+      // The factory's waist widths (Daniel, 2026-10-21): Standard 4.0 cm,
+      // Tall 5.0 cm. Customers see Standard / Tall.
+      { name: "4.0 cm", displayName: "Standard", factoryCode: "301D", img: "./assets/pants-waist-new-standard.jpg" },
+      { name: "5.0 cm", displayName: "Tall", factoryCode: "301F", img: "./assets/pants-waist-new-tall.jpg" },
     ],
   },
   waistbandExtension: {
@@ -2692,7 +2692,7 @@ const CLASSIC_SUIT_PRESET = {
     fixed: {
       fabric: "__same_as__fabric",
       frontPleat: "No Pleat",
-      waistLineHeight: "5.0 cm",
+      waistLineHeight: "4.0 cm",
       waistbandStyle: "Normal Waistband",
       waistbandExtension: "Round Shape 5cm",
       beltLoops: "Belt Loops",
