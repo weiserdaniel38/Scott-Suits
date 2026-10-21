@@ -303,17 +303,6 @@ const PANTS_CATALOG = {
       { name: "No Belt Loop", img: "./assets/pants-beltloop-new-no.jpg" },
     ],
   },
-  hookEye: {
-    label: "Hook And Eye Style",
-    column: "hook_and_eye_style",
-    // Shown on the options page as a brief explainer -- most customers
-    // won't know this tailoring term on sight.
-    description: "The hook and eye is the small fastener that closes the waistband at the very top of the fly, above the zipper -- its style affects how the waistband closes and sits.",
-    options: [
-      { name: "Metal Hook And Eye", img: "./assets/pants-hookeye-new-metal.jpg" },
-      { name: "Arrow Shape Extension (Button)", img: "./assets/pants-hookeye-new-arrow.jpg" },
-    ],
-  },
   frontPocket: {
     label: "Front Pocket Style",
     column: "front_pocket_style",
@@ -407,7 +396,7 @@ const PANTS_CATALOG_GROUPS = [
   { label: "Fabric", keys: ["fabric"] },
   { label: "Front & Waistband", keys: ["frontPleat", "waistLineHeight", "waistbandStyle", "waistbandExtension", "beltLoops"] },
   { label: "Pockets", keys: ["frontPocket", "backPocket", "watchPocket"] },
-  { label: "Bottom & Details", keys: ["bottomStyle", "backWaistShape", "hookEye", "threadColor", "buttonNail"] },
+  { label: "Bottom & Details", keys: ["bottomStyle", "backWaistShape", "threadColor", "buttonNail"] },
   { label: "Personalization", keys: ["monogram"] },
 ];
 
@@ -2613,7 +2602,6 @@ const PANTS_STEP_TAGLINES = {
   waistbandStyle: "How your waist is built.",
   frontPleat: "Sleek flat-front or old-school swagger.",
   beltLoops: "Loops, fancy X's or no belt at all.",
-  hookEye: "The tiny fastener above your zipper.",
   frontPocket: "Where your hands live.",
   bottomStyle: "Clean hem or folded-up cuff.",
   buttonNail: "A stitch only you will know about.",
@@ -2697,7 +2685,6 @@ const CLASSIC_SUIT_PRESET = {
       backPocket: "Double Besom Pocket",
       watchPocket: "No Watch Pocket",
       backWaistShape: "No V Open",
-      hookEye: "Metal Hook And Eye",
       threadColor: "Match Fabric Color",
       buttonNail: "X Shape Sewing Button",
       monogram: "No Monogram Need",
