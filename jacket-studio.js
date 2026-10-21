@@ -356,6 +356,7 @@
     else if (/^Patch/.test(m)) main = "patch";
     else if (/Slant Pocket Flap/.test(m)) main = "flap";
     else if (/W\/ Flap/.test(m)) main = "flap";
+    else if (/^Diamond Flap/.test(m)) main = "flap";
     else if (/Flat Welt/.test(m)) main = "welt";
     else if (/^Single Besom/.test(m)) main = "sb";
     const slant = /Slant/.test(m);
