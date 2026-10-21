@@ -31,7 +31,7 @@
 // Secrets (Supabase Dashboard > Edge Functions > Secrets):
 //   STRIPE_SECRET_KEY      required -- sk_test_... while testing, sk_live_... to go live
 //   STRIPE_WEBHOOK_SECRET  optional -- whsec_... from the Stripe webhook endpoint
-//   SHIPPING_FLAT_USD      optional, default 15 -- per order; keep in step
+//   SHIPPING_FLAT_USD      optional, default 19.99 -- per order; keep in step
 //                          with SHIPPING_FLAT_USD in the site's config.js
 //   STRIPE_AUTOMATIC_TAX   optional -- "true" to add sales tax (Stripe Tax)
 //   SITE_URL               optional, default https://scottssuits.com
@@ -43,7 +43,7 @@ const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
 const SITE_URL = env("SITE_URL", "https://scottssuits.com").replace(/\/+$/, "");
 const STRIPE_KEY = env("STRIPE_SECRET_KEY");
 const WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET");
-const SHIPPING_CENTS = Math.max(0, Math.round(Number(env("SHIPPING_FLAT_USD", "15")) * 100) || 0);
+const SHIPPING_CENTS = Math.max(0, Math.round(Number(env("SHIPPING_FLAT_USD", "19.99")) * 100) || 0);
 const AUTOMATIC_TAX = env("STRIPE_AUTOMATIC_TAX").toLowerCase() === "true";
 // Stripe Tax product codes: clothing, and shipping.
 const TAX_CODE_CLOTHING = "txcd_30011000";

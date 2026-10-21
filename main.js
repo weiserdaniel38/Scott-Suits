@@ -4989,16 +4989,22 @@ function cartTotalUsd() {
 // the order as "1 suit" when the cart is still empty (nothing committed
 // yet) so a first-time visitor sees the price of the suit being designed, with
 // nothing looking unfinished before they've reached this page.
+// "$369.99" for cents, "$350" for whole dollars.
+function usd(n) {
+  const r = Math.round(n * 100) / 100;
+  return "$" + (Number.isInteger(r) ? String(r) : r.toFixed(2));
+}
+
 function updateOrderSummaryUI() {
   const suits = cartTotalUsd();
   // Shipped Stripe orders add flat shipping here and sales tax at checkout.
   const shipped = STRIPE_ENABLED && fulfillmentChoice() === "ship";
   const shipping = shipped ? shippingUsd() : 0;
   const total = suits + shipping;
-  submitBtn.textContent = PAYMENT_ENABLED ? "Pay $" + total + (shipped ? " + tax" : "") + " & Submit Order" : "Submit Order";
+  submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? " + tax" : "") + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
-  let text = "Total: $" + total + " (" + qty + (qty === 1 ? " suit" : " suits") + (shipping ? " + $" + shipping + " shipping" : "") + ")";
+  let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
   if (shipped) text += " plus sales tax, worked out at checkout from your address.";
   else if (STRIPE_ENABLED) text += ", in-store pickup: no shipping, no tax.";
   if (STRIPE_ENABLED) text += " You'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
@@ -5006,7 +5012,7 @@ function updateOrderSummaryUI() {
   orderTotalNote.textContent = text;
   orderTotalNote.hidden = false;
   const persPriceEl = document.getElementById("persPrice");
-  if (persPriceEl) persPriceEl.textContent = "$" + total;
+  if (persPriceEl) persPriceEl.textContent = usd(total);
 }
 
 // Renders the cart icon's badge and its dropdown contents (see index.html)
@@ -5675,7 +5681,7 @@ function shippingUsd() {
 }
 (function () {
   const sub = document.getElementById("fulfillShipSub");
-  if (sub && STRIPE_ENABLED) sub.textContent = (shippingUsd() ? "$" + shippingUsd() + " shipping" : "Free shipping") + " + sales tax, added at checkout";
+  if (sub && STRIPE_ENABLED) sub.textContent = (shippingUsd() ? usd(shippingUsd()) + " shipping" : "Free shipping") + " + sales tax, added at checkout";
   document.querySelectorAll('input[name="fulfillment"]').forEach((el) =>
     el.addEventListener("change", () => {
       applyFulfillmentChoice();
