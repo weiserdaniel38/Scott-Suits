@@ -145,7 +145,7 @@ const JACKET_CATALOG = {
       // 2026-10-21): picking "No Lining Construction" moves fused or full
       // canvas to Unconstructed.
       { name: "Fused Construction", factoryCode: "00C1", img: "./assets/jacket-construction-new-fused.jpg", badge: "Standard", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
-      { name: "Full Canvas Construction", factoryCode: "000A", img: "./assets/jacket-construction-new-canvas.jpg", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
+      { name: "Full Canvas Construction", displayName: "Full Canvas Construction (+$200)", surchargeUsd: 200, factoryCode: "000A", img: "./assets/jacket-construction-new-canvas.jpg", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
       { name: "Unconstructed", factoryCode: "00D1", img: "./assets/jacket-construction-new-unconstructed.jpg" },
     ],
   },

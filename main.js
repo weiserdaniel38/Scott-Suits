@@ -90,10 +90,19 @@ function currentFabricTier() {
 function liningUploadSurcharge(jacketSel) {
   return jacketSel && jacketSel.lining === LINING_UPLOAD_OPTION.name ? LINING_UPLOAD_OPTION.surchargeUsd : 0;
 }
+// Extra charge for full canvas construction (+$200, Daniel 2026-10-21).
+function constructionSurcharge(jacketSel) {
+  const opt = jacketSel && (JACKET_CATALOG.construction.options || []).find((o) => o.name === jacketSel.construction);
+  return (opt && opt.surchargeUsd) || 0;
+}
+// All option surcharges on a jacket: the custom lining photo and full canvas.
+function jacketSurchargeUsd(jacketSel) {
+  return liningUploadSurcharge(jacketSel) + constructionSurcharge(jacketSel);
+}
 // Price of one suit in the cart: the suit-type price for its fabric tier
-// plus any option surcharge (currently only the custom lining photo).
+// plus any option surcharge.
 function itemPriceUsd(item) {
-  return suitPriceForType(item.type, fabricPriceTier(item.jacket, item.pants)) + liningUploadSurcharge(item.jacket);
+  return suitPriceForType(item.type, fabricPriceTier(item.jacket, item.pants)) + jacketSurchargeUsd(item.jacket);
 }
 
 // The measurement fields relevant to the suit type currently being designed
@@ -4891,7 +4900,7 @@ function buildVisualSpecText(item, opts) {
 function cartTotalUsd() {
   if (!cartItems.length) {
     let extra = 0;
-    try { extra = liningUploadSurcharge(jacketDesigner.getSelections()); } catch (e) { extra = 0; }
+    try { extra = jacketSurchargeUsd(jacketDesigner.getSelections()); } catch (e) { extra = 0; }
     return suitPriceForType(currentSuitType, currentFabricTier()) + extra;
   }
   return cartItems.reduce((sum, item) => sum + itemPriceUsd(item), 0);
@@ -7002,11 +7011,11 @@ function updateProcessBarForSuitType() {
 // pricing), so both need to be swapped by hand rather than computed from
 // selections.
 // Live price of the suit being designed: the price for its fabric tier plus
-// the $80 custom lining photo when that is chosen. Called from every designer
+// the $80 custom lining photo and the $200 full canvas when chosen. Called from every designer
 // summary refresh and whenever the suit type changes.
 function refreshDesignerPrice() {
   let extra = 0;
-  try { extra = typeof jacketDesigner !== "undefined" ? liningUploadSurcharge(jacketDesigner.getSelections()) : 0; } catch (e) { extra = 0; }
+  try { extra = typeof jacketDesigner !== "undefined" ? jacketSurchargeUsd(jacketDesigner.getSelections()) : 0; } catch (e) { extra = 0; }
   const price = suitPriceForType(currentSuitType, currentFabricTier()) + extra;
   ["totalPrice", "pantsTotalPrice"].forEach((id) => {
     const el = document.getElementById(id);
