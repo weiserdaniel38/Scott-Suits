@@ -1,7 +1,7 @@
 -- Daily factory status check. Safe to re-run; run after 13_factory_orders.sql
 -- and after kute-factory is deployed with the factory_status_all action.
 --
--- Every day at 14:00 UTC (10am Eastern) pg_cron asks kute-factory to refresh
+-- Every day at 03:00 UTC (11pm Eastern daylight time, 10pm in winter) pg_cron asks kute-factory to refresh
 -- the factory status of every suit still at the factory, the same as the
 -- admin pressing "Factory status" on each one: production step, delivery
 -- date and the factory's waybill. No email or text goes out.
@@ -26,7 +26,7 @@ on conflict (name) do nothing;
 
 select cron.schedule(
   'kute-factory-status-daily',
-  '0 14 * * *',
+  '0 3 * * *',
   $job$
   select net.http_post(
     url := 'https://nvlhngzycldysosvhglx.supabase.co/functions/v1/kute-factory',
