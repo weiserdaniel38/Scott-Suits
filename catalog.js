@@ -88,7 +88,7 @@ const JACKET_CATALOG = {
     specLabel: "Top Sleeve Crown Type",
     column: "sleeve_crown_type",
     options: [
-      { name: "Regular Armhole", displayName: "Smooth Shoulder", specName: "Regular Armhole", factoryCode: "0601", img: "./assets/jacket-sleevecrown-regulararmhole.jpg", badge: "Standard" },
+      { name: "Regular Armhole", displayName: "Regular Shoulder", specName: "Regular Armhole", factoryCode: "0601", img: "./assets/jacket-sleevecrown-regulararmhole.jpg", badge: "Standard" },
       { name: "Naples Sleeve", displayName: "Gathered Shoulder (Neapolitan)", specName: "Naples Sleeve", factoryCode: "060N", img: "./assets/jacket-sleevecrown-naplessleeve.jpg" },
       { name: "Close Seam Sleeve", displayName: "Topstitched Shoulder", specName: "Close Seam Sleeve", factoryCode: "0603", img: "./assets/jacket-sleevecrown-closeseam.jpg" },
     ],
