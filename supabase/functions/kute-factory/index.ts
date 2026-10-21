@@ -151,7 +151,13 @@ async function allowed(req: Request): Promise<boolean> {
   if (serverKeys().some((k) => k === m?.[1] || k === req.headers.get("apikey"))) return true;
   if (!m) return false;
   const { data: who } = await supabase.auth.getUser(m[1]);
-  if (!who?.user) return false;
+  if (!who?.user) {
+    // Not a user: accept it only if it works as a service role key (the
+    // auth admin API refuses every other key).
+    const asKey = createClient(env("SUPABASE_URL"), m[1], { auth: { persistSession: false } });
+    const { error } = await asKey.auth.admin.listUsers({ page: 1, perPage: 1 });
+    return !error;
+  }
   const { data: adminRow } = await supabase.from("admins").select("user_id").eq("user_id", who.user.id).maybeSingle();
   return !!adminRow;
 }
