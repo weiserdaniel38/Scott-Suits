@@ -215,7 +215,14 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   // Lining style and facing.
   const facing = s(row.facing_style);
   if (facing === "No Lining Construction") {
-    blocking.push("Unlined jackets can't be sent yet: the factory's code for \"no lining\" is still missing.");
+    // No lining with piping, inner facing F with edge; the factory only
+    // accepts it unconstructed and with no body or sleeve lining.
+    jc.push("AAWY", "0866", "0706");
+    if (s(row.jacket_construction) !== "Unconstructed") {
+      for (const c of ["00C1", "000A"]) { const i = jc.indexOf(c); if (i !== -1) jc.splice(i, 1); }
+      if (jc.indexOf("00D1") === -1) jc.push("00D1");
+      warnings.push("Unlined jacket: sent as Unconstructed, the only canvas the factory allows without lining.");
+    }
   } else if (facing === "Half Lining W/ Fabric Facing") {
     jc.push("AA2Y", "0701");
   } else {
