@@ -925,6 +925,9 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .wiz-seg::after{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;} /* bigger tap target */
 .wiz-seg.done{background:rgba(176,141,87,0.55);}
 .wiz-seg.current{background:var(--ivory);}
+/* Steps the customer hasn't reached yet can't be jumped to (the admin can). */
+.wiz-seg.locked{cursor:default;}
+body.admin-skip .wiz-seg.locked{cursor:pointer;}
 .wiz-meta{display:flex;align-items:baseline;margin-bottom:12px;font-size:10.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:rgba(34,30,25,0.55);}
 .wiz-group{color:var(--brass);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .wiz-step{flex:none;}
@@ -984,6 +987,8 @@ body.wiz-lock{overflow:hidden;}
 .wiz-row span:last-child{color:var(--ivory);text-align:right;}
 .wiz-row span.missing{color:var(--brass);font-weight:600;}
 .wiz-row:hover span:first-child{color:var(--brass);}
+.wiz-row.locked{cursor:default;}
+.wiz-row.locked:hover span:first-child{color:inherit;}
 .wiz-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:18px;font-size:15px;}
 .wiz-total b{font-family:'Playfair Display',serif;font-size:24px;font-weight:600;}
 .wiz-sheet .summary-note{margin-top:6px;}
