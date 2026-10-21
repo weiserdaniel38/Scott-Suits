@@ -1870,3 +1870,13 @@ body.order-done-view > .process{display:none !important;}
 .pers-ship-fields{display:contents;}
 .pers-ship-fields[hidden]{display:none;}
 @media (max-width:600px){.fulfill-choice{grid-template-columns:1fr;}}
+
+/* Admin notifications (My Account) */
+.admin-notif-count{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#b3261e;color:#fff;font-size:11px;font-weight:700;font-family:'Inter',sans-serif;vertical-align:middle;}
+.admin-notif-count[hidden]{display:none;}
+.admin-notif{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:8px;margin-bottom:8px;}
+.admin-notif b{display:block;font-weight:600;}
+.admin-notif-meta{display:block;font-size:12px;opacity:0.75;margin-top:2px;}
+.admin-notif-total{font-weight:600;white-space:nowrap;}
+.admin-notif-new{border-left:4px solid #b3261e;background:rgba(179,38,30,0.05);}
+.nav-cart-badge.nav-account-badge-alert{background:#b3261e;}

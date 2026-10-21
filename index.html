@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261021shiptax2">
+<link rel="stylesheet" href="./style.css?v=20261021notif">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -723,6 +723,13 @@
         <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
       </details>
 
+      <!-- Shop admin only: one line per order placed, newest first. -->
+      <details class="account-collapse" id="adminNotificationsSection" hidden>
+        <summary><h3>Notifications <span class="admin-notif-count" id="adminNotifCount" hidden></span></h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <p class="account-section-note">Only you see this (shop admin). Every order placed shows up here.</p>
+        <div id="adminNotificationsList"></div>
+      </details>
+
       <h3>Past Orders</h3>
       <div id="pastOrdersList"></div>
 
@@ -815,9 +822,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261021shiptax2"></script>
-<script src="./catalog.js?v=20261021canvas"></script>
+<script src="./catalog.js?v=20261021notif"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261021canvas"></script>
+<script src="./main.js?v=20261021notif"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
