@@ -23,6 +23,10 @@
 //       again updates the same draft.
 //   { action: "factory_status", id }  the suit's factory status; moves the
 //       order's shipping step forward to match
+//   { action: "factory_status_all" }  factory_status for every suit still
+//       at the factory; run once a day by pg_cron (see
+//       supabase/sql/15_factory_status_daily.sql), which signs in with the
+//       x-cron-token header and may run only this action
 //   { action: "sync" }   saves every code list (crafts for each garment
 //       category) into public.factory_codes and returns row counts. Can be
 //       run from the Supabase dashboard's function "Test" button (service
@@ -53,7 +57,7 @@ const supabase = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KE
 
 const CORS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "content-type, apikey, authorization, x-webhook-secret",
+  "access-control-allow-headers": "content-type, apikey, authorization, x-webhook-secret, x-cron-token",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) =>
@@ -253,6 +257,32 @@ async function factoryStatus(id: string) {
   return { ok: true, status: update.factory_status, deliveryDate: update.factory_delivery_date, waybill: update.factory_waybill, shippingStatus: moved ? stage : current || null };
 }
 
+// Every suit sent to the factory and not yet shipped from it: refresh its
+// factory status (the daily job).
+async function factoryStatusAll() {
+  const { data, error } = await supabase.from("orders").select("id, shipping_status")
+    .not("factory_order_no", "is", null).limit(200);
+  if (error) throw new Error(error.message);
+  const atFactory = new Set(["", "received", "sent_to_factory", "cutting", "sewing", "finishing"]);
+  const rows = (data || []).filter((r) => atFactory.has(String(r.shipping_status || "")));
+  let updated = 0, failed = 0;
+  for (const r of rows) {
+    const out = await factoryStatus(String(r.id)).catch((e) => ({ ok: false, error: String(e) }));
+    if (out.ok) updated++;
+    else failed++;
+  }
+  return { ok: true, checked: rows.length, updated, failed };
+}
+
+// The daily job's token: made inside the database by
+// 15_factory_status_daily.sql and never shown to anyone.
+async function cronAllowed(req: Request): Promise<boolean> {
+  const sent = req.headers.get("x-cron-token") || "";
+  if (sent.length < 32) return false;
+  const { data } = await supabase.from("job_tokens").select("token").eq("name", "kute-factory-status").maybeSingle();
+  return !!data?.token && data.token === sent;
+}
+
 // The project's server-only keys: the legacy service role key and any new
 // "sb_secret_..." keys (SUPABASE_SECRET_KEYS is a JSON object of them).
 function serverKeys(): string[] {
@@ -292,7 +322,8 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "send a JSON body" }, 400);
   }
-  if (!(await allowed(req))) {
+  const byCron = input.action === "factory_status_all" && (await cronAllowed(req));
+  if (!byCron && !(await allowed(req))) {
     // Which kind of key was sent (never the key itself), to debug dashboard tests.
     const a = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     console.log("kute-factory 403, key kind:", a.startsWith("eyJ") ? "jwt" : a.slice(0, 10), "apikey kind:", (req.headers.get("apikey") || "").slice(0, 10));
@@ -325,6 +356,8 @@ Deno.serve(async (req) => {
         return json(await saveDraft(input));
       case "factory_status":
         return json(await factoryStatus(str(input.id)));
+      case "factory_status_all":
+        return json(await factoryStatusAll());
       default:
         return json({ error: "unknown action" }, 400);
     }

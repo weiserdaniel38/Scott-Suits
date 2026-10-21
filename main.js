@@ -697,6 +697,80 @@ async function refreshAdminStatus() {
     shipWrap.hidden = !admin;
     if (admin) loadAdminOrders();
   }
+  if (adminNotificationsSection) {
+    adminNotificationsSection.hidden = !admin;
+    if (admin) loadAdminNotifications();
+    else setAdminUnread(0);
+  }
+}
+
+// ---- Admin notifications: one per order placed (supabase/sql/16) ----
+const adminNotificationsSection = document.getElementById("adminNotificationsSection");
+const adminNotificationsList = document.getElementById("adminNotificationsList");
+const adminNotifCount = document.getElementById("adminNotifCount");
+let adminUnread = 0;
+
+// The count shows next to "Notifications" and on the account icon.
+function setAdminUnread(n) {
+  adminUnread = n;
+  if (adminNotifCount) {
+    adminNotifCount.hidden = !n;
+    adminNotifCount.textContent = n + " new";
+  }
+  const badge = document.getElementById("accountBadge");
+  if (badge) {
+    badge.textContent = n ? String(n) : "\u2713";
+    badge.classList.toggle("nav-account-badge-alert", !!n);
+  }
+}
+
+async function loadAdminNotifications() {
+  if (!adminNotificationsList) return;
+  try {
+    const { data, error } = await getSupabase().rpc("admin_list_notifications");
+    if (error) throw error;
+    const rows = data || [];
+    setAdminUnread(rows.filter((n) => !n.read_at).length);
+    if (!rows.length) {
+      adminNotificationsList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      return;
+    }
+    adminNotificationsList.innerHTML = "";
+    rows.forEach((n) => {
+      const item = document.createElement("div");
+      item.className = "admin-notif" + (n.read_at ? "" : " admin-notif-new");
+      const when = n.created_at ? new Date(n.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+      const suits = n.suits > 1 ? n.suits + " suits" : "1 suit";
+      item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>';
+      // Customer-typed text goes in with textContent, never as HTML.
+      item.querySelector("b").textContent = "New order from " + (n.customer_name || "a customer");
+      item.querySelector(".admin-notif-meta").textContent = when + " \u00b7 " + suits + " \u00b7 " +
+        (n.admin_no_payment ? "No payment (admin)" : n.payment_status === "paid" ? "Paid" : n.payment_status === "awaiting_payment" ? "Awaiting payment" : "Not paid");
+      item.querySelector(".admin-notif-total").textContent = "$" + Number(n.total || 0).toFixed(0);
+      adminNotificationsList.appendChild(item);
+    });
+  } catch (err) {
+    console.error("Failed to load notifications:", err);
+    adminNotificationsList.innerHTML = '<p class="account-section-note">Couldn\u2019t load notifications right now.</p>';
+  }
+}
+
+// Opening the list marks everything read; the "new" marks stay until it is
+// closed so the admin can see which ones they were.
+if (adminNotificationsSection) {
+  adminNotificationsSection.addEventListener("toggle", async () => {
+    if (adminNotificationsSection.open) {
+      if (!adminUnread) return;
+      try {
+        await getSupabase().rpc("admin_mark_notifications_read");
+        setAdminUnread(0);
+      } catch (e) {
+        console.error(e);
+      }
+    } else if (currentIsAdmin) {
+      loadAdminNotifications();
+    }
+  });
 }
 
 const accountIconBtn = document.getElementById("accountIconBtn");
@@ -1445,6 +1519,8 @@ async function prefillContactDetails() {
     lastFocused = triggerEl || document.activeElement;
     accountOverlay.classList.add("open");
     closeBtn.focus();
+    // Fresh notifications each time the admin opens My Account.
+    if (currentIsAdmin && adminNotificationsSection && !adminNotificationsSection.open) loadAdminNotifications();
     document.addEventListener("keydown", onKeydown);
   }
   function close() {
@@ -1462,6 +1538,7 @@ async function prefillContactDetails() {
     if (loginForm) loginForm.reset();
     const savedMeasurements = document.getElementById("savedMeasurementsSection");
     if (savedMeasurements) savedMeasurements.open = false;
+    if (adminNotificationsSection) adminNotificationsSection.open = false;
   }
 
   if (accountIconBtn) accountIconBtn.addEventListener("click", (e) => open(e.currentTarget));
