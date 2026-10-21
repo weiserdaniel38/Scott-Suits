@@ -2269,6 +2269,9 @@ JACKET_CATALOG.lining = {
   // not all the way to the list of linings (see renderPatternTypeOptions).
   backToColorFamilies: true,
   specialOptions: [LINING_MATCH_OPTION, LINING_UPLOAD_OPTION],
+  // An unlined jacket has no body or sleeve lining: the factory refuses a
+  // lining fabric with "No lining" (Daniel, 2026-10-21).
+  hiddenWhenEquals: { key: "facing", value: "No Lining Construction" },
   options: [LINING_MATCH_OPTION, LINING_UPLOAD_OPTION].concat(flattenPatternTypes(LINING_PATTERN_TYPES)),
 };
 

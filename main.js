@@ -2355,6 +2355,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     }
     const reqEq = cat.requiresEquals;
     if (reqEq && order[reqEq.key] !== reqEq.value) return false;
+    // `hiddenWhenEquals: { key, value }`: dropped while another category is
+    // set to that value (e.g. no Lining step on an unlined jacket).
+    const hidEq = cat.hiddenWhenEquals;
+    if (hidEq && order[hidEq.key] === hidEq.value) return false;
     return true;
   }
 
