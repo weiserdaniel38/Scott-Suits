@@ -201,10 +201,18 @@ async function saveDraft(input: Record<string, unknown>) {
   const { row, body, warnings, blocking } = await factoryOrder(input);
   if (blocking.length) return { ok: false, blocking, warnings };
   body.submit = false; // never submit from here
-  const r = await kute("POST", "/order/saveOrder", {}, body);
-  const res = (r.data || {}) as Record<string, any>;
-  const d = res.data || {};
-  const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  let r = await kute("POST", "/order/saveOrder", {}, body);
+  let res = (r.data || {}) as Record<string, any>;
+  let d = res.data || {};
+  let ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  if (!ok && body.orderNo) {
+    // The earlier draft may have been deleted on the factory site: save a new one.
+    body.orderNo = "";
+    r = await kute("POST", "/order/saveOrder", {}, body);
+    res = (r.data || {}) as Record<string, any>;
+    d = res.data || {};
+    ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  }
   const err = ok ? (d.errorMessage || null) : (d.errorMessage || res.msg || res.message || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300));
   const update: Record<string, unknown> = { factory_error: err, factory_sent_at: new Date().toISOString() };
   if (ok) {

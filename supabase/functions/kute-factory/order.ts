@@ -75,6 +75,20 @@ const PANTS_EMB_POSITIONS: Record<string, string> = {
 };
 const NO_MONOGRAM = "No Monogram Need";
 
+// Body measurements (the customer's own, cm) -> the factory's body
+// measurement positions; the factory adds the allowance for the fit.
+const JACKET_BODY: [string, string][] = [
+  ["body_neck", "1"], ["body_chest", "2"], ["body_stomach", "3"], ["body_seat", "5"], ["body_bicep", "8"],
+  ["body_shoulder", "11"], ["body_sleeve", "13"], ["body_sleeve", "14"], ["body_nape_waist", "18"],
+  ["body_back_length", "15"], ["body_front_waist", "19"],
+];
+const PANTS_BODY: [string, string][] = [
+  ["body_waist", "4"], ["body_seat", "5"], ["body_thigh", "6"], ["body_u_rise", "7"], ["body_back_waist_h", "21"],
+  ["body_front_waist_h", "20"], ["body_outseam", "16"], ["body_outseam", "17"],
+];
+// The fits offered on the site (BODY_FITS in catalog.js) -> factory fit codes.
+const FIT_CODES: Record<string, number> = { Slim: 1, Regular: 2, Loose: 3 };
+
 // Finished measurements (cm) -> the factory's measurement position codes.
 const JACKET_SIZES: [string, string][] = [
   ["chest", "XF01"], ["stomach", "XF02"], ["bicep", "XF04"], ["sleeve_length", "XF05"], ["sleeve_length", "XF06"],
@@ -191,6 +205,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   const blocking: string[] = [];
   const notes: string[] = [];
   const isSuit = s(row.suit_type) !== "jacket_only";
+  const bodyMode = s(row.measure_type) === "body";
+  const fit = (v: unknown) => FIT_CODES[s(v)] || FIT_CODES.Regular;
 
   // ---- Jacket ----
   const jc = catalogCodes(jacket, row, JACKET_BY_HAND, "Jacket", warnings);
@@ -268,8 +284,9 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   const details: Record<string, unknown>[] = [{
     categoryCode: "MXF",
     crafts: [...new Set(jc)].join(","),
-    orderSizes: sizes(row, JACKET_SIZES, "Jacket", warnings),
+    orderSizes: sizes(row, bodyMode ? JACKET_BODY : JACKET_SIZES, "Jacket", warnings),
     orderEmbs: jacketEmbs,
+    ...(bodyMode ? { versionStyle: fit(row.jacket_fit) } : {}),
   }];
 
   // ---- Trousers ----
@@ -287,11 +304,12 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     details.push({
       categoryCode: "MXK",
       crafts: [...new Set(pc)].join(","),
-      orderSizes: sizes(row, PANTS_SIZES, "Trousers", warnings),
+      orderSizes: sizes(row, bodyMode ? PANTS_BODY : PANTS_SIZES, "Trousers", warnings),
       orderEmbs: pantsEmbs,
+      ...(bodyMode ? { versionStyle: fit(row.pants_fit) } : {}),
     });
     const calf = Number(row.calf);
-    if (isFinite(calf) && calf > 0) notes.push("Calf (finished): " + calf + " cm.");
+    if (!bodyMode && isFinite(calf) && calf > 0) notes.push("Calf (finished): " + calf + " cm.");
   }
 
   // Fabric: the site stores "26SU218.DBV3529"; the factory's number is the part after the dot.
@@ -321,7 +339,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     amount: 1,
     isSample: 0,
     category: isSuit ? "T" : "MXF",
-    measuresType: 10002,
+    measuresType: bodyMode ? 10001 : 10002,
     fabric,
     customer: {
       nickname: name,
