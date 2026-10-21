@@ -274,9 +274,9 @@ JACKET_CATALOG.pickStitch = {
   column: "jacket_pick_stitch",
   description: "Pick stitching is a row of small stitches just inside the edges, a classic hand-tailored detail.",
   options: [
-    { name: "No Pick Stitching", displayName: "None", factoryCode: "0570", img: "./assets/jacket-pickstitch-none.jpg", badge: "Standard" },
-    { name: "Pick Stitch Edges", displayName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg" },
-    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg" },
+    { name: "No Pick Stitching", displayName: "None", factoryCode: "0570", img: "./assets/jacket-pickstitch-none.jpg?v=2", badge: "Standard" },
+    { name: "Pick Stitch Edges", displayName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=2" },
+    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=2" },
   ],
 };
 
@@ -449,8 +449,8 @@ PANTS_CATALOG.pickStitch = {
   column: "pants_pick_stitch",
   description: "A row of small stitches along the front pocket openings, to match a pick stitched jacket.",
   options: [
-    { name: "No Pick Stitching", displayName: "None", factoryCode: "31A6", img: "./assets/pants-pickstitch-none.jpg", badge: "Standard" },
-    { name: "Pick Stitch Front Pockets", displayName: "Front Pockets", factoryCode: "31A5", img: "./assets/pants-pickstitch-pockets.jpg" },
+    { name: "No Pick Stitching", displayName: "None", factoryCode: "31A6", img: "./assets/pants-pickstitch-none.jpg?v=2", badge: "Standard" },
+    { name: "Pick Stitch Front Pockets", displayName: "Front Pockets", factoryCode: "31A5", img: "./assets/pants-pickstitch-pockets.jpg?v=2" },
   ],
 };
 
