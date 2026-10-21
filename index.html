@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261021shiptax">
+<link rel="stylesheet" href="./style.css?v=20261021shiptax2">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -361,7 +361,28 @@
   </div>
   <div class="meas-intro">
     <h3>Your measurements</h3>
-    <p class="sub">Grab a tape measure (a patient friend helps). Everything is in centimeters.</p>
+    <p class="sub">Grab a tape measure (a patient friend helps). Measurements are in centimeters; height and weight can be in feet and pounds.</p>
+  </div>
+
+  <!-- Finished-garment sizes (the default) or body measurements plus a fit,
+       which the factory turns into garment sizes (see setMeasureMode() in
+       main.js). -->
+  <div class="measure-mode" id="measureModeBox">
+    <p class="measure-mode-q">Which measurements will you give us?</p>
+    <div class="measure-mode-pick">
+      <button type="button" class="measure-mode-btn active" data-mode="finished" aria-pressed="true"><b>Finished suit sizes</b><span>The sizes of a suit that fits you well</span></button>
+      <button type="button" class="measure-mode-btn" data-mode="body" aria-pressed="false"><b>Body measurements</b><span>Measure yourself and pick a fit; our tailors do the rest</span></button>
+    </div>
+    <div class="measure-fit-row" id="measureFitRow" hidden>
+      <div class="measure-field">
+        <label for="jacketFitSelect">Jacket fit</label>
+        <div class="measure-input-wrap"><select id="jacketFitSelect"></select></div>
+      </div>
+      <div class="measure-field" id="pantsFitField">
+        <label for="pantsFitSelect">Pants fit</label>
+        <div class="measure-input-wrap"><select id="pantsFitSelect"></select></div>
+      </div>
+    </div>
   </div>
 
   <!-- Only shown once there's already at least one other suit in this order
@@ -793,10 +814,10 @@
 <!-- ==================== END TEMP QA NAV BAR ==================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="./config.js?v=20261021shiptax"></script>
-<script src="./catalog.js?v=20261021body"></script>
+<script src="./config.js?v=20261021shiptax2"></script>
+<script src="./catalog.js?v=20261021bodym"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261021shiptax"></script>
+<script src="./main.js?v=20261021shiptax2"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
