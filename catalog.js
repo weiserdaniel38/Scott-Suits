@@ -2668,6 +2668,7 @@ const FABRIC_ZOOM_MAP = {
 // One fun sentence per step, shown under each step's title in place of the
 // plain "Choose one." hint (see tagline in main.js renderOptions).
 const JACKET_STEP_TAGLINES = {
+  pickStitch: "Tiny stitches that whisper \"handmade.\"",
   collar: "Your lapels' big first impression.",
   lapelwidth: "How much lapel real estate you want.",
   lapelbuttonhole: "A tiny slit that's dying to hold a flower.",
@@ -2695,6 +2696,7 @@ const JACKET_STEP_TAGLINES = {
   buttoncolor: "The little finishing touch (sparkle optional)."
 };
 const PANTS_STEP_TAGLINES = {
+  pickStitch: "Little stitches to match your jacket's handiwork.",
   waistLineHeight: "Where your pants sit: standard or tall.",
   waistbandExtension: "The little tab that closes your waist in style.",
   waistbandStyle: "How your waist is built.",
