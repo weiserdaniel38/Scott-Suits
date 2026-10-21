@@ -7059,19 +7059,6 @@ function isStepComplete(stepId) {
   return true;
 }
 
-// Same required-field check used at final submit, without the alert -- just
-// "is everything filled in yet" for the progress bar.
-function isShippingInfoComplete() {
-  if (fulfillmentChoice() === "pickup") return Boolean(customerNameInput.value.trim());
-  return Boolean(
-    customerNameInput.value.trim() &&
-    shippingAddress1Input.value.trim() &&
-    shippingCityInput.value.trim() &&
-    shippingStateInput.value.trim() &&
-    shippingZipInput.value.trim()
-  );
-}
-
 // Dims each progress-bar step once it's actually done, so the eye is drawn to
 // whichever step still needs attention. The bar has 5 visual steps (Jacket,
 // Pants, Measure, Ship, Order) but only 4 underlying sections -- Ship and
@@ -7094,13 +7081,17 @@ function updateProcessBar() {
   if (activeStepEl === suitTypeSection) furthestStepIndex = activeIdx;
   else if (activeIdx > furthestStepIndex && activeStepEl !== confirmationSection) furthestStepIndex = activeIdx;
   document.querySelectorAll(".process-step[data-milestone]").forEach((el) => {
-    el.classList.toggle("current", !!activeStepId && el.getAttribute("data-step") === activeStepId);
     const milestone = el.getAttribute("data-milestone");
+    // "Complete" shares personalInfoSection with "Order", but it stays plain
+    // until the order is actually placed -- only Order lights up on that page.
+    el.classList.toggle("current", !!activeStepId && milestone !== "ship" && el.getAttribute("data-step") === activeStepId);
     let done = false;
     if (milestone === "jacket") done = jacketDesigner.isComplete();
     else if (milestone === "pants") done = pantsDesigner.isComplete();
     else if (milestone === "measure") done = collectMeasurements().missing.length === 0;
-    else if (milestone === "ship") done = isShippingInfoComplete();
+    // Only once the order is placed -- not when the address is filled in,
+    // since a signed-in customer's address is prefilled from the start.
+    else if (milestone === "ship") done = orderSubmitted;
     else if (milestone === "order") done = orderSubmitted;
     else if (milestone === "preview") done = !!(designPreview && designPreview.status === "done");
     el.classList.toggle("completed", done);
