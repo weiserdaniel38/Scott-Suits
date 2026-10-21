@@ -275,8 +275,8 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
 
   // -------------------------------------------------------------- PANTS
   "Waist Line Height": {
-    Standard: "standard waistband, about 5 cm tall",
-    Tall: "slightly taller waistband, about 5.5 cm",
+    Standard: "standard waistband, about 4 cm tall",
+    Tall: "taller waistband, about 5 cm",
   },
   "Waistband Extension Style": {
     "Round Shape": "a short tab (about 5 cm) overlapping just past the top of the fly, with a ROUNDED end and one button",
