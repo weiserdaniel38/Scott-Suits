@@ -101,9 +101,79 @@ function itemPriceUsd(item) {
 // measurements (plus height and weight), not the 8 pants ones nobody needs
 // for an order with no pants in it. See the "part" field on each
 // MEASUREMENTS entry in catalog.js.
+// Body measurements replace the finished ones when the customer picks
+// "Body measurements" (measureMode); height and weight are always asked.
 function activeMeasurements() {
-  return isJacketOnlyType(currentSuitType) ? MEASUREMENTS.filter((m) => m.part !== "pants") : MEASUREMENTS;
+  const jacketOnly = isJacketOnlyType(currentSuitType);
+  return MEASUREMENTS.filter(
+    (m) => (m.part === "body" || (m.mode || "finished") === measureMode) && !(jacketOnly && m.part === "pants")
+  );
 }
+
+// "Finished suit sizes" or "Body measurements" (plus a jacket and pants
+// fit). Saved with the measurements as measure_type / jacket_fit /
+// pants_fit, so they reach the order row and the factory order.
+let measureMode = "finished";
+// Values typed in the other mode's fields, kept while switching back and
+// forth (cleared with the form).
+let measureStash = {};
+const jacketFitSelect = document.getElementById("jacketFitSelect");
+const pantsFitSelect = document.getElementById("pantsFitSelect");
+[jacketFitSelect, pantsFitSelect].forEach((sel) => {
+  if (!sel) return;
+  sel.innerHTML = BODY_FITS.map((f) => '<option value="' + f + '">' + f + "</option>").join("");
+  sel.value = "Regular";
+  sel.addEventListener("change", () => saveDraft());
+});
+function setMeasureMode(mode) {
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && el.value !== "") measureStash[m.id] = el.value;
+  });
+  measureMode = mode === "body" ? "body" : "finished";
+  document.querySelectorAll(".measure-mode-btn").forEach((b) => {
+    const on = b.dataset.mode === measureMode;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  const fitRow = document.getElementById("measureFitRow");
+  if (fitRow) fitRow.hidden = measureMode !== "body";
+  const pantsFitField = document.getElementById("pantsFitField");
+  if (pantsFitField) pantsFitField.hidden = isJacketOnlyType(currentSuitType);
+  // The size estimate fills in finished sizes only.
+  const estimateBox = document.getElementById("sizeEstimateBox");
+  if (estimateBox) estimateBox.hidden = measureMode === "body";
+  if (typeof measureGrid !== "undefined" && measureGrid) {
+    renderMeasurementFields();
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el && el.value === "" && measureStash[m.id] !== undefined) el.value = measureStash[m.id];
+    });
+  }
+}
+// The mode and fits as saved alongside the measurement values.
+function measureExtras() {
+  const extras = { measure_type: measureMode };
+  if (measureMode === "body") {
+    extras.jacket_fit = jacketFitSelect ? jacketFitSelect.value : "Regular";
+    if (!isJacketOnlyType(currentSuitType)) extras.pants_fit = pantsFitSelect ? pantsFitSelect.value : "Regular";
+  }
+  return extras;
+}
+// Puts a saved mode and fits back (before the values, since switching mode
+// rebuilds the fields).
+function applyMeasureExtras(saved) {
+  if (!saved) return;
+  if (saved.jacket_fit && jacketFitSelect) jacketFitSelect.value = saved.jacket_fit;
+  if (saved.pants_fit && pantsFitSelect) pantsFitSelect.value = saved.pants_fit;
+  setMeasureMode(saved.measure_type || "finished");
+}
+document.querySelectorAll(".measure-mode-btn").forEach((b) =>
+  b.addEventListener("click", () => {
+    setMeasureMode(b.dataset.mode);
+    saveDraft();
+  })
+);
 // Height and weight. Height is stored in inches and weight in pounds, in a
 // hidden input with the usual "m_"/"pm_" id, so drafts, saved profiles and
 // the order row keep working unchanged; the customer types feet + inches or
@@ -1624,6 +1694,7 @@ const useSavedMeasurementsBtn = document.getElementById("useSavedMeasurementsBtn
 if (useSavedMeasurementsBtn) {
   useSavedMeasurementsBtn.addEventListener("click", () => {
     if (!currentProfile || !currentProfile.measurements) return;
+    applyMeasureExtras(currentProfile.measurements);
     MEASUREMENTS.forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       const val = currentProfile.measurements[m.id];
@@ -4241,9 +4312,15 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
   }
 
   lines.push("MEASUREMENTS");
-  const measurementList = isJacketOnly ? MEASUREMENTS.filter((m) => m.part !== "pants") : MEASUREMENTS;
+  const mode = measurements.measure_type === "body" ? "body" : "finished";
+  const measurementList = MEASUREMENTS.filter(
+    (m) => (m.part === "body" || (m.mode || "finished") === mode) && !(isJacketOnly && m.part === "pants")
+  );
+  if (mode === "body") {
+    lines.push("Body measurements -- jacket fit: " + (measurements.jacket_fit || "Regular") + (isJacketOnly ? "" : ", pants fit: " + (measurements.pants_fit || "Regular")));
+  }
   measurementList.forEach((m) => {
-    const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + "-");
+    const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + (m.mode === "body" ? " (body):" : "-"));
     const val = measurements[m.id];
     let shown = val === undefined ? "" : val + " " + (m.unit || "cm");
     if (m.id === "height" && val !== undefined) shown = Math.floor(val / 12) + " ft " + Math.round((val % 12) * 10) / 10 + " in (" + val + " in)";
@@ -4281,7 +4358,8 @@ function renderMeasurementFields() {
     const field = document.createElement("div");
     field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
     field.innerHTML =
-      '<label for="m_' + m.id + '">' + m.label + "</label>" + measureInputHtml("m_", m);
+      '<label for="m_' + m.id + '">' + m.label + "</label>" + measureInputHtml("m_", m) +
+      (m.hint ? '<p class="measure-field-hint">' + m.hint + "</p>" : "");
     bindBodyMeasure(field, "m_", m);
     field.querySelectorAll("input, select").forEach((el) => {
       el.addEventListener("input", saveDraft);
@@ -4483,6 +4561,7 @@ function collectMeasurements() {
       values[m.id] = val;
     }
   });
+  Object.assign(values, measureExtras());
   return { values, missing };
 }
 
@@ -4504,6 +4583,7 @@ if (addAnotherSuitBtn) {
     // with the "Use the same measurements as Suit N" banner above the grid
     // (see samePreviousMeasurementsBanner / updateSamePreviousMeasurementsBanner)
     // instead of retyping everything.
+    measureStash = {};
     MEASUREMENTS.forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       if (el) el.value = "";
@@ -4984,6 +5064,7 @@ if (useSamePreviousMeasurementsBtn) {
   useSamePreviousMeasurementsBtn.addEventListener("click", () => {
     const previous = cartItems[cartItems.length - 1];
     if (!previous || !previous.measurements) return;
+    applyMeasureExtras(previous.measurements);
     activeMeasurements().forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       if (el && previous.measurements[m.id] !== undefined) el.value = previous.measurements[m.id];
@@ -5005,6 +5086,7 @@ if (useSamePreviousMeasurementsBtn) {
 const resetMeasurementsBtn = document.getElementById("resetMeasurementsBtn");
 if (resetMeasurementsBtn) {
   resetMeasurementsBtn.addEventListener("click", () => {
+    measureStash = {};
     activeMeasurements().forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       if (el) el.value = "";
@@ -5179,6 +5261,7 @@ function loadCartItemIntoDesigner(index) {
     const el = document.getElementById("m_" + m.id);
     if (el) el.value = "";
   });
+  applyMeasureExtras(item.measurements || { measure_type: "finished" });
   activeMeasurements().forEach((m) => {
     const el = document.getElementById("m_" + m.id);
     if (el && item.measurements && item.measurements[m.id] !== undefined) el.value = item.measurements[m.id];
@@ -6287,6 +6370,7 @@ function saveDraft() {
       const el = document.getElementById("m_" + m.id);
       if (el && el.value !== "") measurements[m.id] = el.value;
     });
+    Object.assign(measurements, measureExtras());
     const activeStepEl = document.querySelector(".step.active");
     const draft = {
       step: activeStepEl ? activeStepEl.id : "designer",
@@ -6400,6 +6484,7 @@ function restoreDraft() {
   }
 
   if (draft.measurements) {
+    applyMeasureExtras(draft.measurements);
     activeMeasurements().forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       if (el && draft.measurements[m.id] !== undefined) el.value = draft.measurements[m.id];
@@ -6601,7 +6686,9 @@ function clearDesignerAndForm() {
   // Back to the default suit type -- also rebuilds the measurement grid to
   // its full (jacket + pants) field set before the clearing loop below, and
   // resets the progress bar / prices / button wording along with it.
+  measureStash = {};
   applySuitType("full");
+  setMeasureMode("finished");
 
   MEASUREMENTS.forEach((m) => {
     const el = document.getElementById("m_" + m.id);
@@ -6893,7 +6980,7 @@ function applySuitType(type) {
   const isPreset = type === "preset" || type === "presetJacket";
   jacketDesigner.setPreset(isPreset ? CLASSIC_SUIT_PRESET.jacket : null);
   pantsDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.pants : null);
-  renderMeasurementFields();
+  setMeasureMode(measureMode); // rebuilds the fields for this suit type
   updateSamePreviousMeasurementsBanner();
   updateProcessBarForSuitType();
   updatePriceTextForSuitType();

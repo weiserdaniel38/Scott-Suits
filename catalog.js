@@ -429,7 +429,29 @@ const MEASUREMENTS = [
   { id: "knee", label: "Knee", part: "pants" },
   { id: "calf", label: "Calf", part: "pants" },
   { id: "cuff", label: "Cuff", part: "pants" },
+  // Body measurements (mode "body"): the customer measures themselves and
+  // picks a fit; the factory adds its own allowances. Every entry above
+  // without a `mode` is a finished-garment measurement. Each id is its
+  // orders column; kute-factory maps them to the factory's body positions.
+  { id: "body_neck", label: "Neck", part: "jacket", mode: "body", hint: "Around the base of your neck" },
+  { id: "body_chest", label: "Chest", part: "jacket", mode: "body", hint: "Around the fullest part, under your arms" },
+  { id: "body_stomach", label: "Stomach", part: "jacket", mode: "body", hint: "Around your belly at the navel" },
+  { id: "body_seat", label: "Seat", part: "jacket", mode: "body", hint: "Around the fullest part of your seat" },
+  { id: "body_bicep", label: "Bicep", part: "jacket", mode: "body", hint: "Around the fullest part of your upper arm" },
+  { id: "body_shoulder", label: "Shoulder Width", part: "jacket", mode: "body", hint: "Across your back, shoulder point to shoulder point" },
+  { id: "body_sleeve", label: "Arm Length", part: "jacket", mode: "body", hint: "Shoulder point to wrist bone, arm relaxed" },
+  { id: "body_nape_waist", label: "Nape to Waist", part: "jacket", mode: "body", hint: "Back of your neck down to your natural waist" },
+  { id: "body_back_length", label: "Jacket Length", part: "jacket", mode: "body", hint: "Back of your neck down to where the jacket should end" },
+  { id: "body_front_waist", label: "Front Waist Length", part: "jacket", mode: "body", hint: "Shoulder at the neck, down the front to your natural waist" },
+  { id: "body_waist", label: "Waist", part: "pants", mode: "body", hint: "Around where you wear your trousers" },
+  { id: "body_thigh", label: "Thigh", part: "pants", mode: "body", hint: "Around the fullest part of your upper thigh" },
+  { id: "body_u_rise", label: "U-Rise", part: "pants", mode: "body", hint: "Front waist, between your legs, to the back waist" },
+  { id: "body_front_waist_h", label: "Front Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the front" },
+  { id: "body_back_waist_h", label: "Back Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the back" },
+  { id: "body_outseam", label: "Outseam", part: "pants", mode: "body", hint: "Side of your waist down to where the trousers should end" },
 ];
+// Fits offered with body measurements (the factory's fit names).
+const BODY_FITS = ["Slim", "Regular", "Loose"];
 
 // ---------------------------------------------------------------------
 // "Don't know your measurements?" size-based estimator
