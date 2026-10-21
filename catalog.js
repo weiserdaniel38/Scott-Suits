@@ -289,9 +289,9 @@ const PANTS_CATALOG = {
     label: "Front Pleat",
     column: "front_pleat",
     options: [
-      { name: "No Pleat", img: "./assets/pants-pleat-new-no.jpg" },
-      { name: "Single Pleat", img: "./assets/pants-pleat-new-single.jpg" },
-      { name: "Double Pleat", img: "./assets/pants-pleat-new-double.jpg" },
+      { name: "No Pleat", factoryCode: "302L", img: "./assets/pants-pleat-new-no.jpg" },
+      { name: "Single Pleat", factoryCode: "3021", img: "./assets/pants-pleat-new-single.jpg" },
+      { name: "Double Pleat", factoryCode: "3023", img: "./assets/pants-pleat-new-double.jpg" },
     ],
   },
   beltLoops: {
