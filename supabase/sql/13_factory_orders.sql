@@ -88,3 +88,9 @@ end;
 $$;
 revoke all on function public.admin_order_suits(text) from public, anon;
 grant execute on function public.admin_order_suits(text) to authenticated;
+
+-- Height (inches) and weight (pounds), asked with the measurements; the
+-- factory needs both.
+alter table public.orders
+  add column if not exists height numeric,
+  add column if not exists weight numeric;

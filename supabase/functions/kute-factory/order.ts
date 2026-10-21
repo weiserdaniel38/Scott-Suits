@@ -304,8 +304,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     notes.push("Trousers fabric: " + pantsFabric + ".");
   }
 
-  if (!(input.height > 0)) blocking.push("Enter the customer's height.");
-  if (!(input.weight > 0)) blocking.push("Enter the customer's weight.");
+  if (!(input.height > 0)) blocking.push("No height on this order: enter it above.");
+  if (!(input.weight > 0)) blocking.push("No weight on this order: enter it above.");
 
   const name = s(row.customer_name) || "Customer";
   const { first, last } = splitName(name);
