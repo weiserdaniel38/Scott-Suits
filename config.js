@@ -64,6 +64,10 @@ const STRIPE_CHECKOUT_ENABLED = true;
 // Stripe actually charges is the SHIPPING_FLAT_USD secret in Supabase, so
 // change both together.
 const SHIPPING_FLAT_USD = 19.99;
+// true = "Ship to me" is charged the cheapest carrier rate to the customer's
+// address (Shippo, worked out at checkout; SHIPPING_FLAT_USD is only the
+// fallback), so the order page shows "+ shipping" instead of a price.
+const SHIPPING_LIVE_RATES = true;
 // Pre-launch notice on the home page: "We can't accept orders just yet, but
 // we will next week -- come explore and design your suit." Shoppers can
 // still design and submit as normal; this is only a message. Set this to

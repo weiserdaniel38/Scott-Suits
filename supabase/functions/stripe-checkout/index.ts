@@ -20,20 +20,26 @@
 // webhook calls are refused and "verify" does the job.
 //
 // Shipping and tax: an order picked up in store (fulfillment = 'pickup')
-// pays the suits only. An order shipped to the customer adds the flat
-// SHIPPING_FLAT_USD and, once STRIPE_AUTOMATIC_TAX is "true", sales tax
-// worked out by Stripe Tax from the shipping address (Stripe Tax must be set
-// up in the Stripe dashboard first: origin address + where you're
-// registered to collect). What was charged is saved on the order.
+// pays the suits only. An order shipped to the customer adds the cheapest
+// carrier rate Shippo finds for the shipping address (one bag per suit,
+// sent from the shop), or the flat SHIPPING_FLAT_USD when Shippo isn't set
+// up, the address is outside the US, or Shippo returns no rate. Then, once
+// STRIPE_AUTOMATIC_TAX is "true", sales tax worked out by Stripe Tax from
+// the shipping address (Stripe Tax must be set up in the Stripe dashboard
+// first: origin address + where you're registered to collect). What was
+// charged is saved on the order.
 //
 // Admin orders (admin_no_payment) never come through here.
 //
 // Secrets (Supabase Dashboard > Edge Functions > Secrets):
 //   STRIPE_SECRET_KEY      required -- sk_test_... while testing, sk_live_... to go live
 //   STRIPE_WEBHOOK_SECRET  optional -- whsec_... from the Stripe webhook endpoint
-//   SHIPPING_FLAT_USD      optional, default 19.99 -- per order; keep in step
-//                          with SHIPPING_FLAT_USD in the site's config.js
+//   SHIPPING_FLAT_USD      optional, default 19.99 -- per order, used when there's
+//                          no Shippo rate
 //   STRIPE_AUTOMATIC_TAX   optional -- "true" to add sales tax (Stripe Tax)
+//   SHIPPO_API_KEY         optional -- shippo_live_... for live carrier rates
+//   SHIPPING_MARKUP_USD    optional, default 0 -- added to the Shippo rate
+//   SHIP_BOX_IN / SHIP_BOX_LB  optional, default "24x19x2" / "3" -- one suit in a poly mailer bag
 //   SITE_URL               optional, default https://scottssuits.com
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
@@ -45,6 +51,19 @@ const STRIPE_KEY = env("STRIPE_SECRET_KEY");
 const WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET");
 const SHIPPING_CENTS = Math.max(0, Math.round(Number(env("SHIPPING_FLAT_USD", "19.99")) * 100) || 0);
 const AUTOMATIC_TAX = env("STRIPE_AUTOMATIC_TAX").toLowerCase() === "true";
+const SHIPPO_KEY = env("SHIPPO_API_KEY");
+const MARKUP_CENTS = Math.max(0, Math.round(Number(env("SHIPPING_MARKUP_USD", "0")) * 100) || 0);
+const BOX_IN = env("SHIP_BOX_IN", "24x19x2").split(/x/i).map((n) => n.trim());
+const BOX_LB = env("SHIP_BOX_LB", "3");
+// Where suits are shipped from.
+const SHIP_FROM = {
+  name: "Scott Suits",
+  street1: "38 Parson Road",
+  city: "Clifton",
+  state: "NJ",
+  zip: "07012",
+  country: "US",
+};
 // Stripe Tax product codes: clothing, and shipping.
 const TAX_CODE_CLOTHING = "txcd_30011000";
 const TAX_CODE_SHIPPING = "txcd_92010001";
@@ -182,6 +201,47 @@ async function taxCustomer(r: OrderRow, email: string): Promise<string | null> {
   return c.id;
 }
 
+// The cheapest rate any carrier offers for this order, via Shippo, or null
+// (caller falls back to the flat price).
+export async function cheapestRate(r: OrderRow, boxes: number): Promise<{ cents: number; name: string } | null> {
+  if (!SHIPPO_KEY || countryCode(r.shipping_country) !== "US" || !r.shipping_address_line1 || !r.shipping_zip) return null;
+  const parcel = { length: BOX_IN[0], width: BOX_IN[1], height: BOX_IN[2], distance_unit: "in", weight: BOX_LB, mass_unit: "lb" };
+  const res = await fetch("https://api.goshippo.com/shipments/", {
+    method: "POST",
+    headers: { authorization: "ShippoToken " + SHIPPO_KEY, "content-type": "application/json" },
+    body: JSON.stringify({
+      address_from: SHIP_FROM,
+      address_to: {
+        name: r.customer_name || "Customer",
+        street1: r.shipping_address_line1,
+        street2: r.shipping_address_line2 || "",
+        city: r.shipping_city || "",
+        state: r.shipping_state || "",
+        zip: r.shipping_zip,
+        country: "US",
+      },
+      parcels: Array.from({ length: Math.max(1, boxes) }, () => parcel),
+      async: false,
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error("Shippo " + res.status + ": " + JSON.stringify(body).slice(0, 300));
+  let best: { cents: number; name: string } | null = null;
+  for (const rate of body.rates || []) {
+    if (rate.currency !== "USD") continue;
+    // Media/Library Mail is for books only; clothing can't go that way.
+    if (/media_mail|library_mail/i.test((rate.servicelevel && rate.servicelevel.token) || "")) continue;
+    const cents = Math.round(Number(rate.amount) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) continue;
+    if (!best || cents < best.cents) {
+      const service = [rate.provider, rate.servicelevel && rate.servicelevel.name].filter(Boolean).join(" ");
+      const days = rate.estimated_days ? " (about " + rate.estimated_days + (rate.estimated_days === 1 ? " day)" : " days)") : "";
+      best = { cents, name: ("Shipping: " + service + days).slice(0, 100) };
+    }
+  }
+  return best && { cents: best.cents + MARKUP_CENTS, name: best.name };
+}
+
 async function createCheckout(orderId: string, origin: string | null) {
   const rows = await loadOrder(orderId);
   if (!rows.length) return json({ error: "order not found" }, 404);
@@ -220,13 +280,18 @@ async function createCheckout(orderId: string, origin: string | null) {
     success_url: base + "/?stripe_return=1&session_id={CHECKOUT_SESSION_ID}",
     cancel_url: base + "/?stripe_cancelled=1&order=" + encodeURIComponent(orderId),
   };
-  if (!pickup && SHIPPING_CENTS > 0) {
+  const rate = pickup
+    ? null
+    : await cheapestRate(rows[0], rows.length).catch((e) => (console.error("shippo failed, using flat shipping:", e), null));
+  const shippingCents = rate ? rate.cents : SHIPPING_CENTS;
+  if (!pickup) console.log("shipping for", orderId, rate ? rate.name + " " + rate.cents : "no rate", "charged", shippingCents);
+  if (!pickup && shippingCents > 0) {
     params.shipping_options = {
       0: {
         shipping_rate_data: {
           type: "fixed_amount",
-          display_name: "Shipping",
-          fixed_amount: { amount: SHIPPING_CENTS, currency: "usd" },
+          display_name: rate ? rate.name : "Shipping",
+          fixed_amount: { amount: shippingCents, currency: "usd" },
           tax_behavior: "exclusive",
           tax_code: TAX_CODE_SHIPPING,
         },

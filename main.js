@@ -5001,11 +5001,12 @@ function updateOrderSummaryUI() {
   const shipped = STRIPE_ENABLED && fulfillmentChoice() === "ship";
   const shipping = shipped ? shippingUsd() : 0;
   const total = suits + shipping;
-  submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? " + tax" : "") + " & Submit Order" : "Submit Order";
+  submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? (liveShippingRates() ? " + shipping + tax" : " + tax") : "") + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
   let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
-  if (shipped) text += " plus sales tax, worked out at checkout from your address.";
+  if (shipped && liveShippingRates()) text += " plus shipping (the cheapest carrier rate to your address) and sales tax, both worked out at checkout.";
+  else if (shipped) text += " plus sales tax, worked out at checkout from your address.";
   else if (STRIPE_ENABLED) text += ", in-store pickup: no shipping, no tax.";
   if (STRIPE_ENABLED) text += " You'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
   else if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
@@ -5675,13 +5676,21 @@ function applyFulfillmentChoice() {
   updateOrderSummaryUI();
   updateProcessBar();
 }
-// Flat shipping for "Ship to me" (config.js), charged only with Stripe on.
+// Live carrier rates (config.js): the price is only known at checkout.
+function liveShippingRates() {
+  return STRIPE_ENABLED && typeof SHIPPING_LIVE_RATES !== "undefined" && !!SHIPPING_LIVE_RATES;
+}
+// Flat shipping for "Ship to me" (config.js), charged only with Stripe on;
+// 0 when live rates are on (added at checkout instead).
 function shippingUsd() {
+  if (liveShippingRates()) return 0;
   return STRIPE_ENABLED && typeof SHIPPING_FLAT_USD !== "undefined" ? Number(SHIPPING_FLAT_USD) || 0 : 0;
 }
 (function () {
   const sub = document.getElementById("fulfillShipSub");
-  if (sub && STRIPE_ENABLED) sub.textContent = (shippingUsd() ? usd(shippingUsd()) + " shipping" : "Free shipping") + " + sales tax, added at checkout";
+  if (sub && STRIPE_ENABLED) sub.textContent = liveShippingRates()
+    ? "Cheapest carrier rate to your address + sales tax, added at checkout"
+    : (shippingUsd() ? usd(shippingUsd()) + " shipping" : "Free shipping") + " + sales tax, added at checkout";
   document.querySelectorAll('input[name="fulfillment"]').forEach((el) =>
     el.addEventListener("change", () => {
       applyFulfillmentChoice();
