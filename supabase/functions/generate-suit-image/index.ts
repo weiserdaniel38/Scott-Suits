@@ -233,6 +233,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Inside Pocket Style": {
     "Regular Inner Pocket": "inside: a welt pocket on each side of the chest (the one on the wearer's left closed by a small pointed tab and button that are sewn INSIDE, on the lining; the outside of the jacket has no tab or button at the chest), a short pen pocket welt just below the wearer's right chest pocket, and ONE more welt pocket at waist height on the wearer's right side only",
     "Fashion Inner Pocket": "inside: a welt pocket on each side of the chest (the one on the wearer's left closed by a small pointed tab and button that are sewn INSIDE, on the lining; the outside of the jacket has no tab or button at the chest), a short pen pocket welt just below the wearer's right chest pocket, and a welt pocket at waist height on BOTH sides",
+    "Combination Inner Pocket": "inside: a welt pocket on each side of the chest (the one on the wearer's left closed by a small pointed tab and button that are sewn INSIDE, on the lining; the outside of the jacket has no tab or button at the chest) with a short welt just below it; on the wearer's right, a narrow upright pen slot high on the facing near the lapel, a small teardrop-shaped pen pocket just below the chest pocket, and ONE more welt pocket at waist height",
     "No Inner Pockets": "inside: NO pockets at all; the lining and facings are plain, with no welts, tabs or buttons",
   },
   "Monogram Placement": {
@@ -365,6 +366,7 @@ function describeSpec(spec: string): string {
 const INSIDE_VIEW: Record<string, string> = {
   "Regular Inner Pocket": "exactly ONE horizontal inside welt pocket at chest height, level with the outside chest pocket, running from the fabric facing into the lining; a short pen pocket welt (about 5 cm wide) a little below it; and ONE more horizontal welt pocket at waist height",
   "Fashion Inner Pocket": "exactly ONE horizontal inside welt pocket at chest height, level with the outside chest pocket, running from the fabric facing into the lining; a short pen pocket welt (about 5 cm wide) a little below it; and ONE more horizontal welt pocket at waist height",
+  "Combination Inner Pocket": "exactly ONE horizontal inside welt pocket at chest height, level with the outside chest pocket, running from the fabric facing into the lining; a narrow upright pen slot high on the facing near the lapel; a small teardrop-shaped pen pocket just below the chest welt; and ONE more horizontal welt pocket at waist height",
   "No Inner Pockets": "NO inside pockets at all: the facing and lining are completely plain",
 };
 
