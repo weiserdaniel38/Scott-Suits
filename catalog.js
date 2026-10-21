@@ -103,8 +103,8 @@ const JACKET_CATALOG = {
   lowerpocket: {
     label: "Lower Pockets",
     column: "lower_pocket",
-    // 17 options grouped under small headings (Besom / Welt / Slant Besom / Flap /
-    // Slant Flap / Patch / High-Back Patch / No Pockets); within a family the
+    // Options grouped under small headings (Besom / Welt / Slant Besom / Flap /
+    // Slant Flap / Diamond Flap / Patch / High-Back Patch / No Pockets); within a family the
     // rows read plain -> + besom ticket pocket -> + flap ticket pocket. Single besom
     // options were removed (Daniel, 2026-10-21); "Double Besom" is shown as "Besom".
     options: [
@@ -118,6 +118,8 @@ const JACKET_CATALOG = {
       { section: "Slant Flap", name: "Slant Pocket Flap", displayName: "Slant Flap Pocket", img: "./assets/jacket-lowerpocket-new-slantflap.jpg" },
       { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom Ticket Pocket", displayName: "Slant Flap + Besom Ticket", img: "./assets/jacket-lowerpocket-new-slantflapdbt.jpg" },
       { section: "Slant Flap", name: "Slant Pocket Flap + Double Besom W/ Flat Ticket Pocket", displayName: "Slant Flap + Flap Ticket Pocket", img: "./assets/jacket-lowerpocket-new-slantflapft.jpg" },
+      { section: "Diamond Flap", name: "Diamond Flap", factoryCode: "0237", img: "./assets/jacket-lowerpocket-new-diamondflap.jpg" },
+      { section: "Diamond Flap", name: "Diamond Flap With Buttons", factoryCode: "0211", img: "./assets/jacket-lowerpocket-new-diamondflapbtn.jpg" },
       { section: "Patch", name: "Patch Pocket", displayName: "Patch Pocket", img: "./assets/jacket-lowerpocket-new-patch.jpg" },
       { section: "Patch", name: "Patch Pocket + Double Besom Ticket Pocket", displayName: "Patch Pocket + Besom Ticket", img: "./assets/jacket-lowerpocket-new-patchdbt.jpg" },
       { section: "High-Back Patch", name: "Patch Pocket With Highly Back", displayName: "High-Back Patch Pocket", img: "./assets/jacket-lowerpocket-new-patchhighback.jpg" },
