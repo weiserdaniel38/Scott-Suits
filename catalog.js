@@ -168,12 +168,20 @@ const JACKET_CATALOG = {
   insidepocket: {
     label: "Inside Pocket Style",
     column: "inside_pocket_style",
+    // The factory's basic inner pocket shapes only (Daniel, 2026-10-21).
+    // A draft saved with an older style is asked again.
+    retiredOptions: [
+      "Normal Inside Pocket W/ Pen Pocket",
+      "Normal Inside Pocket W/ Water Drop Pen Pocket",
+      "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket",
+    ],
     options: [
-      { name: "Normal Inside Pocket W/ Pen Pocket", img: "./assets/jacket-insidepocket-new-pen.jpg" },
-      { name: "Normal Inside Pocket W/ Water Drop Pen Pocket", img: "./assets/jacket-insidepocket-new-waterdrop.jpg" },
-      { name: "Normal Inside Pocket W/ Pen Pocket + Cigarette Pocket", img: "./assets/jacket-insidepocket-new-pencig.jpg" },
+      { name: "Regular Inner Pocket", factoryCode: "0801", img: "./assets/jacket-insidepocket-factory-regular.jpg", badge: "Standard" },
+      { name: "Fashion Inner Pocket", factoryCode: "0803", img: "./assets/jacket-insidepocket-factory-fashion.jpg" },
+      { name: "No Inner Pockets", factoryCode: "0806", img: "./assets/jacket-insidepocket-factory-none.jpg" },
     ],
   },
+
   monogram: {
     label: "Monogram Placement",
     column: "jacket_monogram_placement",
@@ -183,9 +191,9 @@ const JACKET_CATALOG = {
     textInput: { label: "Your monogram", placeholder: "Type your monogram (initials or name)", hint: "Up to 24 characters; capital letters count as 2. For two lines, put (/) between them, e.g. Beijing(/)China.", maxLength: 24, skipWhen: "No Monogram Need" },
     options: [
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/jacket-monogram-new-nomonogram.jpg" },
-      { name: "On Left Inside Pocket", displayName: "Left Inside Pocket", img: "./assets/jacket-monogram-new-onleftinsidepkt.jpg" },
-      { name: "On Right Inside Pocket", displayName: "Right Inside Pocket", img: "./assets/jacket-monogram-new-onrightinsidepkt.jpg" },
-      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Inside Pocket Satin Tape", img: "./assets/jacket-monogram-new-pocketsatin.jpg" },
+      { name: "On Left Inside Pocket", displayName: "Left Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onleftinsidepkt.jpg" },
+      { name: "On Right Inside Pocket", displayName: "Right Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onrightinsidepkt.jpg" },
+      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-pocketsatin.jpg" },
       { name: "Monogram On Middle Under Collar", displayName: "Middle Under Collar", img: "./assets/jacket-monogram-new-middlecollar.jpg" },
       { name: "Monogram Placement On Left Button", displayName: "Left Lapel Placement", img: "./assets/jacket-monogram-new-lapel.jpg" },
       { name: "Above Left Sleeve Cuff 2cm", displayName: "Above Left Sleeve Cuff", img: "./assets/jacket-monogram-new-leftcuff.jpg" },
@@ -2647,7 +2655,7 @@ const CLASSIC_SUIT_PRESET = {
       feltundercollar: "Match Felt Undercollar",
       threadColor: "Match Fabric Color",
       buttonNail: "X Shape Sewing Button",
-      insidepocket: "Normal Inside Pocket W/ Pen Pocket",
+      insidepocket: "Regular Inner Pocket",
       monogram: "No Monogram Need",
       construction: "Fused Construction",
       facing: "Round Shape Facing",
