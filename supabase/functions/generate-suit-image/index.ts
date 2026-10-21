@@ -229,7 +229,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Button Nail Method": {
     "X Shape Sewing": "four-hole buttons sewn on with the thread crossing in an X",
     "Parallel Sewing": "four-hole buttons sewn on with two parallel thread bars (=)",
-    "Arrow Shape Sewing": "four-hole buttons sewn on with the thread forming an arrow/crow's-foot shape (three lines meeting at one hole)",
+    "Square Sewing": "four-hole buttons sewn on with the thread forming a small square joining the four holes",
   },
   "Facing Style": {
     "Round Shape Facing": "fully lined jacket: inside, the fabric facing beside the front edge curves in a rounded shape at the hem, and the rest of the inside is the chosen lining",
