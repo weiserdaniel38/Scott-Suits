@@ -59,6 +59,11 @@ const PAYPAL_BUSINESS_EMAIL = "";
 // changes when going live. The admin's "Place order without payment" button
 // always skips payment. false = orders are placed with no payment step.
 const STRIPE_CHECKOUT_ENABLED = true;
+// Flat shipping charged per order when the customer picks "Ship to me"
+// (nothing for "Pick up in store"). Only shown on the order page: what
+// Stripe actually charges is the SHIPPING_FLAT_USD secret in Supabase, so
+// change both together.
+const SHIPPING_FLAT_USD = 15;
 // Pre-launch notice on the home page: "We can't accept orders just yet, but
 // we will next week -- come explore and design your suit." Shoppers can
 // still design and submit as normal; this is only a message. Set this to

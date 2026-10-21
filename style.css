@@ -1847,3 +1847,14 @@ body.order-done-view > .process{display:none !important;}
   .order-done-card{padding:24px 18px;}
   .order-done-card h2{font-size:24px;}
 }
+
+/* Ship to me / Pick up in store, on the Personal Info step. */
+.fulfill-choice{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 24px;}
+.fulfill-option{position:relative;display:flex;flex-direction:column;gap:4px;padding:14px 16px 14px 44px;border:1px solid var(--line);border-radius:12px;background:var(--card-tint);cursor:pointer;}
+.fulfill-option:has(input:checked){border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset;}
+.fulfill-option input{position:absolute;left:16px;top:16px;width:18px;height:18px;margin:0;accent-color:var(--brass);}
+.fulfill-title{font-weight:600;font-size:15px;}
+.fulfill-sub{font-size:13px;line-height:1.4;color:var(--ivory-dim);}
+.pers-ship-fields{display:contents;}
+.pers-ship-fields[hidden]{display:none;}
+@media (max-width:600px){.fulfill-choice{grid-template-columns:1fr;}}

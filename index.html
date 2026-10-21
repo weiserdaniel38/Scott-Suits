@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261021body">
+<link rel="stylesheet" href="./style.css?v=20261021shiptax">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -482,9 +482,24 @@
     <div class="wiz-progress" id="persProgress"></div>
     <div class="wiz-status"><div class="wiz-cheer"></div><button type="button" class="wiz-pct" data-stage="pers" title="Go to what&rsquo;s left"></button></div>
   </div>
+  <!-- Ship to me (flat shipping + sales tax at checkout) or pick up in
+       store (no shipping, no tax). Read by fulfillmentChoice() in main.js;
+       the price under "Ship to me" comes from SHIPPING_FLAT_USD in config.js. -->
+  <div class="fulfill-choice" role="radiogroup" aria-label="Delivery">
+    <label class="fulfill-option">
+      <input type="radio" name="fulfillment" value="ship" checked>
+      <span class="fulfill-title">Ship to me</span>
+      <span class="fulfill-sub" id="fulfillShipSub">Shipping + sales tax added at checkout</span>
+    </label>
+    <label class="fulfill-option">
+      <input type="radio" name="fulfillment" value="pickup">
+      <span class="fulfill-title">Pick up in store</span>
+      <span class="fulfill-sub">No shipping, no tax. We'll contact you when it's ready.</span>
+    </label>
+  </div>
   <div class="meas-intro">
-    <h3>Where should we send it?</h3>
-    <p class="sub">Start typing your street address and pick it from the list &mdash; the fastest way to get your suit to the right door.</p>
+    <h3 id="persIntroTitle">Where should we send it?</h3>
+    <p class="sub" id="persIntroSub">Start typing your street address and pick it from the list &mdash; the fastest way to get your suit to the right door.</p>
   </div>
 
   <div class="pers-grid">
@@ -500,6 +515,7 @@
       <label for="customerEmail">Email</label>
       <div class="measure-input-wrap"><input type="email" id="customerEmail" placeholder="Email address" autocomplete="email"></div>
     </div>
+    <div class="pers-ship-fields" id="shipAddressFields">
     <div class="measure-field pers-full address-field-with-suggestions">
       <label for="shippingAddress1">Street address</label>
       <div class="measure-input-wrap"><input type="text" id="shippingAddress1" placeholder="Start typing your address..." autocomplete="address-line1"></div>
@@ -524,6 +540,7 @@
     <div class="measure-field">
       <label for="shippingCountry">Country</label>
       <div class="measure-input-wrap"><input type="text" id="shippingCountry" placeholder="Country" autocomplete="country-name" value="United States"></div>
+    </div>
     </div>
   </div>
   <p class="pers-total" id="orderTotalNote" hidden></p>
@@ -776,10 +793,10 @@
 <!-- ==================== END TEMP QA NAV BAR ==================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="./config.js?v=20261020stripe"></script>
+<script src="./config.js?v=20261021shiptax"></script>
 <script src="./catalog.js?v=20261021body"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261021body"></script>
+<script src="./main.js?v=20261021shiptax"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
