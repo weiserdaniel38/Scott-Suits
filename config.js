@@ -72,4 +72,4 @@ const SHIPPING_LIVE_RATES = true;
 // we will next week -- come explore and design your suit." Shoppers can
 // still design and submit as normal; this is only a message. Set this to
 // false once orders are open to remove the notice.
-const ORDERS_OPENING_SOON = true;
+const ORDERS_OPENING_SOON = false;
