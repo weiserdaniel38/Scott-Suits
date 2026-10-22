@@ -16,12 +16,17 @@ type Category = { column: string; options?: Option[]; colorFamilies?: { options?
 export type Catalog = Record<string, Category>;
 // Embroidery fonts and colors from public.factory_codes (list "embroideries").
 export type EmbCodes = { fonts: { code: string; name: string }[]; colors: { code: string; name: string }[] };
+// The factory's allowed range (cm) for each measurement position, from
+// public.factory_codes (lists "bodyMeasurements" / "finishedMeasurements").
+export type SizeRanges = Record<string, { name: string; min: number; max: number }>;
 
 export type BuildInput = {
   row: Row;
   jacket: Catalog;
   pants: Catalog;
   emb: { MXF?: EmbCodes; MXK?: EmbCodes };
+  // For the measurement type of this suit (body or finished).
+  ranges?: { MXF?: SizeRanges; MXK?: SizeRanges };
   height: number;
   heightUnit: "cm" | "in";
   weight: number;
@@ -149,7 +154,7 @@ function embFont(codes: EmbCodes | undefined, site: string): string {
   return hit ? s(hit.code) : "";
 }
 
-function sizes(row: Row, list: [string, string][], label: string, warnings: string[]) {
+function sizes(row: Row, list: [string, string][], label: string, warnings: string[], ranges?: SizeRanges) {
   const out: { positionEcode: string; size: number }[] = [];
   for (const [col, code] of list) {
     const n = Number(row[col]);
@@ -157,7 +162,15 @@ function sizes(row: Row, list: [string, string][], label: string, warnings: stri
       if (!out.some((x) => x.positionEcode === code)) warnings.push(label + ": no " + col.replace(/_/g, " ") + " measurement.");
       continue;
     }
-    out.push({ positionEcode: code, size: Math.round(n * 10) / 10 });
+    const size = Math.round(n * 10) / 10;
+    // The factory refuses a size outside its range, so say which one now.
+    const r = ranges && ranges[code];
+    if (r && (size < r.min || size > r.max)) {
+      const msg = label + ": " + col.replace(/^body_/, "").replace(/_h$/, "_height").replace(/_/g, " ") + " is " + size + " cm, outside the factory's " +
+        r.min + " to " + r.max + " cm for " + r.name.replace(/\s*\((L|R)\)\s*$/i, "") + ". Check it was entered in cm.";
+      if (!warnings.includes(msg)) warnings.push(msg);
+    }
+    out.push({ positionEcode: code, size });
   }
   return out;
 }
@@ -293,7 +306,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   const details: Record<string, unknown>[] = [{
     categoryCode: "MXF",
     crafts: [...new Set(jc)].join(","),
-    orderSizes: sizes(row, bodyMode ? JACKET_BODY : JACKET_SIZES, "Jacket", warnings),
+    orderSizes: sizes(row, bodyMode ? JACKET_BODY : JACKET_SIZES, "Jacket", warnings, input.ranges?.MXF),
     orderEmbs: jacketEmbs,
     ...(bodyMode ? { versionStyle: fit(row.jacket_fit) } : {}),
   }];
@@ -314,7 +327,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     details.push({
       categoryCode: "MXK",
       crafts: [...new Set(pc)].join(","),
-      orderSizes: sizes(row, bodyMode ? PANTS_BODY : PANTS_SIZES, "Trousers", warnings),
+      orderSizes: sizes(row, bodyMode ? PANTS_BODY : PANTS_SIZES, "Trousers", warnings, input.ranges?.MXK),
       orderEmbs: pantsEmbs,
       ...(bodyMode ? { versionStyle: fit(row.pants_fit) } : {}),
     });
