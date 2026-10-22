@@ -5348,7 +5348,7 @@ function renderTailorChecklist() {
   box.innerHTML =
     '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
     '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
-  // Plain-text copy with blanks, to paste into Notes or a message and fill in.
+  // Plain-text copy to paste into Notes or a message and type the numbers in.
   const lines = ["Scott's Suits suit measurements"];
   box.querySelector(".tailor-checklist-intro").textContent =
     "Have the tailor take these suit measurements and write them down, then type them into the boxes below.";
@@ -5377,7 +5377,7 @@ function renderTailorChecklist() {
     const blank = document.createElement("span");
     blank.className = "tailor-checklist-blank";
     blank.textContent = m.id === "height" ? "ft / in" : m.unit || "cm";
-    lines.push(m.label + ": ______ " + blank.textContent);
+    lines.push(m.label + " (" + blank.textContent.replace(/ /g, "") + "): ");
     li.append(name, blank);
     list.appendChild(li);
   });

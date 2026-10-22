@@ -1969,7 +1969,7 @@ body.order-done-view > .process{display:none !important;}
 .tailor-checklist-list{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));column-gap:28px;}
 .tailor-checklist-part{grid-column:1 / -1;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--brass);font-weight:600;margin:14px 0 4px;}
 .tailor-checklist-part:first-child{margin-top:0;}
-.tailor-checklist-item{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px;color:var(--ivory);}
+.tailor-checklist-item{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ivory);}
 .tailor-checklist-name{min-width:0;}
 .tailor-checklist-name small{display:block;font-size:11.5px;color:var(--ivory-dim);line-height:1.4;margin-top:2px;}
 .tailor-checklist-blank{flex:0 0 auto;min-width:84px;text-align:right;font-size:12px;color:var(--ivory-dim);}
