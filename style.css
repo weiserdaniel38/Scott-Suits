@@ -1957,7 +1957,7 @@ body.order-done-view > .process{display:none !important;}
   .tailor-finder-form .btn-primary{width:100%;}
   .admin-tailor{flex-direction:column;}
 }
-.tailor-card a.tailor-card-map{align-self:flex-start;margin-top:6px;padding:8px 14px;border:1px solid var(--brass);color:var(--brass);text-decoration:none;font-weight:600;font-size:13px;}
-.tailor-card a.tailor-card-map:hover{background:var(--brass);color:var(--ink, #fff);}
+.tailor-card a.tailor-card-map{align-self:flex-start;margin-top:4px;color:var(--brass);text-decoration:underline;text-decoration-color:currentColor;font-weight:600;font-size:13px;}
+.tailor-card a.tailor-card-map:hover{color:var(--ivory);}
 .tailor-finder-form .measure-field{flex:1 1 360px;}
 .tailor-finder .address-suggestions{top:calc(100% + 6px);border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 10px 30px rgba(34,30,25,0.12);overflow-x:hidden;}
