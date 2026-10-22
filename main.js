@@ -134,7 +134,7 @@ function itemPriceUsd(item) {
 // "Body measurements" (measureMode); height and weight are always asked.
 function activeMeasurements() {
   return MEASUREMENTS.filter(
-    (m) => (m.part === "body" || (m.mode || "finished") === measureMode) && measurementForType(m, currentSuitType)
+    (m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === measureMode) && measurementForType(m, currentSuitType)
   );
 }
 
@@ -920,6 +920,7 @@ function renderProfileMeasureGrid(values) {
   profileMeasureGrid.innerHTML = "";
   let lastPart = null;
   MEASUREMENTS.forEach((m) => {
+    if (m.factoryOptional) return;
     if (m.part !== lastPart) {
       const h = document.createElement("h4");
       h.className = "measure-part-heading";

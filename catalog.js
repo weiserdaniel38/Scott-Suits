@@ -472,25 +472,28 @@ const PANTS_CATALOG_GROUPS = [
 // min/max are the factory's own limits for each measurement (from its Open
 // API, public.factory_codes; calf and height/weight have none there, so
 // they get sensible ones); the site won't take a value outside them.
+// factoryOptional: the factory doesn't require it (its "required" flag is 0
+// for that position), so the customer isn't asked for it. Kept here so older
+// orders and saved profiles that have the value still show and send it.
 const MEASUREMENTS = [
   { id: "height", label: "Height", part: "body", unit: "in", step: "0.5", min: 48, max: 96 },
   { id: "weight", label: "Weight", part: "body", unit: "lb", step: "1", min: 70, max: 500 },
   { id: "shoulder", label: "Shoulder", part: "jacket", min: 31, max: 72 },
   { id: "sleeve_length", label: "Sleeve Length", part: "jacket", min: 20, max: 85 },
-  { id: "wrist", label: "Wrist", part: "jacket", min: 20, max: 90 },
+  { id: "wrist", label: "Wrist", part: "jacket", min: 20, max: 90, factoryOptional: true },
   { id: "chest", label: "Chest", part: "jacket", min: 72, max: 211 },
   { id: "stomach", label: "Stomach", part: "jacket", min: 60, max: 221 },
-  { id: "front_jacket", label: "Front Jacket", part: "jacket", min: 47, max: 108 },
+  { id: "front_jacket", label: "Front Jacket", part: "jacket", min: 47, max: 108, factoryOptional: true },
   { id: "back_jacket", label: "Back Jacket", part: "jacket", min: 47, max: 101 },
-  { id: "bicep", label: "Bicep", part: "jacket", min: 26, max: 86 },
+  { id: "bicep", label: "Bicep", part: "jacket", min: 26, max: 86, factoryOptional: true },
   { id: "hips", label: "Hips", part: "pants", min: 65, max: 243 },
   { id: "waist", label: "Waist", part: "pants", min: 58, max: 221 },
   { id: "leg_length", label: "Full Pants Length", part: "pants", min: 40, max: 135 },
   { id: "crotch", label: "Crotch", part: "pants", min: 50, max: 132 },
   { id: "thigh", label: "Thigh", part: "pants", min: 46, max: 137 },
-  { id: "knee", label: "Knee", part: "pants", min: 30, max: 124 },
-  { id: "calf", label: "Calf", part: "pants", min: 25, max: 90 },
-  { id: "cuff", label: "Cuff", part: "pants", min: 26, max: 80 },
+  { id: "knee", label: "Knee", part: "pants", min: 30, max: 124, factoryOptional: true },
+  { id: "calf", label: "Calf", part: "pants", min: 25, max: 90, factoryOptional: true },
+  { id: "cuff", label: "Cuff", part: "pants", min: 26, max: 80, factoryOptional: true },
   // Body measurements (mode "body"): the customer measures themselves and
   // picks a fit; the factory adds its own allowances. Every entry above
   // without a `mode` is a finished-garment measurement. Each id is its

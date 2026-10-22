@@ -99,6 +99,9 @@ const JACKET_SIZES: [string, string][] = [
   ["chest", "XF01"], ["stomach", "XF02"], ["bicep", "XF04"], ["sleeve_length", "XF05"], ["sleeve_length", "XF06"],
   ["back_jacket", "XF07"], ["shoulder", "XF08"], ["front_jacket", "XF11"], ["wrist", "XF12"],
 ];
+// Positions the factory doesn't require (bicep, front length, cuff, knee,
+// bottom). The site no longer asks for them, so a missing one is no warning.
+const OPTIONAL_SIZES = new Set(["XF04", "XF11", "XF12", "XK08", "XK07"]);
 const PANTS_SIZES: [string, string][] = [
   ["waist", "XK01"], ["hips", "XK02"], ["thigh", "XK03"], ["crotch", "XK04"], ["leg_length", "XK05"], ["leg_length", "XK06"],
   ["knee", "XK08"], ["cuff", "XK07"],
@@ -159,7 +162,7 @@ function sizes(row: Row, list: [string, string][], label: string, warnings: stri
   for (const [col, code] of list) {
     const n = Number(row[col]);
     if (row[col] === null || row[col] === undefined || row[col] === "" || !isFinite(n) || n <= 0) {
-      if (!out.some((x) => x.positionEcode === code)) warnings.push(label + ": no " + col.replace(/_/g, " ") + " measurement.");
+      if (!OPTIONAL_SIZES.has(code) && !out.some((x) => x.positionEcode === code)) warnings.push(label + ": no " + col.replace(/_/g, " ") + " measurement.");
       continue;
     }
     const size = Math.round(n * 10) / 10;
