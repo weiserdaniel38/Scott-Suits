@@ -67,14 +67,14 @@ create trigger partner_tailors_touch
   before update on public.partner_tailors
   for each row execute function public.partner_tailors_touch();
 
--- First partner tailors. lat/lng are approximate; saving each one once in My Account > Partner Tailors looks up the exact spot.
+-- First partner tailors (lat/lng looked up with Geoapify).
 insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
 select 'Saveway Cleaners', '947 Allwood Rd', 'Clifton', 'NJ', '07012',
-       40.8487, -74.1590
+       40.8523, -74.1730
  where not exists (select 1 from public.partner_tailors where name = 'Saveway Cleaners');
 insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
 select 'Ziker Cleaners & Joe Z Tailoring', '2330 South Bend Ave', 'South Bend', 'IN', '46635',
-       41.6938, -86.2160
+       41.7007, -86.2149
  where not exists (select 1 from public.partner_tailors where name = 'Ziker Cleaners & Joe Z Tailoring');
 
 notify pgrst, 'reload schema';
