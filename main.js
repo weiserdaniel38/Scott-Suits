@@ -988,8 +988,6 @@ function greetAsNewCustomer() {
 function updateWelcomeGreeting() {
   const heroWelcome = document.getElementById("heroWelcome");
   const accountGreetingWord = document.getElementById("accountGreetingWord");
-  const welcomeIntro = document.getElementById("welcomeIntro");
-  if (welcomeIntro) welcomeIntro.hidden = !!currentUser;
   if (!currentUser) {
     if (heroWelcome) heroWelcome.hidden = true;
     return;
