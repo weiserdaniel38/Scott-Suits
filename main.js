@@ -5241,11 +5241,11 @@ function initAddressAutocomplete() {
 initAddressAutocomplete();
 
 // ---------------------------------------------------------------------------
-// Partner tailors (supabase/sql/21_partner_tailors.sql). Customers type a ZIP
-// code on the Measurements step and see the closest tailors that measure for
-// us; the admin keeps the list in My Account > Partner Tailors. Places are
-// turned into lat/lng with Geoapify (same key as the address autocomplete):
-// the customer's ZIP when they search, a tailor's address when it's saved.
+// Partner tailors (supabase/sql/21_partner_tailors.sql). Customers type their
+// address (with suggestions) or ZIP on the Measurements step and see the
+// closest tailors that measure for us; the admin keeps the list in My
+// Account > Partner Tailors. Places are turned into lat/lng with Geoapify (same key as the address autocomplete):
+// the customer's address when they search, a tailor's address when it's saved.
 const TAILOR_MAX_MILES = 100;
 const TAILOR_MAX_RESULTS = 5;
 
@@ -5340,18 +5340,24 @@ function initTailorFinder() {
   const panel = document.getElementById("tailorFinderPanel");
   const form = document.getElementById("tailorFinderForm");
   const input = document.getElementById("tailorZipInput");
+  const sugList = document.getElementById("tailorAddressSuggestions");
   const btn = document.getElementById("tailorFinderBtn");
   const msg = document.getElementById("tailorFinderMsg");
   const results = document.getElementById("tailorResults");
   if (!toggle || !panel || !form || !input || !results) return;
+  // Set when the customer picks a suggested address, so the search can use
+  // its exact spot instead of looking the text up again.
+  let picked = null;
 
   toggle.addEventListener("click", () => {
     panel.hidden = !panel.hidden;
     toggle.classList.toggle("open", !panel.hidden);
     toggle.setAttribute("aria-expanded", String(!panel.hidden));
     if (!panel.hidden && !input.value) {
-      const shipZip = normalizeZip((document.getElementById("shippingZip") || {}).value);
-      if (shipZip) input.value = shipZip;
+      const val = (id) => ((document.getElementById(id) || {}).value || "").trim();
+      const shipZip = normalizeZip(val("shippingZip"));
+      const street = val("shippingAddress1");
+      if (shipZip) input.value = street ? [street, val("shippingCity"), (val("shippingState") + " " + shipZip).trim()].filter(Boolean).join(", ") : shipZip;
     }
   });
 
@@ -5360,15 +5366,17 @@ function initTailorFinder() {
     msg.hidden = !text;
   };
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  async function search() {
     results.innerHTML = "";
-    const zip = normalizeZip(input.value);
-    if (!zip) {
-      say("Please enter a 5-digit US ZIP code.");
+    const where = input.value.trim().replace(/\s+/g, " ");
+    const zip = normalizeZip(where);
+    const zipOnly = /^\d{5}(-\d{4})?$/.test(where);
+    if (!picked && !zipOnly && where.length < 5) {
+      say("Please enter your address, or a 5-digit ZIP code.");
       return;
     }
-    say("Looking for tailors near " + zip + "…");
+    const nearText = zipOnly ? zip : "you";
+    say("Looking for tailors near " + nearText + "…");
     if (btn) btn.disabled = true;
     try {
       const { data, error } = await getSupabase()
@@ -5381,7 +5389,7 @@ function initTailorFinder() {
         say("We're still building our list of partner tailors. Check back soon, or measure yourself using the fields below.");
         return;
       }
-      const here = await geocodeUs({ postcode: zip, type: "postcode" });
+      const here = picked || (zipOnly ? await geocodeUs({ postcode: zip, type: "postcode" }) : await geocodeUs({ text: where }));
       let list;
       if (here) {
         list = tailors
@@ -5389,16 +5397,19 @@ function initTailorFinder() {
           .map((t) => ({ t, miles: milesBetween(here, { lat: t.lat, lng: t.lng }) }))
           .filter((x) => x.miles <= TAILOR_MAX_MILES)
           .sort((a, b) => a.miles - b.miles);
+      } else if (!zip) {
+        say("We couldn’t find that address. Please pick one from the list as you type, or try just your ZIP code.");
+        return;
       } else {
-        // ZIP lookup unavailable: fall back to tailors in the same ZIP area.
+        // Map lookup unavailable: fall back to tailors in the same ZIP area.
         list = tailors.filter((t) => normalizeZip(t.zip).slice(0, 3) === zip.slice(0, 3)).map((t) => ({ t, miles: null }));
       }
       list = list.slice(0, TAILOR_MAX_RESULTS);
       if (!list.length) {
-        say("We don't have a partner tailor near " + zip + " yet. You can still measure yourself using the fields below, or contact us and we'll help.");
+        say("We don't have a partner tailor near " + nearText + " yet. You can still measure yourself using the fields below, or contact us and we'll help.");
         return;
       }
-      say(list.length === 1 ? "1 partner tailor near " + zip + ":" : list.length + " partner tailors near " + zip + ", closest first:");
+      say(list.length === 1 ? "The closest partner tailor to " + nearText + ":" : list.length + " partner tailors near " + nearText + ", closest first:");
       list.forEach((x) => results.appendChild(buildTailorCard(x.t, x.miles)));
     } catch (err) {
       console.error("Tailor search failed:", err);
@@ -5406,7 +5417,96 @@ function initTailorFinder() {
     } finally {
       if (btn) btn.disabled = false;
     }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    closeSuggestions();
+    search();
   });
+
+  // Address suggestions as they type, from Geoapify (same as the shipping
+  // address field). Picking one searches right away.
+  let sugTimer = null;
+  let sugController = null;
+  let suggestions = [];
+  let highlighted = -1;
+  function closeSuggestions() {
+    if (!sugList) return;
+    sugList.innerHTML = "";
+    sugList.classList.remove("open");
+    suggestions = [];
+    highlighted = -1;
+  }
+  function pick(r) {
+    input.value = r.formatted || r.address_line1 || input.value;
+    picked = typeof r.lat === "number" && typeof r.lon === "number" ? { lat: r.lat, lng: r.lon } : null;
+    closeSuggestions();
+    search();
+  }
+  function setHighlighted(i) {
+    const items = sugList.querySelectorAll(".address-suggestion");
+    items.forEach((el) => el.classList.remove("highlighted"));
+    if (i >= 0 && i < items.length) items[i].classList.add("highlighted");
+    highlighted = i;
+  }
+  input.addEventListener("input", () => {
+    picked = null;
+    if (!sugList || typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
+    const text = input.value.trim();
+    clearTimeout(sugTimer);
+    // A bare ZIP is searched as typed; suggestions are for street addresses.
+    if (text.length < 3 || /^\d+$/.test(text)) {
+      closeSuggestions();
+      return;
+    }
+    sugTimer = setTimeout(() => {
+      if (sugController) sugController.abort();
+      sugController = new AbortController();
+      const url = "https://api.geoapify.com/v1/geocode/autocomplete?text=" + encodeURIComponent(text) +
+        "&filter=countrycode:us&format=json&limit=5&apiKey=" + encodeURIComponent(GEOAPIFY_API_KEY);
+      fetch(url, { signal: sugController.signal })
+        .then((res) => res.json())
+        .then((data) => {
+          suggestions = (data && data.results) || [];
+          highlighted = -1;
+          sugList.innerHTML = "";
+          if (!suggestions.length) {
+            sugList.classList.remove("open");
+            return;
+          }
+          suggestions.forEach((r) => {
+            const item = document.createElement("div");
+            item.className = "address-suggestion";
+            item.textContent = r.formatted || r.address_line1 || "";
+            // mousedown (not click) so this fires before the input's blur closes the list
+            item.addEventListener("mousedown", (e) => {
+              e.preventDefault();
+              pick(r);
+            });
+            sugList.appendChild(item);
+          });
+          sugList.classList.add("open");
+        })
+        .catch(() => {});
+    }, 300);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted(Math.min(highlighted + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted(Math.max(highlighted - 1, 0));
+    } else if (e.key === "Enter" && highlighted >= 0) {
+      e.preventDefault();
+      pick(suggestions[highlighted]);
+    } else if (e.key === "Escape") {
+      closeSuggestions();
+    }
+  });
+  input.addEventListener("blur", () => setTimeout(closeSuggestions, 150));
 }
 initTailorFinder();
 
