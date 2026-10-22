@@ -1,9 +1,9 @@
-// Scott Suits -- emails the shop admin each time an order is placed: when
-// Stripe confirms the payment, and right away for an admin "Place order
-// without payment" order. One email per order, however many suits.
+// Scott Suits -- emails the shop admin each time an order is paid: when
+// Stripe confirms the payment. Admin "Place order without payment" orders
+// don't send one. One email per order, however many suits.
 //
 // How it's called: by the database (supabase/sql/19_order_email_alert.sql),
-// the moment an order turns paid or an admin order is saved:
+// the moment an order turns paid:
 //   x-webhook-secret: <secret>   { order_id: "..." }
 // The function reads the order itself, and sends only to the accounts in
 // public.admins, so the request can't point the email at anyone else.
