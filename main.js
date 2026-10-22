@@ -5358,7 +5358,8 @@ function renderTailorChecklist() {
     "Have the tailor take these suit measurements and write them down, then type them into the boxes below. Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
   const list = box.querySelector(".tailor-checklist-list");
   let lastPart = null;
-  MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && measurementForType(m, currentSuitType)).forEach((m) => {
+  // Height and weight are the customer's own to type in, not the tailor's.
+  MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && m.part !== "body" && measurementForType(m, currentSuitType)).forEach((m) => {
     const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
     if (part !== lastPart) {
       lines.push("", measurePartHeading(part).toUpperCase());
@@ -5378,17 +5379,13 @@ function renderTailorChecklist() {
       hint.textContent = m.hint;
       name.appendChild(hint);
     }
-    const blank = document.createElement("span");
-    blank.className = "tailor-checklist-blank";
-    // Only height and weight carry a unit; the note says the rest are cm.
-    blank.textContent = m.id === "height" ? "ft / in" : m.unit || "";
-    lines.push(m.label + (blank.textContent ? " (" + blank.textContent.replace(/ /g, "") + ")" : "") +
+    lines.push(m.label +
       (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") + ": ");
-    li.append(name, blank);
+    li.append(name);
     list.appendChild(li);
   });
-  box.querySelector(".tailor-checklist-foot").textContent = "ALL MEASUREMENTS IN CENTIMETERS, EXCEPT HEIGHT AND WEIGHT.";
-  lines.push("", "ALL MEASUREMENTS IN CENTIMETERS, EXCEPT HEIGHT AND WEIGHT.");
+  box.querySelector(".tailor-checklist-foot").textContent = "ALL MEASUREMENTS IN CENTIMETERS.";
+  lines.push("", "ALL MEASUREMENTS IN CENTIMETERS.");
   const text = lines.join("\n");
   const copyBtn = box.querySelector(".tailor-checklist-copy");
   copyBtn.addEventListener("click", async () => {
