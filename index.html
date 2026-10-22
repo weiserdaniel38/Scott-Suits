@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261022grandopen">
+<link rel="stylesheet" href="./style.css?v=20261022protect">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -580,6 +580,26 @@
     </div>
     </div>
   </div>
+  <!-- Alteration Protection: the customer must pick Yes or No before
+       paying. No asks "Are you sure?" first (alterationConfirmOverlay).
+       Price is ALTERATION_PROTECTION_USD in config.js; see
+       alterationChoice() in main.js. -->
+  <div class="protect-block" id="alterationBlock">
+    <h3>Alteration Protection</h3>
+    <p class="sub" id="alterationIntro">Add Alteration Protection for $100 and get three free alterations, so if anything needs adjusting after your suit arrives, we fix it at no cost.</p>
+    <div class="fulfill-choice" role="radiogroup" aria-label="Alteration Protection">
+      <label class="fulfill-option">
+        <input type="radio" name="alterationProtection" value="yes">
+        <span class="fulfill-title">Yes, protect my suit</span>
+        <span class="fulfill-sub" id="alterationYesSub">$100 &middot; three free alterations</span>
+      </label>
+      <label class="fulfill-option">
+        <input type="radio" name="alterationProtection" value="no">
+        <span class="fulfill-title">No thanks</span>
+        <span class="fulfill-sub">Any alterations are at my own cost</span>
+      </label>
+    </div>
+  </div>
   <p class="pers-total" id="orderTotalNote" hidden></p>
   <div class="admin-order" id="adminOrderWrap" hidden>
     <p><strong>Admin</strong> You're signed in as the shop admin.</p>
@@ -648,7 +668,7 @@
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-pants.png?v=20261006h" alt=""></span><div class="hiw-step-body"><span class="hiw-num">Step 2</span><h3>Design every detail</h3><p>Pick your fabric, which sets the price, then choose the lapel, pockets, buttons, lining and more. Add a monogram, or upload your own photo for the lining (+$80). For the pants, match your jacket fabric or go with a contrast. Every style option is included except full canvas (+$200).</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 3</span><h3>See your suit before you buy</h3><p>Get a free picture of your finished suit with all your choices, so you know exactly what you're ordering. Sign in to create one.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 4</span><h3>Add your measurements</h3><p>Enter the sizes of a suit that fits you well, or measure your body and pick a fit and our tailors do the rest. You can also estimate from your usual size in seconds. We check every number is in a sensible range, and if you have an account your measurements are saved for next time.</p></div></li>
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6.5 14.5h4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 5</span><h3>Choose delivery and pay</h3><p>Ship to your door at the cheapest carrier rate, or pick up in store for free. Pay securely by card, Apple Pay, Google Pay or Klarna, and you'll get a confirmation right away.</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6.5 14.5h4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 5</span><h3>Choose delivery and pay</h3><p>Ship to your door at the cheapest carrier rate, or pick up in store for free. Add Alteration Protection for $100 to get three free alterations. Pay securely by card, Apple Pay, Google Pay or Klarna, and you'll get a confirmation right away.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2z"/><path d="M14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 6</span><h3>Follow your suit and reorder anytime</h3><p>In My Account, watch your suit move from cutting and sewing all the way to delivery, with a tracking link once it ships. Love it? Reorder any past order in one tap.</p></div></li>
     </ol>
     <div class="hiw-foot">
@@ -780,6 +800,20 @@
   </div>
 </div>
 
+<!-- Asked when a customer picks "No thanks" for Alteration Protection.
+     See the alteration code in main.js. -->
+<div class="confirm-overlay" id="alterationConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="alterationConfirmTitle">
+  <div class="confirm-panel">
+    <span class="confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6Z"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg></span>
+    <h3 id="alterationConfirmTitle">Are you sure?</h3>
+    <p id="alterationConfirmText">Without Alteration Protection, any alterations are at your own cost, and Scott Suits takes no responsibility for a suit that doesn't fit because of wrong or bad measurements. With it, you get three free alterations for $100.</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="alterationDeclineBtn">Yes, I'm sure</button>
+      <button type="button" class="btn-primary" id="alterationAddBtn">Add protection</button>
+    </div>
+  </div>
+</div>
+
 <!-- Asked before a cart suit's "Edit" link replaces a suit still being
      designed that isn't in the cart yet. See editCartItem() in main.js. -->
 <div class="confirm-overlay" id="editSuitConfirmOverlay" role="dialog" aria-modal="true" aria-labelledby="editSuitConfirmTitle">
@@ -839,10 +873,10 @@
 <!-- ==================== END TEMP QA NAV BAR ==================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="./config.js?v=20261022live"></script>
+<script src="./config.js?v=20261022protect"></script>
 <script src="./catalog.js?v=20261022quips"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261022grandopen"></script>
+<script src="./main.js?v=20261022protect"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 

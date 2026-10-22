@@ -55,6 +55,11 @@ const SHIPPO_KEY = env("SHIPPO_API_KEY");
 const MARKUP_CENTS = Math.max(0, Math.round(Number(env("SHIPPING_MARKUP_USD", "0")) * 100) || 0);
 const BOX_IN = env("SHIP_BOX_IN", "24x19x2").split(/x/i).map((n) => n.trim());
 const BOX_LB = env("SHIP_BOX_LB", "3");
+// Alteration Protection add-on, per suit/item (three free alterations).
+// Charged from this price, never from what the website sent.
+const PROTECTION_CENTS = Math.max(0, Math.round(Number(env("ALTERATION_PROTECTION_USD", "100")) * 100) || 0);
+// Stripe tax code for a general service (only matters with Stripe Tax on).
+const TAX_CODE_SERVICE = "txcd_20030000";
 // Where suits are shipped from.
 const SHIP_FROM = {
   name: "Scott Suits",
@@ -120,6 +125,7 @@ type OrderRow = {
   suit_number: number | null;
   suit_type: string | null;
   item_price_usd: number | string | null;
+  alteration_protection: boolean | null;
   customer_email: string | null;
   payment_status: string | null;
   admin_no_payment: boolean | null;
@@ -139,7 +145,7 @@ async function loadOrder(orderId: string): Promise<OrderRow[]> {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "order_id, suit_number, suit_type, item_price_usd, customer_email, payment_status, admin_no_payment, stripe_session_id, created_at, " +
+      "order_id, suit_number, suit_type, item_price_usd, alteration_protection, customer_email, payment_status, admin_no_payment, stripe_session_id, created_at, " +
         "fulfillment, customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country",
     )
     .eq("order_id", orderId)
@@ -165,6 +171,19 @@ export function lineItems(rows: OrderRow[]) {
       },
     };
   });
+  // One Alteration Protection line covering every protected suit.
+  const protectedCount = rows.filter((r) => r.alteration_protection).length;
+  if (protectedCount && PROTECTION_CENTS > 0) {
+    items[String(rows.length)] = {
+      quantity: protectedCount,
+      price_data: {
+        currency: "usd",
+        unit_amount: PROTECTION_CENTS,
+        tax_behavior: "exclusive",
+        product_data: { name: "Alteration Protection (3 free alterations)", tax_code: TAX_CODE_SERVICE },
+      },
+    };
+  }
   return items;
 }
 

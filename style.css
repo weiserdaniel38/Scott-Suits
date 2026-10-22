@@ -1878,6 +1878,11 @@ body.order-done-view > .process{display:none !important;}
 .fulfill-option:has(input:checked){border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset;}
 .fulfill-option input{position:absolute;left:16px;top:16px;width:18px;height:18px;margin:0;accent-color:var(--brass);}
 .fulfill-title{font-weight:600;font-size:15px;}
+.protect-block{margin:28px 0 0;}
+.protect-block h3{font-size:22px;line-height:1.2;font-weight:500;margin:0 0 6px;}
+.protect-block .sub{color:var(--ivory-dim);font-size:14px;line-height:1.5;margin:0 0 14px;}
+.protect-block .fulfill-choice{margin-bottom:0;}
+.protect-block.needs-choice .fulfill-option{border-color:#c0563b;}
 .fulfill-sub{font-size:13px;line-height:1.4;color:var(--ivory-dim);}
 .pers-ship-fields{display:contents;}
 .pers-ship-fields[hidden]{display:none;}
