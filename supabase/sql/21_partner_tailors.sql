@@ -69,9 +69,9 @@ create trigger partner_tailors_touch
 
 -- First partner tailor. lat/lng are approximate (Clifton, NJ 07012); saving
 -- it once in My Account > Partner Tailors looks up the exact spot.
-insert into public.partner_tailors (name, address, city, state, zip, note, lat, lng)
+insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
 select 'Saveway Cleaners', '947 Allwood Rd', 'Clifton', 'NJ', '07012',
-       'Ask for Sam and mention Scott''s Suits.', 40.8487, -74.1590
+       40.8487, -74.1590
  where not exists (select 1 from public.partner_tailors where name = 'Saveway Cleaners');
 
 notify pgrst, 'reload schema';
