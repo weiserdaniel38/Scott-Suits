@@ -536,6 +536,7 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .confirm-panel{max-width:340px;width:100%;background:var(--ink);border:1px solid var(--line);padding:24px 22px;}
 .confirm-panel h3{font-family:'Playfair Display',serif;font-weight:600;font-size:19px;color:var(--ivory);margin:0 0 10px;}
 .confirm-panel p{font-size:13px;color:var(--ivory-dim);line-height:1.5;margin:0;}
+#alterationConfirmText{font-weight:700;color:var(--ivory);}
 .confirm-actions{display:flex;justify-content:flex-end;gap:20px;align-items:center;margin-top:20px;}
 @media(max-width:900px){
   .confirm-panel{padding:20px 18px;}
