@@ -125,6 +125,10 @@ a.navlink-btn{text-decoration:none;}
 .opening-soon-notice[hidden]{display:none;}
 .opening-soon-label{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:600;color:var(--brass);margin-bottom:6px;}
 .opening-soon-notice p{margin:0;font-size:14px;line-height:1.55;color:var(--ivory);}
+.welcome-intro{margin:0 0 26px;padding:14px 18px 15px;border:1px solid rgba(176,141,87,0.55);border-left:3px solid var(--brass);background:var(--card-tint);max-width:460px;}
+.welcome-intro[hidden]{display:none;}
+.welcome-intro-label{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:600;color:var(--brass);margin-bottom:6px;}
+.welcome-intro p{margin:0;font-size:14px;line-height:1.55;color:var(--ivory);}
 .hero-eyebrow{color:var(--ivory-dim);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;font-weight:500;}
 .hero-welcome{margin:0 0 14px;font-size:20px;font-weight:600;letter-spacing:0.01em;color:var(--brass);}
 .hero-welcome[hidden]{display:none;}

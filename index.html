@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261022reorder">
+<link rel="stylesheet" href="./style.css?v=20261022welcome">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -158,6 +158,13 @@
       <div class="opening-soon-notice" id="openingSoonNotice" role="note" hidden>
         <span class="opening-soon-label">Orders open next week</span>
         <p>We aren't accepting orders just yet, but we will be very soon. In the meantime, come explore the site and start designing your suit.</p>
+      </div>
+      <!-- Welcome intro for visitors, in the spot the opening-soon notice
+           used. Hidden by updateWelcomeGreeting() in main.js while someone is
+           signed in, since they get their own "Welcome back" line instead. -->
+      <div class="welcome-intro" id="welcomeIntro" role="note">
+        <span class="welcome-intro-label">Welcome to Scott's Suits</span>
+        <p>We're glad you're here. Every suit we make is cut to your own measurements and built with the details you choose, from the lapels to the lining. Take a look around and start designing whenever you're ready.</p>
       </div>
       <!-- "Welcome, Bob" the first time a just-created account is seen in
            this browser, "Welcome back, Bob" every other time. Filled in and
@@ -834,7 +841,7 @@
 <script src="./config.js?v=20261022live"></script>
 <script src="./catalog.js?v=20261022pants"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261022reorder"></script>
+<script src="./main.js?v=20261022welcome"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
