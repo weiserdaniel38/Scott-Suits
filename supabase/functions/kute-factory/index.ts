@@ -46,7 +46,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildFactoryOrder, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes } from "./order.ts";
+import { buildFactoryOrder, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes, type SizeRanges } from "./order.ts";
 
 const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
 const BASE = "https://platform.kutetailor.com/api";
@@ -175,6 +175,30 @@ async function loadEmbCodes(): Promise<{ MXF?: EmbCodes; MXK?: EmbCodes }> {
   return out;
 }
 
+// The factory's allowed range for each measurement position, for body or
+// finished measurements.
+async function loadSizeRanges(body: boolean): Promise<{ MXF?: SizeRanges; MXK?: SizeRanges }> {
+  const { data } = await supabase.from("factory_codes").select("category, data")
+    .eq("list", body ? "bodyMeasurements" : "finishedMeasurements").in("category", ["MXF", "MXK"]);
+  const out: Record<string, SizeRanges> = {};
+  for (const r of data || []) {
+    const list = ((r.data as Record<string, any>)?.data || []) as Record<string, any>[];
+    const ranges: SizeRanges = {};
+    for (const p of list) {
+      const code = String(p.positionCode || "");
+      const min = Number(p.minValue), max = Number(p.maxValue);
+      // Some positions are listed twice (long and short sleeve): keep the widest.
+      if (!code || !isFinite(min) || !isFinite(max)) continue;
+      const had = ranges[code];
+      ranges[code] = had
+        ? { name: had.name, min: Math.min(had.min, min), max: Math.max(had.max, max) }
+        : { name: String(p.positionName || code).trim(), min, max };
+    }
+    out[r.category] = ranges;
+  }
+  return out;
+}
+
 async function loadRow(id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("unknown suit");
   const { data, error } = await supabase.from("orders").select("*").eq("id", id).maybeSingle();
@@ -185,13 +209,15 @@ async function loadRow(id: string) {
 
 async function factoryOrder(input: Record<string, unknown>) {
   const row = await loadRow(String(input.id || ""));
-  const [{ jacket, pants }, emb] = await Promise.all([loadCatalog(), loadEmbCodes()]);
+  const [{ jacket, pants }, emb, ranges] = await Promise.all([
+    loadCatalog(), loadEmbCodes(), loadSizeRanges(String(row.measure_type || "") === "body"),
+  ]);
   // The customer's own height (inches) and weight (pounds) from the order,
   // unless the admin typed others in.
   const typedHeight = Number(input.height) || 0;
   const typedWeight = Number(input.weight) || 0;
   const built = buildFactoryOrder({
-    row, jacket, pants, emb,
+    row, jacket, pants, emb, ranges,
     height: typedHeight || Number(row.height) || 0,
     heightUnit: typedHeight ? (input.heightUnit === "cm" ? "cm" : "in") : "in",
     weight: typedWeight || Number(row.weight) || 0,
