@@ -738,6 +738,11 @@ let currentProfile = null;
 // without payment" button. This only decides what's shown: the database
 // itself refuses a no-payment order from anyone who isn't an admin.
 let currentIsAdmin = false;
+// The new-order email's "Open in admin" button links to /?admin=orders:
+// open My Account at All Orders once the admin is signed in (the sign-in
+// form first if they aren't).
+let openAdminOrdersPending = new URLSearchParams(window.location.search).get("admin") === "orders";
+if (openAdminOrdersPending) window.history.replaceState(null, "", window.location.pathname + window.location.hash);
 // Set by the QA nav bar code near the end of this file.
 let setQaNavAllowed = null;
 
@@ -767,6 +772,17 @@ async function refreshAdminStatus() {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
     else setAdminUnread(0);
+  }
+  if (openAdminOrdersPending && openAccountOverlay) {
+    if (admin) {
+      openAdminOrdersPending = false;
+      openAccountOverlay();
+      if (shipWrap) shipWrap.scrollIntoView({ block: "start" });
+    } else if (!user) {
+      openAccountOverlay();
+    } else {
+      openAdminOrdersPending = false;
+    }
   }
 }
 
