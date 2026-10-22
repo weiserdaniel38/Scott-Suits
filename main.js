@@ -1095,7 +1095,7 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status");
+    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status");
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd"));
@@ -1115,12 +1115,15 @@ async function loadOrderHistory() {
     data.forEach((row) => {
       const key = row.order_id || row.created_at;
       if (!byOrder[key]) {
-        byOrder[key] = { created_at: row.created_at, suits: [], total: 0, images: [], completed: true, ship: row };
+        byOrder[key] = { orderId: row.order_id, created_at: row.created_at, suits: [], suitNumbers: [], total: 0, images: [], completed: true, paid: false, ship: row };
         order.push(key);
       }
       byOrder[key].suits.push(row.suit_type === "jacket_only" ? "Jacket Only" : row.suit_type === "pants_only" ? "Pants Only" : "Full Suit");
       byOrder[key].total += Number(row.item_price_usd) || 0;
       if (row.status !== "completed") byOrder[key].completed = false;
+      if (row.suit_number) byOrder[key].suitNumbers.push(Number(row.suit_number));
+      // Reorder is only offered on orders that were actually paid for.
+      if (row.payment_status === "paid") byOrder[key].paid = true;
       if (row.image_url) byOrder[key].images.push(row.image_url);
     });
     pastOrdersList.innerHTML = order
@@ -1148,6 +1151,7 @@ async function loadOrderHistory() {
           "</span>" +
           shippingLineHtml(o.ship) +
           (imgs ? '<div class="past-order-imgs">' + imgs + "</div>" : "") +
+          reorderButtonsHtml(o) +
           "</div>"
         );
       })
@@ -1156,6 +1160,208 @@ async function loadOrderHistory() {
     console.error(err);
     pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
   }
+}
+
+// ============================================================
+// Reorder (My Account > Past Orders). A paid order's suits go back in the
+// cart with the same design, fabric, monograms, lining photo and
+// measurements, at today's prices. Anything no longer offered is left
+// unanswered and that suit opens in the designer to choose again;
+// otherwise the customer goes straight to checkout.
+// ============================================================
+function reorderButtonsHtml(o) {
+  if (!o.paid || !o.orderId) return "";
+  const id = escapeAttr(o.orderId);
+  let html = '<div class="past-order-reorder"><button type="button" class="past-order-reorder-btn" data-reorder="' + id + '">Reorder</button>';
+  // Several suits in one order: each can also be reordered on its own.
+  const nums = o.suitNumbers.slice().sort((a, b) => a - b);
+  if (o.suits.length > 1 && nums.length === o.suits.length) {
+    html += '<span class="past-order-reorder-one">or just ' +
+      nums.map((n) => '<button type="button" class="past-order-reorder-link" data-reorder="' + id + '" data-suit="' + n + '">Suit ' + n + "</button>").join(", ") +
+      "</span>";
+  }
+  return html + "</div>";
+}
+
+// Whether a saved option value is still one the catalog offers.
+function catalogStillOffers(cat, value) {
+  if (!cat || value === undefined || value === null || value === "") return false;
+  if (cat.retiredOptions && cat.retiredOptions.indexOf(value) !== -1) return false;
+  return (cat.options || []).some((o) => o.name === value);
+}
+
+function selectionsFromRow(catalog, row) {
+  const sel = {};
+  Object.keys(catalog).forEach((key) => {
+    const v = row[catalog[key].column];
+    if (catalogStillOffers(catalog[key], v)) sel[key] = v;
+  });
+  return sel;
+}
+
+// The customer's own lining photo, back as a data URL from the public
+// lining-photos bucket (see uploadLiningPhotos). null when it's gone.
+async function reorderLiningPhoto(row) {
+  try {
+    const client = getSupabase();
+    const url = client.storage.from("lining-photos").getPublicUrl(row.order_id + "/suit-" + (row.suit_number || 1) + ".jpg").data.publicUrl;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn("Couldn't load the lining photo for a reorder:", err);
+    return null;
+  }
+}
+
+// One order row -> a cart item, run through the designers so their own
+// rules (options that depend on other choices, a lining photo that's
+// missing, a monogram with no text) apply exactly as in the designer.
+// Leaves the designers holding this suit; the caller resets them.
+async function cartItemFromOrderRow(row) {
+  const type = row.suit_type === "jacket_only" ? "jacketOnly" : row.suit_type === "pants_only" ? "pantsOnly" : "full";
+  const jacketOnly = isJacketOnlyType(type);
+  const pantsOnly = isPantsOnlyType(type);
+  const jacket = pantsOnly ? {} : selectionsFromRow(JACKET_CATALOG, row);
+  const pants = jacketOnly ? {} : selectionsFromRow(PANTS_CATALOG, row);
+  const texts = {
+    jacket: row.jacket_monogram_text ? { monogram: row.jacket_monogram_text } : {},
+    pants: row.pants_monogram_text ? { monogram: row.pants_monogram_text } : {},
+  };
+  const liningPhoto = jacket.lining === LINING_UPLOAD_OPTION.name ? await reorderLiningPhoto(row) : null;
+
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  applySuitType(type);
+  if (liningPhoto) jacketDesigner.setLiningPhoto(liningPhoto);
+  jacketDesigner.setTexts(texts.jacket);
+  pantsDesigner.setTexts(texts.pants);
+  if (!pantsOnly) jacketDesigner.setSelections(jacket);
+  if (!jacketOnly) pantsDesigner.setSelections(pants);
+
+  const missing = []
+    .concat(pantsOnly ? [] : jacketDesigner.missingLabels())
+    .concat(jacketOnly ? [] : pantsDesigner.missingLabels());
+
+  // Measurements: the same fields the Measurements page would ask for now.
+  const measurements = { measure_type: row.measure_type === "body" ? "body" : "finished" };
+  if (row.jacket_fit) measurements.jacket_fit = row.jacket_fit;
+  if (row.pants_fit) measurements.pants_fit = row.pants_fit;
+  applyMeasureExtras(measurements);
+  let measurementsOk = true;
+  activeMeasurements().forEach((m) => {
+    const val = parseFloat(row[m.id]);
+    if (isNaN(val) || val <= 0 || !measureInRange(m, val)) measurementsOk = false;
+    else measurements[m.id] = val;
+  });
+  Object.assign(measurements, measureExtras());
+
+  const item = {
+    type,
+    jacket: pantsOnly ? {} : jacketDesigner.getSelections(),
+    pants: jacketOnly ? null : pantsDesigner.getSelections(),
+    measurements,
+    liningPhoto: pantsOnly ? null : jacketDesigner.getLiningPhoto(),
+    texts: { jacket: pantsOnly ? {} : jacketDesigner.getTexts(), pants: jacketOnly ? {} : pantsDesigner.getTexts() },
+    previewId: null,
+  };
+  if (!measurementsOk) missing.push("Measurements");
+  // Checked again at checkout (collectAndValidateOrderInput) and cleared
+  // once the suit is saved from the designer.
+  if (missing.length) item.needsReview = missing;
+  return item;
+}
+
+// Puts the designer back to a blank new suit (the cart is left alone).
+function resetDesignerForNewSuit() {
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  measureStash = {};
+  applySuitType("full");
+  setMeasureMode("finished");
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el) el.value = "";
+  });
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+}
+
+async function reorderPastOrder(orderId, suitNumber, btn) {
+  if (!currentUser || !orderId) return;
+  const label = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Adding..."; }
+  try {
+    const { data, error } = await getSupabase()
+      .from("orders")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("order_id", orderId)
+      .eq("payment_status", "paid")
+      .order("suit_number", { ascending: true });
+    if (error) throw error;
+    const rows = (data || []).filter((r) => !suitNumber || Number(r.suit_number) === suitNumber);
+    if (!rows.length) {
+      alert("Sorry, that order couldn't be found to reorder.");
+      return;
+    }
+    const items = [];
+    for (const row of rows) items.push(await cartItemFromOrderRow(row));
+    resetDesignerForNewSuit();
+    const firstIndex = cartItems.length;
+    items.forEach((item) => cartItems.push(item));
+    if (closeAccountOverlay) closeAccountOverlay();
+    markDesignStarted();
+    renderCartBar();
+    updateOrderSummaryUI();
+    updateProcessBar();
+    const reviewAt = items.findIndex((item) => item.needsReview);
+    if (reviewAt !== -1) {
+      const n = firstIndex + reviewAt;
+      loadCartItemIntoDesigner(n);
+      alert(reorderReviewMessage(n, cartItems[n].needsReview));
+    } else {
+      prefillContactDetails();
+      saveDraft();
+      goToCheckout();
+    }
+  } catch (err) {
+    console.error("Reorder failed:", err);
+    alert("Sorry, something went wrong adding that order to your cart. Please try again.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
+}
+
+function reorderReviewMessage(index, missing) {
+  const choices = missing.filter((m) => m !== "Measurements");
+  const parts = [];
+  if (choices.length) parts.push("pick a new " + choices.join(", ") + " (what you chose last time isn't offered anymore)");
+  if (missing.indexOf("Measurements") !== -1) parts.push("check your measurements");
+  return "Suit " + (index + 1) + " is in your cart with everything filled in as before. Please " + parts.join(" and ") + ", then continue to checkout.";
+}
+
+if (pastOrdersList) {
+  pastOrdersList.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-reorder]");
+    if (!btn) return;
+    const orderId = btn.getAttribute("data-reorder");
+    const suitNumber = Number(btn.getAttribute("data-suit")) || null;
+    const go = () => reorderPastOrder(orderId, suitNumber, btn);
+    if (!designerHasUnsavedWork()) return go();
+    openEditSuitConfirm(null, {
+      title: "Reorder this?",
+      text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+      confirm: "Yes, reorder",
+      onConfirm: go,
+    });
+  });
 }
 
 // ============================================================
@@ -5599,13 +5805,17 @@ function updateEditingCartNotice() {
 // dialog, same as Start Over's (see the note on startOver() below).
 const openEditSuitConfirm = (function () {
   const overlay = document.getElementById("editSuitConfirmOverlay");
-  if (!overlay) return (index) => loadCartItemIntoDesigner(index);
+  if (!overlay) return (index, custom) => (custom ? custom.onConfirm() : loadCartItemIntoDesigner(index));
   const cancelBtn = document.getElementById("editSuitCancelBtn");
   const confirmBtn = document.getElementById("editSuitConfirmBtn");
   const title = document.getElementById("editSuitConfirmTitle");
   const text = document.getElementById("editSuitConfirmText");
   let pendingIndex = null;
+  // Set when another flow (Reorder in My Account) borrows this dialog.
+  let pendingAction = null;
   let lastFocused = null;
+  const confirmLabel = confirmBtn.textContent;
+  const cancelLabel = cancelBtn.textContent;
   function onKeydown(e) {
     if (e.key === "Escape") close();
   }
@@ -5620,11 +5830,25 @@ const openEditSuitConfirm = (function () {
   });
   confirmBtn.addEventListener("click", () => {
     close();
-    if (pendingIndex !== null) loadCartItemIntoDesigner(pendingIndex);
+    if (pendingAction) pendingAction();
+    else if (pendingIndex !== null) loadCartItemIntoDesigner(pendingIndex);
   });
-  return function open(index) {
+  // open(index) asks before editing cart suit `index`; open(null, { title,
+  // text, confirm, cancel, onConfirm }) asks something else.
+  return function open(index, custom) {
     pendingIndex = index;
+    pendingAction = (custom && custom.onConfirm) || null;
     lastFocused = document.activeElement;
+    confirmBtn.textContent = (custom && custom.confirm) || confirmLabel;
+    cancelBtn.textContent = (custom && custom.cancel) || cancelLabel;
+    if (custom) {
+      if (title) title.textContent = custom.title;
+      if (text) text.textContent = custom.text;
+      overlay.classList.add("open");
+      cancelBtn.focus();
+      document.addEventListener("keydown", onKeydown);
+      return;
+    }
     if (title) title.textContent = "Edit Suit " + (index + 1) + "?";
     if (text) {
       text.textContent = pendingCommitIndex !== null && cartItems[pendingCommitIndex]
@@ -5783,6 +6007,13 @@ customerPhoneInput.addEventListener("input", () => {
 function collectAndValidateOrderInput() {
   if (!cartItems.length) {
     alert("Your cart is empty -- please go back and finish designing at least one suit before submitting.");
+    return null;
+  }
+  // A reordered suit with a choice that isn't offered anymore.
+  const reviewAt = cartItems.findIndex((item) => item.needsReview);
+  if (reviewAt !== -1) {
+    alert(reorderReviewMessage(reviewAt, cartItems[reviewAt].needsReview));
+    loadCartItemIntoDesigner(reviewAt);
     return null;
   }
 
