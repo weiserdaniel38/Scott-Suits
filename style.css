@@ -696,6 +696,8 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .measure-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:14px;}
 .measure-field{display:flex;flex-direction:column;gap:8px;}
 .measure-field label{font-size:13px;color:var(--ivory-dim);}
+.measure-field-error{font-size:12px;color:#a8402f;margin-top:-4px;line-height:1.4;}
+.measure-field-invalid .measure-input-wrap{border-color:#c8604d;}
 .measure-field-hint{font-size:11px;color:var(--ivory-dim);opacity:0.8;margin-top:-6px;line-height:1.4;}
 .measure-input-wrap select{background:none;border:none;color:var(--ivory);font-size:15px;padding:14px 0;width:100%;font-family:'Inter',sans-serif;cursor:pointer;}
 .measure-input-wrap select:focus{outline:none;}
