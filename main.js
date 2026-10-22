@@ -4845,6 +4845,7 @@ function renderMeasurementFields() {
     if (el) el.value = previousValues[id];
   });
   if (typeof renderMeasureChrome === "function") renderMeasureChrome();
+  if (typeof renderTailorChecklist === "function") renderTailorChecklist();
 }
 renderMeasurementFields();
 
@@ -5335,6 +5336,88 @@ function buildTailorCard(t, miles) {
   return card;
 }
 
+// The list a customer takes to the tailor: exactly the fields the form below
+// asks for (same suit type and same "Finished suit sizes" / "Body
+// measurements" choice), so whatever the tailor writes down can be typed
+// straight in. Rebuilt by renderMeasurementFields() whenever those change.
+function renderTailorChecklist() {
+  const box = document.getElementById("tailorChecklist");
+  if (!box) return;
+  const body = measureMode === "body";
+  box.innerHTML =
+    '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
+    '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
+  // Plain-text copy with blanks, to paste into Notes or a message and fill in.
+  const lines = ["Scott's Suits measurements (" + (body ? "body measurements" : "finished suit sizes") + ")"];
+  box.querySelector(".tailor-checklist-intro").textContent = body
+    ? "Write these down while the tailor measures you, then type them into the boxes below. Body measurements, taken snug over a shirt."
+    : "Write these down while the tailor measures you, then type them into the boxes below. These are finished suit sizes: the measurements of a suit that fits you well, not of your body.";
+  const list = box.querySelector(".tailor-checklist-list");
+  let lastPart = null;
+  activeMeasurements().forEach((m) => {
+    const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
+    if (part !== lastPart) {
+      lines.push("", measurePartHeading(part).toUpperCase());
+      const h = document.createElement("li");
+      h.className = "tailor-checklist-part";
+      h.textContent = measurePartHeading(part);
+      list.appendChild(h);
+      lastPart = part;
+    }
+    const li = document.createElement("li");
+    li.className = "tailor-checklist-item";
+    const name = document.createElement("span");
+    name.className = "tailor-checklist-name";
+    name.textContent = m.label;
+    if (m.hint) {
+      const hint = document.createElement("small");
+      hint.textContent = m.hint;
+      name.appendChild(hint);
+    }
+    const blank = document.createElement("span");
+    blank.className = "tailor-checklist-blank";
+    blank.textContent = m.id === "height" ? "ft / in" : m.unit || "cm";
+    lines.push(m.label + ": ______ " + blank.textContent);
+    li.append(name, blank);
+    list.appendChild(li);
+  });
+  const fits = [];
+  if (body && hasJacketStep()) fits.push("jacket");
+  if (body && !isJacketOnlyType(currentSuitType)) fits.push("pants");
+  box.querySelector(".tailor-checklist-foot").textContent =
+    "All measurements in centimeters, except height and weight." +
+    (fits.length ? " You'll also pick a " + fits.join(" and a ") + " fit (Slim, Regular or Loose); the tailor can help you choose." : "");
+  if (fits.length) lines.push("", "FIT");
+  fits.forEach((f) => lines.push((f === "jacket" ? "Jacket" : "Pants") + " fit (Slim / Regular / Loose): ______"));
+  lines.push("", "All measurements in centimeters, except height and weight.");
+  const text = lines.join("\n");
+  const copyBtn = box.querySelector(".tailor-checklist-copy");
+  copyBtn.addEventListener("click", async () => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      // Older browsers: copy through a hidden text box instead.
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        ok = document.execCommand("copy");
+      } catch (e2) {
+        ok = false;
+      }
+      ta.remove();
+    }
+    copyBtn.textContent = ok ? "Copied" : "Couldn\u2019t copy";
+    setTimeout(() => (copyBtn.textContent = "Copy list"), 2000);
+  });
+}
+
 function initTailorFinder() {
   const toggle = document.getElementById("tailorFinderToggleBtn");
   const panel = document.getElementById("tailorFinderPanel");
@@ -5353,6 +5436,7 @@ function initTailorFinder() {
     panel.hidden = !panel.hidden;
     toggle.classList.toggle("open", !panel.hidden);
     toggle.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) renderTailorChecklist();
     if (!panel.hidden && !input.value) {
       const val = (id) => ((document.getElementById(id) || {}).value || "").trim();
       const shipZip = normalizeZip(val("shippingZip"));
