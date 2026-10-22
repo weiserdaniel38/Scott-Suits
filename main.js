@@ -5376,13 +5376,14 @@ function renderTailorChecklist() {
     }
     const blank = document.createElement("span");
     blank.className = "tailor-checklist-blank";
-    blank.textContent = m.id === "height" ? "ft / in" : m.unit || "cm";
-    lines.push(m.label + " (" + blank.textContent.replace(/ /g, "") + "): ");
+    // Only height and weight carry a unit; the note says the rest are cm.
+    blank.textContent = m.id === "height" ? "ft / in" : m.unit || "";
+    lines.push(m.label + (blank.textContent ? " (" + blank.textContent.replace(/ /g, "") + ")" : "") + ": ");
     li.append(name, blank);
     list.appendChild(li);
   });
-  box.querySelector(".tailor-checklist-foot").textContent = "All measurements in centimeters, except height and weight.";
-  lines.push("", "All measurements in centimeters, except height and weight.");
+  box.querySelector(".tailor-checklist-foot").textContent = "ALL MEASUREMENTS IN CENTIMETERS, EXCEPT HEIGHT AND WEIGHT.";
+  lines.push("", "ALL MEASUREMENTS IN CENTIMETERS, EXCEPT HEIGHT AND WEIGHT.");
   const text = lines.join("\n");
   const copyBtn = box.querySelector(".tailor-checklist-copy");
   copyBtn.addEventListener("click", async () => {
