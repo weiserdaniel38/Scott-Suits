@@ -5406,7 +5406,7 @@ function updateOrderSummaryUI() {
   let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (protection ? " + " + usd(protection) + " Alteration Protection" : "") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
   if (shipped && liveShippingRates()) text += " plus shipping (the cheapest carrier rate to your address) and sales tax, both worked out at checkout.";
   else if (shipped) text += " plus sales tax, worked out at checkout from your address.";
-  else if (STRIPE_ENABLED) text += ", in-store pickup: no shipping, no tax.";
+  else if (STRIPE_ENABLED) text += ", in-store pickup in Clifton, NJ: no shipping, no tax.";
   if (STRIPE_ENABLED) text += " You'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
   else if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
   orderTotalNote.textContent = text;
