@@ -5324,12 +5324,14 @@ function buildTailorCard(t, miles) {
     card.appendChild(el);
   };
   const addr = tailorAddressLine(t);
-  addLine("tailor-card-line", addr, addr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t.name + ", " + addr) : "");
+  const mapUrl = addr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t.name + ", " + addr) : "";
+  addLine("tailor-card-line", addr, mapUrl);
   addLine("tailor-card-line", t.phone, t.phone ? "tel:" + t.phone.replace(/[^\d+]/g, "") : "");
   addLine("tailor-card-line", t.hours);
   const site = tailorWebsiteUrl(t.website);
   addLine("tailor-card-line", site ? t.website.replace(/^https?:\/\//i, "").replace(/\/$/, "") : "", site);
   addLine("tailor-card-note", t.note);
+  addLine("tailor-card-map", "Open in Maps", mapUrl);
   return card;
 }
 
