@@ -1891,3 +1891,19 @@ body.order-done-view > .process{display:none !important;}
 .admin-notif-clear-all[hidden]{display:none;}
 .admin-notif-clear{background:none;border:0;font-size:20px;line-height:1;padding:0 2px;cursor:pointer;opacity:0.55;color:inherit;}
 .admin-notif-clear:hover,.admin-notif-clear:focus-visible{opacity:1;}
+
+/* Three suit-type cards (Full Suit, Jacket Only, Pants Only), 2026-10-22. */
+#suitTypeSection .suit-type-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1000px;}
+@media(max-width:900px) and (min-width:601px){
+  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:100%;}
+}
+@media(max-width:600px){
+  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  #suitTypeSection .suit-type-icon{padding:12px 6px;}
+  #suitTypeSection .suit-type-icon img{width:64px;height:64px;}
+  #suitTypeSection .suit-type-card .suit-type-body{padding:10px 4px 12px;}
+  #suitTypeSection .suit-type-name{font-size:15px;}
+  #suitTypeSection .suit-type-desc{font-size:8.5px;letter-spacing:0.8px;}
+  #suitTypeSection .suit-type-price{font-size:14px;}
+  #suitTypeSection .suit-type-go{margin-top:6px;padding:5px 10px;font-size:11px;}
+}

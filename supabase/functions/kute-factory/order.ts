@@ -217,102 +217,109 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   const warnings: string[] = [];
   const blocking: string[] = [];
   const notes: string[] = [];
-  const isSuit = s(row.suit_type) !== "jacket_only";
+  // Jacket only, pants only, or both (a suit).
+  const hasJacket = s(row.suit_type) !== "pants_only";
+  const hasPants = s(row.suit_type) !== "jacket_only";
+  const isSuit = hasJacket && hasPants;
   const bodyMode = s(row.measure_type) === "body";
   const fit = (v: unknown) => FIT_CODES[s(v)] || FIT_CODES.Regular;
 
-  // ---- Jacket ----
-  const jc = catalogCodes(jacket, row, JACKET_BY_HAND, "Jacket", warnings);
-  jc.push(...JACKET_FIXED);
-  // Orders from before the pick stitching step: no pick stitch.
-  if (!s(row.jacket_pick_stitch)) jc.push("0570");
-
-  // Lining style and facing.
-  const facing = s(row.facing_style);
-  if (facing === "No Lining Construction") {
-    // No lining with piping, inner facing F with edge; the factory only
-    // accepts it unconstructed and with no body or sleeve lining.
-    jc.push("AAWY", "0866", "0706");
-    if (s(row.jacket_construction) !== "Unconstructed") {
-      for (const c of ["00C1", "000A"]) { const i = jc.indexOf(c); if (i !== -1) jc.splice(i, 1); }
-      if (jc.indexOf("00D1") === -1) jc.push("00D1");
-      warnings.push("Unlined jacket: sent as Unconstructed, the only canvas the factory allows without lining.");
-    }
-  } else if (facing === "Half Lining W/ Fabric Facing") {
-    jc.push("AA2Y", "0701");
-  } else {
-    jc.push("AAQL", "0702");
-  }
-
-  // Body lining, and sleeve lining matching it.
-  if (facing !== "No Lining Construction") {
-    const lining = s(row.jacket_lining);
-    if (matched(jacket.lining, lining)) jc.push("0711");
-    else if (lining === "Customer's Own Photo") {
-      warnings.push("Lining: the customer sent their own lining photo; pick the lining on the factory site.");
-      notes.push("Lining: customer's own (photo on the order).");
-    } else jc.push("0714:" + lining);
-    jc.push("0721");
-  }
-
-  // Sleeve cuff: working or imitation slit, straight or slanted buttonholes,
-  // and how many buttons.
-  const cuffStyle = s(row.sleeve_cuff_style);
-  const cuffButtons = s(row.sleeve_cuff_buttons);
-  const slant = /slant/i.test(cuffButtons);
-  if (cuffStyle) {
-    const working = /^Working/.test(cuffStyle);
-    jc.push(working ? "AAAJ" : "AAAI");
-    jc.push(working ? (slant ? "AAAQ" : "AAAP") : (slant ? "AAAN" : "AAAM"));
-  }
-  if (cuffButtons) {
-    const code = CUFF_BUTTON_CODES[cuffButtons];
-    if (code) jc.push(code);
-    else warnings.push("Jacket: no factory code for cuff buttons \"" + cuffButtons + "\".");
-  }
-
-  // Button sewing thread.
-  const thread = s(row.jacket_thread_color);
-  jc.push(matched(jacket.threadColor, thread) ? "064C" : "064D:" + thread);
-
-  // Buttonhole thread: lapel, and front + sleeve.
-  const lapelHole = s(row.jacket_buttonhole_thread_color);
-  const frontHole = s(row.jacket_front_buttonhole_thread_color);
-  const lapelMatched = matched(jacket.buttonholeThreadColor, lapelHole);
-  const frontMatched = matched(jacket.frontButtonholeThreadColor, frontHole);
-  if (lapelMatched && frontMatched) jc.push("064A");
-  else if (!lapelMatched && !frontMatched && lapelHole === frontHole) jc.push("064B:" + lapelHole);
-  else {
-    if (!lapelMatched) jc.push("05A3:" + lapelHole);
-    if (!frontMatched) jc.push("06M2:" + frontHole, "06C2:" + frontHole);
-  }
-
-  // Felt under collar.
-  const felt = s(row.felt_under_collar);
-  if (felt === "Customer-Appointed Felt") {
-    const color = s(row.felt_color);
-    if (color) jc.push("0672:" + color);
-    else warnings.push("Felt: the customer chose their own felt but the color wasn't saved; pick it on the factory site.");
-  } else jc.push("0671");
-
-  // Buttons.
+  const details: Record<string, unknown>[] = [];
   const button = s(row.button_color);
-  if (button && !matched(jacket.buttoncolor, button)) jc.push("0638:" + button);
-  else notes.push("Buttons: best match to the fabric.");
 
-  const jacketEmbs = monogram(row, "Jacket", "jacket_monogram_placement", "jacket_monogram_text", "jacket_monogram_font",
-    "jacket_monogram_thread_color", JACKET_EMB_POSITIONS, emb.MXF, warnings, notes);
+  // ---- Jacket ----
+  if (hasJacket) {
+    const jc = catalogCodes(jacket, row, JACKET_BY_HAND, "Jacket", warnings);
+    jc.push(...JACKET_FIXED);
+    // Orders from before the pick stitching step: no pick stitch.
+    if (!s(row.jacket_pick_stitch)) jc.push("0570");
 
-  const details: Record<string, unknown>[] = [{
-    categoryCode: "MXF",
-    crafts: [...new Set(jc)].join(","),
-    orderSizes: sizes(row, bodyMode ? JACKET_BODY : JACKET_SIZES, "Jacket", warnings, input.ranges?.MXF),
-    orderEmbs: jacketEmbs,
-    ...(bodyMode ? { versionStyle: fit(row.jacket_fit) } : {}),
-  }];
+    // Lining style and facing.
+    const facing = s(row.facing_style);
+    if (facing === "No Lining Construction") {
+      // No lining with piping, inner facing F with edge; the factory only
+      // accepts it unconstructed and with no body or sleeve lining.
+      jc.push("AAWY", "0866", "0706");
+      if (s(row.jacket_construction) !== "Unconstructed") {
+        for (const c of ["00C1", "000A"]) { const i = jc.indexOf(c); if (i !== -1) jc.splice(i, 1); }
+        if (jc.indexOf("00D1") === -1) jc.push("00D1");
+        warnings.push("Unlined jacket: sent as Unconstructed, the only canvas the factory allows without lining.");
+      }
+    } else if (facing === "Half Lining W/ Fabric Facing") {
+      jc.push("AA2Y", "0701");
+    } else {
+      jc.push("AAQL", "0702");
+    }
+
+    // Body lining, and sleeve lining matching it.
+    if (facing !== "No Lining Construction") {
+      const lining = s(row.jacket_lining);
+      if (matched(jacket.lining, lining)) jc.push("0711");
+      else if (lining === "Customer's Own Photo") {
+        warnings.push("Lining: the customer sent their own lining photo; pick the lining on the factory site.");
+        notes.push("Lining: customer's own (photo on the order).");
+      } else jc.push("0714:" + lining);
+      jc.push("0721");
+    }
+
+    // Sleeve cuff: working or imitation slit, straight or slanted buttonholes,
+    // and how many buttons.
+    const cuffStyle = s(row.sleeve_cuff_style);
+    const cuffButtons = s(row.sleeve_cuff_buttons);
+    const slant = /slant/i.test(cuffButtons);
+    if (cuffStyle) {
+      const working = /^Working/.test(cuffStyle);
+      jc.push(working ? "AAAJ" : "AAAI");
+      jc.push(working ? (slant ? "AAAQ" : "AAAP") : (slant ? "AAAN" : "AAAM"));
+    }
+    if (cuffButtons) {
+      const code = CUFF_BUTTON_CODES[cuffButtons];
+      if (code) jc.push(code);
+      else warnings.push("Jacket: no factory code for cuff buttons \"" + cuffButtons + "\".");
+    }
+
+    // Button sewing thread.
+    const thread = s(row.jacket_thread_color);
+    jc.push(matched(jacket.threadColor, thread) ? "064C" : "064D:" + thread);
+
+    // Buttonhole thread: lapel, and front + sleeve.
+    const lapelHole = s(row.jacket_buttonhole_thread_color);
+    const frontHole = s(row.jacket_front_buttonhole_thread_color);
+    const lapelMatched = matched(jacket.buttonholeThreadColor, lapelHole);
+    const frontMatched = matched(jacket.frontButtonholeThreadColor, frontHole);
+    if (lapelMatched && frontMatched) jc.push("064A");
+    else if (!lapelMatched && !frontMatched && lapelHole === frontHole) jc.push("064B:" + lapelHole);
+    else {
+      if (!lapelMatched) jc.push("05A3:" + lapelHole);
+      if (!frontMatched) jc.push("06M2:" + frontHole, "06C2:" + frontHole);
+    }
+
+    // Felt under collar.
+    const felt = s(row.felt_under_collar);
+    if (felt === "Customer-Appointed Felt") {
+      const color = s(row.felt_color);
+      if (color) jc.push("0672:" + color);
+      else warnings.push("Felt: the customer chose their own felt but the color wasn't saved; pick it on the factory site.");
+    } else jc.push("0671");
+
+    // Buttons.
+    if (button && !matched(jacket.buttoncolor, button)) jc.push("0638:" + button);
+    else notes.push("Buttons: best match to the fabric.");
+
+    const jacketEmbs = monogram(row, "Jacket", "jacket_monogram_placement", "jacket_monogram_text", "jacket_monogram_font",
+      "jacket_monogram_thread_color", JACKET_EMB_POSITIONS, emb.MXF, warnings, notes);
+
+    details.push({
+      categoryCode: "MXF",
+      crafts: [...new Set(jc)].join(","),
+      orderSizes: sizes(row, bodyMode ? JACKET_BODY : JACKET_SIZES, "Jacket", warnings, input.ranges?.MXF),
+      orderEmbs: jacketEmbs,
+      ...(bodyMode ? { versionStyle: fit(row.jacket_fit) } : {}),
+    });
+  }
 
   // ---- Trousers ----
-  if (isSuit) {
+  if (hasPants) {
     const pc = catalogCodes(pants, row, PANTS_BY_HAND, "Trousers", warnings);
     pc.push(...PANTS_FIXED);
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
@@ -336,7 +343,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   }
 
   // Fabric: the site stores "26SU218.DBV3529"; the factory's number is the part after the dot.
-  const fabricValue = s(row.fabric);
+  // Pants on their own use the pants fabric.
+  const fabricValue = hasJacket ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
   const fabric = fabricValue.includes(".") ? fabricValue.split(".").pop() || "" : fabricValue;
   if (!fabric) blocking.push("No fabric on this suit.");
   const pantsFabric = s(row.pants_fabric);
@@ -361,7 +369,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     addProduct: false,
     amount: 1,
     isSample: 0,
-    category: isSuit ? "T" : "MXF",
+    category: isSuit ? "T" : hasJacket ? "MXF" : "MXK",
     measuresType: bodyMode ? 10001 : 10002,
     fabric,
     customer: {
