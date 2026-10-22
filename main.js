@@ -5349,9 +5349,13 @@ function renderTailorChecklist() {
     '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
     '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
   // Plain-text copy to paste into Notes or a message and type the numbers in.
-  const lines = ["Scott's Suits suit measurements"];
+  const lines = [
+    "Scott's Suits suit measurements",
+    "",
+    "FOR THE TAILOR: these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so measure for a close, slim fit.",
+  ];
   box.querySelector(".tailor-checklist-intro").textContent =
-    "Have the tailor take these suit measurements and write them down, then type them into the boxes below.";
+    "Have the tailor take these suit measurements and write them down, then type them into the boxes below. Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
   const list = box.querySelector(".tailor-checklist-list");
   let lastPart = null;
   MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && measurementForType(m, currentSuitType)).forEach((m) => {
@@ -5378,7 +5382,8 @@ function renderTailorChecklist() {
     blank.className = "tailor-checklist-blank";
     // Only height and weight carry a unit; the note says the rest are cm.
     blank.textContent = m.id === "height" ? "ft / in" : m.unit || "";
-    lines.push(m.label + (blank.textContent ? " (" + blank.textContent.replace(/ /g, "") + ")" : "") + ": ");
+    lines.push(m.label + (blank.textContent ? " (" + blank.textContent.replace(/ /g, "") + ")" : "") +
+      (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") + ": ");
     li.append(name, blank);
     list.appendChild(li);
   });

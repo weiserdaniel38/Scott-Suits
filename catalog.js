@@ -489,7 +489,7 @@ const MEASUREMENTS = [
   { id: "hips", label: "Hips", part: "pants", min: 65, max: 243 },
   { id: "waist", label: "Waist", part: "pants", min: 58, max: 221 },
   { id: "leg_length", label: "Full Pants Length", part: "pants", min: 40, max: 135 },
-  { id: "crotch", label: "Crotch", part: "pants", min: 50, max: 132 },
+  { id: "crotch", label: "Full Crotch", part: "pants", hint: "The FULL crotch of the suit pants, snug, not baggy: front waistband, down between the legs, up to the back waistband", min: 50, max: 132 },
   { id: "thigh", label: "Thigh", part: "pants", min: 46, max: 137 },
   { id: "knee", label: "Knee", part: "pants", min: 30, max: 124, factoryOptional: true },
   { id: "calf", label: "Calf", part: "pants", min: 25, max: 90, factoryOptional: true },
