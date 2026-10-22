@@ -272,6 +272,12 @@ function bindBodyMeasure(field, prefix, m) {
   });
 }
 
+// A field's name with its garment where the same name is used twice
+// ("Pants Thigh"), for messages.
+function measurePartLabel(m) {
+  const dup = MEASUREMENTS.filter((x) => x.label === m.label && (x.mode || "finished") === (m.mode || "finished")).length > 1;
+  return dup ? (m.part === "pants" ? "Pants " : "Jacket ") + m.label : m.label;
+}
 // Heading over each group of measurement fields.
 function measurePartHeading(part) {
   return part === "pants" ? "Pants" : part === "body" ? "Height & Weight" : "Jacket";
@@ -281,9 +287,47 @@ function measurePartHeading(part) {
 function measureInputHtml(prefix, m) {
   if (m.part === "body") return bodyMeasureHtml(prefix, m);
   return (
-    '<div class="measure-input-wrap"><input type="number" step="' + (m.step || "0.1") + '" min="0" id="' + prefix +
+    '<div class="measure-input-wrap"><input type="number" step="' + (m.step || "0.1") + '" min="' + (m.min || 0) + '"' +
+    (m.max ? ' max="' + m.max + '"' : "") + ' id="' + prefix +
     m.id + '" placeholder="' + (m.step === "1" ? "0" : "0.0") + '"><span class="unit">' + (m.unit || "cm") + "</span></div>"
   );
+}
+// Each measurement's allowed range (the factory's limits, see MEASUREMENTS
+// in catalog.js), as the customer reads it.
+function measureInRange(m, val) {
+  return !(m.min !== undefined && val < m.min) && !(m.max !== undefined && val > m.max);
+}
+function measureRangeText(m) {
+  if (m.id === "height") {
+    const ftIn = (n) => Math.floor(n / 12) + " ft " + (n % 12) + " in";
+    return ftIn(m.min) + " to " + ftIn(m.max) + " (" + Math.round(m.min * 2.54) + " to " + Math.round(m.max * 2.54) + " cm)";
+  }
+  if (m.id === "weight") {
+    return m.min + " to " + m.max + " lb (" + Math.round(m.min / 2.20462) + " to " + Math.round(m.max / 2.20462) + " kg)";
+  }
+  return m.min + " to " + m.max + " " + (m.unit || "cm");
+}
+// Shows "Must be 72 to 211 cm." under a field once a value outside its range
+// is entered, and clears it as soon as the value is fixed.
+function bindMeasureRange(field, prefix, m) {
+  if (m.min === undefined && m.max === undefined) return;
+  const el = field.querySelector("#" + prefix + m.id);
+  const msg = document.createElement("p");
+  msg.className = "measure-field-error";
+  msg.hidden = true;
+  msg.textContent = "Must be " + measureRangeText(m) + ".";
+  field.appendChild(msg);
+  const check = (strict) => {
+    const raw = el.value;
+    const val = parseFloat(raw);
+    const bad = raw !== "" && !isNaN(val) && !measureInRange(m, val);
+    if (bad && !strict && msg.hidden) return; // only clear while typing
+    msg.hidden = !bad;
+    field.classList.toggle("measure-field-invalid", bad);
+  };
+  field.addEventListener("input", () => check(false));
+  field.addEventListener("change", () => check(true));
+  field.addEventListener("focusout", () => check(true));
 }
 // Set true only once an order has actually been saved -- used solely to mark
 // the "Order" step in the progress bar as done; see updateProcessBar().
@@ -846,6 +890,7 @@ function renderProfileMeasureGrid(values) {
     field.innerHTML =
       '<label for="pm_' + m.id + '">' + m.label + "</label>" + measureInputHtml("pm_", m);
     bindBodyMeasure(field, "pm_", m);
+    bindMeasureRange(field, "pm_", m);
     profileMeasureGrid.appendChild(field);
   });
   if (values) {
@@ -864,6 +909,11 @@ function collectProfileMeasurements() {
     if (!isNaN(val) && val > 0) values[m.id] = val;
   });
   return values;
+}
+// Saved measurements outside their allowed range, as "Chest (72 to 211 cm)".
+function profileMeasurementsOutOfRange(values) {
+  return MEASUREMENTS.filter((m) => values[m.id] !== undefined && !measureInRange(m, values[m.id]))
+    .map((m) => measurePartLabel(m) + " (" + measureRangeText(m) + ")");
 }
 
 // Prefers the name collected at signup (available immediately off the
@@ -1787,7 +1837,15 @@ if (saveProfileMeasurementsBtn) {
   saveProfileMeasurementsBtn.addEventListener("click", async () => {
     saveProfileMeasurementsBtn.disabled = true;
     saveProfileMeasurementsBtn.textContent = "Saving...";
-    const ok = await saveProfileMeasurements(collectProfileMeasurements());
+    const values = collectProfileMeasurements();
+    const outOfRange = profileMeasurementsOutOfRange(values);
+    if (outOfRange.length) {
+      showAccountStatus(profileMeasurementsStatusMsg, "Please fix these to save: " + outOfRange.join(", ") + ".");
+      saveProfileMeasurementsBtn.disabled = false;
+      saveProfileMeasurementsBtn.textContent = "Save Measurements";
+      return;
+    }
+    const ok = await saveProfileMeasurements(values);
     showAccountStatus(
       profileMeasurementsStatusMsg,
       ok ? "Saved." : "Something went wrong saving your measurements -- please try again."
@@ -4491,6 +4549,7 @@ function renderMeasurementFields() {
       '<label for="m_' + m.id + '">' + m.label + "</label>" + measureInputHtml("m_", m) +
       (m.hint ? '<p class="measure-field-hint">' + m.hint + "</p>" : "");
     bindBodyMeasure(field, "m_", m);
+    bindMeasureRange(field, "m_", m);
     field.querySelectorAll("input, select").forEach((el) => {
       el.addEventListener("input", saveDraft);
       el.addEventListener("change", saveDraft);
@@ -4679,20 +4738,26 @@ document.getElementById("backToDesignerBtn").addEventListener("click", () => {
 
 // Reads + validates the measurement fields without navigating anywhere;
 // shared by the "Continue" button here and the final submit on the next page.
+// Out-of-range values count as missing too (outOfRange says which), so no
+// step or order goes ahead with a size the factory can't make.
 function collectMeasurements() {
   const values = {};
   const missing = [];
+  const outOfRange = [];
   activeMeasurements().forEach((m) => {
     const raw = document.getElementById("m_" + m.id).value;
     const val = parseFloat(raw);
     if (raw === "" || isNaN(val) || val <= 0) {
-      missing.push(m.label);
+      missing.push(measurePartLabel(m));
+    } else if (!measureInRange(m, val)) {
+      missing.push(measurePartLabel(m));
+      outOfRange.push(measurePartLabel(m) + ": " + measureRangeText(m));
     } else {
       values[m.id] = val;
     }
   });
   Object.assign(values, measureExtras());
-  return { values, missing };
+  return { values, missing, outOfRange };
 }
 
 document.getElementById("continueToPersonalInfoBtn").addEventListener("click", () => {
@@ -5516,7 +5581,11 @@ const openEditSuitConfirm = (function () {
 // reopening it with the cart's "Edit" link, never creates a duplicate. Used by
 // both "Add to Cart & Design Another Suit" and "Continue to Personal Info".
 function commitCurrentSuitToCart() {
-  const { values: measurementValues, missing: missingMeasurements } = collectMeasurements();
+  const { values: measurementValues, missing: missingMeasurements, outOfRange } = collectMeasurements();
+  if (outOfRange.length) {
+    alert("These measurements are outside what can be made. Please check them. Allowed:\n\n" + outOfRange.join("\n"));
+    return false;
+  }
   if (missingMeasurements.length) {
     alert("Please enter a valid measurement for: " + missingMeasurements.join(", "));
     return false;
