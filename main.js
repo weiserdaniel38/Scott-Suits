@@ -5439,7 +5439,7 @@ function initTailorFinder() {
     highlighted = -1;
   }
   function pick(r) {
-    input.value = r.formatted || r.address_line1 || input.value;
+    input.value = (r.formatted || r.address_line1 || input.value).replace(/, United States of America$/, "");
     picked = typeof r.lat === "number" && typeof r.lon === "number" ? { lat: r.lat, lng: r.lon } : null;
     closeSuggestions();
     search();
@@ -5478,7 +5478,7 @@ function initTailorFinder() {
           suggestions.forEach((r) => {
             const item = document.createElement("div");
             item.className = "address-suggestion";
-            item.textContent = r.formatted || r.address_line1 || "";
+            item.textContent = (r.formatted || r.address_line1 || "").replace(/, United States of America$/, "");
             // mousedown (not click) so this fires before the input's blur closes the list
             item.addEventListener("mousedown", (e) => {
               e.preventDefault();
