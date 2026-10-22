@@ -498,7 +498,7 @@ const MEASUREMENTS = [
   { id: "body_neck", label: "Neck", part: "jacket", mode: "body", hint: "Around the base of your neck", min: 30, max: 70 },
   { id: "body_chest", label: "Chest", part: "jacket", mode: "body", hint: "Around the fullest part, under your arms", min: 66, max: 224 },
   { id: "body_stomach", label: "Stomach", part: "jacket", mode: "body", hint: "Around your belly at the navel", min: 55, max: 219 },
-  { id: "body_seat", label: "Seat", part: "jacket", mode: "body", hint: "Around the fullest part of your seat", min: 68, max: 220 },
+  { id: "body_seat", label: "Seat", part: "jacket", pantsToo: true, mode: "body", hint: "Around the fullest part of your seat", min: 68, max: 220 },
   { id: "body_bicep", label: "Bicep", part: "jacket", mode: "body", hint: "Around the fullest part of your upper arm", min: 19, max: 74 },
   { id: "body_shoulder", label: "Shoulder Width", part: "jacket", mode: "body", hint: "Across your back, shoulder point to shoulder point", min: 31, max: 72 },
   { id: "body_sleeve", label: "Arm Length", part: "jacket", mode: "body", hint: "Shoulder point to wrist bone, arm relaxed", min: 25, max: 90 },
@@ -2182,10 +2182,12 @@ function fabricDescription(pattern, colorGroup, hex) {
 // fabric missing from FABRIC_PRICE_TIER falls back to the top tier so a
 // newly added fabric is never sold below cost.
 // ---------------------------------------------------------------------
+// Pants on their own (Daniel, 2026-10-22): from $150, stepping up with the
+// fabric tier.
 const FABRIC_PRICE_TIERS = [
-  { suitUsd: 350, jacketUsd: 265 },
-  { suitUsd: 385, jacketUsd: 285 },
-  { suitUsd: 400, jacketUsd: 300 },
+  { suitUsd: 350, jacketUsd: 265, pantsUsd: 150 },
+  { suitUsd: 385, jacketUsd: 285, pantsUsd: 165 },
+  { suitUsd: 400, jacketUsd: 300, pantsUsd: 180 },
 ];
 const FABRIC_PRICE_TIER = {
   "26SU210.DBP325A": 0, // $15/m Soft Ivory

@@ -154,7 +154,7 @@ export function lineItems(rows: OrderRow[]) {
   rows.forEach((r, i) => {
     const cents = Math.round(Number(r.item_price_usd) * 100);
     if (!Number.isFinite(cents) || cents < 100 || cents > 2_000_000) throw new Error("order has an invalid price");
-    const name = r.suit_type === "jacket_only" ? "Custom Jacket" : "Custom Suit";
+    const name = r.suit_type === "jacket_only" ? "Custom Jacket" : r.suit_type === "pants_only" ? "Custom Pants" : "Custom Suit";
     items[String(i)] = {
       quantity: 1,
       price_data: {
