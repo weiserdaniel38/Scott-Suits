@@ -561,19 +561,11 @@ function smoothScrollContainerToX(container, targetX) {
 const STEP_FOCUS_SELECTOR = {
   designer: "#designerModeBar",
   pantsSection: "#pantsGrid",
-  // A plain selector lands on the size estimator when neither shortcut
-  // banner above it is showing. But when one IS showing (see
-  // samePreviousMeasurementsBanner / savedMeasurementsBanner in index.html),
-  // it sits between the skipped-past heading and the estimator -- landing on
-  // the estimator would leave that banner's height straddling the sticky
-  // nav/process bar, half-covered rather than either skipped past cleanly or
-  // shown in full. A function here (instead of a plain selector string) picks
-  // whichever is actually topmost right now, so it lands fully in view.
   previewSection: ".designer-head",
-  measurementsSection: () =>
-    document.querySelector("#samePreviousMeasurementsBanner:not([hidden])") ||
-    document.querySelector("#savedMeasurementsBanner:not([hidden])") ||
-    document.getElementById("sizeEstimateBox"),
+  // On a phone, land with the "Your measurements" heading right under the
+  // sticky step bar, skipping the big page title and progress strip above it
+  // (Daniel's reference screenshot, 2026-10-22).
+  measurementsSection: ".meas-intro",
   personalInfoSection: ".customer-name-field",
   // suitTypeSection now centers its content inside a taller box (see
   // style.css), so landing on the section's own top edge stops short,
@@ -596,9 +588,9 @@ function scrollToStepTop(el, onComplete) {
   // Doing it here first means every measurement below reflects the page's
   // actual final layout for the step being navigated to.
   updateProcessBar();
-  // Measurements is the exception: on a phone, skipping straight to the
-  // size estimator (past the heading/intro) matters because that header
-  // eats real screen space. On desktop there's room for the heading, the
+  // Measurements is the exception: on a phone, skipping the page title and
+  // progress strip down to the "Your measurements" heading matters because
+  // that header eats real screen space. On desktop there's room for the heading, the
   // intro line, the estimator AND the full measurement grid to all land in
   // view together, so there's nothing to skip past -- land at the actual
   // top of the section instead.
