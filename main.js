@@ -5351,7 +5351,7 @@ function renderTailorChecklist() {
   // Plain-text copy with blanks, to paste into Notes or a message and fill in.
   const lines = ["Scott's Suits suit measurements"];
   box.querySelector(".tailor-checklist-intro").textContent =
-    "Have the tailor take these suit measurements and write them down. Then pick \u201cFinished suit sizes\u201d above and type them into the boxes below.";
+    "Have the tailor take these suit measurements and write them down, then type them into the boxes below.";
   const list = box.querySelector(".tailor-checklist-list");
   let lastPart = null;
   MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && measurementForType(m, currentSuitType)).forEach((m) => {
@@ -5429,7 +5429,14 @@ function initTailorFinder() {
     panel.hidden = !panel.hidden;
     toggle.classList.toggle("open", !panel.hidden);
     toggle.setAttribute("aria-expanded", String(!panel.hidden));
-    if (!panel.hidden) renderTailorChecklist();
+    if (!panel.hidden) {
+      // A tailor takes suit sizes, so switch the boxes below to match.
+      if (measureMode !== "finished") {
+        setMeasureMode("finished");
+        saveDraft();
+      }
+      renderTailorChecklist();
+    }
     if (!panel.hidden && !input.value) {
       const val = (id) => ((document.getElementById(id) || {}).value || "").trim();
       const shipZip = normalizeZip(val("shippingZip"));
