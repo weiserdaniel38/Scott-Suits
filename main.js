@@ -5337,25 +5337,24 @@ function buildTailorCard(t, miles) {
   return card;
 }
 
-// The list a customer takes to the tailor: exactly the fields the form below
-// asks for (same suit type and same "Finished suit sizes" / "Body
-// measurements" choice), so whatever the tailor writes down can be typed
-// straight in. Rebuilt by renderMeasurementFields() whenever those change.
+// The list a customer takes to the tailor: always finished suit sizes (the
+// tailor measures for the suit, never the body list), for the current suit
+// type and only what the factory requires, so whatever the tailor writes
+// down can be typed straight into the "Finished suit sizes" boxes. Rebuilt
+// by renderMeasurementFields() whenever the suit type changes.
 function renderTailorChecklist() {
   const box = document.getElementById("tailorChecklist");
   if (!box) return;
-  const body = measureMode === "body";
   box.innerHTML =
     '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
     '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
   // Plain-text copy with blanks, to paste into Notes or a message and fill in.
-  const lines = ["Scott's Suits measurements (" + (body ? "body measurements" : "finished suit sizes") + ")"];
-  box.querySelector(".tailor-checklist-intro").textContent = body
-    ? "Write these down while the tailor measures you, then type them into the boxes below. Body measurements, taken snug over a shirt."
-    : "Write these down while the tailor measures you, then type them into the boxes below. These are finished suit sizes: the measurements of a suit that fits you well, not of your body.";
+  const lines = ["Scott's Suits suit measurements"];
+  box.querySelector(".tailor-checklist-intro").textContent =
+    "Have the tailor take these suit measurements and write them down. Then pick \u201cFinished suit sizes\u201d above and type them into the boxes below.";
   const list = box.querySelector(".tailor-checklist-list");
   let lastPart = null;
-  activeMeasurements().forEach((m) => {
+  MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && measurementForType(m, currentSuitType)).forEach((m) => {
     const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
     if (part !== lastPart) {
       lines.push("", measurePartHeading(part).toUpperCase());
@@ -5382,14 +5381,7 @@ function renderTailorChecklist() {
     li.append(name, blank);
     list.appendChild(li);
   });
-  const fits = [];
-  if (body && hasJacketStep()) fits.push("jacket");
-  if (body && !isJacketOnlyType(currentSuitType)) fits.push("pants");
-  box.querySelector(".tailor-checklist-foot").textContent =
-    "All measurements in centimeters, except height and weight." +
-    (fits.length ? " You'll also pick a " + fits.join(" and a ") + " fit (Slim, Regular or Loose); the tailor can help you choose." : "");
-  if (fits.length) lines.push("", "FIT");
-  fits.forEach((f) => lines.push((f === "jacket" ? "Jacket" : "Pants") + " fit (Slim / Regular / Loose): ______"));
+  box.querySelector(".tailor-checklist-foot").textContent = "All measurements in centimeters, except height and weight.";
   lines.push("", "All measurements in centimeters, except height and weight.");
   const text = lines.join("\n");
   const copyBtn = box.querySelector(".tailor-checklist-copy");
