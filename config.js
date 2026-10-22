@@ -73,3 +73,9 @@ const SHIPPING_LIVE_RATES = true;
 // still design and submit as normal; this is only a message. Set this to
 // false once orders are open to remove the notice.
 const ORDERS_OPENING_SOON = false;
+
+// Alteration Protection: an optional add-on the customer must say Yes or
+// No to on the order page, charged per suit/item and covering three free
+// alterations of it. The stripe-checkout function charges its own copy
+// (ALTERATION_PROTECTION_USD secret, default 100), so keep the two in step.
+const ALTERATION_PROTECTION_USD = 100;

@@ -1111,7 +1111,8 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status");
+    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd");
+    if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd"));
@@ -1135,7 +1136,7 @@ async function loadOrderHistory() {
         order.push(key);
       }
       byOrder[key].suits.push(row.suit_type === "jacket_only" ? "Jacket Only" : row.suit_type === "pants_only" ? "Pants Only" : "Full Suit");
-      byOrder[key].total += Number(row.item_price_usd) || 0;
+      byOrder[key].total += (Number(row.item_price_usd) || 0) + (Number(row.alteration_protection_usd) || 0);
       if (row.status !== "completed") byOrder[key].completed = false;
       if (row.suit_number) byOrder[key].suitNumbers.push(Number(row.suit_number));
       // Reorder is only offered on orders that were actually paid for.
@@ -1451,11 +1452,12 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
       client.rpc("admin_order_extras"),
+      client.rpc("admin_order_protection"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1470,6 +1472,7 @@ async function loadAdminOrders() {
     const payments = {};
     if (!pay.error && pay.data) pay.data.forEach((p) => (payments[p.order_id] = p));
     if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     adminOrdersList.innerHTML = "";
     data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
   } catch (err) {
@@ -1493,6 +1496,14 @@ function adminPaymentLabel(o) {
   return pickup + "Not paid";
 }
 
+// "Alteration Protection: Yes ($100)", "...: No (declined)", or "" for
+// orders from before it existed.
+function adminProtectionLabel(o) {
+  if (o.protection_items > 0) return "Alteration Protection: Yes ($" + Number(o.protection_usd || 0).toFixed(0) + ", 3 free alterations" + (o.protection_items > 1 ? " each" : "") + ")";
+  if (o.protection_declined) return "Alteration Protection: No (declined)";
+  return "";
+}
+
 function adminOrderRow(o) {
   const row = document.createElement("div");
   row.className = "admin-ship-row";
@@ -1514,8 +1525,9 @@ function adminOrderRow(o) {
     '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
-  row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o);
-  row.querySelector(".past-order-total").textContent = "$" + Number(o.total || 0).toFixed(0);
+  const protection = adminProtectionLabel(o);
+  row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o) + (protection ? " \u00b7 " + protection : "");
+  row.querySelector(".past-order-total").textContent = "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   const statusSel = row.querySelector(".ship-status");
   const carrierSel = row.querySelector(".ship-carrier");
   const numberInput = row.querySelector(".ship-number");
@@ -5385,11 +5397,13 @@ function updateOrderSummaryUI() {
   // Shipped Stripe orders add flat shipping here and sales tax at checkout.
   const shipped = STRIPE_ENABLED && fulfillmentChoice() === "ship";
   const shipping = shipped ? shippingUsd() : 0;
-  const total = suits + shipping;
+  const protection = protectionTotalUsd();
+  const total = suits + protection + shipping;
+  refreshAlterationText();
   submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? (liveShippingRates() ? " + shipping + tax" : " + tax") : "") + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
-  let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
+  let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (protection ? " + " + usd(protection) + " Alteration Protection" : "") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
   if (shipped && liveShippingRates()) text += " plus shipping (the cheapest carrier rate to your address) and sales tax, both worked out at checkout.";
   else if (shipped) text += " plus sales tax, worked out at checkout from your address.";
   else if (STRIPE_ENABLED) text += ", in-store pickup: no shipping, no tax.";
@@ -5958,7 +5972,7 @@ function buildPayPalCheckoutUrl() {
     cmd: "_xclick",
     business: PAYPAL_BUSINESS_EMAIL,
     item_name: "Scott's Suits custom suit order (" + cartItems.length + (cartItems.length === 1 ? " suit)" : " suits)"),
-    amount: cartTotalUsd().toFixed(2),
+    amount: (cartTotalUsd() + protectionTotalUsd()).toFixed(2),
     currency_code: "USD",
     no_shipping: "1",
     return: baseUrl + "?paypal_return=1",
@@ -6061,12 +6075,23 @@ function collectAndValidateOrderInput() {
     alert("Please enter a valid email address.");
     return null;
   }
+  const protectChoice = alterationChoice();
+  if (!protectChoice) {
+    const block = document.getElementById("alterationBlock");
+    if (block) {
+      block.classList.add("needs-choice");
+      block.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    alert("Please choose Yes or No for Alteration Protection.");
+    return null;
+  }
+  const alterationProtection = protectChoice === "yes";
 
   // A pickup order keeps no address, so nothing is ever shipped to one by
   // mistake.
   return shipping
-    ? { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country, fulfillment }
-    : { customerName, customerPhone, customerEmail, address1: "", address2: "", city: "", state: "", zip: "", country: "", fulfillment };
+    ? { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country, fulfillment, alterationProtection }
+    : { customerName, customerPhone, customerEmail, address1: "", address2: "", city: "", state: "", zip: "", country: "", fulfillment, alterationProtection };
 }
 
 // "ship" or "pickup" -- the Ship to me / Pick up in store choice at the top
@@ -6117,6 +6142,90 @@ function shippingUsd() {
       saveDraft();
     })
   );
+})();
+
+// Alteration Protection: "yes", "no" or "" (not chosen yet -- the order
+// can't be placed until it is). $ALTERATION_PROTECTION_USD per suit/item,
+// three free alterations each. Picking No asks "Are you sure?" first.
+function alterationChoice() {
+  const el = document.querySelector('input[name="alterationProtection"]:checked');
+  return el ? el.value : "";
+}
+// The last choice actually made (No only counts once confirmed).
+var alterationLastChoice = "";
+function setAlterationChoice(value) {
+  alterationLastChoice = value || "";
+  document.querySelectorAll('input[name="alterationProtection"]').forEach((el) => (el.checked = el.value === value));
+  const block = document.getElementById("alterationBlock");
+  if (block && value) block.classList.remove("needs-choice");
+  updateOrderSummaryUI();
+}
+function protectionPriceUsd() {
+  return typeof ALTERATION_PROTECTION_USD !== "undefined" ? Number(ALTERATION_PROTECTION_USD) || 0 : 0;
+}
+function protectionTotalUsd() {
+  return alterationChoice() === "yes" ? protectionPriceUsd() * (cartItems.length || 1) : 0;
+}
+// "suit" when every item is a full suit, "item" otherwise.
+function protectionNoun() {
+  return cartItems.length && cartItems.some((it) => isJacketOnlyType(it.type) || isPantsOnlyType(it.type)) ? "item" : "suit";
+}
+function refreshAlterationText() {
+  const price = usd(protectionPriceUsd());
+  const qty = cartItems.length || 1;
+  const noun = protectionNoun();
+  const intro = document.getElementById("alterationIntro");
+  if (intro) {
+    intro.textContent = "Add Alteration Protection for " + price + (qty > 1 ? " per " + noun : "") +
+      " and get three free alterations" + (qty > 1 ? " on each " + noun : "") +
+      ", so if anything needs adjusting after your " + noun + (qty > 1 ? "s arrive" : " arrives") + ", we fix it at no cost.";
+  }
+  const yesSub = document.getElementById("alterationYesSub");
+  if (yesSub) yesSub.textContent = qty > 1 ? price + " each (" + usd(protectionPriceUsd() * qty) + ") \u00b7 three free alterations each" : price + " \u00b7 three free alterations";
+  const yesTitle = document.querySelector('input[name="alterationProtection"][value="yes"] ~ .fulfill-title');
+  if (yesTitle) yesTitle.textContent = "Yes, protect my " + noun + (qty > 1 ? "s" : "");
+}
+(function () {
+  const overlay = document.getElementById("alterationConfirmOverlay");
+  const addBtn = document.getElementById("alterationAddBtn");
+  const declineBtn = document.getElementById("alterationDeclineBtn");
+  const text = document.getElementById("alterationConfirmText");
+  function onKeydown(e) {
+    if (e.key === "Escape") close(alterationLastChoice);
+  }
+  function close(choice) {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    setAlterationChoice(choice);
+    saveDraft();
+  }
+  document.querySelectorAll('input[name="alterationProtection"]').forEach((el) =>
+    el.addEventListener("change", () => {
+      if (el.value === "no" && overlay) {
+        // Stays unchosen until they confirm in the dialog.
+        el.checked = false;
+        setAlterationChoice(alterationLastChoice);
+        if (text) {
+          const noun = protectionNoun();
+          text.textContent = "Without Alteration Protection, any alterations are at your own cost, and Scott Suits takes no responsibility for a " +
+            noun + " that doesn't fit because of wrong or bad measurements. With it, you get three free alterations for " +
+            usd(protectionPriceUsd()) + ((cartItems.length || 1) > 1 ? " per " + noun : "") + ".";
+        }
+        overlay.classList.add("open");
+        addBtn.focus();
+        document.addEventListener("keydown", onKeydown);
+        return;
+      }
+      setAlterationChoice(el.value);
+      saveDraft();
+    })
+  );
+  if (!overlay) return;
+  addBtn.addEventListener("click", () => close("yes"));
+  declineBtn.addEventListener("click", () => close("no"));
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close(alterationLastChoice);
+  });
 })();
 
 // Builds the order summary text for every suit in the cart and stitches them
@@ -6628,6 +6737,8 @@ async function finalizeOrder(input, opts) {
     row.suit_number = i + 1;
     row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : isPantsOnlyType(item.type) ? "pants_only" : "full_suit";
     row.item_price_usd = itemPriceUsd(item);
+    row.alteration_protection = !!input.alterationProtection;
+    row.alteration_protection_usd = input.alterationProtection ? protectionPriceUsd() : 0;
     if (adminNoPayment) row.admin_no_payment = true;
     else if (payWithStripe) row.payment_status = "awaiting_payment";
     Object.assign(row, item.measurements);
@@ -6660,7 +6771,10 @@ async function finalizeOrder(input, opts) {
       : buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
   const fullMessage = shippingBlock + "\n\n" + clientFormText;
   const contactBlock = buildContactBlock(customerPhone, customerEmail);
-  const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") + contactBlock + "\n\n" + fullMessage;
+  const protectionLine = input.alterationProtection
+    ? "ALTERATION PROTECTION: YES -- " + usd(protectionPriceUsd() * rows.length) + (rows.length > 1 ? " (" + usd(protectionPriceUsd()) + " x " + rows.length + ")" : "") + ", three free alterations" + (rows.length > 1 ? " each" : "")
+    : "ALTERATION PROTECTION: NO -- customer declined (alterations at their cost, no responsibility for bad measurements)";
+  const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") + contactBlock + "\n\n" + protectionLine + "\n\n" + fullMessage;
 
   submitBtn.disabled = true;
   submitBtn.textContent = "Saving...";
@@ -6978,6 +7092,7 @@ function saveDraft() {
       shippingZip: shippingZipInput.value,
       shippingCountry: shippingCountryInput.value,
       fulfillment: fulfillmentChoice(),
+      alterationProtection: alterationChoice(),
       // Photos are big, so they are kept out of the draft itself (below).
       cart: cartItems.map((it) => { const c = Object.assign({}, it); delete c.liningPhoto; return c; }),
       pendingCommitIndex: pendingCommitIndex,
@@ -7089,6 +7204,7 @@ function restoreDraft() {
   if (draft.shippingZip) shippingZipInput.value = draft.shippingZip;
   if (draft.shippingCountry) shippingCountryInput.value = draft.shippingCountry;
   if (draft.fulfillment) setFulfillmentChoice(draft.fulfillment);
+  if (draft.alterationProtection) setAlterationChoice(draft.alterationProtection);
 
   // Never resume straight onto the confirmation screen -- that only happens
   // right after a real submission, which already clears the draft anyway.
@@ -7294,6 +7410,7 @@ function clearDesignerAndForm() {
   shippingZipInput.value = "";
   shippingCountryInput.value = "United States";
   setFulfillmentChoice("ship");
+  setAlterationChoice("");
   // A signed-in customer's details go straight back in for the next order.
   prefillContactDetails();
   orderSubmitted = false;

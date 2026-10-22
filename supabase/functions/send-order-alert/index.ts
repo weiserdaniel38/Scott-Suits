@@ -49,6 +49,8 @@ export type AlertRow = {
   suit_type: string | null;
   fabric: string | null;
   item_price_usd: number | null;
+  alteration_protection?: boolean | null;
+  alteration_protection_usd?: number | null;
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
@@ -73,7 +75,14 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
   const name = (r.customer_name || "").trim() || "No name";
   const adminOrder = rows.some((x) => x.admin_no_payment);
   const paid = rows.some((x) => x.payment_status === "paid");
-  const itemsTotal = rows.reduce((t, x) => t + Number(x.item_price_usd || 0), 0);
+  const protectedRows = rows.filter((x) => x.alteration_protection);
+  const protectionTotal = protectedRows.reduce((t, x) => t + Number(x.alteration_protection_usd || 0), 0);
+  const itemsTotal = rows.reduce((t, x) => t + Number(x.item_price_usd || 0), 0) + protectionTotal;
+  const protection = protectedRows.length
+    ? "Yes, " + money(protectionTotal) + " (3 free alterations" + (protectedRows.length > 1 ? " each on " + protectedRows.length + " items" : "") + ")"
+    : rows.some((x) => x.alteration_protection === false)
+    ? "No, declined (alterations at their cost)"
+    : "";
   const total = paid && r.amount_paid_usd != null ? Number(r.amount_paid_usd) : itemsTotal;
   const count = rows.length === 1 ? "1 item" : rows.length + " items";
   const payment = adminOrder
@@ -105,11 +114,13 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
     ["Email", r.customer_email || ""],
     ["Phone", r.customer_phone || ""],
     [pickup ? "Delivery" : "Ship to", address || "(no address)"],
+    ["Alterations", protection],
   ];
   const items = rows.map(
     (x, i) =>
       (x.suit_number || i + 1) + ". " + (SUIT_TYPES[x.suit_type || ""] || "Suit") +
-      (x.fabric ? " · " + x.fabric : "") + " · " + money(x.item_price_usd),
+      (x.fabric ? " · " + x.fabric : "") + " · " + money(x.item_price_usd) +
+      (x.alteration_protection ? " + Alteration Protection " + money(x.alteration_protection_usd) : ""),
   );
 
   const text = [
@@ -191,7 +202,7 @@ Deno.serve(async (req) => {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "order_id, suit_number, suit_type, fabric, item_price_usd, customer_name, customer_email, customer_phone, fulfillment, " +
+      "order_id, suit_number, suit_type, fabric, item_price_usd, alteration_protection, alteration_protection_usd, customer_name, customer_email, customer_phone, fulfillment, " +
         "shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country, " +
         "payment_status, admin_no_payment, amount_paid_usd, shipping_usd, tax_usd, client_form_text, created_at",
     )
