@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261023locate">
+<link rel="stylesheet" href="./style.css?v=20261023autosearch">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -430,9 +430,8 @@
           <label for="tailorZipInput">Your address or ZIP code</label>
           <div class="measure-input-wrap"><input type="text" id="tailorZipInput" maxlength="200" placeholder="Start typing your address..." autocomplete="off"></div>
           <div class="address-suggestions" id="tailorAddressSuggestions"></div>
-          <button type="button" class="tailor-locate-btn" id="tailorLocateBtn"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Use my location</button>
         </div>
-        <button type="submit" class="btn-primary" id="tailorFinderBtn">Find tailors</button>
+        <button type="button" class="tailor-locate-btn" id="tailorLocateBtn"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Use my location</button>
       </form>
       <p class="tailor-finder-msg" id="tailorFinderMsg" hidden></p>
       <div class="tailor-results" id="tailorResults"></div>
@@ -920,7 +919,7 @@
 <script src="./config.js?v=20261022protect"></script>
 <script src="./catalog.js?v=20261023tailors"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261023nofit"></script>
+<script src="./main.js?v=20261023autosearch"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 

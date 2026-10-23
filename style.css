@@ -1980,3 +1980,6 @@ body.order-done-view > .process{display:none !important;}
 .tailor-checklist-steps strong{font-weight:600;}
 .tailor-locate-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:4px 0;background:none;border:0;color:var(--brass);font:inherit;font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
 .tailor-locate-btn:disabled{opacity:.6;cursor:wait;}
+.tailor-finder-form{flex-direction:column;align-items:stretch;gap:0;}
+.tailor-finder-form .measure-field{flex:none;width:100%;max-width:520px;}
+.tailor-finder-form .tailor-locate-btn{align-self:flex-start;}
