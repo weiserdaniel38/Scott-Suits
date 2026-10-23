@@ -5341,7 +5341,7 @@ function renderTailorChecklist() {
     '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
     '<ol class="tailor-checklist-steps">' +
     '<li><strong>Tap "Copy list"</strong> and paste it into a note or text message on your phone.</li>' +
-    '<li><strong>Wear a suit to the tailor</strong> (jacket and pants), so they can measure you the way a suit should fit.</li>' +
+    '<li><strong>Wear or bring a suit to the tailor</strong> (jacket and pants), so they can check the measurements against a real suit.</li>' +
     '<li><strong>Show the list to the tailor.</strong> They measure you and fill in a number next to each item.</li>' +
     '<li><strong>Come back here and type their numbers</strong> into the matching boxes below.</li>' +
     '</ol>' +
