@@ -88,5 +88,9 @@ insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
 select 'Twin Brothers Custom Made Tailor Shop', '155 S Middletown Rd', 'Nanuet', 'NY', '10954',
        41.0916, -74.0130
  where not exists (select 1 from public.partner_tailors where name = 'Twin Brothers Custom Made Tailor Shop');
+insert into public.partner_tailors (name, address, city, state, zip, note, lat, lng)
+select 'Valley Cleaners, Inc.', '5 Spring Valley Market Pl', 'Spring Valley', 'NY', '10977',
+       'The tailor is not in on Fridays from 12 to 3 pm.', 41.1060, -74.0290
+ where not exists (select 1 from public.partner_tailors where name = 'Valley Cleaners, Inc.');
 
 notify pgrst, 'reload schema';
