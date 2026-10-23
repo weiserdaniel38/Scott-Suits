@@ -2526,18 +2526,19 @@ PANTS_CATALOG.monogramThreadColor = {
 // and factoryCode is printed on the order form. The factory's fonts aren't
 // web fonts, so `css` is the closest free Google font, used only to show
 // the customer's typed monogram on the site (see MONOGRAM_FONTS_CSS_URL).
+// Grouped by look (script, classic, block); the first is the default.
 const MONOGRAM_FONT_OPTIONS = [
-  { name: "Calligraphy", factoryCode: "RC01", css: "'Great Vibes', cursive", size: 1.25 },
-  { name: "Times Roman", factoryCode: "RC02", css: "'Tinos', 'Times New Roman', serif" },
-  { name: "Block", factoryCode: "RC03", css: "'Oswald', 'Arial Narrow', sans-serif", weight: 500 },
-  { name: "Script", factoryCode: "RC04", css: "'Allura', cursive", size: 1.3 },
-  { name: "Bradley", factoryCode: "RC05", css: "'Caveat', cursive", weight: 500, size: 1.2 },
-  { name: "Bank Gothic Light BT", displayName: "Bank Gothic", factoryCode: "RC06", css: "'Michroma', sans-serif", size: 0.8 },
-  { name: "Book Script", factoryCode: "RC07", css: "'Parisienne', cursive", size: 1.15 },
-  { name: "Old English", factoryCode: "RC08", css: "'UnifrakturMaguntia', serif", size: 1.1 },
-  { name: "Gradl", factoryCode: "RC09", css: "'Pinyon Script', cursive", size: 1.15 },
-  { name: "Kennerley Old Style Bold", displayName: "Kennerley Old Style", factoryCode: "RC10", css: "'Goudy Bookletter 1911', Georgia, serif", weight: 700 },
-  { name: "Cochin", factoryCode: "RC11", css: "'Cormorant Garamond', Georgia, serif", weight: 600, size: 1.1 },
+  { group: "Script", name: "Calligraphy", factoryCode: "RC01", css: "'Great Vibes', cursive", size: 1.25 },
+  { group: "Script", name: "Script", factoryCode: "RC04", css: "'Allura', cursive", size: 1.3 },
+  { group: "Script", name: "Book Script", factoryCode: "RC07", css: "'Parisienne', cursive", size: 1.15 },
+  { group: "Script", name: "Gradl", factoryCode: "RC09", css: "'Pinyon Script', cursive", size: 1.15 },
+  { group: "Script", name: "Bradley", factoryCode: "RC05", css: "'Caveat', cursive", weight: 500, size: 1.2 },
+  { group: "Classic", name: "Times Roman", factoryCode: "RC02", css: "'Tinos', 'Times New Roman', serif" },
+  { group: "Classic", name: "Cochin", factoryCode: "RC11", css: "'Cormorant Garamond', Georgia, serif", weight: 600, size: 1.1 },
+  { group: "Classic", name: "Kennerley Old Style Bold", displayName: "Kennerley Old Style", factoryCode: "RC10", css: "'Goudy Bookletter 1911', Georgia, serif", weight: 700 },
+  { group: "Classic", name: "Old English", factoryCode: "RC08", css: "'UnifrakturMaguntia', serif", size: 1.1 },
+  { group: "Block", name: "Block", factoryCode: "RC03", css: "'Oswald', 'Arial Narrow', sans-serif", weight: 500 },
+  { group: "Block", name: "Bank Gothic Light BT", displayName: "Bank Gothic", factoryCode: "RC06", css: "'Michroma', sans-serif", size: 0.8 },
 ];
 const MONOGRAM_FONTS_CSS_URL = "https://fonts.googleapis.com/css2?family=Great+Vibes&family=Tinos&family=Oswald:wght@500&family=Allura&family=Caveat:wght@500&family=Michroma&family=Parisienne&family=UnifrakturMaguntia&family=Pinyon+Script&family=Goudy+Bookletter+1911&family=Cormorant+Garamond:wght@600&display=swap";
 // The factory's limits on the typed text, checked by monogramTextProblem().

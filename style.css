@@ -1852,6 +1852,8 @@ body.studio-sheet-up .lightbox{z-index:170;}
 .mono-font-row{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;}
 .mono-font-chip{flex:0 0 auto;border:1px solid var(--line);background:rgba(255,255,255,0.6);color:#1c1814;border-radius:999px;padding:5px 12px;font-size:calc(14px * var(--mono-scale,1));line-height:1.2;cursor:pointer;white-space:nowrap;}
 .mono-font-chip:hover{border-color:var(--brass);}
+.mono-font-group{flex:0 0 auto;align-self:center;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--brass);padding:0 2px 0 6px;}
+.mono-font-group:first-child{padding-left:0;}
 .mono-font-chip.selected{border:1.5px solid var(--brass);background:rgba(176,141,87,0.16);padding:4.5px 11.5px;}
 .mono-font-tag{color:var(--brass);letter-spacing:0;}
 .mono-text-status{font-size:12px;color:var(--ivory-dim);margin-top:2px;min-height:0;}

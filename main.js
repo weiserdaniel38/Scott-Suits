@@ -4485,7 +4485,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     row.className = "mono-font-row";
     row.setAttribute("role", "radiogroup");
     row.setAttribute("aria-label", fcat.label);
+    let lastGroup = null;
     fcat.options.forEach((opt) => {
+      // A small label where each group of fonts (script, classic, block) starts.
+      if (opt.group && opt.group !== lastGroup) {
+        const g = document.createElement("span");
+        g.className = "mono-font-group";
+        g.textContent = opt.group;
+        row.appendChild(g);
+        lastGroup = opt.group;
+      }
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "mono-font-chip" + (order.monogramFont === opt.name ? " selected" : "");
