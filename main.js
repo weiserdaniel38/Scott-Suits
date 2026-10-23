@@ -138,9 +138,10 @@ function activeMeasurements() {
   );
 }
 
-// "Finished suit sizes" or "Body measurements" (plus a jacket and pants
-// fit). Saved with the measurements as measure_type / jacket_fit /
-// pants_fit, so they reach the order row and the factory order.
+// "Finished suit sizes" or "Body measurements". Saved with the
+// measurements as measure_type (body orders also save jacket_fit /
+// pants_fit as "Regular", the factory's standard allowance; customers no
+// longer pick a fit), so they reach the order row and the factory order.
 let measureMode = "finished";
 // Values typed in the other mode's fields, kept while switching back and
 // forth (cleared with the form).
@@ -4775,12 +4776,7 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
   const measurementList = MEASUREMENTS.filter(
     (m) => (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, suitType)
   );
-  if (mode === "body") {
-    const fits = [];
-    if (!isPantsOnly) fits.push("jacket fit: " + (measurements.jacket_fit || "Regular"));
-    if (!isJacketOnly) fits.push("pants fit: " + (measurements.pants_fit || "Regular"));
-    lines.push("Body measurements -- " + fits.join(", "));
-  }
+  if (mode === "body") lines.push("Body measurements");
   measurementList.forEach((m) => {
     const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + (m.mode === "body" ? " (body):" : "-"));
     const val = measurements[m.id];
@@ -5299,7 +5295,9 @@ function buildTailorCard(t, miles) {
   if (miles != null) {
     const dist = document.createElement("span");
     dist.className = "tailor-card-dist";
-    dist.textContent = miles < 1 ? "Under 1 mile" : Math.round(miles) + (Math.round(miles) === 1 ? " mile" : " miles");
+    // Tenths of a mile under 10 miles (0.1 at least), whole miles above.
+    const shown = miles < 10 ? Math.max(0.1, Math.round(miles * 10) / 10).toFixed(1) : String(Math.round(miles));
+    dist.textContent = shown + (shown === "1.0" ? " mile" : " miles");
     head.appendChild(dist);
   }
   card.appendChild(head);
