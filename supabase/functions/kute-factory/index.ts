@@ -31,6 +31,11 @@
 //       category) into public.factory_codes and returns row counts. Can be
 //       run from the Supabase dashboard's function "Test" button (service
 //       role key).
+// Read-only lookups for Claude: the database function public.kute_lookup()
+// (supabase/sql/21_factory_lookup.sql) calls this with the x-lookup-token
+// header, which may run only the actions in LOOKUP_ACTIONS (status, stock,
+// fabric, archive, factory_preview). They read from the factory and
+// change nothing, here or there.
 // Nothing here submits an order: factory_draft only saves drafts.
 //
 // Signing (the factory's "Signature Authentication"): each request carries
@@ -57,7 +62,7 @@ const supabase = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KE
 
 const CORS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "content-type, apikey, authorization, x-webhook-secret, x-cron-token",
+  "access-control-allow-headers": "content-type, apikey, authorization, x-webhook-secret, x-cron-token, x-lookup-token",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) =>
@@ -309,6 +314,19 @@ async function cronAllowed(req: Request): Promise<boolean> {
   return !!data?.token && data.token === sent;
 }
 
+// Actions that only read from the factory (or build an order without
+// sending it), for the read-only lookup token.
+const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview"]);
+
+// The lookup token: made inside the database by 21_factory_lookup.sql and
+// never shown to anyone.
+async function lookupAllowed(req: Request): Promise<boolean> {
+  const sent = req.headers.get("x-lookup-token") || "";
+  if (sent.length < 32) return false;
+  const { data } = await supabase.from("job_tokens").select("token").eq("name", "kute-factory-lookup").maybeSingle();
+  return !!data?.token && data.token === sent;
+}
+
 // The project's server-only keys: the legacy service role key and any new
 // "sb_secret_..." keys (SUPABASE_SECRET_KEYS is a JSON object of them).
 function serverKeys(): string[] {
@@ -349,7 +367,8 @@ Deno.serve(async (req) => {
     return json({ error: "send a JSON body" }, 400);
   }
   const byCron = input.action === "factory_status_all" && (await cronAllowed(req));
-  if (!byCron && !(await allowed(req))) {
+  const byLookup = !byCron && LOOKUP_ACTIONS.has(String(input.action)) && (await lookupAllowed(req));
+  if (!byCron && !byLookup && !(await allowed(req))) {
     // Which kind of key was sent (never the key itself), to debug dashboard tests.
     const a = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     console.log("kute-factory 403, key kind:", a.startsWith("eyJ") ? "jwt" : a.slice(0, 10), "apikey kind:", (req.headers.get("apikey") || "").slice(0, 10));
