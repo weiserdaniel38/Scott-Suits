@@ -80,5 +80,9 @@ insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
 select 'Tambi Tailoring & Alterations', '1051 Bloomfield Ave, Suite 165', 'Clifton', 'NJ', '07012',
        40.8418, -74.1602
  where not exists (select 1 from public.partner_tailors where name = 'Tambi Tailoring & Alterations');
+insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
+select 'Giorgio''s Tailoring & Menswear', '73 Park Ave', 'Park Ridge', 'NJ', '07656',
+       41.0331, -74.0368
+ where not exists (select 1 from public.partner_tailors where name = 'Giorgio''s Tailoring & Menswear');
 
 notify pgrst, 'reload schema';
