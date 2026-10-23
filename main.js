@@ -5339,6 +5339,12 @@ function renderTailorChecklist() {
   if (!box) return;
   box.innerHTML =
     '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
+    '<ol class="tailor-checklist-steps">' +
+    '<li><strong>Tap "Copy list"</strong> and paste it into a note or text message on your phone.</li>' +
+    '<li><strong>Wear a suit to the tailor</strong> (jacket and pants), so they can measure you the way a suit should fit.</li>' +
+    '<li><strong>Show the list to the tailor.</strong> They measure you and fill in a number next to each item.</li>' +
+    '<li><strong>Come back here and type their numbers</strong> into the matching boxes below.</li>' +
+    '</ol>' +
     '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
   // Plain-text copy to paste into Notes or a message and type the numbers in.
   const lines = [
@@ -5347,7 +5353,7 @@ function renderTailorChecklist() {
     "FOR THE TAILOR: these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so measure for a close, slim fit.",
   ];
   box.querySelector(".tailor-checklist-intro").textContent =
-    "Have the tailor take these suit measurements and write them down, then type them into the boxes below. Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
+    "Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
   const list = box.querySelector(".tailor-checklist-list");
   let lastPart = null;
   // Height and weight are the customer's own to type in, not the tailor's.

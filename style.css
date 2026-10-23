@@ -1975,3 +1975,6 @@ body.order-done-view > .process{display:none !important;}
 .tailor-checklist-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px;}
 .tailor-checklist-head h4{margin:0;}
 .tailor-checklist-copy{font-size:13px;white-space:nowrap;}
+.tailor-checklist-steps{margin:0 0 12px;padding-left:22px;font-size:14px;line-height:1.6;max-width:640px;}
+.tailor-checklist-steps li{margin:4px 0;}
+.tailor-checklist-steps strong{font-weight:600;}
