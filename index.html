@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261023steps">
+<link rel="stylesheet" href="./style.css?v=20261023locate">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -434,12 +434,13 @@
       <span class="size-estimate-toggle-cta">Find a tailor near you</span>
     </button>
     <div class="size-estimate-panel" id="tailorFinderPanel" hidden>
-      <p class="size-estimate-intro">These tailors work with Scott's Suits and can take your measurements for you. Enter your address to see the closest ones. Wear or bring a suit when you go, along with the list below to show the tailor.</p>
+      <p class="size-estimate-intro">These tailors work with Scott's Suits and can take your measurements for you. Enter your address, or tap Use my location, to see the closest ones. Wear or bring a suit when you go, along with the list below to show the tailor.</p>
       <form class="tailor-finder-form" id="tailorFinderForm">
         <div class="measure-field address-field-with-suggestions">
           <label for="tailorZipInput">Your address or ZIP code</label>
           <div class="measure-input-wrap"><input type="text" id="tailorZipInput" maxlength="200" placeholder="Start typing your address..." autocomplete="off"></div>
           <div class="address-suggestions" id="tailorAddressSuggestions"></div>
+          <button type="button" class="tailor-locate-btn" id="tailorLocateBtn"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Use my location</button>
         </div>
         <button type="submit" class="btn-primary" id="tailorFinderBtn">Find tailors</button>
       </form>
@@ -929,7 +930,7 @@
 <script src="./config.js?v=20261022protect"></script>
 <script src="./catalog.js?v=20261023tailors"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261023bring"></script>
+<script src="./main.js?v=20261023locate"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 

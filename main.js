@@ -5529,6 +5529,43 @@ function initTailorFinder() {
     closeSuggestions();
     search();
   }
+  // "Use my location": the phone's or browser's location instead of an
+  // address. The address shown in the box is filled in afterwards if
+  // Geoapify can name the spot; the search doesn't wait for it.
+  const locateBtn = document.getElementById("tailorLocateBtn");
+  if (locateBtn) {
+    if (!navigator.geolocation) locateBtn.hidden = true;
+    locateBtn.addEventListener("click", () => {
+      closeSuggestions();
+      say("Finding your location…");
+      locateBtn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          locateBtn.disabled = false;
+          picked = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          input.value = "Your current location";
+          search();
+          if (typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
+          const qs = new URLSearchParams({ lat: String(picked.lat), lon: String(picked.lng), format: "json", apiKey: GEOAPIFY_API_KEY });
+          const spot = picked;
+          fetch("https://api.geoapify.com/v1/geocode/reverse?" + qs.toString())
+            .then((res) => res.json())
+            .then((data) => {
+              const r = data && data.results && data.results[0];
+              if (r && r.formatted && picked === spot) input.value = r.formatted.replace(/, United States of America$/, "");
+            })
+            .catch(() => {});
+        },
+        (err) => {
+          locateBtn.disabled = false;
+          say(err && err.code === 1
+            ? "Location is turned off for this site. Please allow it in your settings, or type your address or ZIP code."
+            : "We couldn’t find your location. Please type your address or ZIP code.");
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+      );
+    });
+  }
   function setHighlighted(i) {
     const items = sugList.querySelectorAll(".address-suggestion");
     items.forEach((el) => el.classList.remove("highlighted"));
