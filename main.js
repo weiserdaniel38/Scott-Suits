@@ -5416,7 +5416,6 @@ function initTailorFinder() {
   const form = document.getElementById("tailorFinderForm");
   const input = document.getElementById("tailorZipInput");
   const sugList = document.getElementById("tailorAddressSuggestions");
-  const btn = document.getElementById("tailorFinderBtn");
   const msg = document.getElementById("tailorFinderMsg");
   const results = document.getElementById("tailorResults");
   if (!toggle || !panel || !form || !input || !results) return;
@@ -5460,7 +5459,6 @@ function initTailorFinder() {
     }
     const nearText = zipOnly ? zip : "you";
     say("Looking for tailors near " + nearText + "…");
-    if (btn) btn.disabled = true;
     try {
       const { data, error } = await getSupabase()
         .from("partner_tailors")
@@ -5497,13 +5495,13 @@ function initTailorFinder() {
     } catch (err) {
       console.error("Tailor search failed:", err);
       say("Couldn’t look up tailors right now. Please try again in a moment.");
-    } finally {
-      if (btn) btn.disabled = false;
     }
   }
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
+    clearTimeout(sugTimer);
+    if (sugController) sugController.abort();
     closeSuggestions();
     search();
   });
@@ -5572,6 +5570,13 @@ function initTailorFinder() {
   }
   input.addEventListener("input", () => {
     picked = null;
+    // A full 5-digit ZIP searches on its own (there's no search button).
+    if (/^\d{5}$/.test(input.value.trim())) {
+      clearTimeout(sugTimer);
+      closeSuggestions();
+      search();
+      return;
+    }
     if (!sugList || typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
     const text = input.value.trim();
     clearTimeout(sugTimer);
