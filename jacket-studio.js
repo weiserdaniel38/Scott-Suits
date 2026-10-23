@@ -893,10 +893,10 @@
     if (mg === "On Left Inside Pocket") monogramText(g, 530, 344, v, 12, 0);
     else if (mg === "On Right Inside Pocket") monogramText(g, 270, 344, v, 12, 0);
     else if (mg === "On Right Inside Pocket, Monogram On Satin") {
-      g.save(); g.fillStyle = "#f1ece2"; g.fillRect(238, 334, 64, 20); g.restore();
-      monogramText(g, 270, 344, v, 12, 0);
+      g.save(); g.fillStyle = "#f1ece2"; g.fillRect(498, 334, 64, 20); g.restore();
+      monogramText(g, 530, 344, v, 12, 0);
     } else if (mg === "Monogram On Middle Under Collar") monogramText(g, 400, 66, v, 9, 0);
-    anchors.monogram = mg === "On Right Inside Pocket" || mg === "On Right Inside Pocket, Monogram On Satin" ? [270, 372] : [530, 372];
+    anchors.monogram = mg === "On Right Inside Pocket" ? [270, 372] : [530, 372];
     return true;
   }
 

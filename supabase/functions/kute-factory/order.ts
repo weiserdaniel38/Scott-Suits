@@ -71,7 +71,7 @@ const CUFF_BUTTON_CODES: Record<string, string> = {
 const JACKET_EMB_POSITIONS: Record<string, string> = {
   "On Left Inside Pocket": "937",
   "On Right Inside Pocket": "939",
-  "On Right Inside Pocket, Monogram On Satin": "549",
+  "On Right Inside Pocket, Monogram On Satin": "549,0873", // name label, 2cm above left inner pocket
   "Monogram On Middle Under Collar": "550",
 };
 const PANTS_EMB_POSITIONS: Record<string, string> = {

@@ -210,11 +210,8 @@ const JACKET_CATALOG = {
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/jacket-monogram-new-nomonogram.jpg" },
       { name: "On Left Inside Pocket", displayName: "Left Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onleftinsidepkt.jpg" },
       { name: "On Right Inside Pocket", displayName: "Right Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onrightinsidepkt.jpg" },
-      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Satin Label by Right Inside Pocket", specName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-pocketsatin.jpg" },
+      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Left Side Inner Pocket", specName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-leftnamelabel.jpg" },
       { name: "Monogram On Middle Under Collar", displayName: "Under the Collar", specName: "Middle Under Collar", img: "./assets/jacket-monogram-new-middlecollar.jpg" },
-      { name: "Monogram Placement On Left Button", displayName: "Left Lapel", specName: "Left Lapel Placement", img: "./assets/jacket-monogram-new-lapel.jpg" },
-      { name: "Above Left Sleeve Cuff 2cm", displayName: "Above Left Sleeve Cuff", img: "./assets/jacket-monogram-new-leftcuff.jpg" },
-      { name: "Above Right Sleeve Cuff 2cm", displayName: "Above Right Sleeve Cuff", img: "./assets/jacket-monogram-new-rightcuff.jpg" },
     ],
   },
   backvent: {
@@ -418,7 +415,6 @@ const PANTS_CATALOG = {
     options: [
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/pants-monogram-new-none.jpg" },
       { name: "Monogram On Left Back Pocket", displayName: "Left Back Pocket", img: "./assets/pants-monogram-new-leftback.jpg" },
-      { name: "On Right Side Below Waistband Seam", displayName: "Front Right, Below Waistband", specName: "Right Side Below Waistband Seam", img: "./assets/pants-monogram-new-rightbelow.jpg" },
       { name: "Monogram Inside Left Waist", displayName: "Inside the Waistband", specName: "Inside Left Waist", img: "./assets/pants-monogram-new-insideleft.jpg" },
     ],
   },
