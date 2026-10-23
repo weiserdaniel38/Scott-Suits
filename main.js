@@ -5240,7 +5240,7 @@ initAddressAutocomplete();
 // closest tailors that measure for us; the admin keeps the list in My
 // Account > Partner Tailors. Places are turned into lat/lng with Geoapify (same key as the address autocomplete):
 // the customer's address when they search, a tailor's address when it's saved.
-const TAILOR_MAX_MILES = 100;
+const TAILOR_MAX_MILES = 15;
 const TAILOR_MAX_RESULTS = 5;
 
 async function geocodeUs(params) {
@@ -5465,7 +5465,7 @@ function initTailorFinder() {
       if (error) throw error;
       const tailors = data || [];
       if (!tailors.length) {
-        say("We're still building our list of partner tailors. Check back soon, or measure yourself using the fields below.");
+        say("No tailors near you yet. Coming soon!");
         return;
       }
       const here = picked || (zipOnly ? await geocodeUs({ postcode: zip, type: "postcode" }) : await geocodeUs({ text: where }));
@@ -5485,7 +5485,7 @@ function initTailorFinder() {
       }
       list = list.slice(0, TAILOR_MAX_RESULTS);
       if (!list.length) {
-        say("We don't have a partner tailor near " + nearText + " yet. You can still measure yourself using the fields below, or contact us and we'll help.");
+        say("No tailors near you yet. Coming soon!");
         return;
       }
       say(list.length === 1 ? "The closest partner tailor to " + nearText + ":" : list.length + " partner tailors near " + nearText + ", closest first:");
