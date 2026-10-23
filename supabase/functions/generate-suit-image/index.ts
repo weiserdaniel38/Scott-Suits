@@ -242,7 +242,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "No Monogram": NO_MONOGRAM,
     "Left Inside Pocket": MONO + " on the lining just above the wearer's left inside pocket (only visible when the jacket is open)",
     "Right Inside Pocket": MONO + " on the lining just above the wearer's right inside pocket (only visible when the jacket is open)",
-    "Inside Pocket Satin Tape": MONO + " on a small satin label above the wearer's right inside pocket (only visible when the jacket is open)",
+    "Inside Pocket Satin Tape": MONO + " on a small name label above the wearer's left inside pocket (only visible when the jacket is open)",
     "Middle Under Collar": MONO + " centred on the underside of the collar (not visible from the outside)",
     "Left Lapel Placement": MONO + " on the wearer's left lapel, angled along it below the buttonhole",
     "Above Left Sleeve Cuff": MONO + " about 2 cm above the hem of the wearer's left sleeve, beside the cuff buttons",

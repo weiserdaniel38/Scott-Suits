@@ -210,7 +210,7 @@ const JACKET_CATALOG = {
       { name: "No Monogram Need", displayName: "No Monogram", img: "./assets/jacket-monogram-new-nomonogram.jpg" },
       { name: "On Left Inside Pocket", displayName: "Left Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onleftinsidepkt.jpg" },
       { name: "On Right Inside Pocket", displayName: "Right Inside Pocket", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-onrightinsidepkt.jpg" },
-      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Satin Label by Right Inside Pocket", specName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-pocketsatin.jpg" },
+      { name: "On Right Inside Pocket, Monogram On Satin", displayName: "Left Side Inner Pocket", specName: "Inside Pocket Satin Tape", hiddenWhen: { insidepocket: ["No Inner Pockets"] }, img: "./assets/jacket-monogram-new-leftnamelabel.jpg" },
       { name: "Monogram On Middle Under Collar", displayName: "Under the Collar", specName: "Middle Under Collar", img: "./assets/jacket-monogram-new-middlecollar.jpg" },
     ],
   },
