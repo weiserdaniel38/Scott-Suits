@@ -76,5 +76,9 @@ insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
 select 'Ziker Cleaners & Joe Z Tailoring', '2330 South Bend Ave', 'South Bend', 'IN', '46635',
        41.7007, -86.2149
  where not exists (select 1 from public.partner_tailors where name = 'Ziker Cleaners & Joe Z Tailoring');
+insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
+select 'Tambi Tailoring & Alterations', '1051 Bloomfield Ave, Suite 165', 'Clifton', 'NJ', '07012',
+       40.8418, -74.1602
+ where not exists (select 1 from public.partner_tailors where name = 'Tambi Tailoring & Alterations');
 
 notify pgrst, 'reload schema';

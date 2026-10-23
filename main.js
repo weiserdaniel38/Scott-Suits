@@ -5243,7 +5243,7 @@ function initAddressAutocomplete() {
 initAddressAutocomplete();
 
 // ---------------------------------------------------------------------------
-// Partner tailors (supabase/sql/21_partner_tailors.sql). Customers type their
+// Partner tailors (supabase/sql/22_partner_tailors.sql). Customers type their
 // address (with suggestions) or ZIP on the Measurements step and see the
 // closest tailors that measure for us; the admin keeps the list in My
 // Account > Partner Tailors. Places are turned into lat/lng with Geoapify (same key as the address autocomplete):
