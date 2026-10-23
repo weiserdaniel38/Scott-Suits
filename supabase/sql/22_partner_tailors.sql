@@ -96,9 +96,9 @@ insert into public.partner_tailors (name, address, city, state, zip, hours, lat,
 select 'Tailoring While U Wait', '401 Main St', 'Toms River', 'NJ', '08753',
        '8 am to 1 pm, closed Thursdays', 39.9562, -74.1987
  where not exists (select 1 from public.partner_tailors where name = 'Tailoring While U Wait');
-insert into public.partner_tailors (name, address, city, state, zip, lat, lng)
+insert into public.partner_tailors (name, address, city, state, zip, note, lat, lng)
 select 'Tri City Cleaners', '2360 US-9', 'Toms River', 'NJ', '08755',
-       40.0441, -74.2239
+       'Call ahead to make sure the tailor is in.', 40.0441, -74.2239
  where not exists (select 1 from public.partner_tailors where name = 'Tri City Cleaners');
 
 notify pgrst, 'reload schema';
