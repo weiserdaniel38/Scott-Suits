@@ -1978,3 +1978,5 @@ body.order-done-view > .process{display:none !important;}
 .tailor-checklist-steps{margin:0 0 12px;padding-left:22px;font-size:14px;line-height:1.6;max-width:640px;}
 .tailor-checklist-steps li{margin:4px 0;}
 .tailor-checklist-steps strong{font-weight:600;}
+.tailor-locate-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:4px 0;background:none;border:0;color:var(--brass);font:inherit;font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.tailor-locate-btn:disabled{opacity:.6;cursor:wait;}
