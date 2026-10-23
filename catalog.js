@@ -2549,7 +2549,8 @@ JACKET_CATALOG.monogramFont = {
   label: "Monogram Font",
   column: "jacket_monogram_font",
   description: "The lettering style your jacket monogram is embroidered in.",
-  fontCards: true, // cards show the customer's own text in each font (see renderFontCards in main.js)
+  fontCards: true, // cards show the customer's own text in each font (see renderInlineFonts in main.js)
+  inlineWith: "monogram", // picked on the monogram step, under the text box; no step of its own
   options: MONOGRAM_FONT_OPTIONS,
   requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
 };
@@ -2558,6 +2559,7 @@ PANTS_CATALOG.monogramFont = {
   column: "pants_monogram_font",
   description: "The lettering style your pants monogram is embroidered in.",
   fontCards: true,
+  inlineWith: "monogram",
   options: MONOGRAM_FONT_OPTIONS,
   requiresOtherThan: { key: "monogram", value: "No Monogram Need" },
 };

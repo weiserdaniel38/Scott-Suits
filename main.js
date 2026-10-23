@@ -2821,7 +2821,13 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const ti = catalog[k] && catalog[k].textInput;
     if (!ti || !order[k] || order[k] === ti.skipWhen) return false;
     const t = String(customTexts[k] || "").trim();
-    return !t || (k === "monogram" && !!monogramTextProblem(t));
+    return !t || (k === "monogram" && (!!monogramTextProblem(t) || fontMissing()));
+  }
+  // The Monogram Font is picked on the monogram step itself (its
+  // `inlineWith`), so that step isn't finished until a font is chosen.
+  function fontMissing() {
+    const f = catalog.monogramFont;
+    return !!(f && f.inlineWith === "monogram" && isApplicable("monogramFont") && !order.monogramFont);
   }
   function textShown(k) {
     const ti = catalog[k] && catalog[k].textInput;
@@ -3028,6 +3034,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // Questions shown in the wizard: every applicable one, or only the
   // preset's own steps while a preset is loaded.
   function isShown(key) {
+    // A step picked inside another step (Monogram Font, on the monogram
+    // step) has no tab or wizard step of its own.
+    if (catalog[key].inlineWith) return false;
     return isApplicable(key) && (!preset || preset.steps.indexOf(key) !== -1);
   }
   function allowedOptions(key) {
@@ -3453,7 +3462,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         const v = displayValue(k);
         const needText = !!v && textMissing(k);
         return '<button type="button" class="wiz-row' + (i > reachIdx ? " locked" : "") + '" data-k="' + k + '"' + (i > reachIdx ? " disabled" : "") + '><span>' + wizEsc(catalog[k].label) +
-          '</span><span class="' + (v && !needText ? "" : "missing") + '">' + wizEsc(needText ? "Add your monogram" : v || "Choose") + "</span></button>";
+          '</span><span class="' + (v && !needText ? "" : "missing") + '">' + wizEsc(needText ? (k === "monogram" && String(customTexts.monogram || "").trim() && fontMissing() ? "Pick a font" : "Add your monogram") : v || "Choose") + "</span></button>";
       }).join("") +
       "</div>" +
       '<div class="wiz-total"><span>Estimated total</span><b>' + (wizPriceEl ? wizEsc(wizPriceEl.textContent) : "") + "</b></div>" +
@@ -3655,6 +3664,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // grid once we're actually there, avoids that: there's nothing left above
   // the fold for the swap to yank around.
   function switchTab(key) {
+    if (catalog[key] && catalog[key].inlineWith) key = catalog[key].inlineWith;
     // Any move (Back, Next, a progress segment, a Review row) wins over a
     // pick's pending auto-advance -- otherwise tapping Back right after a
     // pick went back and then got carried forward again a moment later.
@@ -4394,6 +4404,11 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // The box only appears once a real option (not "No Monogram") is picked.
     const showTextBox = !!ti && !!order[textKey] && order[textKey] !== ti.skipWhen;
     if (cat.fontCards || textKey === "monogram") ensureMonogramFonts();
+    // The font picked on the monogram step starts on the first font, so the
+    // customer only has to change it if they want another.
+    if (showTextBox && textKey === "monogram" && catalog.monogramFont && catalog.monogramFont.inlineWith && isApplicable("monogramFont") && !order.monogramFont) {
+      order.monogramFont = catalog.monogramFont.options[0].name;
+    }
     const fontOpt = textKey === "monogram" && catalog.monogramFont && isApplicable("monogramFont")
       ? catalog.monogramFont.options.find((o) => o.name === order.monogramFont) : null;
     const textBoxHtml = showTextBox
@@ -4406,6 +4421,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
       (cat.tagline === "" ? "" : '<p class="sub">' + (cat.tagline || "Choose one.") + "</p>") + textBoxHtml + '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' +
       gridId + '"></div>';
+    if (showTextBox && textKey === "monogram" && !cat.fontCards) renderInlineFonts();
     if (showTextBox) {
       const textEl = document.getElementById("catText");
       const statusEl = document.getElementById("catTextStatus");
@@ -4423,7 +4439,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         customTexts[tabAtText] = textEl.value;
         showStatus();
         // Font cards show the typed text live.
-        if (cat.fontCards) {
+        if (cat.fontCards || textKey === "monogram") {
           const html = monogramPreviewHtml(textEl.value);
           optionsEl.querySelectorAll(".font-swatch").forEach((el) => { el.innerHTML = html; });
         }
@@ -4455,6 +4471,57 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       }
       renderSwatchCard(cat, opt, grid);
     });
+  }
+
+  // The Monogram Font picker: a small row of font buttons inside the
+  // monogram box, each name shown in its own font. Picking one keeps the
+  // customer on this step and switches the typed text to that font.
+  function renderInlineFonts() {
+    const fcat = catalog.monogramFont;
+    if (!fcat || fcat.inlineWith !== "monogram" || !isApplicable("monogramFont")) return;
+    const box = optionsEl.querySelector(".mono-text-card");
+    if (!box) return;
+    const row = document.createElement("div");
+    row.className = "mono-font-row";
+    row.setAttribute("role", "radiogroup");
+    row.setAttribute("aria-label", fcat.label);
+    fcat.options.forEach((opt) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "mono-font-chip" + (order.monogramFont === opt.name ? " selected" : "");
+      chip.setAttribute("role", "radio");
+      chip.setAttribute("aria-checked", order.monogramFont === opt.name ? "true" : "false");
+      chip.setAttribute("style", monogramFontStyle(opt).replace(/&#39;/g, "'"));
+      chip.textContent = opt.displayName || opt.name;
+      chip.onclick = () => {
+        order.monogramFont = opt.name;
+        row.querySelectorAll(".mono-font-chip").forEach((c) => {
+          c.classList.toggle("selected", c === chip);
+          c.setAttribute("aria-checked", c === chip ? "true" : "false");
+        });
+        const input = document.getElementById("catText");
+        if (input) {
+          input.classList.add("mono-in-font");
+          input.setAttribute("style", monogramFontStyle(opt).replace(/&#39;/g, "'"));
+        }
+        const tag = box.querySelector(".mono-font-tag");
+        if (tag) tag.textContent = "in " + (opt.displayName || opt.name);
+        if (!embedQuiet) markDesignStarted();
+        renderTabs();
+        renderSummary();
+        saveDraft();
+      };
+      row.appendChild(chip);
+    });
+    const label = document.createElement("div");
+    label.className = "mono-font-label";
+    label.textContent = "Font";
+    const inputWrap = box.querySelector(".measure-input-wrap");
+    (inputWrap || box.lastChild).insertAdjacentElement("afterend", row);
+    row.insertAdjacentElement("beforebegin", label);
+    // Keep the picked font in view when it's past the edge of the row.
+    const picked = row.querySelector(".mono-font-chip.selected");
+    if (picked) row.scrollLeft = Math.max(0, picked.offsetLeft - row.offsetLeft - 8);
   }
 
   function renderSummary() {
