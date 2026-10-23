@@ -4651,7 +4651,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     setActiveTab: (k) => {
       if (keys.indexOf(k) === -1) return;
       closeReview();
-      activeTab = k;
+      activeTab = catalog[k].inlineWith || k;
       renderTabs();
       renderOptions();
     },
@@ -4675,7 +4675,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       embedHost = hostEl;
       embedQuiet = !!(opts && opts.quiet);
       if (optionsEl.parentNode !== hostEl) hostEl.appendChild(optionsEl);
-      if (keys.indexOf(k) !== -1) activeTab = k;
+      if (keys.indexOf(k) !== -1) activeTab = catalog[k].inlineWith || k;
       renderTabs();
       renderOptions();
       hostEl.scrollTop = 0;
