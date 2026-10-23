@@ -4413,7 +4413,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       ? catalog.monogramFont.options.find((o) => o.name === order.monogramFont) : null;
     const textBoxHtml = showTextBox
       ? '<div class="measure-field mono-text-card"><label for="catText">' + ti.label + (fontOpt ? ' <span class="mono-font-tag">in ' + (fontOpt.displayName || fontOpt.name) + "</span>" : "") + "</label>" +
-        '<div class="measure-input-wrap"><input type="text" id="catText" maxlength="' + (ti.maxLength || 40) + '" placeholder="' + ti.placeholder + '" autocomplete="off" autocapitalize="characters" spellcheck="false"' + (fontOpt ? ' class="mono-in-font" style="' + monogramFontStyle(fontOpt) + '"' : "") + "></div>" +
+        '<div class="measure-input-wrap"><input type="text" id="catText" maxlength="' + (ti.maxLength || 40) + '" placeholder="' + ti.placeholder + '" autocomplete="off" autocapitalize="words" spellcheck="false"' + (fontOpt ? ' class="mono-in-font" style="' + monogramFontStyle(fontOpt) + '"' : "") + "></div>" +
         (textKey === "monogram" ? '<div class="mono-text-status" id="catTextStatus"></div>' : "") +
         (ti.hint ? '<div class="mono-text-hint">' + ti.hint + "</div>" : "") + "</div>"
       : "";
