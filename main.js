@@ -134,7 +134,7 @@ function itemPriceUsd(item) {
 // "Body measurements" (measureMode); height and weight are always asked.
 function activeMeasurements() {
   return MEASUREMENTS.filter(
-    (m) => (m.part === "body" || (m.mode || "finished") === measureMode) && measurementForType(m, currentSuitType)
+    (m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === measureMode) && measurementForType(m, currentSuitType)
   );
 }
 
@@ -760,6 +760,11 @@ async function refreshAdminStatus() {
     shipWrap.hidden = !admin;
     if (admin) loadAdminOrders();
   }
+  const tailorsSection = document.getElementById("adminTailorsSection");
+  if (tailorsSection) {
+    tailorsSection.hidden = !admin;
+    if (admin && typeof loadAdminTailors === "function") loadAdminTailors();
+  }
   if (adminNotificationsSection) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
@@ -907,6 +912,7 @@ function renderProfileMeasureGrid(values) {
   profileMeasureGrid.innerHTML = "";
   let lastPart = null;
   MEASUREMENTS.forEach((m) => {
+    if (m.factoryOptional) return;
     if (m.part !== lastPart) {
       const h = document.createElement("h4");
       h.className = "measure-part-heading";
@@ -4832,6 +4838,7 @@ function renderMeasurementFields() {
     if (el) el.value = previousValues[id];
   });
   if (typeof renderMeasureChrome === "function") renderMeasureChrome();
+  if (typeof renderTailorChecklist === "function") renderTailorChecklist();
 }
 renderMeasurementFields();
 
@@ -5226,6 +5233,513 @@ function initAddressAutocomplete() {
   });
 }
 initAddressAutocomplete();
+
+// ---------------------------------------------------------------------------
+// Partner tailors (supabase/sql/22_partner_tailors.sql). Customers type their
+// address (with suggestions) or ZIP on the Measurements step and see the
+// closest tailors that measure for us; the admin keeps the list in My
+// Account > Partner Tailors. Places are turned into lat/lng with Geoapify (same key as the address autocomplete):
+// the customer's address when they search, a tailor's address when it's saved.
+const TAILOR_MAX_MILES = 100;
+const TAILOR_MAX_RESULTS = 5;
+
+async function geocodeUs(params) {
+  if (typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return null;
+  const qs = new URLSearchParams(Object.assign({ filter: "countrycode:us", format: "json", limit: "1", apiKey: GEOAPIFY_API_KEY }, params));
+  try {
+    const res = await fetch("https://api.geoapify.com/v1/geocode/search?" + qs.toString());
+    const data = await res.json();
+    const r = data && data.results && data.results[0];
+    return r && typeof r.lat === "number" && typeof r.lon === "number" ? { lat: r.lat, lng: r.lon } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function normalizeZip(text) {
+  const m = String(text || "").match(/\d{5}/);
+  return m ? m[0] : "";
+}
+
+function milesBetween(a, b) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 3958.8 * 2 * Math.asin(Math.sqrt(h));
+}
+
+function tailorAddressLine(t) {
+  const cityState = [t.city, [t.state, t.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  return [t.address, cityState].filter(Boolean).join(", ");
+}
+
+// Only http(s) links, so a typo can't turn into a javascript: link.
+function tailorWebsiteUrl(site) {
+  const s = String(site || "").trim();
+  if (!s) return "";
+  const url = /^https?:\/\//i.test(s) ? s : "https://" + s;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+// One tailor card. Everything goes in with textContent, never as HTML.
+function buildTailorCard(t, miles) {
+  const card = document.createElement("div");
+  card.className = "tailor-card";
+  const head = document.createElement("div");
+  head.className = "tailor-card-head";
+  const name = document.createElement("b");
+  name.textContent = t.name;
+  head.appendChild(name);
+  if (miles != null) {
+    const dist = document.createElement("span");
+    dist.className = "tailor-card-dist";
+    dist.textContent = miles < 1 ? "Under 1 mile" : Math.round(miles) + (Math.round(miles) === 1 ? " mile" : " miles");
+    head.appendChild(dist);
+  }
+  card.appendChild(head);
+  const addLine = (cls, text, href) => {
+    if (!text) return;
+    const el = document.createElement(href ? "a" : "span");
+    el.className = cls;
+    el.textContent = text;
+    if (href) {
+      el.href = href;
+      if (/^https?:/i.test(href)) {
+        el.target = "_blank";
+        el.rel = "noopener";
+      }
+    }
+    card.appendChild(el);
+  };
+  const addr = tailorAddressLine(t);
+  const mapUrl = addr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t.name + ", " + addr) : "";
+  addLine("tailor-card-line", addr, mapUrl);
+  addLine("tailor-card-line", t.phone, t.phone ? "tel:" + t.phone.replace(/[^\d+]/g, "") : "");
+  addLine("tailor-card-line", t.hours);
+  const site = tailorWebsiteUrl(t.website);
+  addLine("tailor-card-line", site ? t.website.replace(/^https?:\/\//i, "").replace(/\/$/, "") : "", site);
+  addLine("tailor-card-note", t.note);
+  addLine("tailor-card-map", "Open in Maps", mapUrl);
+  return card;
+}
+
+// The list a customer takes to the tailor: always finished suit sizes (the
+// tailor measures for the suit, never the body list), for the current suit
+// type and only what the factory requires, so whatever the tailor writes
+// down can be typed straight into the "Finished suit sizes" boxes. Rebuilt
+// by renderMeasurementFields() whenever the suit type changes.
+function renderTailorChecklist() {
+  const box = document.getElementById("tailorChecklist");
+  if (!box) return;
+  box.innerHTML =
+    '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
+    '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
+  // Plain-text copy to paste into Notes or a message and type the numbers in.
+  const lines = [
+    "Scott's Suits suit measurements",
+    "",
+    "FOR THE TAILOR: these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so measure for a close, slim fit.",
+  ];
+  box.querySelector(".tailor-checklist-intro").textContent =
+    "Have the tailor take these suit measurements and write them down, then type them into the boxes below. Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
+  const list = box.querySelector(".tailor-checklist-list");
+  let lastPart = null;
+  // Height and weight are the customer's own to type in, not the tailor's.
+  MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && m.part !== "body" && measurementForType(m, currentSuitType)).forEach((m) => {
+    const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
+    if (part !== lastPart) {
+      lines.push("", measurePartHeading(part).toUpperCase());
+      const h = document.createElement("li");
+      h.className = "tailor-checklist-part";
+      h.textContent = measurePartHeading(part);
+      list.appendChild(h);
+      lastPart = part;
+    }
+    const li = document.createElement("li");
+    li.className = "tailor-checklist-item";
+    const name = document.createElement("span");
+    name.className = "tailor-checklist-name";
+    name.textContent = m.label;
+    if (m.hint) {
+      const hint = document.createElement("small");
+      hint.textContent = m.hint;
+      name.appendChild(hint);
+    }
+    lines.push(m.label +
+      (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") + ": ");
+    li.append(name);
+    list.appendChild(li);
+  });
+  box.querySelector(".tailor-checklist-foot").textContent = "ALL MEASUREMENTS IN CENTIMETERS.";
+  lines.push("", "ALL MEASUREMENTS IN CENTIMETERS.");
+  const text = lines.join("\n");
+  const copyBtn = box.querySelector(".tailor-checklist-copy");
+  copyBtn.addEventListener("click", async () => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      // Older browsers: copy through a hidden text box instead.
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        ok = document.execCommand("copy");
+      } catch (e2) {
+        ok = false;
+      }
+      ta.remove();
+    }
+    copyBtn.textContent = ok ? "Copied" : "Couldn\u2019t copy";
+    setTimeout(() => (copyBtn.textContent = "Copy list"), 2000);
+  });
+}
+
+function initTailorFinder() {
+  const toggle = document.getElementById("tailorFinderToggleBtn");
+  const panel = document.getElementById("tailorFinderPanel");
+  const form = document.getElementById("tailorFinderForm");
+  const input = document.getElementById("tailorZipInput");
+  const sugList = document.getElementById("tailorAddressSuggestions");
+  const btn = document.getElementById("tailorFinderBtn");
+  const msg = document.getElementById("tailorFinderMsg");
+  const results = document.getElementById("tailorResults");
+  if (!toggle || !panel || !form || !input || !results) return;
+  // Set when the customer picks a suggested address, so the search can use
+  // its exact spot instead of looking the text up again.
+  let picked = null;
+
+  toggle.addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+    toggle.classList.toggle("open", !panel.hidden);
+    toggle.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) {
+      // A tailor takes suit sizes, so switch the boxes below to match.
+      if (measureMode !== "finished") {
+        setMeasureMode("finished");
+        saveDraft();
+      }
+      renderTailorChecklist();
+    }
+    if (!panel.hidden && !input.value) {
+      const val = (id) => ((document.getElementById(id) || {}).value || "").trim();
+      const shipZip = normalizeZip(val("shippingZip"));
+      const street = val("shippingAddress1");
+      if (shipZip) input.value = street ? [street, val("shippingCity"), (val("shippingState") + " " + shipZip).trim()].filter(Boolean).join(", ") : shipZip;
+    }
+  });
+
+  const say = (text) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+  };
+
+  async function search() {
+    results.innerHTML = "";
+    const where = input.value.trim().replace(/\s+/g, " ");
+    const zip = normalizeZip(where);
+    const zipOnly = /^\d{5}(-\d{4})?$/.test(where);
+    if (!picked && !zipOnly && where.length < 5) {
+      say("Please enter your address, or a 5-digit ZIP code.");
+      return;
+    }
+    const nearText = zipOnly ? zip : "you";
+    say("Looking for tailors near " + nearText + "…");
+    if (btn) btn.disabled = true;
+    try {
+      const { data, error } = await getSupabase()
+        .from("partner_tailors")
+        .select("id,name,address,city,state,zip,phone,website,hours,note,lat,lng")
+        .eq("active", true);
+      if (error) throw error;
+      const tailors = data || [];
+      if (!tailors.length) {
+        say("We're still building our list of partner tailors. Check back soon, or measure yourself using the fields below.");
+        return;
+      }
+      const here = picked || (zipOnly ? await geocodeUs({ postcode: zip, type: "postcode" }) : await geocodeUs({ text: where }));
+      let list;
+      if (here) {
+        list = tailors
+          .filter((t) => typeof t.lat === "number" && typeof t.lng === "number")
+          .map((t) => ({ t, miles: milesBetween(here, { lat: t.lat, lng: t.lng }) }))
+          .filter((x) => x.miles <= TAILOR_MAX_MILES)
+          .sort((a, b) => a.miles - b.miles);
+      } else if (!zip) {
+        say("We couldn’t find that address. Please pick one from the list as you type, or try just your ZIP code.");
+        return;
+      } else {
+        // Map lookup unavailable: fall back to tailors in the same ZIP area.
+        list = tailors.filter((t) => normalizeZip(t.zip).slice(0, 3) === zip.slice(0, 3)).map((t) => ({ t, miles: null }));
+      }
+      list = list.slice(0, TAILOR_MAX_RESULTS);
+      if (!list.length) {
+        say("We don't have a partner tailor near " + nearText + " yet. You can still measure yourself using the fields below, or contact us and we'll help.");
+        return;
+      }
+      say(list.length === 1 ? "The closest partner tailor to " + nearText + ":" : list.length + " partner tailors near " + nearText + ", closest first:");
+      list.forEach((x) => results.appendChild(buildTailorCard(x.t, x.miles)));
+    } catch (err) {
+      console.error("Tailor search failed:", err);
+      say("Couldn’t look up tailors right now. Please try again in a moment.");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    closeSuggestions();
+    search();
+  });
+
+  // Address suggestions as they type, from Geoapify (same as the shipping
+  // address field). Picking one searches right away.
+  let sugTimer = null;
+  let sugController = null;
+  let suggestions = [];
+  let highlighted = -1;
+  function closeSuggestions() {
+    if (!sugList) return;
+    sugList.innerHTML = "";
+    sugList.classList.remove("open");
+    suggestions = [];
+    highlighted = -1;
+  }
+  function pick(r) {
+    input.value = (r.formatted || r.address_line1 || input.value).replace(/, United States of America$/, "");
+    picked = typeof r.lat === "number" && typeof r.lon === "number" ? { lat: r.lat, lng: r.lon } : null;
+    closeSuggestions();
+    search();
+  }
+  function setHighlighted(i) {
+    const items = sugList.querySelectorAll(".address-suggestion");
+    items.forEach((el) => el.classList.remove("highlighted"));
+    if (i >= 0 && i < items.length) items[i].classList.add("highlighted");
+    highlighted = i;
+  }
+  input.addEventListener("input", () => {
+    picked = null;
+    if (!sugList || typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
+    const text = input.value.trim();
+    clearTimeout(sugTimer);
+    // A bare ZIP is searched as typed; suggestions are for street addresses.
+    if (text.length < 3 || /^\d+$/.test(text)) {
+      closeSuggestions();
+      return;
+    }
+    sugTimer = setTimeout(() => {
+      if (sugController) sugController.abort();
+      sugController = new AbortController();
+      const url = "https://api.geoapify.com/v1/geocode/autocomplete?text=" + encodeURIComponent(text) +
+        "&filter=countrycode:us&format=json&limit=5&apiKey=" + encodeURIComponent(GEOAPIFY_API_KEY);
+      fetch(url, { signal: sugController.signal })
+        .then((res) => res.json())
+        .then((data) => {
+          suggestions = (data && data.results) || [];
+          highlighted = -1;
+          sugList.innerHTML = "";
+          if (!suggestions.length) {
+            sugList.classList.remove("open");
+            return;
+          }
+          suggestions.forEach((r) => {
+            const item = document.createElement("div");
+            item.className = "address-suggestion";
+            item.textContent = (r.formatted || r.address_line1 || "").replace(/, United States of America$/, "");
+            // mousedown (not click) so this fires before the input's blur closes the list
+            item.addEventListener("mousedown", (e) => {
+              e.preventDefault();
+              pick(r);
+            });
+            sugList.appendChild(item);
+          });
+          sugList.classList.add("open");
+        })
+        .catch(() => {});
+    }, 300);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted(Math.min(highlighted + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted(Math.max(highlighted - 1, 0));
+    } else if (e.key === "Enter" && highlighted >= 0) {
+      e.preventDefault();
+      pick(suggestions[highlighted]);
+    } else if (e.key === "Escape") {
+      closeSuggestions();
+    }
+  });
+  input.addEventListener("blur", () => setTimeout(closeSuggestions, 150));
+}
+initTailorFinder();
+
+// ---- Admin: Partner Tailors in My Account ----
+const adminTailorsSection = document.getElementById("adminTailorsSection");
+const adminTailorsList = document.getElementById("adminTailorsList");
+const adminTailorForm = document.getElementById("adminTailorForm");
+const adminTailorStatus = document.getElementById("adminTailorStatus");
+const TAILOR_FIELDS = {
+  name: "tailorNameInput",
+  address: "tailorAddressInput",
+  city: "tailorCityInput",
+  state: "tailorStateInput",
+  zip: "tailorZipAdminInput",
+  phone: "tailorPhoneInput",
+  website: "tailorWebsiteInput",
+  hours: "tailorHoursInput",
+  note: "tailorNoteInput",
+};
+let editingTailor = null;
+
+function resetTailorForm() {
+  editingTailor = null;
+  if (adminTailorForm) adminTailorForm.reset();
+  const active = document.getElementById("tailorActiveInput");
+  if (active) active.checked = true;
+  document.getElementById("adminTailorFormTitle").textContent = "Add a tailor";
+  document.getElementById("adminTailorSaveBtn").textContent = "Add tailor";
+  document.getElementById("adminTailorCancelBtn").hidden = true;
+}
+
+function editTailor(t) {
+  editingTailor = t;
+  Object.entries(TAILOR_FIELDS).forEach(([key, id]) => {
+    document.getElementById(id).value = t[key] || "";
+  });
+  document.getElementById("tailorActiveInput").checked = !!t.active;
+  document.getElementById("adminTailorFormTitle").textContent = "Edit " + t.name;
+  document.getElementById("adminTailorSaveBtn").textContent = "Save changes";
+  document.getElementById("adminTailorCancelBtn").hidden = false;
+  hideAccountStatus(adminTailorStatus);
+  adminTailorForm.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+async function loadAdminTailors() {
+  if (!adminTailorsList) return;
+  try {
+    const { data, error } = await getSupabase()
+      .from("partner_tailors")
+      .select("*")
+      .order("state")
+      .order("city")
+      .order("name");
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) {
+      adminTailorsList.innerHTML = '<p class="account-section-note">No tailors yet. Add your first one below.</p>';
+      return;
+    }
+    adminTailorsList.innerHTML = "";
+    rows.forEach((t) => {
+      const item = document.createElement("div");
+      item.className = "admin-tailor" + (t.active ? "" : " admin-tailor-hidden");
+      const info = document.createElement("div");
+      const name = document.createElement("b");
+      name.textContent = t.name + (t.active ? "" : " (hidden)");
+      const meta = document.createElement("span");
+      meta.className = "admin-notif-meta";
+      meta.textContent = [tailorAddressLine(t), t.phone].filter(Boolean).join(" · ");
+      info.append(name, meta);
+      if (typeof t.lat !== "number") {
+        const warn = document.createElement("span");
+        warn.className = "admin-tailor-warn";
+        warn.textContent = "Couldn't find this address on the map, so customers won't see it in distance results. Check the address and save again.";
+        info.appendChild(warn);
+      }
+      const actions = document.createElement("div");
+      actions.className = "admin-tailor-btns";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "btn-ghost";
+      edit.textContent = "Edit";
+      edit.addEventListener("click", () => editTailor(t));
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-ghost";
+      del.textContent = "Remove";
+      del.addEventListener("click", async () => {
+        if (del.dataset.confirm !== "1") {
+          del.dataset.confirm = "1";
+          del.textContent = "Tap again to remove";
+          setTimeout(() => {
+            del.dataset.confirm = "";
+            del.textContent = "Remove";
+          }, 4000);
+          return;
+        }
+        const { error: delErr } = await getSupabase().from("partner_tailors").delete().eq("id", t.id);
+        if (delErr) console.error("Failed to remove tailor:", delErr);
+        if (editingTailor && editingTailor.id === t.id) resetTailorForm();
+        loadAdminTailors();
+      });
+      actions.append(edit, del);
+      item.append(info, actions);
+      adminTailorsList.appendChild(item);
+    });
+  } catch (err) {
+    console.error("Failed to load tailors:", err);
+    adminTailorsList.innerHTML = '<p class="account-section-note">Couldn’t load tailors right now.</p>';
+  }
+}
+
+if (adminTailorForm) {
+  document.getElementById("adminTailorCancelBtn").addEventListener("click", () => {
+    resetTailorForm();
+    hideAccountStatus(adminTailorStatus);
+  });
+  adminTailorForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const row = {};
+    Object.entries(TAILOR_FIELDS).forEach(([key, id]) => {
+      row[key] = document.getElementById(id).value.trim();
+    });
+    row.active = document.getElementById("tailorActiveInput").checked;
+    if (!row.name || !normalizeZip(row.zip)) {
+      showAccountStatus(adminTailorStatus, "Please enter at least a name and a 5-digit ZIP code.");
+      return;
+    }
+    const saveBtn = document.getElementById("adminTailorSaveBtn");
+    saveBtn.disabled = true;
+    showAccountStatus(adminTailorStatus, "Saving…");
+    try {
+      // Street address first; if the map service can't place it, the ZIP's
+      // center is close enough for "closest tailor" sorting.
+      const full = tailorAddressLine(row);
+      const spot = (row.address && (await geocodeUs({ text: full }))) || (await geocodeUs({ postcode: normalizeZip(row.zip), type: "postcode" }));
+      row.lat = spot ? spot.lat : null;
+      row.lng = spot ? spot.lng : null;
+      const q = editingTailor
+        ? getSupabase().from("partner_tailors").update(row).eq("id", editingTailor.id)
+        : getSupabase().from("partner_tailors").insert(row);
+      const { error } = await q;
+      if (error) throw error;
+      showAccountStatus(adminTailorStatus, (editingTailor ? "Saved " : "Added ") + row.name + "." + (spot ? "" : " Couldn't find the address on the map, so please check it."));
+      resetTailorForm();
+      loadAdminTailors();
+    } catch (err) {
+      console.error("Failed to save tailor:", err);
+      showAccountStatus(adminTailorStatus, "Couldn’t save the tailor. Please try again.");
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Cart -- lets a customer design more than one suit in a single order. Each
