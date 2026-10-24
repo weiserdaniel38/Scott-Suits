@@ -6,8 +6,8 @@ const JACKET_CATALOG = {
   collar: {
     label: "Lapel Style",
     column: "collar_style",
-    // Trimmed to the four lapel styles the shop offers: Notch, Peak, Shawl
-    // and Diamond (drawings supplied by the shop). The other styles
+    // Trimmed to the lapel styles the shop offers: Notch, Semi-Notch, Peak,
+    // Semi-Peak, Shawl and Diamond (drawings supplied by the shop). The other styles
     // (Narrow/Gorge notch, Curve Peak, the Shawl variants, Safari, Top
     // Collar) were removed on request -- they are saved in
     // catalog_BACKUP_before_lapel_cleanup_20261005.js.txt. The stored
@@ -19,7 +19,14 @@ const JACKET_CATALOG = {
         // breasted (see reconcileSelections() in main.js).
         hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
         replaceWith: "Peak Lapel" },
+      // Semi-notch and semi-peak added from Daniel's drawings (2026-10-24).
+      // Semi-notch follows Notch: not offered double breasted, becomes
+      // Semi-Peak there.
+      { name: "Semi-Notch Lapel", factoryCode: "0003", img: "./assets/jacket-collar-new-seminotch.jpg",
+        hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
+        replaceWith: "Semi-Peak Lapel" },
       { name: "Peak Lapel", factoryCode: "0002", img: "./assets/jacket-collar-new-peak.jpg" },
+      { name: "Semi-Peak Lapel", factoryCode: "0004", img: "./assets/jacket-collar-new-semipeak.jpg" },
       { name: "Shawl", displayName: "Shawl Collar", specName: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl.jpg" },
       { name: "Diamond Lapel", factoryCode: "001R", img: "./assets/jacket-collar-new-diamond.jpg" },
     ],

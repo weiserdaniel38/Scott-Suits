@@ -44,6 +44,7 @@
   // with the lapels redrawn (scripts/make_jacket_photo.py).
   const SHADE_LAPEL = {
     "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
+    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
     "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
     "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
   };
