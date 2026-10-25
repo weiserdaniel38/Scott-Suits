@@ -1032,6 +1032,10 @@ body.wiz-lock{overflow:hidden;}
 /* Small divider between option sections (e.g. Single / Double Breasted) */
 .opt-grid .opt-section-divider{grid-column:1/-1;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--brass);margin:18px 0 2px;padding-bottom:6px;border-bottom:1px solid var(--line);}
 .opt-grid .opt-section-divider:first-child{margin-top:4px;}
+/* New Fabrics section in the Fabric step: a stronger title, color headings, then small price labels */
+.opt-grid .opt-section-divider.new-fabrics-title{font-size:13px;letter-spacing:2px;color:var(--ivory);margin-top:30px;border-bottom:2px solid var(--brass);}
+.opt-grid .opt-section-divider.new-fabrics-color{margin-top:16px;}
+.opt-grid .opt-section-divider.new-fabrics-price{font-size:10px;font-weight:600;letter-spacing:1.2px;color:var(--ivory-dim);border-bottom:none;margin:6px 0 0;padding-bottom:0;}
 
 /* Declutter: once designing has started, the landing hero isn't needed */
 body.designing .hero{display:none;}

@@ -19,8 +19,9 @@ CATALOG = open(os.path.join(ROOT, "catalog.js"), encoding="utf-8").read()
 TILE = 1560  # FABRIC_ZOOM_TILE_SIZE
 OUT_HALF = 256
 
-zoom = {m.group(1): (m.group(2), int(m.group(3)), int(m.group(4))) for m in re.finditer(
-    r'"([^"]+)": \{ sprite: "\./assets/([^"]+)", col: (\d+), row: (\d+) \}', CATALOG)}
+# New Fabrics carry their own tile size (tile: 1200, a one-tile "sprite").
+zoom = {m.group(1): (m.group(2), int(m.group(3)), int(m.group(4)), int(m.group(5) or TILE)) for m in re.finditer(
+    r'"([^"]+)": \{ sprite: "\./assets/([^"]+)", col: (\d+), row: (\d+)(?:, tile: (\d+))? \}', CATALOG)}
 thumbs = {m.group(1): m.group(2) for m in re.finditer(
     r'\{ name: "([^"]+)", displayName: "[^"]*", img: "\./assets/jacket-fabric-([^"]+)\.jpg"', CATALOG)}
 
@@ -30,12 +31,12 @@ for code, slug in sorted(thumbs.items()):
     if code not in zoom:
         print("no zoom tile:", code)
         continue
-    sprite, col, row = zoom[code]
+    sprite, col, row, size = zoom[code]
     if sprite not in sheets:
         sheets[sprite] = Image.open(os.path.join(ROOT, "assets", sprite)).convert("RGB")
-    tile = sheets[sprite].crop((col * TILE, row * TILE, (col + 1) * TILE, (row + 1) * TILE))
-    m = int(TILE * 0.1)  # stay inside the pinked edge
-    cloth = tile.crop((m, m, TILE - m, TILE - m)).resize((OUT_HALF, OUT_HALF), Image.LANCZOS)
+    tile = sheets[sprite].crop((col * size, row * size, (col + 1) * size, (row + 1) * size))
+    m = int(size * 0.1)  # stay inside the pinked edge
+    cloth = tile.crop((m, m, size - m, size - m)).resize((OUT_HALF, OUT_HALF), Image.LANCZOS)
     out = Image.new("RGB", (OUT_HALF * 2, OUT_HALF * 2))
     out.paste(cloth, (0, 0))
     out.paste(ImageOps.mirror(cloth), (OUT_HALF, 0))

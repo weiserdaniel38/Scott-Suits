@@ -64,7 +64,7 @@
   function firstNavySolid() {
     const solid = (CAT.fabric.patternTypes || []).find((t) => t.name === "Solid");
     const navy = solid && solid.colorFamilies.find((f) => /navy|blue/i.test(f.name));
-    const list = navy ? navy.options : CAT.fabric.options;
+    const list = (navy ? navy.options : CAT.fabric.options).filter((o) => !o.isNew);
     // A mid navy, not the darkest one, so the cloth reads as navy at a glance.
     const sorted = list.slice().sort((a, b) => lum(b.hex) - lum(a.hex));
     return (sorted[Math.floor(sorted.length / 3)] || CAT.fabric.options[0]).name;
