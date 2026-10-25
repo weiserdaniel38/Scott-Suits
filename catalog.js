@@ -40,10 +40,16 @@ const JACKET_CATALOG = {
     // what the customer sees. (8.5, 9.5 and 10.5 cm were removed.)
     // A Diamond Lapel comes only in 8 cm: the factory's Place Order refuses
     // 00N5 with collar 001R and its site offers only 8.0cm (Daniel,
-    // 2026-10-25).
+    // 2026-10-25). The step is skipped and set to 8 cm (fixedBySelection,
+    // see reconcileSelections() in main.js).
     allowedBySelection: {
       collar: {
         "Diamond Lapel": ["8 cm"],
+      },
+    },
+    fixedBySelection: {
+      collar: {
+        "Diamond Lapel": "8 cm",
       },
     },
     options: [
