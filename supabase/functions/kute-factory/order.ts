@@ -416,8 +416,11 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       lastname: last,
       gender: "1002",
       remark,
-      height: input.height,
-      heightUnit: input.heightUnit === "in" ? 1020 : 1019,
+      // Always cm: the factory reads every measurement in the height's unit,
+      // and the measurements are cm (an inch height made it read 106.5 cm
+      // chest as 106.5 in, Daniel 2026-10-25).
+      height: input.heightUnit === "in" ? Math.round(input.height * 2.54 * 10) / 10 : input.height,
+      heightUnit: 1019,
       weight: input.weight,
       weightUnit: input.weightUnit === "lb" ? 1018 : 1017,
     },
