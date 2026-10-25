@@ -248,7 +248,9 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   // ---- Jacket ----
   if (hasJacket) {
     const jc = catalogCodes(jacket, row, JACKET_BY_HAND, "Jacket", warnings);
-    jc.push(...JACKET_FIXED);
+    // The inner pocket bartack conflicts with no inner pockets at the factory.
+    const noInnerPockets = s(row.inside_pocket_style) === "No Inner Pockets";
+    jc.push(...JACKET_FIXED.filter((c) => !(c === "0861" && noInnerPockets)));
     // Orders from before the pick stitching step: no pick stitch.
     if (!s(row.jacket_pick_stitch)) jc.push("0570");
 
