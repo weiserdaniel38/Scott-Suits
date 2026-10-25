@@ -5992,6 +5992,13 @@ function buildVisualSpecText(item, opts) {
       // specLabel: the step's older name, which the picture generator matches on.
       const specLabel = cat.specLabel || cat.label;
       lines.push(specLabel + ": " + text);
+      // The customer's own monogram letters, so the picture can stitch them
+      // (in the Monogram Font and Thread Color lines that follow).
+      if (key === "monogram") {
+        const part = title === "PANTS" ? "pants" : "jacket";
+        const mono = String((item.texts && item.texts[part] && item.texts[part].monogram) || "").replace(/\s+/g, " ").trim().slice(0, 40);
+        if (mono && !/^No Monogram/i.test(sel[key])) lines.push("Monogram Text: " + mono);
+      }
       if (!d.opt || d.matchesFabric || d.opt.uploadPhoto) return;
       const part = title === "PANTS" ? "pants " : "";
       if (key === "fabric") addSwatch(part + "fabric", d.opt.img);
@@ -7118,12 +7125,18 @@ function buildSuitImageCard(labelText) {
   return ui;
 }
 
+// The monogram letters typed in the designer, shaped like a cart item's `texts`.
+function currentDesignTexts() {
+  return { jacket: jacketDesigner.getTexts(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getTexts() };
+}
+
 function currentDesignSpec() {
   try {
     return buildVisualSpecText({
       type: currentSuitType,
       jacket: jacketDesigner.getSelections(),
       pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(),
+      texts: currentDesignTexts(),
     });
   } catch (e) {
     return "";
@@ -7257,7 +7270,7 @@ async function updateDesignPreviewPanel() {
       // catalog linings (not part of `spec`, which only identifies the design).
       const photoUrl = await previewLiningPhotoUrl(liningPhoto);
       const sent = photoUrl
-        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections() }, { liningPhotoUrl: photoUrl })
+        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(), texts: currentDesignTexts() }, { liningPhotoUrl: photoUrl })
         : spec;
       const start = await callSuitImageFn({ preview: true, visual_spec: sent });
       if (start.status === 401) return signInAgain();

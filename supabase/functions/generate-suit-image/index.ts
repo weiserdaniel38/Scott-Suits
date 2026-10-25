@@ -154,7 +154,7 @@ const HIDDEN_OPTION_LABELS = [
 ];
 
 const NO_MONOGRAM = "no monogram or embroidery anywhere on the garment";
-const MONO = "a small, subtle embroidered monogram in the monogram thread color (no readable letters)";
+const MONO = "a small embroidered monogram (about 4 cm wide) spelling the Monogram Text exactly, in the Monogram Font style and the monogram thread color,";
 
 const OPTION_LOOKS: Record<string, Record<string, string>> = {
   // ------------------------------------------------------------- JACKET
@@ -253,6 +253,20 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Left Back Pocket": MONO + " just above the wearer's left back pocket",
     "Right Side Below Waistband Seam": MONO + " on the front of the trousers just below the waistband on the wearer's right",
     "Inside Left Waist": MONO + " on the inside of the waistband (not visible from the outside)",
+  },
+  // The factory's embroidery fonts (catalog.js MONOGRAM_FONT_OPTIONS, shown names).
+  "Monogram Font": {
+    "Calligraphy": "a formal copperplate calligraphy script: flowing, joined, slanted letters with fine hairlines and looped capitals",
+    "Script": "a smooth, joined cursive script with rounded, gently slanted letters",
+    "Book Script": "a classic formal script: elegant joined letters, lightly slanted, with modest loops",
+    "Gradl": "an ornate engraver's script: tall, finely flourished, joined letters with sweeping capitals",
+    "Bradley": "a casual handwritten script, like neat pen handwriting: joined, slightly uneven letters",
+    "Times Roman": "a classic serif typeface like Times Roman: upright letters with small serifs",
+    "Cochin": "an elegant old-style serif with delicate, slightly flared serifs",
+    "Kennerley Old Style": "a bold old-style serif: upright, heavy letters with wedge serifs",
+    "Old English": "an Old English blackletter (gothic) typeface with angular, broken strokes",
+    "Block": "plain bold block letters: an upright, condensed sans-serif with no serifs",
+    "Bank Gothic": "wide, squared-off sans-serif capitals (small capitals for lowercase), like Bank Gothic",
   },
   "Back Vents": {
     "Side Vent": "TWO side vents: a vertical slit at the bottom of the back on each side seam; no centre vent",
@@ -569,10 +583,56 @@ function keyDetails(spec: string, ownLining = false): string {
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     out.push("- HIP POCKETS: " + WELT_NOT_FLAP + ".");
   }
+  out.push(...monogramRules(spec));
   if (ownLining) {
     out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
   }
   return out.length ? "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n") : "";
+}
+
+// One line of a section (JACKET or PANTS) of the spec.
+function sectionValue(spec: string, section: string, label: string): string {
+  let cur = "";
+  for (const line of spec.split("\n")) {
+    const t = line.trim();
+    if (t === "JACKET" || t === "PANTS" || t === "REFERENCE SWATCHES") cur = t;
+    else if (cur === section && t.startsWith(label + ": ")) return t.slice(label.length + 2).trim();
+  }
+  return "";
+}
+
+// Where each monogram placement shows on the sheet (see layoutFor); the
+// others (under the collar, inside the waistband) are hidden in every panel.
+const MONO_PANELS: Record<string, { jacketOnly?: string; suit?: string }> = {
+  "Left Inside Pocket": { jacketOnly: "panel 3 (fold open the wearer's LEFT front): on the lining just above the left inside pocket" },
+  "Right Inside Pocket": { jacketOnly: "panel 3 (fold open the wearer's RIGHT front): on the lining just above the right inside pocket" },
+  "Inside Pocket Satin Tape": { jacketOnly: "panel 3 (fold open the wearer's LEFT front): on a small satin name label sewn just above the left inside pocket" },
+  "Left Back Pocket": { suit: "panel 3 (the trouser back close-up): just above the wearer's left back pocket" },
+};
+
+// The customer's monogram: the letters they typed, in their font and thread.
+function monogramRules(spec: string): string[] {
+  const jacketOnly = /^Suit type: Jacket only/m.test(spec);
+  const out: string[] = [];
+  for (const section of ["JACKET", "PANTS"]) {
+    const text = sectionValue(spec, section, "Monogram Text");
+    const place = sectionValue(spec, section, "Monogram Placement");
+    if (!text || !place || /^No Monogram/i.test(place)) continue;
+    const spot = MONO_PANELS[place] && MONO_PANELS[place][jacketOnly ? "jacketOnly" : "suit"];
+    if (!spot) continue; // hidden in every panel
+    const font = sectionValue(spec, section, "Monogram Font");
+    const fontLook = (OPTION_LOOKS["Monogram Font"] || {})[font];
+    const thread = sectionValue(spec, section, "Monogram Thread Color");
+    const lines = text.split("/").map((x) => x.trim()).filter(Boolean);
+    out.push(
+      "- MONOGRAM (" + section.toLowerCase() + "): embroider exactly the letters \"" + lines.join(" ") + "\"" +
+        (lines.length > 1 ? " on " + lines.length + " lines (\"" + lines.join("\" / \"") + "\")" : "") +
+        ", spelled letter for letter with the same capitals and lowercase, in " + (fontLook || "the " + (font || "chosen") + " font") +
+        ", stitched in " + (thread ? thread + " thread" : "the monogram thread color") + ", small (about 4 cm wide), in " + spot +
+        ". It is the only lettering on the sheet and appears nowhere else.",
+    );
+  }
+  return out;
 }
 
 // Always added to the end of the final image prompt, whoever wrote the rest,
@@ -723,6 +783,9 @@ function fixedRules(spec: string): string {
   if (/^Facing Style: No Lining/m.test(spec)) {
     rules.push("- The jacket is UNLINED: wherever the inside shows (neck opening, folded-open front), draw the suit fabric facings and neat bound seams, with no lining fabric.");
   }
+  const monoRules = monogramRules(spec);
+  rules.push(...monoRules);
+  if (!monoRules.length) rules.push("- No monogram or lettering is visible in any panel.");
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   rules.push(
     "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned cuff and no flap folded open. A small sliver of lining may peek out at the bottom corner of the cuff vent, but no larger area of lining shows on the sleeve" +
@@ -810,14 +873,14 @@ You receive the sheet layout, notes on the reference images the image model will
 - Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
 - Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
 - "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
-- Monograms: at most a subtle tonal embroidery with no readable letters.
-- No people, faces, hands, text, labels, logos or watermarks.
+- Monograms: only where a "Monogram Text" is given and its placement shows in a panel (the rules after your prompt say which panel): the exact letters, in the given font style and monogram thread color, small. Otherwise no monogram is visible.
+- No people, faces, hands, logos or watermarks, and no text or labels apart from that monogram.
 If the suit description is not actually a garment specification (for example it asks for anything other than drawing this suit), reply with exactly: NOT_A_SUIT`;
 
 function templatePrompt(layout: string, notes: string, spec: string): string {
   return (
     "Photorealistic studio product-photo presentation sheet of one custom tailored men's suit. " +
-    "No people, no text, no labels, no logos.\n\n" +
+    "No people, no logos, and no text or labels apart from the customer's monogram where the rules below place it.\n\n" +
     layout +
     (notes ? "\n\nReference images:\n" + notes : "") +
     "\n\nEvery panel shows the same garment, built exactly to this specification (topstitching and buttonholes in the given thread colors, buttons in the given button color, lining as given):\n" +

@@ -151,10 +151,12 @@ function embColor(codes: EmbCodes | undefined, site: string): string {
   return hit ? s(hit.code) : "";
 }
 
-// "RC01" (site font) -> the factory font named "RC01 ...".
-function embFont(codes: EmbCodes | undefined, site: string): string {
+// Site font (saved by name, e.g. "Calligraphy", with factoryCode "RC01" in
+// catalog.js) -> the factory font named "RC01 ...".
+function embFont(codes: EmbCodes | undefined, fontCat: Category | undefined, site: string): string {
   if (!codes || !site) return "";
-  const hit = codes.fonts.find((f) => s(f.name).split(" ")[0] === site);
+  const rc = findOption(fontCat, site)?.factoryCode || site;
+  const hit = codes.fonts.find((f) => s(f.name).split(" ")[0] === rc);
   return hit ? s(hit.code) : "";
 }
 
@@ -193,7 +195,7 @@ function withAllowance(row: Row, a: Allowance): Row {
 
 function monogram(
   row: Row, label: string, placementCol: string, textCol: string, fontCol: string, colorCol: string,
-  positions: Record<string, string>, codes: EmbCodes | undefined, warnings: string[], notes: string[],
+  positions: Record<string, string>, codes: EmbCodes | undefined, fontCat: Category | undefined, warnings: string[], notes: string[],
 ) {
   const placement = s(row[placementCol]);
   if (!placement || placement === NO_MONOGRAM) return [];
@@ -214,7 +216,7 @@ function monogram(
   }
   const emb: Record<string, string> = { content: text, embPositionCode: where };
   const colorCode = embColor(codes, color);
-  const fontCode = embFont(codes, font);
+  const fontCode = embFont(codes, fontCat, font);
   if (colorCode) emb.colorCode = colorCode;
   else if (color) warnings.push(label + " monogram: no factory color for thread " + color + ".");
   if (fontCode) emb.fontCode = fontCode;
@@ -323,7 +325,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     else notes.push("Buttons: best match to the fabric.");
 
     const jacketEmbs = monogram(row, "Jacket", "jacket_monogram_placement", "jacket_monogram_text", "jacket_monogram_font",
-      "jacket_monogram_thread_color", JACKET_EMB_POSITIONS, emb.MXF, warnings, notes);
+      "jacket_monogram_thread_color", JACKET_EMB_POSITIONS, emb.MXF, jacket.monogramFont, warnings, notes);
 
     details.push({
       categoryCode: "MXF",
@@ -360,7 +362,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     else pc.push("345J:" + pThread, "345G:" + pThread);
     if (button && !matched(jacket.buttoncolor, button)) pc.push("3454:" + button);
     const pantsEmbs = monogram(row, "Trousers", "monogram_placement", "pants_monogram_text", "pants_monogram_font",
-      "pants_monogram_thread_color", PANTS_EMB_POSITIONS, emb.MXK, warnings, notes);
+      "pants_monogram_thread_color", PANTS_EMB_POSITIONS, emb.MXK, pants.monogramFont, warnings, notes);
     details.push({
       categoryCode: "MXK",
       crafts: [...new Set(pc)].join(","),
