@@ -360,13 +360,13 @@ const PANTS_CATALOG = {
     // The suit picture generator still knows this step by its old name.
     specLabel: "Waistband Style",
     column: "waistband_style",
-    // The two buckle styles (factory 3352, 33TG) need an extra factory
-    // setting the site doesn't have yet; the factory refuses them without it
-    // (test drafts, 2026-10-25).
-    retiredOptions: ["Arrow Shape Belt W/ Adjustable Buckle", "Adjustable Waistband On Side W/ Buckle"],
+    // The two buckle styles (factory 3352, 33TG) go to the factory with the
+    // buckle written after the code (kute-factory order.ts adds it).
     options: [
       { name: "Normal Waistband", displayName: "No Adjusters (Plain Waistband)", specName: "Normal Waistband", factoryCode: "3349", img: "./assets/pants-wstyle-new-normal.jpg" },
       { name: "Elastic Waistband On Side Buttons", displayName: "Side Button Tabs", specName: "Elastic Waistband On Side Buttons", factoryCode: "3351", img: "./assets/pants-wstyle-new-sidetabs.jpg" },
+      { name: "Arrow Shape Belt W/ Adjustable Buckle", displayName: "Pointed Side Straps With Buckle", specName: "Arrow Shape Belt W/ Adjustable Buckle", factoryCode: "3352", img: "./assets/pants-wstyle-new-arrowbelt.jpg" },
+      { name: "Adjustable Waistband On Side W/ Buckle", displayName: "Side Buckle Tabs", specName: "Adjustable Waistband On Side W/ Buckle", factoryCode: "33TG", img: "./assets/pants-wstyle-new-adjside.jpg" },
     ],
   },
   frontPleat: {
