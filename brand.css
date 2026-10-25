@@ -9,6 +9,21 @@
 @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url(./assets/sw/fonts/cormorant-600.woff) format('woff');}
 @font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:500;font-display:swap;src:url(./assets/sw/fonts/cormorant-500-italic.woff) format('woff');}
 
+@font-face{font-family:'Bodoni Moda';font-style:normal;font-weight:500;font-display:swap;src:url(./assets/sw/fonts/bodoni-moda-500.woff) format('woff');}
+@font-face{font-family:'Bodoni Moda';font-style:italic;font-weight:500;font-display:swap;src:url(./assets/sw/fonts/bodoni-moda-500-italic.woff) format('woff');}
+@font-face{font-family:'Jost';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/sw/fonts/jost-400.woff) format('woff');}
+@font-face{font-family:'Jost';font-style:normal;font-weight:500 700;font-display:swap;src:url(./assets/sw/fonts/jost-500.woff) format('woff');}
+@font-face{font-family:'Cinzel';font-style:normal;font-weight:400 700;font-display:swap;src:url(./assets/sw/fonts/cinzel-500.woff) format('woff');}
+@font-face{font-family:'SW Montserrat';font-style:normal;font-weight:400 500;font-display:swap;src:url(./assets/sw/fonts/montserrat-400.woff) format('woff');}
+@font-face{font-family:'SW Montserrat';font-style:normal;font-weight:600 700;font-display:swap;src:url(./assets/sw/fonts/montserrat-600.woff) format('woff');}
+@font-face{font-family:'Poiret One';font-style:normal;font-weight:400 700;font-display:swap;src:url(./assets/sw/fonts/poiret-one.woff) format('woff');}
+@font-face{font-family:'Josefin Sans';font-style:normal;font-weight:400 500;font-display:swap;src:url(./assets/sw/fonts/josefin-sans-400.woff) format('woff');}
+@font-face{font-family:'Josefin Sans';font-style:normal;font-weight:600 700;font-display:swap;src:url(./assets/sw/fonts/josefin-sans-600.woff) format('woff');}
+@font-face{font-family:'Great Vibes';font-style:normal;font-weight:400 700;font-display:swap;src:url(./assets/sw/fonts/great-vibes.woff) format('woff');}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:400 500;font-display:swap;src:url(./assets/sw/fonts/eb-garamond-400.woff) format('woff');}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:600 700;font-display:swap;src:url(./assets/sw/fonts/eb-garamond-600.woff) format('woff');}
+@font-face{font-family:'EB Garamond';font-style:italic;font-weight:400;font-display:swap;src:url(./assets/sw/fonts/eb-garamond-400-italic.woff) format('woff');}
+
 html[data-brand="sw"]{
   --ink:#F7F2EC;
   --ivory:#2B1A1D;
@@ -26,6 +41,17 @@ html[data-brand="sw"]{
   --ink-rgb:247,242,236;
   --surface:#FFFDFA;
   --surface-rgb:255,253,250;
+  /* Type: display font (titles, nav, big buttons) and reading font, with
+     sizes per font since a script needs to be much bigger than capitals. */
+  --sw-display:'Pinyon Script',cursive;
+  --sw-display-case:none;
+  --sw-display-track:0;
+  --sw-display-weight:400;
+  --sw-body:'Cormorant Garamond',Georgia,serif;
+  --sw-body-size:1.08em;
+  --sw-body-weight:500;
+  --sw-h1:76px;--sw-h1-m:54px;--sw-h2:1.45em;
+  --sw-nav:24px;--sw-nav-m:20px;--sw-btn:30px;--sw-btn-m:26px;
 }
 
 /* Other color themes, picked in brand.js (SITE_BRANDS.sw.themes). Each
@@ -61,11 +87,37 @@ html[data-brand="sw"][data-sw-theme="blush"]{
   --oxblood:#A85F6C;--sw-burgundy:#A85F6C;--sw-burgundy-dark:#8A4855;--sw-gold:#FFF6F2;
   --line:rgba(43,43,48,0.15);--card-tint:rgba(43,43,48,0.04);--surface:#FFFBFA;--surface-rgb:255,251,250;
 }
+/* Font options (brand.js SITE_BRANDS.sw.fonts, preview with ?font=X). */
+html[data-brand="sw"][data-sw-font="bodoni"]{
+  --sw-display:'Bodoni Moda',Didot,serif;--sw-display-weight:500;--sw-display-track:0;
+  --sw-body:'Jost',Helvetica,sans-serif;--sw-body-size:1em;--sw-body-weight:400;
+  --sw-h1:62px;--sw-h1-m:42px;--sw-h2:1.1em;--sw-nav:15px;--sw-nav-m:13px;--sw-btn:17px;--sw-btn-m:15px;
+  --sw-display-case:none;
+}
+html[data-brand="sw"][data-sw-font="cinzel"]{
+  --sw-display:'Cinzel',serif;--sw-display-weight:500;--sw-display-track:0.04em;
+  --sw-body:'SW Montserrat',Helvetica,sans-serif;--sw-body-size:0.96em;--sw-body-weight:400;
+  --sw-h1:54px;--sw-h1-m:36px;--sw-h2:1em;--sw-nav:14px;--sw-nav-m:12px;--sw-btn:16px;--sw-btn-m:14px;
+}
+html[data-brand="sw"][data-sw-font="deco"]{
+  --sw-display:'Poiret One',sans-serif;--sw-display-weight:400;--sw-display-track:0.06em;--sw-display-case:uppercase;
+  --sw-body:'Josefin Sans',Helvetica,sans-serif;--sw-body-size:1.02em;--sw-body-weight:400;
+  --sw-h1:56px;--sw-h1-m:36px;--sw-h2:1em;--sw-nav:16px;--sw-nav-m:13px;--sw-btn:18px;--sw-btn-m:16px;
+}
+html[data-brand="sw"][data-sw-font="vibes"]{
+  --sw-display:'Great Vibes',cursive;--sw-display-weight:400;
+  --sw-body:'EB Garamond',Georgia,serif;--sw-body-size:1.05em;--sw-body-weight:400;
+  --sw-h1:72px;--sw-h1-m:52px;--sw-h2:1.4em;--sw-nav:24px;--sw-nav-m:20px;--sw-btn:28px;--sw-btn-m:24px;
+}
+
 /* Fabric and option photos keep a white backdrop in the dark theme. */
 html[data-sw-theme="midnight"] .opt-swatch,
 html[data-sw-theme="midnight"] .lightbox-frame,
 html[data-sw-theme="midnight"] .suit-type-icon,
 html[data-sw-theme="midnight"] .suit-preview-img{background:#fff !important;}
+/* Google's sign-in button stays white with dark text (Google's own spec). */
+html[data-sw-theme="midnight"] .btn-google{background:#fff;color:#3c4043;border-color:#dadce0;}
+html[data-sw-theme="midnight"] .btn-google:hover{background:#f8f8f8;}
 
 /* Dark fills (selected tab, progress, confirm buttons) take the main color. */
 html[data-brand="sw"] .tab.active,
@@ -80,25 +132,25 @@ html[data-brand="sw"] h1 *,
 html[data-brand="sw"] h2,
 html[data-brand="sw"] .navlink-btn,
 html[data-brand="sw"] #heroStartDesigningBtn,
-html[data-brand="sw"] .how-it-works-cta{font-family:'Pinyon Script',cursive !important;font-weight:400 !important;letter-spacing:0 !important;text-transform:none !important;}
+html[data-brand="sw"] .how-it-works-cta{font-family:var(--sw-display) !important;font-weight:var(--sw-display-weight) !important;letter-spacing:var(--sw-display-track) !important;text-transform:var(--sw-display-case) !important;}
 html[data-brand="sw"] h3,
 html[data-brand="sw"] p,
 html[data-brand="sw"] p *,
 html[data-brand="sw"] li,
 html[data-brand="sw"] .lead,
 html[data-brand="sw"] footer,
-html[data-brand="sw"] .hero-badges span{font-family:'Cormorant Garamond',Georgia,serif !important;}
+html[data-brand="sw"] .hero-badges span{font-family:var(--sw-body) !important;}
 html[data-brand="sw"] h1,html[data-brand="sw"] h2{color:var(--sw-burgundy);}
-html[data-brand="sw"] h2{font-size:1.45em;}
-html[data-brand="sw"] p{font-size:1.08em;font-weight:500;}
+html[data-brand="sw"] h2{font-size:var(--sw-h2);}
+html[data-brand="sw"] p{font-size:var(--sw-body-size);font-weight:var(--sw-body-weight);}
 html[data-brand="sw"] h3{font-weight:600 !important;}
 
 /* Hero: "Custom-made," in burgundy, the rest in near-black, as in the mockup. */
-html[data-brand="sw"] .hero h1{font-size:76px;line-height:1.05;max-width:620px;}
+html[data-brand="sw"] .hero h1{font-size:var(--sw-h1);line-height:1.05;max-width:620px;}
 html[data-brand="sw"] .hero h1 em{font-style:normal;color:var(--ivory);display:block;}
 html[data-brand="sw"] .hero p.lead{font-size:20px;line-height:1.55;color:var(--ivory);}
 html[data-brand="sw"] .hero-rule{background:var(--brass);width:90px;}
-html[data-brand="sw"] .navlink-btn{font-size:24px;color:var(--sw-burgundy);}
+html[data-brand="sw"] .navlink-btn{font-size:var(--sw-nav);color:var(--sw-burgundy);}
 html[data-brand="sw"] .navlink-btn:hover{color:var(--brass);}
 html[data-brand="sw"] .nav-cart-btn svg{stroke:var(--sw-burgundy);}
 html[data-brand="sw"] .nav-cart-btn svg path[d^="M2.5"],
@@ -108,7 +160,7 @@ html[data-brand="sw"] #cartIconBtn svg{stroke:var(--brass);}
 html[data-brand="sw"] .btn-primary{background:var(--sw-burgundy);color:var(--sw-gold);border:1px solid var(--brass);border-radius:999px;}
 html[data-brand="sw"] .btn-primary:hover{background:var(--sw-burgundy-dark);color:var(--sw-gold);}
 html[data-brand="sw"] #heroStartDesigningBtn,
-html[data-brand="sw"] .how-it-works-cta{font-size:30px;padding:10px 40px 12px;}
+html[data-brand="sw"] .how-it-works-cta{font-size:var(--sw-btn);padding:10px 40px 12px;}
 html[data-brand="sw"] .nav-cta{border-color:var(--brass);color:var(--sw-burgundy);}
 html[data-brand="sw"] .nav-cta:hover{background:var(--sw-burgundy);color:var(--sw-gold);}
 html[data-brand="sw"] .btn-ghost{color:var(--sw-burgundy);}
@@ -119,10 +171,10 @@ html[data-brand="sw"] body > .wrap > header a img{height:118px;width:auto;}
 @media(max-width:900px){html[data-brand="sw"] .logo-mark{height:96px;}}
 @media(max-width:600px){
   html[data-brand="sw"] .logo-mark{height:84px;}
-  html[data-brand="sw"] .navlink-btn{font-size:20px;}
-  html[data-brand="sw"] .hero h1{font-size:54px;}
+  html[data-brand="sw"] .navlink-btn{font-size:var(--sw-nav-m);}
+  html[data-brand="sw"] .hero h1{font-size:var(--sw-h1-m);}
   html[data-brand="sw"] .hero p.lead{font-size:18px;}
-  html[data-brand="sw"] #heroStartDesigningBtn{font-size:26px;}
+  html[data-brand="sw"] #heroStartDesigningBtn{font-size:var(--sw-btn-m);}
 }
 
 /* No prices anywhere: price boxes, totals and price-only notes. */
