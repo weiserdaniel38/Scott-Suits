@@ -145,6 +145,18 @@ html[data-brand="sw"] #lightbox .lightbox-confirm-btn,
 html[data-brand="sw"] .order-done-home:hover{background:var(--sw-burgundy);color:var(--sw-gold);}
 html[data-brand="sw"] body{background:var(--ink);}
 
+/* Every piece of lettering uses the landing page fonts (Daniel, 2026-10-25):
+   the body font everywhere, replacing Scott's site-wide Montserrat; the
+   display font below for titles. Monogram font samples set their own font
+   inline with !important, so they keep their look. */
+html[data-brand="sw"] *,
+html[data-brand="sw"] *::before,
+html[data-brand="sw"] *::after{font-family:var(--sw-body) !important;}
+html[data-brand="sw"] .suit-type-name,
+html[data-brand="sw"] .hiw-num,
+html[data-brand="sw"] .lightbox-caption,
+html[data-brand="sw"] .studio-marker-label{font-family:var(--sw-display) !important;letter-spacing:var(--sw-display-track);text-transform:var(--sw-display-case);}
+
 /* Script for the big titles and the nav, serif for reading text. */
 html[data-brand="sw"] h1,
 html[data-brand="sw"] h1 *,
