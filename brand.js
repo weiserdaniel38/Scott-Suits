@@ -38,13 +38,16 @@ var SITE_BRANDS = {
     logo: "./assets/sw/logo.png",
     logoWidth: 640,
     logoHeight: 552,
-    icon: "./assets/sw/icon-192.png",
+    icon: "./assets/sw/icon-v2-192.png",
     heroImage: "./assets/sw/hero.jpg",
     // Color themes (brand.css). The first is the one shown (Daniel chose
     // midnight and champagne, 2026-10-25); any other can be tried with
     // ?theme=navy etc. (remembered in this browser, ?theme=default goes back).
     // Each has its own recolored logo and hero photo in assets/sw/
     // (logo-navy.png, hero-navy.jpg ...); burgundy uses logo.png / hero.jpg.
+    // A theme listed in logos uses that file instead (Daniel's new logo,
+    // 2026-10-25, gold monogram with an ivory name, made for midnight).
+    logos: { midnight: "./assets/sw/logo-v2.png" },
     themes: ["midnight", "burgundy", "navy", "forest", "blush"],
     // Font pairings (brand.css), picked the same way with ?font=bodoni etc.
     // The first is shown: Art Deco, Poiret One + Josefin Sans (Daniel, 2026-10-25).
@@ -92,7 +95,7 @@ var SITE_BRAND = (function () {
     brand.theme = brandChoice(brand.themes, "theme", "siteTheme");
     root.setAttribute("data-sw-theme", brand.theme);
     if (brand.theme !== "burgundy") {
-      brand.logo = brand.logo.replace(/\.png$/, "-" + brand.theme + ".png");
+      brand.logo = (brand.logos && brand.logos[brand.theme]) || brand.logo.replace(/\.png$/, "-" + brand.theme + ".png");
       brand.heroImage = brand.heroImage.replace(/\.jpg$/, "-" + brand.theme + ".jpg");
     }
   }
