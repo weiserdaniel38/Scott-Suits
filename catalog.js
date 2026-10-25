@@ -343,11 +343,39 @@ const PANTS_CATALOG = {
   frontPleat: {
     label: "Front Pleat",
     column: "front_pleat",
+    // Pleat depth sent to the factory with every pleated pair (3.2 cm).
+    // Factory/admin only, never shown to customers.
+    pleatDepthCode: "302F",
     options: [
       { name: "No Pleat", displayName: "Flat Front (No Pleats)", specName: "No Pleat", factoryCode: "302L", img: "./assets/pants-pleat-new-no.jpg" },
-      { name: "Single Pleat", factoryCode: "3021", img: "./assets/pants-pleat-new-single.jpg" },
-      { name: "Double Pleat", factoryCode: "3023", img: "./assets/pants-pleat-new-double.jpg" },
+      // `allowances`: the factory's table "Men's Pants: Seat & Thigh
+      // Allowances by Pleat Style & Depth" -- cm added to the finished
+      // NON-pleated seat (hips) and thigh, by pleat depth code
+      // (depth cm in `depth`). The factory order adds the row for
+      // pleatDepthCode to finished measurements.
+      { name: "Single Pleat", factoryCode: "3021", img: "./assets/pants-pleat-new-single.jpg", allowances: {
+        "303Z": { depth: 1.5, seat: 2, thigh: 1.2 },
+        "302H": { depth: 2, seat: 2.5, thigh: 1.5 },
+        "302E": { depth: 2.5, seat: 3, thigh: 1.8 },
+        "302F": { depth: 3.2, seat: 5.1, thigh: 3 },
+        "302G": { depth: 3.8, seat: 6.9, thigh: 3.6 },
+        "302N": { depth: 4.4, seat: 8.7, thigh: 4.5 },
+      } },
+      { name: "Double Pleat", factoryCode: "3023", img: "./assets/pants-pleat-new-double.jpg", allowances: {
+        "303Z": { depth: 1.5, seat: 4, thigh: 2.4 },
+        "302H": { depth: 2, seat: 4, thigh: 2.4 },
+        "302E": { depth: 2.5, seat: 5, thigh: 3 },
+        "302F": { depth: 3.2, seat: 7.1, thigh: 4 },
+        "302G": { depth: 3.8, seat: 8.9, thigh: 4.5 },
+        "302N": { depth: 4.4, seat: 10.7, thigh: 5.2 },
+      } },
     ],
+    // Triple pleats aren't offered on the site; kept so the table is whole.
+    tripleAllowances: {
+      "302E": { depth: 2.5, seat: 7, thigh: 4 },
+      "302F": { depth: 3.2, seat: 9.1, thigh: 4.7 },
+      "302G": { depth: 3.8, seat: 10.9, thigh: 5.2 },
+    },
   },
   beltLoops: {
     label: "Belt Loops",

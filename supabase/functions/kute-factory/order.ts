@@ -11,8 +11,9 @@
 // Pure: no network or database, so it can be tested on its own.
 
 type Row = Record<string, unknown>;
-type Option = { name: string; factoryCode?: string; matchesFabric?: boolean; options?: Option[] };
-type Category = { column: string; options?: Option[]; colorFamilies?: { options?: Option[] }[]; patternTypes?: { colorFamilies?: { options?: Option[] }[] }[] };
+type Allowance = { depth: number; seat: number; thigh: number };
+type Option = { name: string; factoryCode?: string; matchesFabric?: boolean; options?: Option[]; allowances?: Record<string, Allowance> };
+type Category = { column: string; options?: Option[]; pleatDepthCode?: string; colorFamilies?: { options?: Option[] }[]; patternTypes?: { colorFamilies?: { options?: Option[] }[] }[] };
 export type Catalog = Record<string, Category>;
 // Embroidery fonts and colors from public.factory_codes (list "embroideries").
 export type EmbCodes = { fonts: { code: string; name: string }[]; colors: { code: string; name: string }[] };
@@ -178,6 +179,18 @@ function sizes(row: Row, list: [string, string][], label: string, warnings: stri
   return out;
 }
 
+// The row with the pleat allowance added to the finished seat (hips) and thigh.
+function withAllowance(row: Row, a: Allowance): Row {
+  const out: Row = { ...row };
+  const add = (col: string, cm: number) => {
+    const n = Number(row[col]);
+    if (row[col] !== null && row[col] !== undefined && row[col] !== "" && isFinite(n) && n > 0) out[col] = n + cm;
+  };
+  add("hips", a.seat);
+  add("thigh", a.thigh);
+  return out;
+}
+
 function monogram(
   row: Row, label: string, placementCol: string, textCol: string, fontCol: string, colorCol: string,
   positions: Record<string, string>, codes: EmbCodes | undefined, warnings: string[], notes: string[],
@@ -326,8 +339,22 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     const pc = catalogCodes(pants, row, PANTS_BY_HAND, "Trousers", warnings);
     pc.push(...PANTS_FIXED);
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
+    // Pleat depth, and the factory's seat/thigh allowance for it: finished
+    // measurements are for flat-front trousers, so a pleated pair needs the
+    // allowance added (body measurements: the factory adds its own).
     const pleat = s(row.front_pleat);
-    if (pleat && pleat !== "No Pleat") pc.push("302F");
+    let pleatAllowance: Allowance | undefined;
+    if (pleat && pleat !== "No Pleat") {
+      const depthCode = pants.frontPleat?.pleatDepthCode || "302F";
+      pc.push(depthCode);
+      pleatAllowance = findOption(pants.frontPleat, pleat)?.allowances?.[depthCode];
+      if (!bodyMode) {
+        if (pleatAllowance) {
+          notes.push("Seat +" + pleatAllowance.seat + " cm and thigh +" + pleatAllowance.thigh + " cm added for " + pleat.toLowerCase() + " (" + pleatAllowance.depth + " cm deep).");
+        } else warnings.push("Trousers: no seat/thigh pleat allowance for \"" + pleat + "\"; add it on the factory site.");
+      }
+    }
+    const pantsRow = !bodyMode && pleatAllowance ? withAllowance(row, pleatAllowance) : row;
     const pThread = s(row.pants_thread_color);
     if (matched(pants.threadColor, pThread)) pc.push("345H", "345F");
     else pc.push("345J:" + pThread, "345G:" + pThread);
@@ -337,7 +364,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     details.push({
       categoryCode: "MXK",
       crafts: [...new Set(pc)].join(","),
-      orderSizes: sizes(row, bodyMode ? PANTS_BODY : PANTS_SIZES, "Trousers", warnings, input.ranges?.MXK),
+      orderSizes: sizes(pantsRow, bodyMode ? PANTS_BODY : PANTS_SIZES, "Trousers", warnings, input.ranges?.MXK),
       orderEmbs: pantsEmbs,
       ...(bodyMode ? { versionStyle: fit(row.pants_fit) } : {}),
     });
