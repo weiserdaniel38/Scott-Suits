@@ -49,6 +49,10 @@ const JACKET_FIXED = ["074G", "0850", "0861", "060K", "AAQD"];
 // nylon zip, standard inner waistband.
 const PANTS_FIXED = ["3500", "3514", "3400", "3420", "3430"];
 
+// Waist adjuster codes whose buckle goes with the code, and what's sent.
+const BUCKLE_CODES = new Set(["3352", "33TG"]);
+const BUCKLE = "Silver metal buckle";
+
 // Steps handled by hand below rather than by the catalog's own codes.
 const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "monogramThreadColor", "fabric"]);
 const PANTS_BY_HAND = new Set(["monogram", "monogramFont", "monogramThreadColor", "threadColor", "fabric"]);
@@ -346,6 +350,14 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   if (hasPants) {
     const pc = catalogCodes(pants, row, PANTS_BY_HAND, "Trousers", warnings);
     pc.push(...PANTS_FIXED);
+    // The buckle waist adjusters need the buckle written with the code, or
+    // the factory refuses the order ("please fill in the content specified
+    // by craft<3352>"). It isn't checked at save, so the admin confirms it.
+    const buckle = pc.findIndex((c) => BUCKLE_CODES.has(c));
+    if (buckle !== -1) {
+      pc[buckle] += ":" + BUCKLE;
+      warnings.push("Trousers: buckle waist adjusters sent with \"" + BUCKLE + "\"; check the buckle on the factory site before placing.");
+    }
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
     // Pleat depth, and the factory's seat/thigh allowance for it: finished
     // measurements are for flat-front trousers, so a pleated pair needs the

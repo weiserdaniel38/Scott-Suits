@@ -27,7 +27,7 @@
 //       at the factory; run once a day by pg_cron (see
 //       supabase/sql/15_factory_status_daily.sql), which signs in with the
 //       x-cron-token header and may run only this action
-//   { action: "factory_probe", id, set: { column: value }, orderNo? }
+//   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
 //       saves a TEST draft of that suit with some choices changed, to see
 //       which combinations the factory refuses; the row is not changed
 //   { action: "sync" }   saves every code list (crafts for each garment
@@ -297,6 +297,12 @@ async function probeDraft(input: Record<string, unknown>) {
     orderNo: String(input.orderNo || ""),
   });
   if (blocking.length) return { ok: false, blocking, warnings };
+  // `swap` replaces whole craft codes, e.g. { "3349": "3352:X" }, to try a
+  // factory code (or its content) the site catalog doesn't offer yet.
+  const swap = (input.swap || {}) as Record<string, string>;
+  for (const d of body.orderDetails as Record<string, unknown>[]) {
+    d.crafts = String(d.crafts).split(",").map((c) => swap[c] ?? c).join(",");
+  }
   body.submit = false; // never submit from here
   const customer = body.customer as Record<string, unknown>;
   customer.remark = "TEST DRAFT, do not produce (Scott's Suits option check). " + String(customer.remark || "");
