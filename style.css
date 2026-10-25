@@ -1609,6 +1609,17 @@ body:not(.qa-allowed) .qa-nav,body:not(.qa-allowed) #qaNavBar,body:not(.qa-allow
 /* Line inside the sticky progress bar while a cart suit is open for editing. */
 .editing-cart-notice{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px 10px;max-width:max-content;margin:8px auto 0;padding:6px 16px;border-radius:999px;background:rgba(var(--brass-rgb),0.14);font-size:12.5px;line-height:1.35;color:var(--ivory);text-align:center;}
 .editing-cart-notice[hidden]{display:none;}
+.admin-edit-bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 14px;width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;margin:8px auto 0;padding:8px 16px;border:1px dashed var(--brass);border-radius:10px;background:var(--card-tint);font-size:12.5px;line-height:1.35;color:var(--ivory);}
+.admin-edit-bar[hidden]{display:none;}
+.admin-edit-bar strong{color:var(--brass);text-transform:uppercase;letter-spacing:1.2px;font-size:11px;margin-right:6px;}
+.admin-edit-help{color:var(--ivory-dim);}
+.admin-edit-bar .admin-order-btn{padding:7px 14px;font-size:12.5px;}
+.admin-edit-cancel{background:none;border:none;color:var(--ivory-dim);font:inherit;text-decoration:underline;cursor:pointer;padding:4px;}
+.admin-edit-cancel:hover{color:var(--brass);}
+/* Editing an order already placed: no price choices, no new suits. */
+body.admin-editing-order #adminOrderWrap,
+body.admin-editing-order #alterationBlock,
+body.admin-editing-order #addAnotherSuitBtn{display:none !important;}
 .editing-cart-tag{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:var(--brass);}
 .editing-cart-text{color:var(--ivory-dim);}
 @media(max-width:600px){

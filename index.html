@@ -44,7 +44,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261025themes">
+<link rel="stylesheet" href="./style.css?v=20261025editorder">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261025deco"></script>
 <link rel="stylesheet" href="./brand.css?v=20261025deco">
@@ -246,6 +246,14 @@
   <div class="editing-cart-notice" id="editingCartNotice" hidden>
     <span class="editing-cart-tag" id="editingCartTag">Editing Suit 1</span>
     <span class="editing-cart-text">Changes save to your cart when you finish Measurements.</span>
+  </div>
+  <!-- Admin only, while editing an order already placed ("Edit order" under
+       All Orders in My Account). See startAdminOrderEdit() in main.js. -->
+  <div class="admin-edit-bar" id="adminEditBar" hidden>
+    <span class="admin-edit-who"><strong>Admin</strong> <span id="adminEditWho">Editing an order</span></span>
+    <span class="admin-edit-help">Change suits with Edit in the cart; contact details are on the Order page.</span>
+    <button type="button" class="admin-order-btn" id="adminEditSaveBtn">Save changes to order</button>
+    <button type="button" class="admin-edit-cancel" id="adminEditCancelBtn">Cancel</button>
   </div>
 </div>
 
@@ -922,7 +930,7 @@
 <script src="./config.js?v=20261022protect"></script>
 <script src="./catalog.js?v=20261025diamondhole"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261025mono"></script>
+<script src="./main.js?v=20261025editorder"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261018off"></script> -->
 
