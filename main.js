@@ -7309,6 +7309,23 @@ const SUIT_LOADING_STEPS = [
   { text: "Giving the jacket a final press..." },
   { text: "Adding the finishing touches..." },
 ];
+// Pants Only orders get these lines instead, so nothing mentions a jacket.
+const PANTS_LOADING_STEPS = [
+  "Cutting your trouser fabric...",
+  "Matching the pattern at the side seams...",
+  "Setting the waistband...",
+  "Sewing in the fly...",
+  "Adding the pockets...",
+  "Attaching the belt loops...",
+  "Pressing the front creases...",
+  "Hemming the trouser legs...",
+  "Checking every stitch...",
+  "Giving the trousers a final press...",
+];
+// "jacket", "pants" or "full": which loading lines fit this suit type.
+function loadingKindForType(type) {
+  return isJacketOnlyType(type) ? "jacket" : isPantsOnlyType(type) ? "pants" : "full";
+}
 
 function buildSuitImageCard(labelText) {
   const card = document.createElement("div");
@@ -7332,7 +7349,7 @@ function buildSuitImageCard(labelText) {
   const ui = {
     card,
     btn,
-    working(jacketOnly) {
+    working(kind) {
       btn.hidden = true;
       btn.disabled = true;
       status.textContent = "";
@@ -7357,7 +7374,7 @@ function buildSuitImageCard(labelText) {
       caption.className = "suit-preview-loading-text";
       caption.innerHTML = "<strong></strong><span>This usually takes about a minute.</span>";
       const line = caption.querySelector("strong");
-      const steps = SUIT_LOADING_STEPS.filter((s) => !(jacketOnly && s.pants)).map((s) => s.text);
+      const steps = kind === "pants" ? PANTS_LOADING_STEPS : SUIT_LOADING_STEPS.filter((s) => !(kind === "jacket" && s.pants)).map((s) => s.text);
       let step = 0;
       line.textContent = steps[0];
       const timer = setInterval(() => {
@@ -7511,7 +7528,7 @@ async function updateDesignPreviewPanel() {
   };
 
   const watch = (preview) => {
-    ui.working(isJacketOnlyType(currentSuitType));
+    ui.working(loadingKindForType(currentSuitType));
     pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
       if (designPreview !== preview) return;
       preview.status = r.status === "done" ? "done" : "failed";
@@ -7532,7 +7549,7 @@ async function updateDesignPreviewPanel() {
 
   ui.btn.addEventListener("click", () => requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing));
   async function startDrawing() {
-    ui.working(isJacketOnlyType(currentSuitType));
+    ui.working(loadingKindForType(currentSuitType));
     // On a phone, bring the whole card (video and caption) into view.
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
       smoothScrollWindowTo(window.scrollY + box.getBoundingClientRect().top - getNavClearance());
@@ -7589,7 +7606,7 @@ async function renderSuitPreview(suits) {
     const ui = buildSuitImageCard(suit.label);
     box.appendChild(ui.card);
     const startDrawing = async () => {
-      ui.working(suit.jacketOnly);
+      ui.working(suit.jacketOnly ? "jacket" : suit.pantsOnly ? "pants" : "full");
       if (SUIT_IMAGES_PAUSED) return;
       try {
         const start = await callSuitImageFn(ids);
@@ -7736,7 +7753,7 @@ async function finalizeOrder(input, opts) {
     customerName +
     (cartItems.length > 1 ? " (" + cartItems.length + " suits)" : "");
   const previewItems = visualSpecSaved
-    ? rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, jacketOnly: r.suit_type === "jacket_only", label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+    ? rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, jacketOnly: r.suit_type === "jacket_only", pantsOnly: r.suit_type === "pants_only", label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
       // Pants on their own get no picture.
       .filter((p, i) => rows[i].suit_type !== "pants_only")
     : null;
