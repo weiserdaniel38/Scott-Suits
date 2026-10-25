@@ -739,6 +739,19 @@ if (openAdminOrdersPending) window.history.replaceState(null, "", window.locatio
 // Set by the QA nav bar code near the end of this file.
 let setQaNavAllowed = null;
 
+// The order the admin is editing ("Edit order" under All Orders), or null.
+// Kept in this tab's storage so a reload stays in edit mode. See
+// startAdminOrderEdit() below.
+const ADMIN_EDIT_KEY = "scottSuitsAdminEdit";
+let adminEditState = readAdminEditState();
+function readAdminEditState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(ADMIN_EDIT_KEY) || "null");
+  } catch (e) {
+    return null;
+  }
+}
+
 async function refreshAdminStatus() {
   const user = currentUser;
   let admin = false;
@@ -1538,6 +1551,7 @@ function adminOrderRow(o) {
     '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
     '<button type="button" class="btn-primary ship-save">Save</button>' +
     '<button type="button" class="admin-ship-factory">Send to factory</button>' +
+    '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
     '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
@@ -1590,6 +1604,8 @@ function adminOrderRow(o) {
       saveBtn.disabled = false;
     }
   });
+  const editBtn = row.querySelector(".admin-ship-edit");
+  editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn));
   const factoryBtn = row.querySelector(".admin-ship-factory");
   let factoryPanel = null;
   factoryBtn.addEventListener("click", () => {
@@ -1769,6 +1785,199 @@ function adminFactorySuit(suit, count) {
   );
   return box;
 }
+
+// ---------------------------------------------------------------------------
+// "Edit order" (admin): loads a placed order's suits into the cart, so the
+// admin changes them in the designer itself, where every option rule applies
+// exactly as for a customer (hidden options, conflicts, measurement limits).
+// Contact and shipping details are edited on the Personal Info page. "Save
+// changes to order" writes the same order rows back (admin_update_order,
+// supabase/sql/25_admin_edit_order.sql); payment, prices, shipping progress
+// and factory fields never change. Whatever was in the admin's own cart is
+// put aside and comes back when editing ends.
+// ---------------------------------------------------------------------------
+async function startAdminOrderEdit(o, btn) {
+  if (!currentIsAdmin) return;
+  if (adminEditState) {
+    alert("You're already editing " + (adminEditState.name || "an order") + "'s order. Save or cancel that first (the bar at the top of the designer).");
+    return;
+  }
+  if ((cartItems.length || designerHasUnsavedWork()) &&
+      !window.confirm("Edit " + (o.customer_name || "this") + "'s order?\n\nYour own cart and design are put aside while you edit and come back when you save or cancel.")) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading...";
+  try {
+    const { data, error } = await getSupabase().rpc("admin_order_rows", { p_order_id: o.order_id });
+    if (error) throw error;
+    if (!data || !data.length) throw new Error("order not found");
+    saveDraft();
+    let draft = null;
+    let photos = null;
+    try {
+      draft = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      photos = sessionStorage.getItem(DRAFT_STORAGE_KEY + "_photos");
+    } catch (e) {
+      // nothing to put back later
+    }
+    const items = [];
+    for (const row of data) {
+      const item = await cartItemFromOrderRow(row);
+      item.adminRowId = row.id;
+      item.adminSuitNumber = row.suit_number;
+      items.push(item);
+    }
+    resetDesignerForNewSuit();
+    designPreview = null;
+    cartItems = items;
+    const first = data[0];
+    customerNameInput.value = first.customer_name || "";
+    customerPhoneInput.value = formatUSPhoneNumber(first.customer_phone || "");
+    customerEmailInput.value = first.customer_email || "";
+    shippingAddress1Input.value = first.shipping_address_line1 || "";
+    shippingAddress2Input.value = first.shipping_address_line2 || "";
+    shippingCityInput.value = first.shipping_city || "";
+    shippingStateInput.value = first.shipping_state || "";
+    shippingZipInput.value = first.shipping_zip || "";
+    shippingCountryInput.value = first.shipping_country || "";
+    setFulfillmentChoice(first.fulfillment === "pickup" ? "pickup" : "ship");
+    // Not editable here (it changes the price); kept only so the page's own
+    // check passes.
+    setAlterationChoice(first.alteration_protection ? "yes" : "no");
+    adminEditState = {
+      orderId: o.order_id,
+      name: first.customer_name || "No name",
+      rowIds: data.map((r) => r.id),
+      atFactory: data.some((r) => r.factory_order_no),
+      savedDraft: draft,
+      savedPhotos: photos,
+    };
+    try {
+      sessionStorage.setItem(ADMIN_EDIT_KEY, JSON.stringify(adminEditState));
+    } catch (e) {
+      // edit mode just won't survive a reload
+    }
+    if (closeAccountOverlay) closeAccountOverlay();
+    markDesignStarted();
+    renderCartBar();
+    updateAdminEditUI();
+    updateOrderSummaryUI();
+    const reviewAt = items.findIndex((item) => item.needsReview);
+    if (reviewAt !== -1) {
+      loadCartItemIntoDesigner(reviewAt);
+      saveDraft();
+      alert("Suit " + (reviewAt + 1) + " has " + items[reviewAt].needsReview.join(", ") + " to fix (a choice that isn't offered anymore, or a missing or out-of-range measurement). Fix it, finish Measurements, then save the order.");
+    } else {
+      saveDraft();
+      goToCheckout();
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Couldn’t open that order for editing: " + (err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+// The bar at the top while editing, the Save button's label, and the parts
+// of Personal Info that don't apply to an order already placed.
+function updateAdminEditUI() {
+  document.body.classList.toggle("admin-editing-order", !!adminEditState);
+  const bar = document.getElementById("adminEditBar");
+  if (bar) bar.hidden = !adminEditState;
+  const who = document.getElementById("adminEditWho");
+  if (who && adminEditState) who.textContent = "Editing " + adminEditState.name + "’s order";
+}
+
+async function saveAdminOrderEdit() {
+  if (!adminEditState) return;
+  if (pendingCommitIndex !== null && designerHasUnsavedWork()) {
+    alert("Suit " + (pendingCommitIndex + 1) + " has changes that aren't in the order yet. Go to its Measurements page and press Continue first.");
+    return;
+  }
+  if (cartItems.some((item) => !item.adminRowId)) {
+    alert("A suit was added while editing. Suits can't be added to an order already placed: remove it from the cart (or place it as a new order) and save again.");
+    return;
+  }
+  const input = collectAndValidateOrderInput();
+  if (!input) return;
+  const removed = adminEditState.rowIds.length - cartItems.length;
+  if (removed > 0 && !window.confirm(removed + (removed === 1 ? " suit was" : " suits were") + " removed from the cart. Save and delete " + (removed === 1 ? "it" : "them") + " from the order? Its price and payment don't change.")) return;
+  const orderId = adminEditState.orderId;
+  const btns = [submitBtn, document.getElementById("adminEditSaveBtn")].filter(Boolean);
+  btns.forEach((b) => { b.disabled = true; b.textContent = "Saving..."; });
+  try {
+    const client = getSupabase();
+    const liningUrls = await uploadLiningPhotos(orderId);
+    // Every measurement field a suit can have is cleared first, so one the
+    // suit no longer uses (finished sizes changed to body measurements, a
+    // full suit changed to jacket only) doesn't stay on the row.
+    const blank = { jacket_fit: null, pants_fit: null };
+    MEASUREMENTS.forEach((m) => { if (!m.factoryOptional) blank[m.id] = null; });
+    [JACKET_CATALOG, PANTS_CATALOG].forEach((cat) => Object.keys(cat).forEach((k) => (blank[cat[k].column] = null)));
+    const suits = cartItems.map((item, i) => {
+      let lining = liningUrls[i];
+      // The photo already on the order, when re-uploading it didn't work.
+      if (!lining && item.liningPhoto && liningUploadSurcharge(item.jacket) && item.adminSuitNumber === i + 1) {
+        lining = client.storage.from("lining-photos").getPublicUrl(orderId + "/suit-" + (i + 1) + ".jpg").data.publicUrl;
+      }
+      const spec = suitSpecRow(item, i, cartItems.length, input.customerName, lining);
+      Object.keys(spec).forEach((k) => spec[k] === undefined && delete spec[k]);
+      return Object.assign({}, blank, spec, {
+        id: item.adminRowId,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail,
+        shipping_address_line1: input.address1,
+        shipping_address_line2: input.address2,
+        shipping_city: input.city,
+        shipping_state: input.state,
+        shipping_zip: input.zip,
+        shipping_country: input.country,
+        fulfillment: input.fulfillment === "pickup" ? "pickup" : "ship",
+      });
+    });
+    const { error } = await client.rpc("admin_update_order", { p_order_id: orderId, p_suits: suits });
+    if (error) throw error;
+    alert("Order saved." + (adminEditState.atFactory ? "\n\nThis order already has a factory draft: open Send to factory and press Update draft at factory to send the changes." : ""));
+    endAdminOrderEdit();
+  } catch (err) {
+    console.error(err);
+    alert("Couldn’t save the order: " + (err.message || err));
+    btns.forEach((b) => (b.disabled = false));
+    updateOrderSummaryUI();
+    const barSave = document.getElementById("adminEditSaveBtn");
+    if (barSave) barSave.textContent = "Save changes to order";
+  }
+}
+
+// Puts the admin's own cart and design back and reopens All Orders.
+function endAdminOrderEdit() {
+  const state = adminEditState;
+  try {
+    sessionStorage.removeItem(ADMIN_EDIT_KEY);
+    if (state && state.savedDraft) sessionStorage.setItem(DRAFT_STORAGE_KEY, state.savedDraft);
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (state && state.savedPhotos) sessionStorage.setItem(DRAFT_STORAGE_KEY + "_photos", state.savedPhotos);
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+  } catch (e) {
+    // ignore
+  }
+  adminEditState = null;
+  window.location.href = window.location.pathname + "?admin=orders";
+}
+
+(function () {
+  const saveBtn = document.getElementById("adminEditSaveBtn");
+  const cancelBtn = document.getElementById("adminEditCancelBtn");
+  if (saveBtn) saveBtn.addEventListener("click", () => saveAdminOrderEdit());
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      if (window.confirm("Stop editing this order? Changes you haven't saved are dropped.")) endAdminOrderEdit();
+    });
+  }
+})();
 
 if (shippingLiveToggle) {
   shippingLiveToggle.addEventListener("change", async () => {
@@ -6045,6 +6254,16 @@ function updateOrderSummaryUI() {
   const protection = protectionTotalUsd();
   const total = suits + protection + shipping;
   refreshAlterationText();
+  if (adminEditState) {
+    submitBtn.textContent = "Save changes to order";
+    if (orderTotalNote) {
+      orderTotalNote.textContent = "You're editing an order already placed. Saving changes its suits, measurements and contact details; prices, payment and Alteration Protection stay as they were.";
+      orderTotalNote.hidden = false;
+    }
+    const persPriceEl = document.getElementById("persPrice");
+    if (persPriceEl) persPriceEl.textContent = "";
+    return;
+  }
   if (PRICES_HIDDEN) {
     // No prices and no payment on this brand: the order goes in as a request.
     submitBtn.textContent = "Submit Order";
@@ -6576,6 +6795,12 @@ function commitCurrentSuitToCart() {
     previewId: currentDesignPreviewId() || editedSuitPreviewId(),
   };
   if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
+    // A suit of an order the admin is editing stays tied to its order row.
+    const prev = cartItems[pendingCommitIndex];
+    if (prev && prev.adminRowId) {
+      item.adminRowId = prev.adminRowId;
+      item.adminSuitNumber = prev.adminSuitNumber;
+    }
     cartItems[pendingCommitIndex] = item;
   } else {
     cartItems.push(item);
@@ -6926,6 +7151,39 @@ async function uploadLiningPhotos(orderId) {
     }
   }
   return urls;
+}
+
+// One suit's own columns on its order row: every option, the measurements,
+// the monogram text, the order text and the picture description. Shared by
+// finalizeOrder and the admin's "Save changes to order" (adminEditSave).
+function suitSpecRow(item, i, count, customerName, liningPhotoUrl) {
+  const row = Object.assign({}, selectionsToRow(JACKET_CATALOG, item.jacket), selectionsToRow(PANTS_CATALOG, item.pants || {}));
+  // Pants on their own: the order's fabric (a required column, and the
+  // one the factory order reads) is the pants fabric.
+  if (isPantsOnlyType(item.type)) row.fabric = row.pants_fabric;
+  row.suit_number = i + 1;
+  row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : isPantsOnlyType(item.type) ? "pants_only" : "full_suit";
+  Object.assign(row, item.measurements);
+  // The monogram text itself, for the factory order (kute-factory).
+  row.jacket_monogram_text = monoText(item, "jacket") || null;
+  row.pants_monogram_text = item.pants ? monoText(item, "pants") || null : null;
+
+  // Phone/email are deliberately kept OUT of the order summary text -- that
+  // text is meant to be the garment spec + shipping address only (it's
+  // what gets shown on the confirmation page and copied to send to
+  // production), not a place for contact details. They're added back in
+  // only for the notification email (finalizeOrder), in their own separate block,
+  // so the shop still has a fast way to reach the customer without it
+  // cluttering the spec sheet.
+  const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrl, jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+  row.client_form_text = count === 1 ? suitText : "SUIT " + (i + 1) + " OF " + count + "\n" + suitText;
+  // Plain-English, personal-data-free description of the suit -- read by
+  // the AI that writes the "finished suit" image prompt once the shop marks
+  // this order completed (see add_order_status_and_suit_image_migration.sql).
+  // No picture for pants on their own (the picture sheets are built
+  // around a jacket).
+  row.visual_spec = isPantsOnlyType(item.type) ? null : buildVisualSpecText(item, { liningPhotoUrl: liningPhotoUrl });
+  return row;
 }
 
 // Actually saves the order (Supabase) and emails the shop (Formspree), then
@@ -7377,10 +7635,7 @@ async function finalizeOrder(input, opts) {
   const liningPhotoUrls = await uploadLiningPhotos(orderId);
 
   const rows = cartItems.map((item, i) => {
-    const row = Object.assign({}, selectionsToRow(JACKET_CATALOG, item.jacket), selectionsToRow(PANTS_CATALOG, item.pants || {}));
-    // Pants on their own: the order's fabric (a required column, and the
-    // one the factory order reads) is the pants fabric.
-    if (isPantsOnlyType(item.type)) row.fabric = row.pants_fabric;
+    const row = suitSpecRow(item, i, cartItems.length, customerName, liningPhotoUrls[i]);
     row.customer_name = customerName;
     row.customer_phone = customerPhone;
     row.customer_email = customerEmail;
@@ -7396,8 +7651,6 @@ async function finalizeOrder(input, opts) {
     // Lets a signed-in customer's past orders be looked back up later
     // without changing anything about how a guest order is saved.
     row.user_id = currentUser ? currentUser.id : null;
-    row.suit_number = i + 1;
-    row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : isPantsOnlyType(item.type) ? "pants_only" : "full_suit";
     row.item_price_usd = itemPriceUsd(item);
     row.alteration_protection = !!input.alterationProtection;
     // Which storefront it came from (brand.js); admin shows it on every order.
@@ -7405,26 +7658,6 @@ async function finalizeOrder(input, opts) {
     row.alteration_protection_usd = input.alterationProtection ? protectionPriceUsd() : 0;
     if (adminNoPayment) row.admin_no_payment = true;
     else if (payWithStripe) row.payment_status = "awaiting_payment";
-    Object.assign(row, item.measurements);
-    // The monogram text itself, for the factory order (kute-factory).
-    row.jacket_monogram_text = monoText(item, "jacket") || null;
-    row.pants_monogram_text = item.pants ? monoText(item, "pants") || null : null;
-
-    // Phone/email are deliberately kept OUT of the order summary text -- that
-    // text is meant to be the garment spec + shipping address only (it's
-    // what gets shown on the confirmation page and copied to send to
-    // production), not a place for contact details. They're added back in
-    // only for the notification email below, in their own separate block,
-    // so the shop still has a fast way to reach the customer without it
-    // cluttering the spec sheet.
-    const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrls[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
-    row.client_form_text = cartItems.length === 1 ? suitText : "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + suitText;
-    // Plain-English, personal-data-free description of the suit -- read by
-    // the AI that writes the "finished suit" image prompt once the shop marks
-    // this order completed (see add_order_status_and_suit_image_migration.sql).
-    // No picture for pants on their own (the picture sheets are built
-    // around a jacket).
-    row.visual_spec = isPantsOnlyType(item.type) ? null : buildVisualSpecText(item, { liningPhotoUrl: liningPhotoUrls[i] });
     return row;
   });
 
@@ -7680,6 +7913,7 @@ function handlePayPalReturn() {
 }
 
 submitBtn.addEventListener("click", async () => {
+  if (adminEditState) return saveAdminOrderEdit();
   const input = collectAndValidateOrderInput();
   if (!input) return;
 
@@ -7700,7 +7934,7 @@ submitBtn.addEventListener("click", async () => {
 const adminNoPayBtn = document.getElementById("adminNoPayBtn");
 if (adminNoPayBtn) {
   adminNoPayBtn.addEventListener("click", async () => {
-    if (!currentIsAdmin) return;
+    if (!currentIsAdmin || adminEditState) return;
     const input = collectAndValidateOrderInput();
     if (!input) return;
     adminNoPayBtn.disabled = true;
@@ -7935,6 +8169,7 @@ function resetDesignStarted() {
 if (restoreDraft()) markDesignStarted();
 handlePayPalReturn();
 handleStripeReturn();
+updateAdminEditUI();
 updateNavActionButtons();
 updateProcessBar();
 
