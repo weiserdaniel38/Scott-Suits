@@ -48,13 +48,14 @@ const JACKET_CATALOG = {
   lapelbuttonhole: {
     label: "Lapel Buttonhole",
     column: "lapel_buttonhole",
-    // When the Collar Style is Shawl or Diamond Lapel, only these two choices
-    // are offered, in this order (see allowedOptions() in main.js). Notch and
-    // Peak keep the full list.
+    // When the Collar Style is Shawl, only these two choices are offered, in
+    // this order (see allowedOptions() in main.js); a Diamond Lapel takes no
+    // lapel buttonhole at all (the factory refuses Diamond collar 001R with
+    // Left bttn hole 0541, Daniel 2026-10-25). Notch and Peak keep the full list.
     allowedBySelection: {
       collar: {
         "Shawl": ["No Lapel Buttonhole", "Standard"],
-        "Diamond Lapel": ["No Lapel Buttonhole", "Standard"],
+        "Diamond Lapel": ["No Lapel Buttonhole"],
       },
     },
     // Exactly the factory's (Kutetailor) Jacket > Hole Position choices, in
@@ -2808,7 +2809,7 @@ const CLASSIC_SUIT_PRESET = {
     fixedBySelection: {
       collar: {
         "Shawl": { lapelbuttonhole: "Standard" },
-        "Diamond Lapel": { lapelbuttonhole: "Standard" },
+        "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
       },
     },
   },
