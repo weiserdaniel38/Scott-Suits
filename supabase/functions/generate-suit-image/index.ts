@@ -1146,6 +1146,23 @@ async function isAdmin(userId: string): Promise<boolean> {
   }
 }
 
+// Extra pictures Daniel granted this account for a while (public.preview_allowances,
+// supabase/sql/26_extra_suit_pictures.sql), added to its daily limit until they
+// expire. Any problem means no extra.
+async function extraPictures(userId: string): Promise<number> {
+  try {
+    const { data: row } = await supabase
+      .from("preview_allowances")
+      .select("extra")
+      .eq("user_id", userId)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    return Math.max(0, Number(row?.extra) || 0);
+  } catch {
+    return 0;
+  }
+}
+
 const SIGN_IN_NEEDED = () => json({ status: "signin", error: "Sign in to have your suit drawn" }, 401);
 
 async function startPreview(req: Request, raw: string): Promise<Response> {
@@ -1158,7 +1175,8 @@ async function startPreview(req: Request, raw: string): Promise<Response> {
   // Daniel's rule); the other limits are off unless set. None of them apply
   // to the shop admin.
   const admin = await isAdmin(userId);
-  const perAccount = admin ? 0 : Number(env("PREVIEW_PER_ACCOUNT_PER_DAY", "3"));
+  const baseAccount = Number(env("PREVIEW_PER_ACCOUNT_PER_DAY", "3"));
+  const perAccount = admin || baseAccount <= 0 ? 0 : baseAccount + (await extraPictures(userId));
   if (perAccount > 0 && (await countSince({ user_id: userId }, since)) >= perAccount) return json({ status: "limit", scope: "account" }, 429);
   const perVisitor = admin ? 0 : Number(env("PREVIEW_PER_VISITOR_PER_DAY", "0"));
   const perDay = admin ? 0 : Number(env("PREVIEW_PER_DAY", "0"));
