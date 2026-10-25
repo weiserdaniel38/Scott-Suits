@@ -21,7 +21,57 @@ html[data-brand="sw"]{
   --sw-burgundy:#6E1423;
   --sw-burgundy-dark:#4E0D18;
   --sw-gold:#E3C58C;
+  --brass-rgb:184,146,79;
+  --ivory-rgb:43,26,29;
+  --ink-rgb:247,242,236;
+  --surface:#FFFDFA;
+  --surface-rgb:255,253,250;
 }
+
+/* Other color themes, picked in brand.js (SITE_BRANDS.sw.themes). Each
+   sets the same tokens, so every page follows: --sw-burgundy is the main
+   color (titles, buttons, selected items), --brass the metal accent,
+   --sw-gold the text on buttons. */
+html[data-brand="sw"][data-sw-theme="navy"]{
+  --ink:#F3F4F6;--ink-rgb:243,244,246;
+  --ivory:#18202E;--ivory-rgb:24,32,46;--ivory-dim:rgba(24,32,46,0.66);
+  --brass:#8D99A8;--brass-light:#A9B3C0;--brass-rgb:141,153,168;
+  --oxblood:#1E3557;--sw-burgundy:#1E3557;--sw-burgundy-dark:#132339;--sw-gold:#E6EBF2;
+  --line:rgba(24,32,46,0.15);--card-tint:rgba(24,32,46,0.04);--surface:#FFFFFF;--surface-rgb:255,255,255;
+}
+html[data-brand="sw"][data-sw-theme="forest"]{
+  --ink:#F2F0E8;--ink-rgb:242,240,232;
+  --ivory:#1E2620;--ivory-rgb:30,38,32;--ivory-dim:rgba(30,38,32,0.66);
+  --brass:#B08D57;--brass-light:#C9A467;--brass-rgb:176,141,87;
+  --oxblood:#1F4A37;--sw-burgundy:#1F4A37;--sw-burgundy-dark:#143224;--sw-gold:#EBD9B0;
+  --line:rgba(30,38,32,0.15);--card-tint:rgba(30,38,32,0.04);--surface:#FCFBF7;--surface-rgb:252,251,247;
+}
+html[data-brand="sw"][data-sw-theme="midnight"]{
+  --ink:#15171C;--ink-rgb:21,23,28;
+  --ivory:#EEE7DA;--ivory-rgb:238,231,218;--ivory-dim:rgba(238,231,218,0.7);
+  --brass:#D7B878;--brass-light:#E6CD96;--brass-rgb:215,184,120;
+  --oxblood:#D7B878;--sw-burgundy:#D7B878;--sw-burgundy-dark:#B89A5C;--sw-gold:#15171C;
+  --line:rgba(238,231,218,0.16);--card-tint:rgba(238,231,218,0.05);--surface:#1F2229;--surface-rgb:31,34,41;
+  color-scheme:dark;
+}
+html[data-brand="sw"][data-sw-theme="blush"]{
+  --ink:#FBF3F0;--ink-rgb:251,243,240;
+  --ivory:#2B2B30;--ivory-rgb:43,43,48;--ivory-dim:rgba(43,43,48,0.66);
+  --brass:#C9A08F;--brass-light:#D9B8AA;--brass-rgb:201,160,143;
+  --oxblood:#A85F6C;--sw-burgundy:#A85F6C;--sw-burgundy-dark:#8A4855;--sw-gold:#FFF6F2;
+  --line:rgba(43,43,48,0.15);--card-tint:rgba(43,43,48,0.04);--surface:#FFFBFA;--surface-rgb:255,251,250;
+}
+/* Fabric and option photos keep a white backdrop in the dark theme. */
+html[data-sw-theme="midnight"] .opt-swatch,
+html[data-sw-theme="midnight"] .lightbox-frame,
+html[data-sw-theme="midnight"] .suit-type-icon,
+html[data-sw-theme="midnight"] .suit-preview-img{background:#fff !important;}
+
+/* Dark fills (selected tab, progress, confirm buttons) take the main color. */
+html[data-brand="sw"] .tab.active,
+html[data-brand="sw"] .wiz-seg.current,
+html[data-brand="sw"] #lightbox .lightbox-confirm-btn,
+html[data-brand="sw"] .order-done-home:hover{background:var(--sw-burgundy);color:var(--sw-gold);}
 html[data-brand="sw"] body{background:var(--ink);}
 
 /* Script for the big titles and the nav, serif for reading text. */
@@ -56,7 +106,7 @@ html[data-brand="sw"] #cartIconBtn svg{stroke:var(--brass);}
 
 /* Buttons: burgundy with a gold edge and gold text. */
 html[data-brand="sw"] .btn-primary{background:var(--sw-burgundy);color:var(--sw-gold);border:1px solid var(--brass);border-radius:999px;}
-html[data-brand="sw"] .btn-primary:hover{background:var(--sw-burgundy-dark);color:#F3DDB0;}
+html[data-brand="sw"] .btn-primary:hover{background:var(--sw-burgundy-dark);color:var(--sw-gold);}
 html[data-brand="sw"] #heroStartDesigningBtn,
 html[data-brand="sw"] .how-it-works-cta{font-size:30px;padding:10px 40px 12px;}
 html[data-brand="sw"] .nav-cta{border-color:var(--brass);color:var(--sw-burgundy);}

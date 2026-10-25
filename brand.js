@@ -40,6 +40,11 @@ var SITE_BRANDS = {
     logoHeight: 552,
     icon: "./assets/sw/icon-192.png",
     heroImage: "./assets/sw/hero.jpg",
+    // Color themes (brand.css). The first is the one shown; any other can be
+    // tried with ?theme=navy etc. (remembered in this browser, ?theme=default
+    // goes back). Each has its own recolored logo and hero photo in assets/sw/
+    // (logo-navy.png, hero-navy.jpg ...); the first uses logo.png / hero.jpg.
+    themes: ["burgundy", "navy", "forest", "midnight", "blush"],
   },
 };
 
@@ -66,6 +71,21 @@ var SITE_BRAND = (function () {
   var brand = SITE_BRANDS[id];
   root.setAttribute("data-brand", id);
   if (brand.hidePrices) root.setAttribute("data-prices", "off");
+  if (brand.themes) {
+    var theme = null;
+    try {
+      var askedTheme = new URLSearchParams(location.search).get("theme");
+      if (askedTheme === "default") localStorage.removeItem("siteTheme");
+      else if (brand.themes.indexOf(askedTheme) !== -1) localStorage.setItem("siteTheme", askedTheme);
+      theme = localStorage.getItem("siteTheme");
+    } catch (e) { /* storage blocked: the first theme */ }
+    brand.theme = brand.themes.indexOf(theme) > 0 ? theme : brand.themes[0];
+    root.setAttribute("data-sw-theme", brand.theme);
+    if (brand.theme !== brand.themes[0]) {
+      brand.logo = brand.logo.replace(/\.png$/, "-" + brand.theme + ".png");
+      brand.heroImage = brand.heroImage.replace(/\.jpg$/, "-" + brand.theme + ".jpg");
+    }
+  }
   if (id !== "scott") {
     // Hidden until the page text is swapped (applySiteBrand), so the other
     // brand's name never flashes up. The timeout is a safety net.
