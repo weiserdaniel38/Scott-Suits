@@ -38,7 +38,7 @@ var SITE_BRANDS = {
     logo: "./assets/sw/logo.png",
     logoWidth: 640,
     logoHeight: 552,
-    icon: "./assets/sw/icon-v2-192.png",
+    icon: "./assets/sw/icon-v3-192.png",
     heroImage: "./assets/sw/hero.jpg",
     // Color themes (brand.css). The first is the one shown (Daniel chose
     // midnight and champagne, 2026-10-25); any other can be tried with
@@ -47,7 +47,7 @@ var SITE_BRANDS = {
     // (logo-navy.png, hero-navy.jpg ...); burgundy uses logo.png / hero.jpg.
     // A theme listed in logos uses that file instead (Daniel's new logo,
     // 2026-10-25, gold monogram with an ivory name, made for midnight).
-    logos: { midnight: "./assets/sw/logo-v2.png" },
+    logos: { midnight: "./assets/sw/logo-v3.png" },
     themes: ["midnight", "burgundy", "navy", "forest", "blush"],
     // Font pairings (brand.css), picked the same way with ?font=bodoni etc.
     // The first is shown: Art Deco, Poiret One + Josefin Sans (Daniel, 2026-10-25).
