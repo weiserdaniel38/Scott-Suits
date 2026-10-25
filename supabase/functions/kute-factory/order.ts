@@ -268,7 +268,11 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     } else if (facing === "Half Lining W/ Fabric Facing") {
       jc.push("AA2Y", "0701");
     } else {
-      jc.push("AAQL", "0702");
+      // Full lining is the factory's default: only facing B is sent. Its
+      // lining style code AAQL saves, but placing the order then fails with
+      // "Combination split code failed! Failed process code: Full(AAQL)"
+      // (Daniel, 2026-10-25).
+      jc.push("0702");
     }
 
     // Body lining, and sleeve lining matching it.
