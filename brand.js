@@ -48,6 +48,8 @@ var SITE_BRANDS = {
     // A theme listed in logos uses that file instead (Daniel's new logo,
     // 2026-10-25, gold monogram with an ivory name, made for midnight).
     logos: { midnight: "./assets/sw/logo-v3.png" },
+    // The suit picture loading clip, recolored for midnight (no extension).
+    loadingVideo: "./assets/sw/suit-loading-thread",
     themes: ["midnight", "burgundy", "navy", "forest", "blush"],
     // Font pairings (brand.css), picked the same way with ?font=bodoni etc.
     // The first is shown: Art Deco, Poiret One + Josefin Sans (Daniel, 2026-10-25).
