@@ -807,8 +807,13 @@ function setAdminUnread(n) {
 async function loadAdminNotifications() {
   if (!adminNotificationsList) return;
   try {
-    const { data, error } = await getSupabase().rpc("admin_list_notifications");
+    const [{ data, error }, brandRes] = await Promise.all([
+      getSupabase().rpc("admin_list_notifications"),
+      getSupabase().rpc("admin_order_brands"),
+    ]);
     if (error) throw error;
+    const brandOf = {};
+    if (!brandRes.error && brandRes.data) brandRes.data.forEach((x) => (brandOf[x.order_id] = x.brand));
     const rows = data || [];
     setAdminUnread(rows.filter((n) => !n.read_at).length);
     if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length;
@@ -826,10 +831,11 @@ async function loadAdminNotifications() {
         '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
       item.querySelector(".admin-notif-clear").addEventListener("click", () => clearAdminNotifications(n.id));
       // Customer-typed text goes in with textContent, never as HTML.
-      item.querySelector("b").textContent = "New order from " + (n.customer_name || "a customer");
+      const nb = SITE_BRANDS[brandOf[n.order_id]];
+      item.querySelector("b").textContent = "New " + (nb && nb.id !== "scott" ? nb.name + " " : "") + "order from " + (n.customer_name || "a customer");
       item.querySelector(".admin-notif-meta").textContent = when + " \u00b7 " + suits + " \u00b7 " +
-        (n.admin_no_payment ? "No payment (admin)" : n.payment_status === "paid" ? "Paid" : n.payment_status === "awaiting_payment" ? "Awaiting payment" : "Not paid");
-      item.querySelector(".admin-notif-total").textContent = "$" + Number(n.total || 0).toFixed(0);
+        (nb && nb.payments === false && !n.admin_no_payment ? "Request, no payment" : n.admin_no_payment ? "No payment (admin)" : n.payment_status === "paid" ? "Paid" : n.payment_status === "awaiting_payment" ? "Awaiting payment" : "Not paid");
+      item.querySelector(".admin-notif-total").textContent = nb && nb.hidePrices ? "" : "$" + Number(n.total || 0).toFixed(0);
       adminNotificationsList.appendChild(item);
     });
   } catch (err) {
@@ -1451,12 +1457,13 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
       client.rpc("admin_order_extras"),
       client.rpc("admin_order_protection"),
+      client.rpc("admin_order_brands"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1472,6 +1479,7 @@ async function loadAdminOrders() {
     if (!pay.error && pay.data) pay.data.forEach((p) => (payments[p.order_id] = p));
     if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     adminOrdersList.innerHTML = "";
     data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
   } catch (err) {
@@ -1484,6 +1492,9 @@ async function loadAdminOrders() {
 // or saved with the QA bar's skip button, say "Not paid".
 function adminPaymentLabel(o) {
   if (o.admin_no_payment) return "No payment (admin)";
+  // Orders from a storefront with no payment (S.W. Atelier) are requests.
+  const brand = SITE_BRANDS[o.brand];
+  if (brand && brand.payments === false) return brand.name + " request, no payment";
   const pickup = o.fulfillment === "pickup" ? "In-store pickup \u00b7 " : "";
   if (o.payment_status === "paid") {
     const extra = [];
@@ -1495,9 +1506,15 @@ function adminPaymentLabel(o) {
   return pickup + "Not paid";
 }
 
+// No price on orders from a storefront without prices (S.W. Atelier).
+function adminBrandHidesPrice(id) {
+  return !!(SITE_BRANDS[id] && SITE_BRANDS[id].hidePrices);
+}
+
 // "Alteration Protection: Yes ($100)", "...: No (declined)", or "" for
 // orders from before it existed.
 function adminProtectionLabel(o) {
+  if (o.protection_items > 0 && adminBrandHidesPrice(o.brand)) return "Alteration Protection: Yes (3 free alterations" + (o.protection_items > 1 ? " each" : "") + ")";
   if (o.protection_items > 0) return "Alteration Protection: Yes ($" + Number(o.protection_usd || 0).toFixed(0) + ", 3 free alterations" + (o.protection_items > 1 ? " each" : "") + ")";
   if (o.protection_declined) return "Alteration Protection: No (declined)";
   return "";
@@ -1526,7 +1543,8 @@ function adminOrderRow(o) {
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
   const protection = adminProtectionLabel(o);
   row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o) + (protection ? " \u00b7 " + protection : "");
-  row.querySelector(".past-order-total").textContent = "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
+  row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
+  if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) row.querySelector("b").textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
   const statusSel = row.querySelector(".ship-status");
   const carrierSel = row.querySelector(".ship-carrier");
   const numberInput = row.querySelector(".ship-number");
@@ -4269,7 +4287,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // Fabrics are grouped by price first (cheapest tier on top, under a
     // heading with that tier's price for the suit type being designed), then
     // by color family and darkness within each price group.
-    tiles.forEach((t) => { t.tier = fabricTierOf(t.opt.name); });
+    // No prices shown (brand.js): one group, by color only.
+    tiles.forEach((t) => { t.tier = PRICES_HIDDEN ? 0 : fabricTierOf(t.opt.name); });
     tiles.sort((x, y) => x.tier - y.tier || famRank(x.fam) - famRank(y.fam) || x.L - y.L || (x.opt.displayName || x.opt.name).localeCompare(y.opt.displayName || y.opt.name));
     // Display: each tile shows the fabric's REAL color (hue + chroma from its
     // photo), only lifted in lightness so dark fabrics are distinguishable.
@@ -4279,7 +4298,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const Ls = tiles.map((t) => t.L), Lmin = Math.min.apply(null, Ls), Lmax = Math.max.apply(null, Ls);
     let lastTier = null;
     tiles.forEach((t) => {
-      if (t.tier !== lastTier) {
+      if (t.tier !== lastTier && !PRICES_HIDDEN) {
         lastTier = t.tier;
         const h = document.createElement("h4");
         h.className = "opt-section-divider";
@@ -5413,7 +5432,7 @@ function renderTailorChecklist() {
     '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
   // Plain-text copy to paste into Notes or a message and type the numbers in.
   const lines = [
-    "Scott's Suits suit measurements",
+    SITE_BRAND.name + " suit measurements",
     "",
     "FOR THE TAILOR: these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so measure for a close, slim fit.",
   ];
@@ -6019,6 +6038,16 @@ function updateOrderSummaryUI() {
   const protection = protectionTotalUsd();
   const total = suits + protection + shipping;
   refreshAlterationText();
+  if (PRICES_HIDDEN) {
+    // No prices and no payment on this brand: the order goes in as a request.
+    submitBtn.textContent = "Submit Order";
+    if (!orderTotalNote) return;
+    const n = cartItems.length || 1;
+    orderTotalNote.textContent = n + (n === 1 ? " suit" : " suits") + (protection ? " with Alteration Protection" : "") +
+      ". No payment is needed: submit your order and we'll be in touch to confirm the details.";
+    orderTotalNote.hidden = false;
+    return;
+  }
   submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? (liveShippingRates() ? " + shipping + tax" : " + tax") : "") + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
@@ -6569,7 +6598,8 @@ const PAYPAL_ENABLED =
   !PAYPAL_BUSINESS_EMAIL.includes("PASTE_YOUR");
 // Stripe checkout -- see STRIPE_CHECKOUT_ENABLED in config.js. Takes over
 // from PayPal when both are on.
-const STRIPE_ENABLED = typeof STRIPE_CHECKOUT_ENABLED !== "undefined" && STRIPE_CHECKOUT_ENABLED === true;
+// A brand with no payment (S.W. Atelier, brand.js) never goes to Stripe.
+const STRIPE_ENABLED = typeof STRIPE_CHECKOUT_ENABLED !== "undefined" && STRIPE_CHECKOUT_ENABLED === true && SITE_BRAND.payments !== false;
 const PAYMENT_ENABLED = STRIPE_ENABLED || PAYPAL_ENABLED;
 
 // Builds a classic PayPal "Website Payments Standard" checkout link -- just
@@ -6790,17 +6820,17 @@ function protectionNoun() {
   return cartItems.length && cartItems.some((it) => isJacketOnlyType(it.type) || isPantsOnlyType(it.type)) ? "item" : "suit";
 }
 function refreshAlterationText() {
-  const price = usd(protectionPriceUsd());
+  const price = PRICES_HIDDEN ? "" : usd(protectionPriceUsd());
   const qty = cartItems.length || 1;
   const noun = protectionNoun();
   const intro = document.getElementById("alterationIntro");
   if (intro) {
-    intro.textContent = "Add Alteration Protection for " + price + (qty > 1 ? " per " + noun : "") +
+    intro.textContent = "Add Alteration Protection" + (price ? " for " + price + (qty > 1 ? " per " + noun : "") : "") +
       " and get three free alterations" + (qty > 1 ? " on each " + noun : "") +
       ", so if anything needs adjusting after your " + noun + (qty > 1 ? "s arrive" : " arrives") + ", we fix it at no cost.";
   }
   const yesSub = document.getElementById("alterationYesSub");
-  if (yesSub) yesSub.textContent = qty > 1 ? price + " each (" + usd(protectionPriceUsd() * qty) + ") \u00b7 three free alterations each" : price + " \u00b7 three free alterations";
+  if (yesSub) yesSub.textContent = !price ? "Three free alterations" + (qty > 1 ? " each" : "") : qty > 1 ? price + " each (" + usd(protectionPriceUsd() * qty) + ") \u00b7 three free alterations each" : price + " \u00b7 three free alterations";
   const yesTitle = document.querySelector('input[name="alterationProtection"][value="yes"] ~ .fulfill-title');
   if (yesTitle) yesTitle.textContent = "Yes, protect my " + noun + (qty > 1 ? "s" : "");
 }
@@ -6826,9 +6856,9 @@ function refreshAlterationText() {
         setAlterationChoice(alterationLastChoice);
         if (text) {
           const noun = protectionNoun();
-          text.textContent = "Without Alteration Protection, any alterations are at your own cost, and Scott Suits takes no responsibility for a " +
-            noun + " that doesn't fit because of wrong or bad measurements. With it, you get three free alterations for " +
-            usd(protectionPriceUsd()) + ((cartItems.length || 1) > 1 ? " per " + noun : "") + ".";
+          text.textContent = "Without Alteration Protection, any alterations are at your own cost, and " + (SITE_BRAND.id === "scott" ? "Scott Suits" : SITE_BRAND.name) + " takes no responsibility for a " +
+            noun + " that doesn't fit because of wrong or bad measurements. With it, you get three free alterations" +
+            (PRICES_HIDDEN ? "" : " for " + usd(protectionPriceUsd()) + ((cartItems.length || 1) > 1 ? " per " + noun : "")) + ".";
         }
         overlay.classList.add("open");
         addBtn.focus();
@@ -7357,6 +7387,8 @@ async function finalizeOrder(input, opts) {
     row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : isPantsOnlyType(item.type) ? "pants_only" : "full_suit";
     row.item_price_usd = itemPriceUsd(item);
     row.alteration_protection = !!input.alterationProtection;
+    // Which storefront it came from (brand.js); admin shows it on every order.
+    row.brand = SITE_BRAND.id;
     row.alteration_protection_usd = input.alterationProtection ? protectionPriceUsd() : 0;
     if (adminNoPayment) row.admin_no_payment = true;
     else if (payWithStripe) row.payment_status = "awaiting_payment";
@@ -7390,10 +7422,13 @@ async function finalizeOrder(input, opts) {
       : buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
   const fullMessage = shippingBlock + "\n\n" + clientFormText;
   const contactBlock = buildContactBlock(customerPhone, customerEmail);
-  const protectionLine = input.alterationProtection
+  const protectionLine = input.alterationProtection && PRICES_HIDDEN
+    ? "ALTERATION PROTECTION: YES -- three free alterations" + (rows.length > 1 ? " each" : "")
+    : input.alterationProtection
     ? "ALTERATION PROTECTION: YES -- " + usd(protectionPriceUsd() * rows.length) + (rows.length > 1 ? " (" + usd(protectionPriceUsd()) + " x " + rows.length + ")" : "") + ", three free alterations" + (rows.length > 1 ? " each" : "")
     : "ALTERATION PROTECTION: NO -- customer declined (alterations at their cost, no responsibility for bad measurements)";
-  const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") + contactBlock + "\n\n" + protectionLine + "\n\n" + fullMessage;
+  const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") +
+    (SITE_BRAND.id !== "scott" ? SITE_BRAND.name.toUpperCase() + " ORDER" + (SITE_BRAND.payments === false ? " -- REQUEST, NO PAYMENT" : "") + "\n\n" : "") + contactBlock + "\n\n" + protectionLine + "\n\n" + fullMessage;
 
   submitBtn.disabled = true;
   submitBtn.textContent = "Saving...";
@@ -7436,7 +7471,7 @@ async function finalizeOrder(input, opts) {
 
   const subject =
     (adminNoPayment ? "[ADMIN, NO PAYMENT] " : "") +
-    "New Scott's Suits order \u2014 " +
+    "New " + SITE_BRAND.name + " order \u2014 " +
     customerName +
     (cartItems.length > 1 ? " (" + cartItems.length + " suits)" : "");
   const previewItems = visualSpecSaved

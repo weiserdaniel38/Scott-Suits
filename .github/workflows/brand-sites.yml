@@ -1,0 +1,34 @@
+# Builds the S.W. Atelier copy of the site (scripts/build_brand_site.py) on
+# every push to main and publishes it to the site-sw branch. The S.W.
+# Atelier domain's hosting serves that branch, so every change to
+# scottssuits.com reaches it automatically. Set the repository variable
+# SW_DOMAIN to that domain once there is one (it writes the CNAME file and
+# the link-preview URLs).
+name: Brand sites
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build S.W. Atelier
+        env:
+          BRAND_DOMAIN: ${{ vars.SW_DOMAIN }}
+        run: python3 scripts/build_brand_site.py sw _site/sw
+      - name: Publish to the site-sw branch
+        run: |
+          cd _site/sw
+          git init -q -b site-sw
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "S.W. Atelier site from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" site-sw

@@ -1,0 +1,86 @@
+/* S.W. Atelier look (see brand.js): ivory and burgundy with gold accents,
+   script headings and a serif body, from Daniel's mockup (2026-10-25).
+   Everything is scoped to html[data-brand="sw"], so Scott's Suits is
+   untouched. Loaded after style.css on every page. */
+/* Fonts (SIL Open Font License, see assets/sw/fonts/), only downloaded on
+   the S.W. Atelier site since only it uses them. */
+@font-face{font-family:'Pinyon Script';font-style:normal;font-weight:400;font-display:swap;src:url(./assets/sw/fonts/pinyon-script.woff) format('woff');}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:500;font-display:swap;src:url(./assets/sw/fonts/cormorant-500.woff) format('woff');}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url(./assets/sw/fonts/cormorant-600.woff) format('woff');}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:500;font-display:swap;src:url(./assets/sw/fonts/cormorant-500-italic.woff) format('woff');}
+
+html[data-brand="sw"]{
+  --ink:#F7F2EC;
+  --ivory:#2B1A1D;
+  --ivory-dim:rgba(43,26,29,0.68);
+  --brass:#B8924F;
+  --brass-light:#CFAE6E;
+  --oxblood:#6E1423;
+  --line:rgba(110,20,35,0.16);
+  --card-tint:rgba(110,20,35,0.035);
+  --sw-burgundy:#6E1423;
+  --sw-burgundy-dark:#4E0D18;
+  --sw-gold:#E3C58C;
+}
+html[data-brand="sw"] body{background:var(--ink);}
+
+/* Script for the big titles and the nav, serif for reading text. */
+html[data-brand="sw"] h1,
+html[data-brand="sw"] h1 *,
+html[data-brand="sw"] h2,
+html[data-brand="sw"] .navlink-btn,
+html[data-brand="sw"] #heroStartDesigningBtn,
+html[data-brand="sw"] .how-it-works-cta{font-family:'Pinyon Script',cursive !important;font-weight:400 !important;letter-spacing:0 !important;text-transform:none !important;}
+html[data-brand="sw"] h3,
+html[data-brand="sw"] p,
+html[data-brand="sw"] p *,
+html[data-brand="sw"] li,
+html[data-brand="sw"] .lead,
+html[data-brand="sw"] footer,
+html[data-brand="sw"] .hero-badges span{font-family:'Cormorant Garamond',Georgia,serif !important;}
+html[data-brand="sw"] h1,html[data-brand="sw"] h2{color:var(--sw-burgundy);}
+html[data-brand="sw"] h2{font-size:1.45em;}
+html[data-brand="sw"] p{font-size:1.08em;font-weight:500;}
+html[data-brand="sw"] h3{font-weight:600 !important;}
+
+/* Hero: "Custom-made," in burgundy, the rest in near-black, as in the mockup. */
+html[data-brand="sw"] .hero h1{font-size:76px;line-height:1.05;max-width:620px;}
+html[data-brand="sw"] .hero h1 em{font-style:normal;color:var(--ivory);display:block;}
+html[data-brand="sw"] .hero p.lead{font-size:20px;line-height:1.55;color:var(--ivory);}
+html[data-brand="sw"] .hero-rule{background:var(--brass);width:90px;}
+html[data-brand="sw"] .navlink-btn{font-size:24px;color:var(--sw-burgundy);}
+html[data-brand="sw"] .navlink-btn:hover{color:var(--brass);}
+html[data-brand="sw"] .nav-cart-btn svg{stroke:var(--sw-burgundy);}
+html[data-brand="sw"] .nav-cart-btn svg path[d^="M2.5"],
+html[data-brand="sw"] #cartIconBtn svg{stroke:var(--brass);}
+
+/* Buttons: burgundy with a gold edge and gold text. */
+html[data-brand="sw"] .btn-primary{background:var(--sw-burgundy);color:var(--sw-gold);border:1px solid var(--brass);border-radius:999px;}
+html[data-brand="sw"] .btn-primary:hover{background:var(--sw-burgundy-dark);color:#F3DDB0;}
+html[data-brand="sw"] #heroStartDesigningBtn,
+html[data-brand="sw"] .how-it-works-cta{font-size:30px;padding:10px 40px 12px;}
+html[data-brand="sw"] .nav-cta{border-color:var(--brass);color:var(--sw-burgundy);}
+html[data-brand="sw"] .nav-cta:hover{background:var(--sw-burgundy);color:var(--sw-gold);}
+html[data-brand="sw"] .btn-ghost{color:var(--sw-burgundy);}
+
+/* The logo stacks the monogram over the name, so it is a little taller. */
+html[data-brand="sw"] .logo-mark{height:118px;}
+html[data-brand="sw"] body > .wrap > header a img{height:118px;width:auto;}
+@media(max-width:900px){html[data-brand="sw"] .logo-mark{height:96px;}}
+@media(max-width:600px){
+  html[data-brand="sw"] .logo-mark{height:84px;}
+  html[data-brand="sw"] .navlink-btn{font-size:20px;}
+  html[data-brand="sw"] .hero h1{font-size:54px;}
+  html[data-brand="sw"] .hero p.lead{font-size:18px;}
+  html[data-brand="sw"] #heroStartDesigningBtn{font-size:26px;}
+}
+
+/* No prices anywhere: price boxes, totals and price-only notes. */
+html[data-prices="off"] .suit-type-price,
+html[data-prices="off"] .summary-total,
+html[data-prices="off"] .summary-note,
+html[data-prices="off"] .wiz-price,
+html[data-prices="off"] .wiz-total,
+html[data-prices="off"] #cartBarTotal,
+html[data-prices="off"] .cart-item-price,
+html[data-prices="off"] #pastOrdersList .past-order-total{display:none !important;}
