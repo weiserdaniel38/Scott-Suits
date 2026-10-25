@@ -3264,7 +3264,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // A step picked inside another step (Monogram Font, on the monogram
     // step) has no tab or wizard step of its own.
     if (catalog[key].inlineWith) return false;
+    if (fixedBySelectionValue(key)) return false;
     return isApplicable(key) && (!preset || preset.steps.indexOf(key) !== -1);
+  }
+  function fixedBySelectionValue(key) {
+    const by = catalog[key].fixedBySelection;
+    if (!by) return null;
+    for (const dep of Object.keys(by)) {
+      if (by[dep][order[dep]]) return by[dep][order[dep]];
+    }
+    return null;
   }
   function allowedOptions(key) {
     const cat = catalog[key];
@@ -3311,6 +3320,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // so the customer is asked again instead of keeping an invalid combination.
   function reconcileSelections() {
     applyPresetFixed();
+    // `fixedBySelection: { otherKey: { value: name } }`: that pick sets this
+    // step itself and the step is skipped (a Diamond Lapel is always 8 cm).
+    keys.forEach((k) => {
+      const v = fixedBySelectionValue(k);
+      if (v) order[k] = v;
+    });
     keys.forEach((k) => {
       const cat = catalog[k];
       if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen || o.hiddenWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) {
