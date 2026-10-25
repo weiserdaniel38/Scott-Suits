@@ -128,6 +128,11 @@ html[data-sw-theme="midnight"] #lightboxImg[src*="assets/buttonnail-"]{filter:in
 html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/jacket-"]),
 html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/pants-"]),
 html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/buttonnail-"]){background:#000 !important;}
+/* The suit picture preview card is cream on Scott's Suits; dark here so
+   its light text reads. The loading video keeps its own light circle. */
+html[data-sw-theme="midnight"] #designPreview.suit-preview.design-preview{background:var(--surface);border:1px solid var(--line);box-shadow:none;}
+html[data-sw-theme="midnight"] #designPreview .suit-preview-card.reviewing .suit-preview-media > a,
+html[data-sw-theme="midnight"] .nav-cart-dropdown{background:var(--surface);}
 /* Google's sign-in button stays white with dark text (Google's own spec). */
 html[data-sw-theme="midnight"] .btn-google{background:#fff;color:#3c4043;border-color:#dadce0;}
 html[data-sw-theme="midnight"] .btn-google:hover{background:#f8f8f8;}
