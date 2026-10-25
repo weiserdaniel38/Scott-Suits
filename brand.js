@@ -152,7 +152,9 @@ var SITE_BRAND_COPY = {
     "Custom-made,": "Handcrafted,",
     "without leaving home.": "tailored to you alone.",
     "Design every detail of your custom suit online, see a free preview of your finished suit, send your measurements, and we build it for you.": "A private atelier for suits and formalwear. Every piece is cut to your measurements and finished by hand, shaped around your style, your fit and your occasion.",
-    "See how it works": "Discover our process",
+    "See how it works": "Our Process",
+    "How It Works": "Our Process",
+    "Close how it works": "Close our process",
     "Fully Customizable": "Handcrafted",
     "No Showroom Needed": "Cut to Your Measurements",
     "Delivered To Your Door": "Made for You Alone",
@@ -329,7 +331,7 @@ function rebrandNode(n) {
     ["alt", "title", "aria-label", "placeholder"].forEach(function (a) {
       var old = n.getAttribute(a);
       if (old) {
-        var v = stripBrandPrices(brandName(old));
+        var v = stripBrandPrices(brandName(brandCopy(old)));
         if (v !== old) n.setAttribute(a, v);
       }
     });
