@@ -38,6 +38,14 @@ const JACKET_CATALOG = {
     // measurement (e.g. "9 cm") so the printed Client Form / production
     // sheet still tells the shop exactly what to cut; displayName is only
     // what the customer sees. (8.5, 9.5 and 10.5 cm were removed.)
+    // A Diamond Lapel comes only in 8 cm: the factory's Place Order refuses
+    // 00N5 with collar 001R and its site offers only 8.0cm (Daniel,
+    // 2026-10-25).
+    allowedBySelection: {
+      collar: {
+        "Diamond Lapel": ["8 cm"],
+      },
+    },
     options: [
       { name: "9 cm", displayName: "Standard", factoryCode: "00N5", img: "./assets/jacket-lapelwidth-new-9.jpg" },
       { name: "8 cm", displayName: "Thin", factoryCode: "00X6", img: "./assets/jacket-lapelwidth-new-8.jpg" },
@@ -2828,7 +2836,7 @@ const CLASSIC_SUIT_PRESET = {
     fixedBySelection: {
       collar: {
         "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
-        "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
+        "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole", lapelwidth: "8 cm" },
       },
     },
   },
