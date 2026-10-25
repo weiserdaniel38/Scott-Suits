@@ -48,13 +48,13 @@ const JACKET_CATALOG = {
   lapelbuttonhole: {
     label: "Lapel Buttonhole",
     column: "lapel_buttonhole",
-    // When the Collar Style is Shawl, only these two choices are offered, in
-    // this order (see allowedOptions() in main.js); a Diamond Lapel takes no
-    // lapel buttonhole at all (the factory refuses Diamond collar 001R with
-    // Left bttn hole 0541, Daniel 2026-10-25). Notch and Peak keep the full list.
+    // A Shawl or Diamond Lapel takes no lapel buttonhole at all: the factory
+    // refuses Shawl 0005 and Diamond collar 001R with Left bttn hole 0541
+    // (test drafts, 2026-10-25). Notch and Peak keep the full list (see
+    // allowedOptions() in main.js).
     allowedBySelection: {
       collar: {
-        "Shawl": ["No Lapel Buttonhole", "Standard"],
+        "Shawl": ["No Lapel Buttonhole"],
         "Diamond Lapel": ["No Lapel Buttonhole"],
       },
     },
@@ -108,7 +108,9 @@ const JACKET_CATALOG = {
       { name: "Normal Pocket", displayName: "Classic Welt Pocket", specName: "Normal Pocket", factoryCode: "0101", img: "./assets/jacket-pockettype-new-normal.jpg" },
       { name: "Boat Shape Pocket", displayName: "Curved Welt Pocket", specName: "Boat Shape Pocket", factoryCode: "0103", img: "./assets/jacket-pockettype-new-boatshape.jpg" },
       { name: "Double Besom Pocket", displayName: "Slit Pocket", specName: "Besom Pocket", factoryCode: "0110", img: "./assets/jacket-pockettype-new-doublebesom.jpg" },
-      { name: "Patch Pocket No Flap", displayName: "Patch Pocket (Sewn On)", specName: "Patch Pocket No Flap", factoryCode: "0150", img: "./assets/jacket-pockettype-new-patchnoflap.jpg" },
+      { name: "Patch Pocket No Flap", displayName: "Patch Pocket (Sewn On)", specName: "Patch Pocket No Flap", factoryCode: "0150",
+        // The factory refuses a chest patch pocket on these fronts (test drafts, 2026-10-25).
+        hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 6X3", "Double Breasted 6X1"] }, img: "./assets/jacket-pockettype-new-patchnoflap.jpg" },
       { name: "No Pocket", displayName: "No Chest Pocket", specName: "No Pocket", factoryCode: "0100", img: "./assets/jacket-pockettype-new-nohandkerchief.jpg" },
     ],
   },
@@ -180,11 +182,13 @@ const JACKET_CATALOG = {
       "Small Round Facing",
       "Arrow Shape Facing W/ Normal Inside Pocket + Cigarette Pocket",
       "No Lining Light Construction W/ Piping Seam",
+      // The factory refuses every no-lining order ("You do not have a
+      // specified process": inner facing F 0866/0706), test drafts 2026-10-25.
+      "No Lining Construction",
     ],
     options: [
       { name: "Round Shape Facing", displayName: "Full Lining", specName: "Round Shape Facing", factoryCode: "0702", img: "./assets/jacket-facing-new-round.jpg", badge: "Standard" },
       { name: "Half Lining W/ Fabric Facing", displayName: "Half Lining", specName: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-new-halflwfabric.jpg" },
-      { name: "No Lining Construction", displayName: "No Lining", specName: "No Lining Construction", img: "./assets/jacket-facing-new-nolining.jpg" },
     ],
   },
   insidepocket: {
@@ -280,8 +284,14 @@ JACKET_CATALOG.pickStitch = {
   description: "Pick stitching is a row of small stitches just inside the edges, a classic hand-tailored detail.",
   options: [
     { name: "No Pick Stitching", displayName: "None", factoryCode: "0570", img: "./assets/jacket-pickstitch-none.jpg?v=2", badge: "Standard" },
-    { name: "Pick Stitch Edges", displayName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=2" },
-    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=2" },
+    // The factory refuses these with some pockets (test drafts, 2026-10-25),
+    // so they're hidden after those pockets are picked.
+    { name: "Pick Stitch Edges", displayName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=2",
+      hiddenWhen: {
+        pockettype: ["No Pocket"],
+        lowerpocket: ["Double Besom Pocket", "Double Besom Pocket + Double Besom Ticket Pocket", "Double Besom Slant Pocket", "Patch Pocket", "Patch Pocket + Double Besom Ticket Pocket", "No Front Pocket"],
+      } },
+    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=2", hiddenWhen: { pockettype: ["No Pocket"] } },
   ],
 };
 
@@ -317,16 +327,18 @@ const PANTS_CATALOG = {
     specLabel: "Waistband Extension Style",
     column: "waistband_extension_style",
     compactCards: true,  // smaller picture cards (3 per row on phone)
+    // The square tabs are hidden on the tall waistband: the factory refuses
+    // 342A and 3417 with 5.0cm 301F (test drafts, 2026-10-25).
     options: [
       { section: "Rounded", name: "Round Shape 5cm", factoryCode: "3413", displayName: "Rounded Tab", specName: "Round Shape", img: "./assets/pants-wext-new-round.jpg" },
       { section: "Rounded", name: "Round Shape 5cm (No Button/Hole)", factoryCode: "342R", displayName: "Rounded Tab, No Visible Button", specName: "Round Shape (No Button/Hole)", img: "./assets/pants-wext-new-round-nobh.jpg" },
       { section: "Rounded", name: "Long Round Shape", displayName: "Long Rounded Tab", specName: "Long Round Shape", factoryCode: "3415", img: "./assets/pants-wext-new-longround.jpg" },
       { section: "Pointed", name: "Arrow Shape 5cm", factoryCode: "3412", displayName: "Pointed Tab", specName: "Arrow Shape", img: "./assets/pants-wext-new-arrow.jpg" },
       { section: "Pointed", name: "Arrow Shape 5cm (No Button/Hole)", factoryCode: "342T", displayName: "Pointed Tab, No Visible Button", specName: "Arrow Shape (No Button/Hole)", img: "./assets/pants-wext-new-arrow-nobh.jpg" },
-      { section: "Square", name: "Square Shape 5cm", factoryCode: "342A", displayName: "Square Tab", specName: "Square Shape", img: "./assets/pants-wext-new-square.jpg" },
+      { section: "Square", name: "Square Shape 5cm", factoryCode: "342A", hiddenWhen: { waistLineHeight: ["5.0 cm"] }, displayName: "Square Tab", specName: "Square Shape", img: "./assets/pants-wext-new-square.jpg" },
       { section: "Square", name: "Square Shape 5cm (No Button/Hole)", factoryCode: "3414", displayName: "Square Tab, No Visible Button", specName: "Square Shape (No Button/Hole)", img: "./assets/pants-wext-new-square-nobh.jpg" },
       { section: "Square", name: "Square Waistband (No Button/Hole)", factoryCode: "3410", displayName: "No Tab (Meets at Center)", specName: "Square Waistband Centered", formNote: "Centered over zipper", img: "./assets/pants-wext-new-squarewb-nobh.jpg" },
-      { section: "Square", name: "Square Shape W/ Long Extension", displayName: "Long Square Tab", specName: "Square Shape W/ Long Extension", factoryCode: "3417", img: "./assets/pants-wext-new-square-longext.jpg" },
+      { section: "Square", name: "Square Shape W/ Long Extension", hiddenWhen: { waistLineHeight: ["5.0 cm"] }, displayName: "Long Square Tab", specName: "Square Shape W/ Long Extension", factoryCode: "3417", img: "./assets/pants-wext-new-square-longext.jpg" },
     ],
   },
   waistbandStyle: {
@@ -334,11 +346,13 @@ const PANTS_CATALOG = {
     // The suit picture generator still knows this step by its old name.
     specLabel: "Waistband Style",
     column: "waistband_style",
+    // The two buckle styles (factory 3352, 33TG) need an extra factory
+    // setting the site doesn't have yet; the factory refuses them without it
+    // (test drafts, 2026-10-25).
+    retiredOptions: ["Arrow Shape Belt W/ Adjustable Buckle", "Adjustable Waistband On Side W/ Buckle"],
     options: [
       { name: "Normal Waistband", displayName: "No Adjusters (Plain Waistband)", specName: "Normal Waistband", factoryCode: "3349", img: "./assets/pants-wstyle-new-normal.jpg" },
       { name: "Elastic Waistband On Side Buttons", displayName: "Side Button Tabs", specName: "Elastic Waistband On Side Buttons", factoryCode: "3351", img: "./assets/pants-wstyle-new-sidetabs.jpg" },
-      { name: "Arrow Shape Belt W/ Adjustable Buckle", displayName: "Pointed Side Straps With Buckle", specName: "Arrow Shape Belt W/ Adjustable Buckle", factoryCode: "3352", img: "./assets/pants-wstyle-new-arrowbelt.jpg" },
-      { name: "Adjustable Waistband On Side W/ Buckle", displayName: "Side Buckle Tabs", specName: "Adjustable Waistband On Side W/ Buckle", factoryCode: "33TG", img: "./assets/pants-wstyle-new-adjside.jpg" },
     ],
   },
   frontPleat: {
@@ -392,12 +406,15 @@ const PANTS_CATALOG = {
     // The suit picture generator still knows this step by its old name.
     specLabel: "Front Pocket Style",
     column: "front_pocket_style",
+    // The factory refuses its jeans pocket (Arc jeans 3135) with pleats,
+    // crossed belt loops or any watch pocket, and with the coin pocket 3530
+    // at all (test drafts, 2026-10-25).
+    retiredOptions: ["Moon Shape Pocket + Coin Pocket"],
     options: [
       { name: "Slant Pocket", displayName: "Slanted Pockets", specName: "Slant Pocket", factoryCode: "3104,3533", img: "./assets/pants-fpocket-new-slant.jpg" },
       { name: "Double Besom", displayName: "Slit Pockets", specName: "Besom", factoryCode: "3131,3533", img: "./assets/pants-fpocket-new-double-besom.jpg" },
       { name: "On Seam Pocket", displayName: "Side Seam Pockets", specName: "On Seam Pocket", factoryCode: "3130,3533", img: "./assets/pants-fpocket-new-onseam.jpg" },
-      { name: "Moon Shape Pocket", displayName: "Curved Pockets (Jeans Style)", specName: "Moon Shape Pocket", factoryCode: "3135,3533", img: "./assets/pants-fpocket-new-moon.jpg" },
-      { name: "Moon Shape Pocket + Coin Pocket", displayName: "Curved Pockets + Coin Pocket", specName: "Moon Shape Pocket + Coin Pocket", factoryCode: "3135,3530", img: "./assets/pants-fpocket-new-moon-coin.jpg" },
+      { name: "Moon Shape Pocket", displayName: "Curved Pockets (Jeans Style)", specName: "Moon Shape Pocket", factoryCode: "3135,3533", hiddenWhen: { frontPleat: ["Single Pleat", "Double Pleat"], beltLoops: ["X Loops"] }, img: "./assets/pants-fpocket-new-moon.jpg" },
     ],
   },
   bottomStyle: {
@@ -434,10 +451,11 @@ const PANTS_CATALOG = {
     // The suit picture generator still knows this step by its old name.
     specLabel: "Watch Pocket Placement",
     column: "watch_pocket_placement",
+    // Hidden where the factory refuses them (test drafts, 2026-10-25).
     options: [
-      { name: "Right Waist Sewn Up", displayName: "Small Pocket Below Waistband", specName: "Welt Pocket Below Waistband", factoryCode: "3181", img: "./assets/pants-watch-new-rightsewn.jpg" },
-      { name: "Peach-Shaped Pocket", displayName: "Small Flap Pocket With Button", specName: "Flap Pocket With Button", factoryCode: "3186", img: "./assets/pants-watch-new-peach.jpg" },
-      { name: "Top Of Right Waist", displayName: "Pocket In Top Of Waistband", factoryCode: "3180", img: "./assets/pants-watch-new-topright.jpg" },
+      { name: "Right Waist Sewn Up", displayName: "Small Pocket Below Waistband", specName: "Welt Pocket Below Waistband", factoryCode: "3181", hiddenWhen: { frontPleat: ["Double Pleat"], frontPocket: ["Moon Shape Pocket"] }, img: "./assets/pants-watch-new-rightsewn.jpg" },
+      { name: "Peach-Shaped Pocket", displayName: "Small Flap Pocket With Button", specName: "Flap Pocket With Button", factoryCode: "3186", hiddenWhen: { frontPocket: ["Moon Shape Pocket"] }, img: "./assets/pants-watch-new-peach.jpg" },
+      { name: "Top Of Right Waist", displayName: "Pocket In Top Of Waistband", factoryCode: "3180", hiddenWhen: { frontPocket: ["Moon Shape Pocket"] }, img: "./assets/pants-watch-new-topright.jpg" },
       { name: "No Watch Pocket", factoryCode: "3169", img: "./assets/pants-watch-new-no.jpg" },
     ],
   },
@@ -482,7 +500,8 @@ PANTS_CATALOG.pickStitch = {
   description: "A row of small stitches along the front pocket openings, to match a pick stitched jacket.",
   options: [
     { name: "No Pick Stitching", displayName: "None", factoryCode: "31A6", img: "./assets/pants-pickstitch-none.jpg?v=2", badge: "Standard" },
-    { name: "Pick Stitch Front Pockets", displayName: "Front Pockets", factoryCode: "31A5", img: "./assets/pants-pickstitch-pockets.jpg?v=2" },
+    // The factory refuses it with slit front pockets (test drafts, 2026-10-25).
+    { name: "Pick Stitch Front Pockets", displayName: "Front Pockets", factoryCode: "31A5", hiddenWhen: { frontPocket: ["Double Besom"] }, img: "./assets/pants-pickstitch-pockets.jpg?v=2" },
   ],
 };
 
@@ -2808,7 +2827,7 @@ const CLASSIC_SUIT_PRESET = {
     },
     fixedBySelection: {
       collar: {
-        "Shawl": { lapelbuttonhole: "Standard" },
+        "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
         "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
       },
     },
