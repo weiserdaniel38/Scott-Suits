@@ -47,7 +47,8 @@ var SITE_BRANDS = {
     // (logo-navy.png, hero-navy.jpg ...); burgundy uses logo.png / hero.jpg.
     themes: ["midnight", "burgundy", "navy", "forest", "blush"],
     // Font pairings (brand.css), picked the same way with ?font=bodoni etc.
-    fonts: ["script", "bodoni", "cinzel", "deco", "vibes"],
+    // The first is shown: Art Deco, Poiret One + Josefin Sans (Daniel, 2026-10-25).
+    fonts: ["deco", "script", "bodoni", "cinzel", "vibes"],
   },
 };
 
