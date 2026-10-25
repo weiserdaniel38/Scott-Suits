@@ -27,6 +27,9 @@
 //       at the factory; run once a day by pg_cron (see
 //       supabase/sql/15_factory_status_daily.sql), which signs in with the
 //       x-cron-token header and may run only this action
+//   { action: "factory_probe", id, set: { column: value }, orderNo? }
+//       saves a TEST draft of that suit with some choices changed, to see
+//       which combinations the factory refuses; the row is not changed
 //   { action: "sync" }   saves every code list (crafts for each garment
 //       category) into public.factory_codes and returns row counts. Can be
 //       run from the Supabase dashboard's function "Test" button (service
@@ -34,8 +37,9 @@
 // Read-only lookups for Claude: the database function public.kute_lookup()
 // (supabase/sql/21_factory_lookup.sql) calls this with the x-lookup-token
 // header, which may run only the actions in LOOKUP_ACTIONS (status, stock,
-// fabric, archive, factory_preview). They read from the factory and
-// change nothing, here or there.
+// fabric, archive, factory_preview, factory_probe). They change nothing
+// here; factory_probe only saves a test DRAFT at the factory (never
+// submitted) to find option conflicts (Daniel, 2026-10-25).
 // Nothing here submits an order: factory_draft only saves drafts.
 //
 // Signing (the factory's "Signature Authentication"): each request carries
@@ -259,6 +263,37 @@ async function saveDraft(input: Record<string, unknown>) {
   return { ok, orderNo: d.orderNo || row.factory_order_no || null, deliveryDate: d.deliveryDate || null, error: err, warnings };
 }
 
+// A throwaway DRAFT at the factory to find option conflicts: the suit row
+// `id` with the columns in `set` changed (nothing is saved here), always
+// submit false and marked as a test. Pass the test draft's orderNo back in
+// to re-save that same draft instead of making a new one.
+async function probeDraft(input: Record<string, unknown>) {
+  const row = await loadRow(String(input.id || ""));
+  const set = (input.set || {}) as Record<string, unknown>;
+  for (const [k, v] of Object.entries(set)) {
+    if (k in row && (v === null || typeof v === "string" || typeof v === "number")) row[k] = v;
+  }
+  const [{ jacket, pants }, emb, ranges] = await Promise.all([
+    loadCatalog(), loadEmbCodes(), loadSizeRanges(String(row.measure_type || "") === "body"),
+  ]);
+  const { body, warnings, blocking } = buildFactoryOrder({
+    row, jacket, pants, emb, ranges,
+    height: Number(row.height) || 70, heightUnit: "in",
+    weight: Number(row.weight) || 170, weightUnit: "lb",
+    orderNo: String(input.orderNo || ""),
+  });
+  if (blocking.length) return { ok: false, blocking, warnings };
+  body.submit = false; // never submit from here
+  const customer = body.customer as Record<string, unknown>;
+  customer.remark = "TEST DRAFT, do not produce (Scott's Suits option check). " + String(customer.remark || "");
+  const r = await kute("POST", "/order/saveOrder", {}, body);
+  const res = (r.data || {}) as Record<string, any>;
+  const d = res.data || {};
+  const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  const error = d.errorMessage || (ok ? null : res.msg || res.message || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300));
+  return { ok, orderNo: d.orderNo || null, error, crafts: (body.orderDetails as Record<string, unknown>[]).map((x) => x.crafts), warnings };
+}
+
 async function factoryStatus(id: string) {
   const row = await loadRow(id);
   const orderNo = String(row.factory_order_no || "");
@@ -316,7 +351,7 @@ async function cronAllowed(req: Request): Promise<boolean> {
 
 // Actions that only read from the factory (or build an order without
 // sending it), for the read-only lookup token.
-const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview"]);
+const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview", "factory_probe"]);
 
 // The lookup token: made inside the database by 21_factory_lookup.sql and
 // never shown to anyone.
@@ -397,6 +432,8 @@ Deno.serve(async (req) => {
         const { body, warnings, blocking } = await factoryOrder(input);
         return json({ body, warnings, blocking });
       }
+      case "factory_probe":
+        return json(await probeDraft(input));
       case "factory_draft":
         return json(await saveDraft(input));
       case "factory_status":
