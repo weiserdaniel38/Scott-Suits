@@ -115,6 +115,19 @@ html[data-sw-theme="midnight"] .opt-swatch,
 html[data-sw-theme="midnight"] .lightbox-frame,
 html[data-sw-theme="midnight"] .suit-type-icon,
 html[data-sw-theme="midnight"] .suit-preview-img{background:#fff !important;}
+/* Option drawings (lapels, pockets, vents...) inverted to white lines on
+   black (Daniel, 2026-10-25). Photos (fabric, lining, buttons, thread) keep
+   their real colors; hue-rotate keeps any colored marks close to the original. */
+html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/jacket-"],
+html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/pants-"],
+html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/buttonnail-"],
+html[data-sw-theme="midnight"] .suit-type-icon,
+html[data-sw-theme="midnight"] #lightboxImg[src*="assets/jacket-"],
+html[data-sw-theme="midnight"] #lightboxImg[src*="assets/pants-"],
+html[data-sw-theme="midnight"] #lightboxImg[src*="assets/buttonnail-"]{filter:invert(1) hue-rotate(180deg);}
+html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/jacket-"]),
+html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/pants-"]),
+html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/buttonnail-"]){background:#000 !important;}
 /* Google's sign-in button stays white with dark text (Google's own spec). */
 html[data-sw-theme="midnight"] .btn-google{background:#fff;color:#3c4043;border-color:#dadce0;}
 html[data-sw-theme="midnight"] .btn-google:hover{background:#f8f8f8;}
