@@ -40,13 +40,29 @@ var SITE_BRANDS = {
     logoHeight: 552,
     icon: "./assets/sw/icon-192.png",
     heroImage: "./assets/sw/hero.jpg",
-    // Color themes (brand.css). The first is the one shown; any other can be
-    // tried with ?theme=navy etc. (remembered in this browser, ?theme=default
-    // goes back). Each has its own recolored logo and hero photo in assets/sw/
-    // (logo-navy.png, hero-navy.jpg ...); the first uses logo.png / hero.jpg.
-    themes: ["burgundy", "navy", "forest", "midnight", "blush"],
+    // Color themes (brand.css). The first is the one shown (Daniel chose
+    // midnight and champagne, 2026-10-25); any other can be tried with
+    // ?theme=navy etc. (remembered in this browser, ?theme=default goes back).
+    // Each has its own recolored logo and hero photo in assets/sw/
+    // (logo-navy.png, hero-navy.jpg ...); burgundy uses logo.png / hero.jpg.
+    themes: ["midnight", "burgundy", "navy", "forest", "blush"],
+    // Font pairings (brand.css), picked the same way with ?font=bodoni etc.
+    fonts: ["script", "bodoni", "cinzel", "deco", "vibes"],
   },
 };
+
+// One of a brand's looks (theme, font): ?param=x in the address, remembered
+// in this browser (?param=default forgets it), else the first in the list.
+function brandChoice(list, param, key) {
+  var v = null;
+  try {
+    var asked = new URLSearchParams(location.search).get(param);
+    if (asked === "default") localStorage.removeItem(key);
+    else if (list.indexOf(asked) !== -1) localStorage.setItem(key, asked);
+    v = localStorage.getItem(key);
+  } catch (e) { /* storage blocked: the first one */ }
+  return list.indexOf(v) !== -1 ? v : list[0];
+}
 
 var SITE_BRAND = (function () {
   var root = document.documentElement;
@@ -72,20 +88,14 @@ var SITE_BRAND = (function () {
   root.setAttribute("data-brand", id);
   if (brand.hidePrices) root.setAttribute("data-prices", "off");
   if (brand.themes) {
-    var theme = null;
-    try {
-      var askedTheme = new URLSearchParams(location.search).get("theme");
-      if (askedTheme === "default") localStorage.removeItem("siteTheme");
-      else if (brand.themes.indexOf(askedTheme) !== -1) localStorage.setItem("siteTheme", askedTheme);
-      theme = localStorage.getItem("siteTheme");
-    } catch (e) { /* storage blocked: the first theme */ }
-    brand.theme = brand.themes.indexOf(theme) > 0 ? theme : brand.themes[0];
+    brand.theme = brandChoice(brand.themes, "theme", "siteTheme");
     root.setAttribute("data-sw-theme", brand.theme);
-    if (brand.theme !== brand.themes[0]) {
+    if (brand.theme !== "burgundy") {
       brand.logo = brand.logo.replace(/\.png$/, "-" + brand.theme + ".png");
       brand.heroImage = brand.heroImage.replace(/\.jpg$/, "-" + brand.theme + ".jpg");
     }
   }
+  if (brand.fonts) root.setAttribute("data-sw-font", brandChoice(brand.fonts, "font", "siteFont"));
   if (id !== "scott") {
     // Hidden until the page text is swapped (applySiteBrand), so the other
     // brand's name never flashes up. The timeout is a safety net.
