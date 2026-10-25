@@ -1851,7 +1851,8 @@ const FABRIC_PATTERN_TYPES = [
 // ---------------------------------------------------------------------
 // New Fabrics (Daniel, 2026-10-25): 100% wool fabrics from the factory's
 // other 26FW books, $15-45/m and in stock when added (no brown, coffee,
-// jacquard, pink or orange). They are filed into FABRIC_PATTERN_TYPES
+// jacquard, pink or orange; whites, greens and khakis taken out later the
+// same day). They are filed into FABRIC_PATTERN_TYPES
 // below like every other fabric (so the order, picture generator and 3D
 // jacket all see them), flagged isNew so the Fabric step shows them in
 // their own "New Fabrics" section, grouped by color (NEW_FABRIC_COLOR_GROUPS)
@@ -1871,35 +1872,23 @@ const NEW_FABRICS = [
   { name: "26SU088.DBV403A", displayName: "Midnight Navy", img: "./assets/jacket-fabric-26su088-dbv403a.jpg", hex: "#1c1f27", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Midnight Navy solid in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
   { name: "26SU076.DBV405A", displayName: "Cobalt Check", img: "./assets/jacket-fabric-26su076-dbv405a.jpg", hex: "#232c35", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Cobalt check in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
   { name: "26SU118.DBV386A", displayName: "Charcoal Herringbone", img: "./assets/jacket-fabric-26su118-dbv386a.jpg", hex: "#373a35", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 0, description: "Charcoal herringbone in pure wool. Year-round, from business to evening." }, // $20/m
-  { name: "26SU117.DBV389A", displayName: "Forest Green Herringbone", img: "./assets/jacket-fabric-26su117-dbv389a.jpg", hex: "#2c3226", pattern: "Herringbone", family: "Green Pattern", palette: "Forest Green", tier: 0, description: "Forest Green herringbone in pure wool. A rich tone for fall and winter." }, // $20/m
-  { name: "26L6.DEB5111", displayName: "Ivory", img: "./assets/jacket-fabric-26l6-deb5111.jpg", hex: "#faf4e3", pattern: "Solid", family: "Cream", palette: "Off White", tier: 0, description: "Ivory solid in pure wool. Light and fresh for spring and summer." }, // $22/m
   { name: "26L6.DEB5114", displayName: "Classic Slate Gray", img: "./assets/jacket-fabric-26l6-deb5114.jpg", hex: "#515559", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 0, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $22/m
   { name: "26SU073.DGG1130", displayName: "Gray Check", img: "./assets/jacket-fabric-26su073-dgg1130.jpg", hex: "#5a5e62", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 0, description: "Gray check in Super 110s pure wool. Versatile for any season." }, // $23.5/m
   { name: "26SU074.DGG1131", displayName: "Navy Check", img: "./assets/jacket-fabric-26su074-dgg1131.jpg", hex: "#252a3c", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy check in Super 110s pure wool. Year-round, from business to evening." }, // $23.5/m
-  { name: "26SU106.DAV7773", displayName: "Forest Green", img: "./assets/jacket-fabric-26su106-dav7773.jpg", hex: "#1c211a", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 0, description: "Forest Green solid in pure wool. A rich tone for fall and winter." }, // $25/m
   { name: "26SU112.DAV7777", displayName: "Onyx", img: "./assets/jacket-fabric-26su112-dav7777.jpg", hex: "#222327", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 0, description: "Onyx solid in pure wool. Year-round, from business to evening." }, // $25/m
   { name: "26SU071.DBV4054", displayName: "Indigo Check", img: "./assets/jacket-fabric-26su071-dbv4054.jpg", hex: "#2e3851", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Indigo check in pure wool. Year-round, from business to evening." }, // $25/m
   { name: "26SU108.DBV4754", displayName: "Classic Charcoal", img: "./assets/jacket-fabric-26su108-dbv4754.jpg", hex: "#23282b", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 0, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $25/m
   { name: "26SU110.DBV4765", displayName: "Classic Midnight Navy", img: "./assets/jacket-fabric-26su110-dbv4765.jpg", hex: "#191d27", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Midnight Navy solid in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU103.DBV5296", displayName: "Sand", img: "./assets/jacket-fabric-26su103-dbv5296.jpg", hex: "#d1c8bb", pattern: "Solid", family: "Khaki", palette: "Oat", tier: 0, description: "Sand solid in pure wool. Light and fresh for spring and summer." }, // $25/m
   { name: "26SU104.DBV5297", displayName: "Smoke Gray", img: "./assets/jacket-fabric-26su104-dbv5297.jpg", hex: "#8a857c", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 0, description: "Smoke Gray solid in pure wool. Versatile for any season." }, // $25/m
   { name: "26SU107.DBV5298", displayName: "Rich Slate Gray", img: "./assets/jacket-fabric-26su107-dbv5298.jpg", hex: "#535557", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 0, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $25/m
   { name: "26SU111.DBV5304", displayName: "Rich Midnight Navy", img: "./assets/jacket-fabric-26su111-dbv5304.jpg", hex: "#181a25", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Midnight Navy solid in pure wool. Year-round, from business to evening." }, // $25/m
   { name: "26SU120.DBV5579", displayName: "Onyx Houndstooth", img: "./assets/jacket-fabric-26su120-dbv5579.jpg", hex: "#6d6e6b", pattern: "Houndstooth", family: "Black Pattern", palette: "Jet Black", tier: 0, description: "Onyx houndstooth in pure wool. Versatile for any season." }, // $25/m
-  { name: "26SU368.DBV5953", displayName: "Olive Stripe", img: "./assets/jacket-fabric-26su368-dbv5953.jpg", hex: "#453c31", pattern: "Pinstripe", family: "Green Pattern", palette: "Forest Green", tier: 0, description: "Olive stripe in pure wool. A rich tone for fall and winter." }, // $25/m
   { name: "26SU369.DBV5955", displayName: "Navy Stripe", img: "./assets/jacket-fabric-26su369-dbv5955.jpg", hex: "#323441", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy stripe in pure wool. Year-round, from business to evening." }, // $25/m
   { name: "26SU094.DBV6378", displayName: "Classic Navy Check", img: "./assets/jacket-fabric-26su094-dbv6378.jpg", hex: "#21262e", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy check in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU099.DEE2023", displayName: "Stone", img: "./assets/jacket-fabric-26su099-dee2023.jpg", hex: "#916b3f", pattern: "Solid", family: "Khaki", palette: "Stone", tier: 0, description: "Stone solid in pure wool. Versatile for any season." }, // $25/m
-  { name: "26SU102.DEE2027", displayName: "Classic Forest Green", img: "./assets/jacket-fabric-26su102-dee2027.jpg", hex: "#1d251a", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 0, description: "Forest Green solid in pure wool. A rich tone for fall and winter." }, // $25/m
-  { name: "26SU089.DZZ0004", displayName: "Olive Check", img: "./assets/jacket-fabric-26su089-dzz0004.jpg", hex: "#48473d", pattern: "Plaid", family: "Green Pattern", palette: "Forest Green", tier: 0, description: "Olive check in Super 100s pure wool. Versatile for any season." }, // $25/m
-  { name: "26SU095.DZZ0010", displayName: "Forest Green Stripe", img: "./assets/jacket-fabric-26su095-dzz0010.jpg", hex: "#33342d", pattern: "Pinstripe", family: "Green Pattern", palette: "Forest Green", tier: 0, description: "Forest Green stripe in Super 100s pure wool. A rich tone for fall and winter." }, // $25/m
   { name: "26SU096.DZZ0013", displayName: "Classic Navy Stripe", img: "./assets/jacket-fabric-26su096-dzz0013.jpg", hex: "#1e1f2e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $25/m
   { name: "26L8.DBT6768", displayName: "Black", img: "./assets/jacket-fabric-26l8-dbt6768.jpg", hex: "#121415", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 0, description: "Black solid in pure wool. Year-round, from business to evening." }, // $28/m
-  { name: "26L8.DBT6772", displayName: "Classic Stone", img: "./assets/jacket-fabric-26l8-dbt6772.jpg", hex: "#8b6837", pattern: "Solid", family: "Khaki", palette: "Stone", tier: 0, description: "Stone solid in pure wool. Versatile for any season." }, // $28/m
   { name: "26SU078.DLL0153", displayName: "Charcoal Stripe", img: "./assets/jacket-fabric-26su078-dll0153.jpg", hex: "#373737", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 0, description: "Charcoal stripe in Super 110s pure wool. Year-round, from business to evening." }, // $28/m
   { name: "26SU079.DLL0154", displayName: "Rich Navy Stripe", img: "./assets/jacket-fabric-26su079-dll0154.jpg", hex: "#1f2435", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy stripe in Super 110s pure wool. Year-round, from business to evening." }, // $28/m
-  { name: "26L8.DBT6770", displayName: "Classic Ivory", img: "./assets/jacket-fabric-26l8-dbt6770.jpg", hex: "#e9e7df", pattern: "Solid", family: "Cream", palette: "Off White", tier: 1, description: "Ivory solid in pure wool. Light and fresh for spring and summer." }, // $30/m
-  { name: "26L8.DZZ0094", displayName: "Stone Stripe", img: "./assets/jacket-fabric-26l8-dzz0094.jpg", hex: "#8a7f75", pattern: "Pinstripe", family: "Khaki Pattern", palette: "Stone", tier: 1, description: "Stone stripe in pure wool. Versatile for any season." }, // $30/m
   { name: "26SU280.DZZ0016", displayName: "Fine Midnight Navy", img: "./assets/jacket-fabric-26su280-dzz0016.jpg", hex: "#141724", pattern: "Solid", family: "Navy", palette: "Navy", tier: 1, description: "Midnight Navy solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
   { name: "26SU281.DZZ0017", displayName: "Classic Onyx", img: "./assets/jacket-fabric-26su281-dzz0017.jpg", hex: "#222222", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 1, description: "Onyx solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
   { name: "26SU279.DZZ0019", displayName: "Fine Charcoal", img: "./assets/jacket-fabric-26su279-dzz0019.jpg", hex: "#37363b", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 1, description: "Charcoal solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
@@ -1908,20 +1897,13 @@ const NEW_FABRICS = [
   { name: "26SU098.DZZ0086", displayName: "Midnight Navy Stripe", img: "./assets/jacket-fabric-26su098-dzz0086.jpg", hex: "#191824", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Midnight Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
   { name: "26SU348.DEB510A", displayName: "Heritage Charcoal", img: "./assets/jacket-fabric-26su348-deb510a.jpg", hex: "#272729", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
   { name: "26SU338.DEB513A", displayName: "Charcoal Check", img: "./assets/jacket-fabric-26su338-deb513a.jpg", hex: "#2e2e31", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal check in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU372.DEB520A", displayName: "Rich Forest Green", img: "./assets/jacket-fabric-26su372-deb520a.jpg", hex: "#342f20", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Forest Green solid in pure wool. A rich tone for fall and winter." }, // $40/m
   { name: "26SU374.DEB522A", displayName: "Royal Charcoal", img: "./assets/jacket-fabric-26su374-deb522a.jpg", hex: "#333234", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
   { name: "26SU376.DEB524A", displayName: "Navy", img: "./assets/jacket-fabric-26su376-deb524a.jpg", hex: "#1d202a", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool. Year-round, from business to evening." }, // $40/m
   { name: "26SU377.DEB526A", displayName: "Heritage Onyx", img: "./assets/jacket-fabric-26su377-deb526a.jpg", hex: "#222222", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU355.DEB527A", displayName: "Khaki", img: "./assets/jacket-fabric-26su355-deb527a.jpg", hex: "#b8a68a", pattern: "Solid", family: "Khaki", palette: "Khaki", tier: 2, description: "Khaki solid in pure wool. Light and fresh for spring and summer." }, // $40/m
-  { name: "26SU359.DEB531A", displayName: "Olive", img: "./assets/jacket-fabric-26su359-deb531a.jpg", hex: "#393624", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Olive solid in pure wool. A rich tone for fall and winter." }, // $40/m
   { name: "26SU360.DEB532A", displayName: "Fine Slate Gray", img: "./assets/jacket-fabric-26su360-deb532a.jpg", hex: "#4c4c4d", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $40/m
-  { name: "26SU351.DEB536A", displayName: "Classic Olive Stripe", img: "./assets/jacket-fabric-26su351-deb536a.jpg", hex: "#574732", pattern: "Pinstripe", family: "Green Pattern", palette: "Forest Green", tier: 2, description: "Olive stripe in pure wool. Versatile for any season." }, // $40/m
   { name: "26SU353.DEB538A", displayName: "Classic Slate Gray Stripe", img: "./assets/jacket-fabric-26su353-deb538a.jpg", hex: "#403f3f", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in pure wool. Year-round, from business to evening." }, // $40/m
   { name: "26SU354.DEB539A", displayName: "Heritage Cobalt", img: "./assets/jacket-fabric-26su354-deb539a.jpg", hex: "#323245", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Cobalt solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU364.DEB545A", displayName: "Classic Olive Check", img: "./assets/jacket-fabric-26su364-deb545a.jpg", hex: "#403b2d", pattern: "Plaid", family: "Green Pattern", palette: "Forest Green", tier: 2, description: "Olive check in pure wool. A rich tone for fall and winter." }, // $40/m
-  { name: "26SU365.DEB546A", displayName: "Rich Olive Check", img: "./assets/jacket-fabric-26su365-deb546a.jpg", hex: "#3e382f", pattern: "Plaid", family: "Green Pattern", palette: "Forest Green", tier: 2, description: "Olive check in pure wool. A rich tone for fall and winter." }, // $40/m
   { name: "26SU366.DEB547A", displayName: "Rich Navy Check", img: "./assets/jacket-fabric-26su366-deb547a.jpg", hex: "#2f353d", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU274.DZZ0020", displayName: "Rich Ivory", img: "./assets/jacket-fabric-26su274-dzz0020.jpg", hex: "#efece3", pattern: "Solid", family: "Cream", palette: "Off White", tier: 2, description: "Ivory solid in Super 110s pure wool. Light and fresh for spring and summer." }, // $41/m
   { name: "26SU344.DEB5121", displayName: "Slate Gray Check", img: "./assets/jacket-fabric-26su344-deb5121.jpg", hex: "#464747", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray check in pure wool. Versatile for any season." }, // $42/m
   { name: "26SU345.DEB5122", displayName: "Fine Navy Check", img: "./assets/jacket-fabric-26su345-deb5122.jpg", hex: "#2b303f", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool. Year-round, from business to evening." }, // $42/m
   { name: "26MZ104.DAT5785", displayName: "Gray", img: "./assets/jacket-fabric-26mz104-dat5785.jpg", hex: "#5f5f5d", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
@@ -1930,14 +1912,8 @@ const NEW_FABRICS = [
   { name: "26MZ121.DAT5814", displayName: "Fine Navy Stripe", img: "./assets/jacket-fabric-26mz121-dat5814.jpg", hex: "#2c2c36", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in pure wool from Marzotto, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26MZ051.DAX9347", displayName: "Classic Navy", img: "./assets/jacket-fabric-26mz051-dax9347.jpg", hex: "#1e254c", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool from Marzotto, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26MZ050.DAX9350", displayName: "Heritage Slate Gray", img: "./assets/jacket-fabric-26mz050-dax9350.jpg", hex: "#54535d", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
-  { name: "26MZ048.DAX9352", displayName: "Classic Sand", img: "./assets/jacket-fabric-26mz048-dax9352.jpg", hex: "#cfcacc", pattern: "Solid", family: "Khaki", palette: "Oat", tier: 2, description: "Sand solid in pure wool from Marzotto, Italy. Light and fresh for spring and summer." }, // $45/m
   { name: "26GB015.DAY4344", displayName: "Rich Navy", img: "./assets/jacket-fabric-26gb015-day4344.jpg", hex: "#2b3052", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB014.DAY4345", displayName: "Steel Blue", img: "./assets/jacket-fabric-26gb014-day4345.jpg", hex: "#3e55a0", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Steel Blue solid in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB009.DAY4347", displayName: "Rich Sand", img: "./assets/jacket-fabric-26gb009-day4347.jpg", hex: "#b9b3a5", pattern: "Solid", family: "Khaki", palette: "Oat", tier: 2, description: "Sand solid in pure wool from Guabello, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26GB010.DAY4348", displayName: "Rich Stone", img: "./assets/jacket-fabric-26gb010-day4348.jpg", hex: "#908881", pattern: "Solid", family: "Khaki", palette: "Stone", tier: 2, description: "Stone solid in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB012.DAY4350", displayName: "Classic Olive", img: "./assets/jacket-fabric-26gb012-day4350.jpg", hex: "#3a3d34", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Olive solid in pure wool from Guabello, Italy. A rich tone for fall and winter." }, // $45/m
-  { name: "26GB011.DAY4351", displayName: "Fine Stone", img: "./assets/jacket-fabric-26gb011-day4351.jpg", hex: "#907957", pattern: "Solid", family: "Khaki", palette: "Stone", tier: 2, description: "Stone solid in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB084.DAY4355", displayName: "Stone Check", img: "./assets/jacket-fabric-26gb084-day4355.jpg", hex: "#7b7675", pattern: "Plaid", family: "Khaki Pattern", palette: "Stone", tier: 2, description: "Stone check in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
   { name: "26GB110.DAY4358", displayName: "Onyx Stripe", img: "./assets/jacket-fabric-26gb110-day4358.jpg", hex: "#28272a", pattern: "Pinstripe", family: "Black Pattern", palette: "Jet Black", tier: 2, description: "Onyx stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB111.DAY4359", displayName: "Heritage Navy Stripe", img: "./assets/jacket-fabric-26gb111-day4359.jpg", hex: "#26252f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB078.DAY4366", displayName: "Classic Gray Check", img: "./assets/jacket-fabric-26gb078-day4366.jpg", hex: "#5a5c60", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray check in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
@@ -1946,19 +1922,13 @@ const NEW_FABRICS = [
   { name: "26GB044.DAY4378", displayName: "Rich Slate Gray Stripe", img: "./assets/jacket-fabric-26gb044-day4378.jpg", hex: "#525759", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
   { name: "26GB045.DAY4379", displayName: "Rich Charcoal Stripe", img: "./assets/jacket-fabric-26gb045-day4379.jpg", hex: "#343a40", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB046.DAY4380", displayName: "Royal Navy Stripe", img: "./assets/jacket-fabric-26gb046-day4380.jpg", hex: "#262b3f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB096.DAY4385", displayName: "Classic Stone Check", img: "./assets/jacket-fabric-26gb096-day4385.jpg", hex: "#808283", pattern: "Plaid", family: "Khaki Pattern", palette: "Stone", tier: 2, description: "Stone check in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
   { name: "26GB099.DAY4386", displayName: "Royal Navy Check", img: "./assets/jacket-fabric-26gb099-day4386.jpg", hex: "#2b2e3a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB100.DAY4387", displayName: "Savile Navy Check", img: "./assets/jacket-fabric-26gb100-day4387.jpg", hex: "#292b3f", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB108.DAY4403", displayName: "Fine Slate Gray Stripe", img: "./assets/jacket-fabric-26gb108-day4403.jpg", hex: "#4a494e", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
   { name: "26GB042.DAY4416", displayName: "Cobalt Stripe", img: "./assets/jacket-fabric-26gb042-day4416.jpg", hex: "#292f45", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Cobalt stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26GB054.DAY4419", displayName: "Wine Stripe", img: "./assets/jacket-fabric-26gb054-day4419.jpg", hex: "#332122", pattern: "Pinstripe", family: "Burgundy Pattern", palette: "Wine", tier: 2, description: "Wine stripe in pure wool from Guabello, Italy. A rich tone for fall and winter." }, // $45/m
-  { name: "26GB024.DAY4465", displayName: "Fine Forest Green", img: "./assets/jacket-fabric-26gb024-day4465.jpg", hex: "#253129", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Forest Green solid in pure wool from Guabello, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB017.DAY9076", displayName: "Classic Gray", img: "./assets/jacket-fabric-26vb017-day9076.jpg", hex: "#656b6e", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB024.DAY9079", displayName: "Fine Navy", img: "./assets/jacket-fabric-26vb024-day9079.jpg", hex: "#1f1f2f", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB018.DAY9082", displayName: "Rich Olive", img: "./assets/jacket-fabric-26vb018-day9082.jpg", hex: "#44564d", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Olive solid in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB019.DAY9083", displayName: "Heritage Forest Green", img: "./assets/jacket-fabric-26vb019-day9083.jpg", hex: "#162b2a", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Forest Green solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
-  { name: "26VB038.DAY9086", displayName: "Sage", img: "./assets/jacket-fabric-26vb038-day9086.jpg", hex: "#81907f", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Sage solid in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB039.DAY9087", displayName: "Fine Olive", img: "./assets/jacket-fabric-26vb039-day9087.jpg", hex: "#405758", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Olive solid in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB041.DAY9089", displayName: "Burgundy", img: "./assets/jacket-fabric-26vb041-day9089.jpg", hex: "#7d2a34", pattern: "Solid", family: "Burgundy", palette: "Wine", tier: 2, description: "Burgundy solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB043.DAY9091", displayName: "Plum", img: "./assets/jacket-fabric-26vb043-day9091.jpg", hex: "#431a37", pattern: "Solid", family: "Purple", palette: "Plum", tier: 2, description: "Plum solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB095.DAY9129", displayName: "Classic Slate Gray Check", img: "./assets/jacket-fabric-26vb095-day9129.jpg", hex: "#424546", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray check in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
@@ -1988,21 +1958,16 @@ const NEW_FABRICS = [
   { name: "26VB044.DAY9162", displayName: "Classic Dove Gray", img: "./assets/jacket-fabric-26vb044-day9162.jpg", hex: "#c4c5c3", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
   { name: "26VB045.DAY9163", displayName: "Fine Gray", img: "./assets/jacket-fabric-26vb045-day9163.jpg", hex: "#71726e", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB058.DAY9164", displayName: "Savile Navy", img: "./assets/jacket-fabric-26vb058-day9164.jpg", hex: "#242c34", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB049.DAY9165", displayName: "Fine Ivory", img: "./assets/jacket-fabric-26vb049-day9165.jpg", hex: "#edede7", pattern: "Solid", family: "Cream", palette: "Off White", tier: 2, description: "Ivory solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26VB055.DAY9169", displayName: "Heritage Olive", img: "./assets/jacket-fabric-26vb055-day9169.jpg", hex: "#353c36", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Olive solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB056.DAY9170", displayName: "Windsor Navy", img: "./assets/jacket-fabric-26vb056-day9170.jpg", hex: "#273653", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26VB113.DAY9172", displayName: "Smoke Gray Stripe", img: "./assets/jacket-fabric-26vb113-day9172.jpg", hex: "#767b7c", pattern: "Pinstripe", family: "Gray Pattern", palette: "Smoke", tier: 2, description: "Smoke Gray stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB114.DAY9173", displayName: "Heritage Slate Gray Stripe", img: "./assets/jacket-fabric-26vb114-day9173.jpg", hex: "#44494a", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB115.DAY9175", displayName: "Indigo Stripe", img: "./assets/jacket-fabric-26vb115-day9175.jpg", hex: "#3b485f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Indigo stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB116.DAY9176", displayName: "Chelsea Navy Stripe", img: "./assets/jacket-fabric-26vb116-day9176.jpg", hex: "#2b303e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB108.DAY9188", displayName: "Royal Forest Green", img: "./assets/jacket-fabric-26vb108-day9188.jpg", hex: "#2a2f2b", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 2, description: "Forest Green solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB110.DAY9189", displayName: "Mayfair Navy", img: "./assets/jacket-fabric-26vb110-day9189.jpg", hex: "#24252d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26RE048.DAY9208", displayName: "Rich Dove Gray", img: "./assets/jacket-fabric-26re048-day9208.jpg", hex: "#bebdc0", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 110s pure wool from Reda, Italy. Light and fresh for spring and summer." }, // $45/m
   { name: "26RE049.DAY9209", displayName: "Heritage Gray", img: "./assets/jacket-fabric-26re049-day9209.jpg", hex: "#62636b", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in Super 110s pure wool from Reda, Italy. Versatile for any season." }, // $45/m
   { name: "26RE050.DAY9210", displayName: "Royal Cobalt", img: "./assets/jacket-fabric-26re050-day9210.jpg", hex: "#393c4d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Cobalt solid in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26RE055.DAY9214", displayName: "Claret", img: "./assets/jacket-fabric-26re055-day9214.jpg", hex: "#1a100f", pattern: "Solid", family: "Burgundy", palette: "Wine", tier: 2, description: "Claret solid in Super 110s pure wool from Reda, Italy. A rich tone for fall and winter." }, // $45/m
-  { name: "26RE065.DAY9242", displayName: "Classic Forest Green Stripe", img: "./assets/jacket-fabric-26re065-day9242.jpg", hex: "#1e201d", pattern: "Pinstripe", family: "Green Pattern", palette: "Forest Green", tier: 2, description: "Forest Green stripe in Super 130s pure wool from Reda, Italy. A rich tone for fall and winter." }, // $45/m
-  { name: "26RE067.DAY9244", displayName: "Rich Forest Green Stripe", img: "./assets/jacket-fabric-26re067-day9244.jpg", hex: "#151a1f", pattern: "Pinstripe", family: "Green Pattern", palette: "Forest Green", tier: 2, description: "Forest Green stripe in Super 130s pure wool from Reda, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26RE102.DAY9249", displayName: "Royal Slate Gray Stripe", img: "./assets/jacket-fabric-26re102-day9249.jpg", hex: "#4c4d4d", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in Super 130s pure wool from Reda, Italy. Versatile for any season." }, // $45/m
   { name: "26RE103.DAY9250", displayName: "Classic Midnight Navy Stripe", img: "./assets/jacket-fabric-26re103-day9250.jpg", hex: "#1b1e27", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Midnight Navy stripe in Super 130s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26RE104.DAY9251", displayName: "Rich Midnight Navy Stripe", img: "./assets/jacket-fabric-26re104-day9251.jpg", hex: "#15151c", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Midnight Navy stripe in Super 130s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
@@ -2016,7 +1981,6 @@ const NEW_FABRICS = [
   { name: "26VB102.DAY9274", displayName: "Oxford Navy Check", img: "./assets/jacket-fabric-26vb102-day9274.jpg", hex: "#29313a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26VB070.DAY9276", displayName: "Gray Herringbone", img: "./assets/jacket-fabric-26vb070-day9276.jpg", hex: "#616667", pattern: "Herringbone", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray herringbone in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB059.DAY9284", displayName: "Royal Onyx", img: "./assets/jacket-fabric-26vb059-day9284.jpg", hex: "#1e2423", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB050.DAY9285", displayName: "Cream", img: "./assets/jacket-fabric-26vb050-day9285.jpg", hex: "#d3d2ca", pattern: "Solid", family: "Cream", palette: "Cream Ivory", tier: 2, description: "Cream solid in pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
   { name: "26VB103.DAY9290", displayName: "Fine Dove Gray", img: "./assets/jacket-fabric-26vb103-day9290.jpg", hex: "#b8bcbc", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
   { name: "26VB104.DAY9291", displayName: "Rich Smoke Gray", img: "./assets/jacket-fabric-26vb104-day9291.jpg", hex: "#6f7576", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 2, description: "Smoke Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
   { name: "26VB105.DAY9292", displayName: "Windsor Slate Gray", img: "./assets/jacket-fabric-26vb105-day9292.jpg", hex: "#414546", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
@@ -2031,9 +1995,6 @@ const NEW_FABRIC_COLOR_GROUPS = [
   ["Black", ["Jet Black"]],
   ["Navy & Blue", ["Navy"]],
   ["Charcoal & Gray", ["Deep Charcoal", "Slate Grey", "Mid Grey", "Smoke", "Light Grey", "Dove Grey"]],
-  ["Khaki & Stone", ["Stone", "Khaki", "Oat"]],
-  ["Ivory & Cream", ["Off White", "Cream Ivory"]],
-  ["Green", ["Forest Green"]],
   ["Burgundy & Plum", ["Wine", "Plum"]],
 ];
 NEW_FABRICS.forEach((f) => {
@@ -2955,35 +2916,23 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26SU088.DBV403A": { sprite: "./assets/fabric-zoom-26su088-dbv403a.avif", col: 0, row: 0, tile: 1200 },
   "26SU076.DBV405A": { sprite: "./assets/fabric-zoom-26su076-dbv405a.avif", col: 0, row: 0, tile: 1200 },
   "26SU118.DBV386A": { sprite: "./assets/fabric-zoom-26su118-dbv386a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU117.DBV389A": { sprite: "./assets/fabric-zoom-26su117-dbv389a.avif", col: 0, row: 0, tile: 1200 },
-  "26L6.DEB5111": { sprite: "./assets/fabric-zoom-26l6-deb5111.avif", col: 0, row: 0, tile: 1200 },
   "26L6.DEB5114": { sprite: "./assets/fabric-zoom-26l6-deb5114.avif", col: 0, row: 0, tile: 1200 },
   "26SU073.DGG1130": { sprite: "./assets/fabric-zoom-26su073-dgg1130.avif", col: 0, row: 0, tile: 1200 },
   "26SU074.DGG1131": { sprite: "./assets/fabric-zoom-26su074-dgg1131.avif", col: 0, row: 0, tile: 1200 },
-  "26SU106.DAV7773": { sprite: "./assets/fabric-zoom-26su106-dav7773.avif", col: 0, row: 0, tile: 1200 },
   "26SU112.DAV7777": { sprite: "./assets/fabric-zoom-26su112-dav7777.avif", col: 0, row: 0, tile: 1200 },
   "26SU071.DBV4054": { sprite: "./assets/fabric-zoom-26su071-dbv4054.avif", col: 0, row: 0, tile: 1200 },
   "26SU108.DBV4754": { sprite: "./assets/fabric-zoom-26su108-dbv4754.avif", col: 0, row: 0, tile: 1200 },
   "26SU110.DBV4765": { sprite: "./assets/fabric-zoom-26su110-dbv4765.avif", col: 0, row: 0, tile: 1200 },
-  "26SU103.DBV5296": { sprite: "./assets/fabric-zoom-26su103-dbv5296.avif", col: 0, row: 0, tile: 1200 },
   "26SU104.DBV5297": { sprite: "./assets/fabric-zoom-26su104-dbv5297.avif", col: 0, row: 0, tile: 1200 },
   "26SU107.DBV5298": { sprite: "./assets/fabric-zoom-26su107-dbv5298.avif", col: 0, row: 0, tile: 1200 },
   "26SU111.DBV5304": { sprite: "./assets/fabric-zoom-26su111-dbv5304.avif", col: 0, row: 0, tile: 1200 },
   "26SU120.DBV5579": { sprite: "./assets/fabric-zoom-26su120-dbv5579.avif", col: 0, row: 0, tile: 1200 },
-  "26SU368.DBV5953": { sprite: "./assets/fabric-zoom-26su368-dbv5953.avif", col: 0, row: 0, tile: 1200 },
   "26SU369.DBV5955": { sprite: "./assets/fabric-zoom-26su369-dbv5955.avif", col: 0, row: 0, tile: 1200 },
   "26SU094.DBV6378": { sprite: "./assets/fabric-zoom-26su094-dbv6378.avif", col: 0, row: 0, tile: 1200 },
-  "26SU099.DEE2023": { sprite: "./assets/fabric-zoom-26su099-dee2023.avif", col: 0, row: 0, tile: 1200 },
-  "26SU102.DEE2027": { sprite: "./assets/fabric-zoom-26su102-dee2027.avif", col: 0, row: 0, tile: 1200 },
-  "26SU089.DZZ0004": { sprite: "./assets/fabric-zoom-26su089-dzz0004.avif", col: 0, row: 0, tile: 1200 },
-  "26SU095.DZZ0010": { sprite: "./assets/fabric-zoom-26su095-dzz0010.avif", col: 0, row: 0, tile: 1200 },
   "26SU096.DZZ0013": { sprite: "./assets/fabric-zoom-26su096-dzz0013.avif", col: 0, row: 0, tile: 1200 },
   "26L8.DBT6768": { sprite: "./assets/fabric-zoom-26l8-dbt6768.avif", col: 0, row: 0, tile: 1200 },
-  "26L8.DBT6772": { sprite: "./assets/fabric-zoom-26l8-dbt6772.avif", col: 0, row: 0, tile: 1200 },
   "26SU078.DLL0153": { sprite: "./assets/fabric-zoom-26su078-dll0153.avif", col: 0, row: 0, tile: 1200 },
   "26SU079.DLL0154": { sprite: "./assets/fabric-zoom-26su079-dll0154.avif", col: 0, row: 0, tile: 1200 },
-  "26L8.DBT6770": { sprite: "./assets/fabric-zoom-26l8-dbt6770.avif", col: 0, row: 0, tile: 1200 },
-  "26L8.DZZ0094": { sprite: "./assets/fabric-zoom-26l8-dzz0094.avif", col: 0, row: 0, tile: 1200 },
   "26SU280.DZZ0016": { sprite: "./assets/fabric-zoom-26su280-dzz0016.avif", col: 0, row: 0, tile: 1200 },
   "26SU281.DZZ0017": { sprite: "./assets/fabric-zoom-26su281-dzz0017.avif", col: 0, row: 0, tile: 1200 },
   "26SU279.DZZ0019": { sprite: "./assets/fabric-zoom-26su279-dzz0019.avif", col: 0, row: 0, tile: 1200 },
@@ -2992,20 +2941,13 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26SU098.DZZ0086": { sprite: "./assets/fabric-zoom-26su098-dzz0086.avif", col: 0, row: 0, tile: 1200 },
   "26SU348.DEB510A": { sprite: "./assets/fabric-zoom-26su348-deb510a.avif", col: 0, row: 0, tile: 1200 },
   "26SU338.DEB513A": { sprite: "./assets/fabric-zoom-26su338-deb513a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU372.DEB520A": { sprite: "./assets/fabric-zoom-26su372-deb520a.avif", col: 0, row: 0, tile: 1200 },
   "26SU374.DEB522A": { sprite: "./assets/fabric-zoom-26su374-deb522a.avif", col: 0, row: 0, tile: 1200 },
   "26SU376.DEB524A": { sprite: "./assets/fabric-zoom-26su376-deb524a.avif", col: 0, row: 0, tile: 1200 },
   "26SU377.DEB526A": { sprite: "./assets/fabric-zoom-26su377-deb526a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU355.DEB527A": { sprite: "./assets/fabric-zoom-26su355-deb527a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU359.DEB531A": { sprite: "./assets/fabric-zoom-26su359-deb531a.avif", col: 0, row: 0, tile: 1200 },
   "26SU360.DEB532A": { sprite: "./assets/fabric-zoom-26su360-deb532a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU351.DEB536A": { sprite: "./assets/fabric-zoom-26su351-deb536a.avif", col: 0, row: 0, tile: 1200 },
   "26SU353.DEB538A": { sprite: "./assets/fabric-zoom-26su353-deb538a.avif", col: 0, row: 0, tile: 1200 },
   "26SU354.DEB539A": { sprite: "./assets/fabric-zoom-26su354-deb539a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU364.DEB545A": { sprite: "./assets/fabric-zoom-26su364-deb545a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU365.DEB546A": { sprite: "./assets/fabric-zoom-26su365-deb546a.avif", col: 0, row: 0, tile: 1200 },
   "26SU366.DEB547A": { sprite: "./assets/fabric-zoom-26su366-deb547a.avif", col: 0, row: 0, tile: 1200 },
-  "26SU274.DZZ0020": { sprite: "./assets/fabric-zoom-26su274-dzz0020.avif", col: 0, row: 0, tile: 1200 },
   "26SU344.DEB5121": { sprite: "./assets/fabric-zoom-26su344-deb5121.avif", col: 0, row: 0, tile: 1200 },
   "26SU345.DEB5122": { sprite: "./assets/fabric-zoom-26su345-deb5122.avif", col: 0, row: 0, tile: 1200 },
   "26MZ104.DAT5785": { sprite: "./assets/fabric-zoom-26mz104-dat5785.avif", col: 0, row: 0, tile: 1200 },
@@ -3014,14 +2956,8 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26MZ121.DAT5814": { sprite: "./assets/fabric-zoom-26mz121-dat5814.avif", col: 0, row: 0, tile: 1200 },
   "26MZ051.DAX9347": { sprite: "./assets/fabric-zoom-26mz051-dax9347.avif", col: 0, row: 0, tile: 1200 },
   "26MZ050.DAX9350": { sprite: "./assets/fabric-zoom-26mz050-dax9350.avif", col: 0, row: 0, tile: 1200 },
-  "26MZ048.DAX9352": { sprite: "./assets/fabric-zoom-26mz048-dax9352.avif", col: 0, row: 0, tile: 1200 },
   "26GB015.DAY4344": { sprite: "./assets/fabric-zoom-26gb015-day4344.avif", col: 0, row: 0, tile: 1200 },
   "26GB014.DAY4345": { sprite: "./assets/fabric-zoom-26gb014-day4345.avif", col: 0, row: 0, tile: 1200 },
-  "26GB009.DAY4347": { sprite: "./assets/fabric-zoom-26gb009-day4347.avif", col: 0, row: 0, tile: 1200 },
-  "26GB010.DAY4348": { sprite: "./assets/fabric-zoom-26gb010-day4348.avif", col: 0, row: 0, tile: 1200 },
-  "26GB012.DAY4350": { sprite: "./assets/fabric-zoom-26gb012-day4350.avif", col: 0, row: 0, tile: 1200 },
-  "26GB011.DAY4351": { sprite: "./assets/fabric-zoom-26gb011-day4351.avif", col: 0, row: 0, tile: 1200 },
-  "26GB084.DAY4355": { sprite: "./assets/fabric-zoom-26gb084-day4355.avif", col: 0, row: 0, tile: 1200 },
   "26GB110.DAY4358": { sprite: "./assets/fabric-zoom-26gb110-day4358.avif", col: 0, row: 0, tile: 1200 },
   "26GB111.DAY4359": { sprite: "./assets/fabric-zoom-26gb111-day4359.avif", col: 0, row: 0, tile: 1200 },
   "26GB078.DAY4366": { sprite: "./assets/fabric-zoom-26gb078-day4366.avif", col: 0, row: 0, tile: 1200 },
@@ -3030,19 +2966,13 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26GB044.DAY4378": { sprite: "./assets/fabric-zoom-26gb044-day4378.avif", col: 0, row: 0, tile: 1200 },
   "26GB045.DAY4379": { sprite: "./assets/fabric-zoom-26gb045-day4379.avif", col: 0, row: 0, tile: 1200 },
   "26GB046.DAY4380": { sprite: "./assets/fabric-zoom-26gb046-day4380.avif", col: 0, row: 0, tile: 1200 },
-  "26GB096.DAY4385": { sprite: "./assets/fabric-zoom-26gb096-day4385.avif", col: 0, row: 0, tile: 1200 },
   "26GB099.DAY4386": { sprite: "./assets/fabric-zoom-26gb099-day4386.avif", col: 0, row: 0, tile: 1200 },
   "26GB100.DAY4387": { sprite: "./assets/fabric-zoom-26gb100-day4387.avif", col: 0, row: 0, tile: 1200 },
   "26GB108.DAY4403": { sprite: "./assets/fabric-zoom-26gb108-day4403.avif", col: 0, row: 0, tile: 1200 },
   "26GB042.DAY4416": { sprite: "./assets/fabric-zoom-26gb042-day4416.avif", col: 0, row: 0, tile: 1200 },
   "26GB054.DAY4419": { sprite: "./assets/fabric-zoom-26gb054-day4419.avif", col: 0, row: 0, tile: 1200 },
-  "26GB024.DAY4465": { sprite: "./assets/fabric-zoom-26gb024-day4465.avif", col: 0, row: 0, tile: 1200 },
   "26VB017.DAY9076": { sprite: "./assets/fabric-zoom-26vb017-day9076.avif", col: 0, row: 0, tile: 1200 },
   "26VB024.DAY9079": { sprite: "./assets/fabric-zoom-26vb024-day9079.avif", col: 0, row: 0, tile: 1200 },
-  "26VB018.DAY9082": { sprite: "./assets/fabric-zoom-26vb018-day9082.avif", col: 0, row: 0, tile: 1200 },
-  "26VB019.DAY9083": { sprite: "./assets/fabric-zoom-26vb019-day9083.avif", col: 0, row: 0, tile: 1200 },
-  "26VB038.DAY9086": { sprite: "./assets/fabric-zoom-26vb038-day9086.avif", col: 0, row: 0, tile: 1200 },
-  "26VB039.DAY9087": { sprite: "./assets/fabric-zoom-26vb039-day9087.avif", col: 0, row: 0, tile: 1200 },
   "26VB041.DAY9089": { sprite: "./assets/fabric-zoom-26vb041-day9089.avif", col: 0, row: 0, tile: 1200 },
   "26VB043.DAY9091": { sprite: "./assets/fabric-zoom-26vb043-day9091.avif", col: 0, row: 0, tile: 1200 },
   "26VB095.DAY9129": { sprite: "./assets/fabric-zoom-26vb095-day9129.avif", col: 0, row: 0, tile: 1200 },
@@ -3072,21 +3002,16 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26VB044.DAY9162": { sprite: "./assets/fabric-zoom-26vb044-day9162.avif", col: 0, row: 0, tile: 1200 },
   "26VB045.DAY9163": { sprite: "./assets/fabric-zoom-26vb045-day9163.avif", col: 0, row: 0, tile: 1200 },
   "26VB058.DAY9164": { sprite: "./assets/fabric-zoom-26vb058-day9164.avif", col: 0, row: 0, tile: 1200 },
-  "26VB049.DAY9165": { sprite: "./assets/fabric-zoom-26vb049-day9165.avif", col: 0, row: 0, tile: 1200 },
-  "26VB055.DAY9169": { sprite: "./assets/fabric-zoom-26vb055-day9169.avif", col: 0, row: 0, tile: 1200 },
   "26VB056.DAY9170": { sprite: "./assets/fabric-zoom-26vb056-day9170.avif", col: 0, row: 0, tile: 1200 },
   "26VB113.DAY9172": { sprite: "./assets/fabric-zoom-26vb113-day9172.avif", col: 0, row: 0, tile: 1200 },
   "26VB114.DAY9173": { sprite: "./assets/fabric-zoom-26vb114-day9173.avif", col: 0, row: 0, tile: 1200 },
   "26VB115.DAY9175": { sprite: "./assets/fabric-zoom-26vb115-day9175.avif", col: 0, row: 0, tile: 1200 },
   "26VB116.DAY9176": { sprite: "./assets/fabric-zoom-26vb116-day9176.avif", col: 0, row: 0, tile: 1200 },
-  "26VB108.DAY9188": { sprite: "./assets/fabric-zoom-26vb108-day9188.avif", col: 0, row: 0, tile: 1200 },
   "26VB110.DAY9189": { sprite: "./assets/fabric-zoom-26vb110-day9189.avif", col: 0, row: 0, tile: 1200 },
   "26RE048.DAY9208": { sprite: "./assets/fabric-zoom-26re048-day9208.avif", col: 0, row: 0, tile: 1200 },
   "26RE049.DAY9209": { sprite: "./assets/fabric-zoom-26re049-day9209.avif", col: 0, row: 0, tile: 1200 },
   "26RE050.DAY9210": { sprite: "./assets/fabric-zoom-26re050-day9210.avif", col: 0, row: 0, tile: 1200 },
   "26RE055.DAY9214": { sprite: "./assets/fabric-zoom-26re055-day9214.avif", col: 0, row: 0, tile: 1200 },
-  "26RE065.DAY9242": { sprite: "./assets/fabric-zoom-26re065-day9242.avif", col: 0, row: 0, tile: 1200 },
-  "26RE067.DAY9244": { sprite: "./assets/fabric-zoom-26re067-day9244.avif", col: 0, row: 0, tile: 1200 },
   "26RE102.DAY9249": { sprite: "./assets/fabric-zoom-26re102-day9249.avif", col: 0, row: 0, tile: 1200 },
   "26RE103.DAY9250": { sprite: "./assets/fabric-zoom-26re103-day9250.avif", col: 0, row: 0, tile: 1200 },
   "26RE104.DAY9251": { sprite: "./assets/fabric-zoom-26re104-day9251.avif", col: 0, row: 0, tile: 1200 },
@@ -3100,7 +3025,6 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26VB102.DAY9274": { sprite: "./assets/fabric-zoom-26vb102-day9274.avif", col: 0, row: 0, tile: 1200 },
   "26VB070.DAY9276": { sprite: "./assets/fabric-zoom-26vb070-day9276.avif", col: 0, row: 0, tile: 1200 },
   "26VB059.DAY9284": { sprite: "./assets/fabric-zoom-26vb059-day9284.avif", col: 0, row: 0, tile: 1200 },
-  "26VB050.DAY9285": { sprite: "./assets/fabric-zoom-26vb050-day9285.avif", col: 0, row: 0, tile: 1200 },
   "26VB103.DAY9290": { sprite: "./assets/fabric-zoom-26vb103-day9290.avif", col: 0, row: 0, tile: 1200 },
   "26VB104.DAY9291": { sprite: "./assets/fabric-zoom-26vb104-day9291.avif", col: 0, row: 0, tile: 1200 },
   "26VB105.DAY9292": { sprite: "./assets/fabric-zoom-26vb105-day9292.avif", col: 0, row: 0, tile: 1200 },
