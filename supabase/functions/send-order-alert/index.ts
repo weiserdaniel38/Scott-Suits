@@ -1,6 +1,9 @@
 // Scott Suits -- emails the shop admin each time an order is paid: when
 // Stripe confirms the payment. Admin "Place order without payment" orders
 // don't send one. One email per order, however many suits.
+// S.W. Atelier orders (orders.brand = 'sw', the coworker site with no
+// prices or payment) send one the moment they're placed, marked as a
+// request, with no prices (supabase/sql/23_site_brand.sql).
 //
 // How it's called: by the database (supabase/sql/19_order_email_alert.sql),
 // the moment an order turns paid:
@@ -37,6 +40,11 @@ const escapeHtml = (s: string) =>
 
 const money = (n: unknown) => "$" + Number(n || 0).toFixed(2);
 
+// Storefronts other than Scott's Suits (see brand.js on the site).
+const BRANDS: Record<string, { name: string; noPayment: boolean }> = {
+  sw: { name: "S.W. Atelier", noPayment: true },
+};
+
 const SUIT_TYPES: Record<string, string> = {
   full_suit: "Full suit",
   jacket_only: "Jacket only",
@@ -68,17 +76,22 @@ export type AlertRow = {
   tax_usd: number | null;
   client_form_text: string | null;
   created_at: string | null;
+  brand?: string | null;
 };
 
 export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
   const r = rows[0];
   const name = (r.customer_name || "").trim() || "No name";
   const adminOrder = rows.some((x) => x.admin_no_payment);
+  const brand = BRANDS[r.brand || ""] || null;
+  const request = !!brand && brand.noPayment && !adminOrder;
   const paid = rows.some((x) => x.payment_status === "paid");
   const protectedRows = rows.filter((x) => x.alteration_protection);
   const protectionTotal = protectedRows.reduce((t, x) => t + Number(x.alteration_protection_usd || 0), 0);
   const itemsTotal = rows.reduce((t, x) => t + Number(x.item_price_usd || 0), 0) + protectionTotal;
-  const protection = protectedRows.length
+  const protection = protectedRows.length && request
+    ? "Yes (3 free alterations" + (protectedRows.length > 1 ? " each on " + protectedRows.length + " items" : "") + ")"
+    : protectedRows.length
     ? "Yes, " + money(protectionTotal) + " (3 free alterations" + (protectedRows.length > 1 ? " each on " + protectedRows.length + " items" : "") + ")"
     : rows.some((x) => x.alteration_protection === false)
     ? "No, declined (alterations at their cost)"
@@ -87,6 +100,8 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
   const count = rows.length === 1 ? "1 item" : rows.length + " items";
   const payment = adminOrder
     ? "Admin order, placed without payment"
+    : request
+    ? brand!.name + " request, no payment"
     : paid
     ? "Paid " + money(r.amount_paid_usd) +
       (Number(r.shipping_usd) ? " (incl. shipping " + money(r.shipping_usd) + ")" : "") +
@@ -104,11 +119,13 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
         .filter((x) => x && String(x).trim())
         .join("\n");
   const adminUrl = siteUrl + "/?admin=orders";
-  const subject = (adminOrder ? "New admin order: " : "New order: ") + name + " · " + count + " · " + money(total);
+  const label = (brand ? brand.name + " " : "") + (adminOrder ? "admin order" : request ? "request" : "order");
+  const subject = "New " + label + ": " + name + " · " + count + (request ? "" : " · " + money(total));
 
   const details: [string, string][] = [
     ["Order", r.order_id],
     ["Placed", r.created_at ? new Date(r.created_at).toLocaleString("en-US", { timeZone: "America/New_York" }) + " (ET)" : ""],
+    ["Site", brand ? brand.name : ""],
     ["Payment", payment],
     ["Customer", name],
     ["Email", r.customer_email || ""],
@@ -119,8 +136,10 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
   const items = rows.map(
     (x, i) =>
       (x.suit_number || i + 1) + ". " + (SUIT_TYPES[x.suit_type || ""] || "Suit") +
-      (x.fabric ? " · " + x.fabric : "") + " · " + money(x.item_price_usd) +
-      (x.alteration_protection ? " + Alteration Protection " + money(x.alteration_protection_usd) : ""),
+      (x.fabric ? " · " + x.fabric : "") +
+      (request
+        ? (x.alteration_protection ? " + Alteration Protection" : "")
+        : " · " + money(x.item_price_usd) + (x.alteration_protection ? " + Alteration Protection " + money(x.alteration_protection_usd) : "")),
   );
 
   const text = [
@@ -159,9 +178,9 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;font-family:Montserrat,Helvetica,Arial,sans-serif;color:#221E19;">
 <tr><td style="padding:28px 32px 8px;">
-<p style="margin:0 0 8px;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#B08D57;">${adminOrder ? "New admin order" : "New order"}</p>
+<p style="margin:0 0 8px;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#B08D57;">${escapeHtml("New " + label)}</p>
 <h1 style="margin:0 0 4px;font-size:22px;font-weight:600;">${escapeHtml(name)}</h1>
-<p style="margin:0 0 16px;font-size:15px;">${escapeHtml(count)} &middot; <b>${escapeHtml(money(total))}</b></p>
+<p style="margin:0 0 16px;font-size:15px;">${escapeHtml(count)}${request ? "" : ` &middot; <b>${escapeHtml(money(total))}</b>`}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${detailRows}</table>
 <h2 style="margin:20px 0 8px;font-size:16px;font-weight:600;">Items</h2>
 <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;line-height:1.5;">${itemRows}</ul>
@@ -204,7 +223,7 @@ Deno.serve(async (req) => {
     .select(
       "order_id, suit_number, suit_type, fabric, item_price_usd, alteration_protection, alteration_protection_usd, customer_name, customer_email, customer_phone, fulfillment, " +
         "shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country, " +
-        "payment_status, admin_no_payment, amount_paid_usd, shipping_usd, tax_usd, client_form_text, created_at",
+        "payment_status, admin_no_payment, amount_paid_usd, shipping_usd, tax_usd, client_form_text, created_at, brand",
     )
     .eq("order_id", orderId)
     .order("suit_number", { ascending: true });
