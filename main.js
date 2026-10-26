@@ -1677,7 +1677,12 @@ function adminFabricList(o) {
     lines.className = "admin-suit-fabrics";
     const actions = document.createElement("div");
     actions.className = "admin-suit-actions";
-    actions.append(adminRedrawButton(o, s, suitBox), adminSuitFactoryButton(o, s, suitBox, stateEl));
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "admin-ship-factory admin-suit-edit";
+    editBtn.textContent = "Edit suit";
+    editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn, s.suit_number || 1));
+    actions.append(editBtn, adminRedrawButton(o, s, suitBox), adminSuitFactoryButton(o, s, suitBox, stateEl));
     infoCol.append(lines, actions);
     box.appendChild(suitBox);
     const parts = [];
@@ -1998,7 +2003,9 @@ function adminFactorySuit(suit, count, stateEl) {
 // and factory fields never change. Whatever was in the admin's own cart is
 // put aside and comes back when editing ends.
 // ---------------------------------------------------------------------------
-async function startAdminOrderEdit(o, btn) {
+// suitNumber (from a suit card's "Edit suit"): opens that suit in the
+// designer instead of going to checkout; the rest of the order still loads.
+async function startAdminOrderEdit(o, btn, suitNumber) {
   if (!currentIsAdmin) return;
   if (adminEditState) {
     alert("You're already editing " + (adminEditState.name || "an order") + "'s order. Save or cancel that first (the bar at the top of the designer).");
@@ -2065,7 +2072,12 @@ async function startAdminOrderEdit(o, btn) {
     updateAdminEditUI();
     updateOrderSummaryUI();
     const reviewAt = items.findIndex((item) => item.needsReview);
-    if (reviewAt !== -1) {
+    const suitAt = suitNumber ? items.findIndex((item) => (item.adminSuitNumber || 1) === suitNumber) : -1;
+    if (suitAt !== -1) {
+      loadCartItemIntoDesigner(suitAt);
+      saveDraft();
+      if (items[suitAt].needsReview) alert("This suit has " + items[suitAt].needsReview.join(", ") + " to fix (a choice that isn't offered anymore, or a missing or out-of-range measurement). Fix it, finish Measurements, then save the order.");
+    } else if (reviewAt !== -1) {
       loadCartItemIntoDesigner(reviewAt);
       saveDraft();
       alert("Suit " + (reviewAt + 1) + " has " + items[reviewAt].needsReview.join(", ") + " to fix (a choice that isn't offered anymore, or a missing or out-of-range measurement). Fix it, finish Measurements, then save the order.");
