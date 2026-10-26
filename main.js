@@ -774,11 +774,6 @@ async function refreshAdminStatus() {
     shipWrap.hidden = !admin;
     if (admin) loadAdminOrders();
   }
-  const tailorsSection = document.getElementById("adminTailorsSection");
-  if (tailorsSection) {
-    tailorsSection.hidden = !admin;
-    if (admin && typeof loadAdminTailors === "function") loadAdminTailors();
-  }
   if (adminNotificationsSection) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
@@ -2293,6 +2288,8 @@ async function prefillContactDetails() {
     if (loginForm) loginForm.reset();
     const savedMeasurements = document.getElementById("savedMeasurementsSection");
     if (savedMeasurements) savedMeasurements.open = false;
+    const pastOrders = document.getElementById("pastOrdersSection");
+    if (pastOrders) pastOrders.open = false;
     if (adminNotificationsSection) adminNotificationsSection.open = false;
   }
 
@@ -6178,158 +6175,6 @@ function initTailorFinder() {
   input.addEventListener("blur", () => setTimeout(closeSuggestions, 150));
 }
 initTailorFinder();
-
-// ---- Admin: Partner Tailors in My Account ----
-const adminTailorsSection = document.getElementById("adminTailorsSection");
-const adminTailorsList = document.getElementById("adminTailorsList");
-const adminTailorForm = document.getElementById("adminTailorForm");
-const adminTailorStatus = document.getElementById("adminTailorStatus");
-const TAILOR_FIELDS = {
-  name: "tailorNameInput",
-  address: "tailorAddressInput",
-  city: "tailorCityInput",
-  state: "tailorStateInput",
-  zip: "tailorZipAdminInput",
-  phone: "tailorPhoneInput",
-  website: "tailorWebsiteInput",
-  hours: "tailorHoursInput",
-  note: "tailorNoteInput",
-};
-let editingTailor = null;
-
-function resetTailorForm() {
-  editingTailor = null;
-  if (adminTailorForm) adminTailorForm.reset();
-  const active = document.getElementById("tailorActiveInput");
-  if (active) active.checked = true;
-  document.getElementById("adminTailorFormTitle").textContent = "Add a tailor";
-  document.getElementById("adminTailorSaveBtn").textContent = "Add tailor";
-  document.getElementById("adminTailorCancelBtn").hidden = true;
-}
-
-function editTailor(t) {
-  editingTailor = t;
-  Object.entries(TAILOR_FIELDS).forEach(([key, id]) => {
-    document.getElementById(id).value = t[key] || "";
-  });
-  document.getElementById("tailorActiveInput").checked = !!t.active;
-  document.getElementById("adminTailorFormTitle").textContent = "Edit " + t.name;
-  document.getElementById("adminTailorSaveBtn").textContent = "Save changes";
-  document.getElementById("adminTailorCancelBtn").hidden = false;
-  hideAccountStatus(adminTailorStatus);
-  adminTailorForm.scrollIntoView({ block: "start", behavior: "smooth" });
-}
-
-async function loadAdminTailors() {
-  if (!adminTailorsList) return;
-  try {
-    const { data, error } = await getSupabase()
-      .from("partner_tailors")
-      .select("*")
-      .order("state")
-      .order("city")
-      .order("name");
-    if (error) throw error;
-    const rows = data || [];
-    if (!rows.length) {
-      adminTailorsList.innerHTML = '<p class="account-section-note">No tailors yet. Add your first one below.</p>';
-      return;
-    }
-    adminTailorsList.innerHTML = "";
-    rows.forEach((t) => {
-      const item = document.createElement("div");
-      item.className = "admin-tailor" + (t.active ? "" : " admin-tailor-hidden");
-      const info = document.createElement("div");
-      const name = document.createElement("b");
-      name.textContent = t.name + (t.active ? "" : " (hidden)");
-      const meta = document.createElement("span");
-      meta.className = "admin-notif-meta";
-      meta.textContent = [tailorAddressLine(t), t.phone].filter(Boolean).join(" · ");
-      info.append(name, meta);
-      if (typeof t.lat !== "number") {
-        const warn = document.createElement("span");
-        warn.className = "admin-tailor-warn";
-        warn.textContent = "Couldn't find this address on the map, so customers won't see it in distance results. Check the address and save again.";
-        info.appendChild(warn);
-      }
-      const actions = document.createElement("div");
-      actions.className = "admin-tailor-btns";
-      const edit = document.createElement("button");
-      edit.type = "button";
-      edit.className = "btn-ghost";
-      edit.textContent = "Edit";
-      edit.addEventListener("click", () => editTailor(t));
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "btn-ghost";
-      del.textContent = "Remove";
-      del.addEventListener("click", async () => {
-        if (del.dataset.confirm !== "1") {
-          del.dataset.confirm = "1";
-          del.textContent = "Tap again to remove";
-          setTimeout(() => {
-            del.dataset.confirm = "";
-            del.textContent = "Remove";
-          }, 4000);
-          return;
-        }
-        const { error: delErr } = await getSupabase().from("partner_tailors").delete().eq("id", t.id);
-        if (delErr) console.error("Failed to remove tailor:", delErr);
-        if (editingTailor && editingTailor.id === t.id) resetTailorForm();
-        loadAdminTailors();
-      });
-      actions.append(edit, del);
-      item.append(info, actions);
-      adminTailorsList.appendChild(item);
-    });
-  } catch (err) {
-    console.error("Failed to load tailors:", err);
-    adminTailorsList.innerHTML = '<p class="account-section-note">Couldn’t load tailors right now.</p>';
-  }
-}
-
-if (adminTailorForm) {
-  document.getElementById("adminTailorCancelBtn").addEventListener("click", () => {
-    resetTailorForm();
-    hideAccountStatus(adminTailorStatus);
-  });
-  adminTailorForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const row = {};
-    Object.entries(TAILOR_FIELDS).forEach(([key, id]) => {
-      row[key] = document.getElementById(id).value.trim();
-    });
-    row.active = document.getElementById("tailorActiveInput").checked;
-    if (!row.name || !normalizeZip(row.zip)) {
-      showAccountStatus(adminTailorStatus, "Please enter at least a name and a 5-digit ZIP code.");
-      return;
-    }
-    const saveBtn = document.getElementById("adminTailorSaveBtn");
-    saveBtn.disabled = true;
-    showAccountStatus(adminTailorStatus, "Saving…");
-    try {
-      // Street address first; if the map service can't place it, the ZIP's
-      // center is close enough for "closest tailor" sorting.
-      const full = tailorAddressLine(row);
-      const spot = (row.address && (await geocodeUs({ text: full }))) || (await geocodeUs({ postcode: normalizeZip(row.zip), type: "postcode" }));
-      row.lat = spot ? spot.lat : null;
-      row.lng = spot ? spot.lng : null;
-      const q = editingTailor
-        ? getSupabase().from("partner_tailors").update(row).eq("id", editingTailor.id)
-        : getSupabase().from("partner_tailors").insert(row);
-      const { error } = await q;
-      if (error) throw error;
-      showAccountStatus(adminTailorStatus, (editingTailor ? "Saved " : "Added ") + row.name + "." + (spot ? "" : " Couldn't find the address on the map, so please check it."));
-      resetTailorForm();
-      loadAdminTailors();
-    } catch (err) {
-      console.error("Failed to save tailor:", err);
-      showAccountStatus(adminTailorStatus, "Couldn’t save the tailor. Please try again.");
-    } finally {
-      saveBtn.disabled = false;
-    }
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Cart -- lets a customer design more than one suit in a single order. Each
