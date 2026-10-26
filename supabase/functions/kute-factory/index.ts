@@ -245,6 +245,17 @@ async function saveDraft(input: Record<string, unknown>) {
   let d = res.data || {};
   let ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
   if (!ok && body.orderNo) {
+    // An order already placed (paid, in production) can't be saved over, and
+    // saving a new one would make the suit twice (DWNYP2610006/07, 2026-10-26).
+    // Only a draft ("Saving" 10035, "Stay Payments" 10039) or a deleted order
+    // may be redone.
+    const st = await kute("GET", "/order/status/" + encodeURIComponent(String(body.orderNo)));
+    const sd = ((st.data || {}) as Record<string, any>).data || {};
+    if (st.httpStatus === 200 && sd.status && ![10035, 10039].includes(Number(sd.status))) {
+      const msg = "Order " + body.orderNo + " is already placed at the factory (" + (sd.statusName || sd.status) + "), so it can't be changed from here. Change it on the factory site.";
+      await supabase.from("orders").update({ factory_error: msg }).eq("id", row.id);
+      return { ok: false, orderNo: row.factory_order_no || null, error: msg, warnings };
+    }
     // The earlier draft may have been deleted on the factory site: save a new one.
     body.orderNo = "";
     r = await kute("POST", "/order/saveOrder", {}, body);
