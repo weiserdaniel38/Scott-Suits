@@ -37,7 +37,8 @@ BRANDS = {
 }
 
 # Never copied: tooling, database code and docs.
-SKIP = {".git", ".github", "scripts", "supabase", "_site", "README.md", "node_modules"}
+# faq.html and llms.txt state Scott's Suits prices.
+SKIP = {".git", ".github", "scripts", "supabase", "_site", "README.md", "node_modules", "faq.html", "llms.txt"}
 
 PAGE_TITLES = {
     "index.html": None,
