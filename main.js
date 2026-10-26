@@ -2226,9 +2226,18 @@ function updateAdminEditUI() {
 
 async function saveAdminOrderEdit() {
   if (!adminEditState) return;
-  if (pendingCommitIndex !== null && designerHasUnsavedWork()) {
-    alert("Suit " + (pendingCommitIndex + 1) + " has changes that aren't in the order yet. Go to its Measurements page and press Continue first.");
-    return;
+  // The suit open in the designer goes into the order as it is now, so a
+  // change can be saved straight away from any step (no need to go through
+  // Measurements and checkout first).
+  if (pendingCommitIndex !== null && cartItems[pendingCommitIndex]) {
+    const missing = []
+      .concat(hasJacketStep() ? jacketDesigner.missingLabels() : [])
+      .concat(isJacketOnlyType(currentSuitType) ? [] : pantsDesigner.missingLabels());
+    if (missing.length) {
+      alert("Suit " + (pendingCommitIndex + 1) + " still needs: " + missing.join(", "));
+      return;
+    }
+    if (!commitCurrentSuitToCart()) return;
   }
   if (cartItems.some((item) => !item.adminRowId)) {
     alert("A suit was added while editing. Suits can't be added to an order already placed: remove it from the cart (or place it as a new order) and save again.");
@@ -7041,7 +7050,9 @@ function commitCurrentSuitToCart() {
   // measurements folded into their saved profile automatically, without
   // making them wait on it here. Unchecked -- e.g. ordering as a gift for
   // someone else -- and nothing about their own saved profile changes.
-  if (currentUser && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
+  // Never while the admin edits a customer's order (it would overwrite the
+  // admin's own saved measurements).
+  if (currentUser && !adminEditState && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
     saveProfileMeasurements(measurementValues);
   }
 
