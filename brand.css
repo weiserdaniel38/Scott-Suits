@@ -157,6 +157,11 @@ html[data-brand="sw"] .hiw-num,
 html[data-brand="sw"] .lightbox-caption,
 html[data-brand="sw"] .studio-marker-label{font-family:var(--sw-display) !important;letter-spacing:var(--sw-display-track);text-transform:var(--sw-display-case);}
 
+/* Designer section names (Lapel Style, Button Closure...) in all caps Art
+   Deco lettering (Daniel, 2026-10-26). */
+html[data-brand="sw"] .designer-grid .options > h3,
+html[data-brand="sw"] .designer-grid .opt-section-divider{font-family:var(--sw-display) !important;text-transform:uppercase;letter-spacing:0.08em;font-weight:400 !important;}
+
 /* Script for the big titles and the nav, serif for reading text. */
 html[data-brand="sw"] h1,
 html[data-brand="sw"] h1 *,
