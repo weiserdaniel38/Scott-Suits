@@ -505,13 +505,16 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-ship-row:last-child{border-bottom:none;}
 .admin-ship-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .admin-ship-contact{display:block;color:var(--ivory-dim);font-size:12px;margin-top:3px;word-break:break-all;}
-.admin-fabrics{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+.admin-fabrics{display:flex;flex-direction:column;gap:14px;margin-top:10px;}
 .admin-fabric{display:flex;align-items:center;gap:10px;}
 .admin-fabric-zoom{cursor:zoom-in;}
 .admin-fabric-swatch{width:44px;height:44px;flex:none;border-radius:6px;object-fit:cover;border:1px solid var(--line);background:var(--line);}
 .admin-fabric-label{display:block;color:var(--ivory-dim);font-size:11px;letter-spacing:.04em;text-transform:uppercase;}
 .admin-fabric b{font-weight:600;}
 .admin-fabric-code{color:var(--ivory-dim);font-size:12px;margin-left:6px;}
+.admin-suit{display:flex;flex-direction:column;gap:8px;}
+.admin-suit-picture{width:100%;max-width:360px;height:auto;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;background:#fff;}
+.admin-suit-fabrics{display:flex;flex-direction:column;gap:8px;min-width:0;}
 .admin-ship-fields{display:grid;grid-template-columns:1.3fr 1fr 1.6fr;gap:10px;margin-top:12px;}
 .admin-ship-fields .measure-input-wrap select,.admin-ship-fields .measure-input-wrap input{padding:10px 0;font-size:14px;}
 .admin-ship-actions{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:13px;color:var(--ivory-dim);}

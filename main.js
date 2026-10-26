@@ -1470,7 +1470,7 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands, fabrics] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
@@ -1478,6 +1478,7 @@ async function loadAdminOrders() {
       client.rpc("admin_order_protection"),
       client.rpc("admin_order_brands"),
       client.rpc("admin_order_fabrics"),
+      client.rpc("admin_order_pictures"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1494,8 +1495,12 @@ async function loadAdminOrders() {
     if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
-    // Each suit's fabric(s), shown on the order row (supabase/sql/27).
+    // Each suit's fabric(s) and suit picture, shown on the order row
+    // (supabase/sql/27 and 28).
+    const pics = {};
+    if (!pictures.error && pictures.data) pictures.data.forEach((x) => (pics[x.order_id + "/" + (x.suit_number || 1)] = x.image_url));
     if (!fabrics.error && fabrics.data) fabrics.data.forEach((x) => {
+      x.image_url = pics[x.order_id + "/" + (x.suit_number || 1)] || null;
       const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
       (p.fabrics = p.fabrics || []).push(x);
     });
@@ -1547,14 +1552,33 @@ function adminFabricOption(value) {
   return opts.find((f) => f.name === value) || opts.find((f) => f.displayName === value) || null;
 }
 
-// One line per suit with the fabric photo, name and code (admin only; the
-// code never shows to customers). Pants in a different fabric get their own.
+// Per suit: the finished suit picture (when one was drawn) beside a line
+// with the fabric photo, name and code (admin only; the code never shows to
+// customers). Pants in a different fabric get their own line.
 function adminFabricList(o) {
   const box = document.createElement("div");
   box.className = "admin-fabrics";
   const suits = o.fabrics || [];
   const many = suits.length > 1;
   suits.forEach((s) => {
+    const suitBox = document.createElement("div");
+    suitBox.className = "admin-suit";
+    if (s.image_url) {
+      const pic = document.createElement("img");
+      pic.className = "admin-suit-picture";
+      pic.src = s.image_url;
+      pic.alt = "Suit picture";
+      pic.loading = "lazy";
+      pic.addEventListener("click", () => {
+        document.getElementById("lightbox").classList.add("over-account");
+        openLightbox(s.image_url, (o.customer_name || "Suit") + (many ? " \u00b7 Suit " + (s.suit_number || 1) : ""), "Suit picture", true);
+      });
+      suitBox.appendChild(pic);
+    }
+    const lines = document.createElement("div");
+    lines.className = "admin-suit-fabrics";
+    suitBox.appendChild(lines);
+    box.appendChild(suitBox);
     const parts = [];
     if (s.suit_type === "pants_only") parts.push(["Pants", s.pants_fabric || s.fabric]);
     else {
@@ -1587,7 +1611,7 @@ function adminFabricList(o) {
           openLightbox(opt.img, opt.displayName || opt.name, "Fabric", true, opt.name, null, "fabric");
         });
       }
-      box.appendChild(line);
+      lines.appendChild(line);
     });
   });
   return box;
