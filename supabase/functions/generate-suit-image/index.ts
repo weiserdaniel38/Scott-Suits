@@ -378,7 +378,7 @@ function describeSpec(spec: string): string {
     .filter((line) => !HIDDEN_OPTION_LABELS.some((l) => line.startsWith(l + ": ")))
     .map((line) => {
       const m = line.match(/^([^:]+): (.+)$/);
-      const look = m && OPTION_LOOKS[m[1]] && OPTION_LOOKS[m[1]][m[2].trim()];
+      const look = m && (m[1] === "Lining" && /^matched to the fabric color/i.test(m[2]) ? PLAIN_MATCH_LINING : OPTION_LOOKS[m[1]] && OPTION_LOOKS[m[1]][m[2].trim()]);
       return look ? line + " -- looks like: " + look : line;
     })
     .join("\n");
@@ -549,6 +549,14 @@ const HIP_REF: Record<string, string> = {
   "High-Back Patch + Besom Ticket": "./assets/jacket-hipref-patchhighbackdbt.jpg",
 };
 
+// "Match Suit Fabric" lining: the spec says "Lining: matched to the fabric
+// color (approx. color #...)" and no lining swatch is sent, so the model
+// invented paisley or jacquard linings. Daniel wants a plain solid lining.
+function liningMatchesFabric(spec: string): boolean {
+  return !/^Facing Style: No Lining/m.test(spec) && /^Lining: (matched to the fabric color|Match Fabric)/im.test(spec);
+}
+const PLAIN_MATCH_LINING = "a PLAIN, SOLID-COLOR lining in one single color matching the suit fabric's color (the same shade or a slightly lighter or darker tone of it), smooth and slightly lustrous like satin/bemberg; absolutely NO pattern, print, paisley, jacquard, stripes, dots, texture motif or design of any kind on it";
+
 function keyDetails(spec: string, ownLining = false): string {
   const out: string[] = [];
   // First: the image model kept drawing level hip pockets when this came later.
@@ -586,6 +594,8 @@ function keyDetails(spec: string, ownLining = false): string {
   out.push(...monogramRules(spec));
   if (ownLining) {
     out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
+  } else if (liningMatchesFabric(spec)) {
+    out.push("- LINING: " + PLAIN_MATCH_LINING + ".");
   }
   return out.length ? "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n") : "";
 }
@@ -782,6 +792,9 @@ function fixedRules(spec: string): string {
   }
   if (/^Facing Style: No Lining/m.test(spec)) {
     rules.push("- The jacket is UNLINED: wherever the inside shows (neck opening, folded-open front), draw the suit fabric facings and neat bound seams, with no lining fabric.");
+  }
+  if (liningMatchesFabric(spec)) {
+    rules.push("- The lining is " + PLAIN_MATCH_LINING + ", everywhere the inside of the jacket shows.");
   }
   const monoRules = monogramRules(spec);
   rules.push(...monoRules);
