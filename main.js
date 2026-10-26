@@ -1835,10 +1835,9 @@ function adminOrderRow(o) {
 }
 
 // "Send to factory": one block per suit of the order. Height and weight
-// come from the order (the customer enters them with their measurements);
-// the admin only types them for older orders or to change them. Check shows the
-// factory order the suit would make (codes, measurements, anything to fix
-// by hand); Save draft saves it as a DRAFT on the factory site through the
+// come from the order (the customer enters them with their measurements).
+// Check shows the factory order the suit would make (codes, measurements,
+// anything to fix by hand); Save draft saves it as a DRAFT on the factory site through the
 // kute-factory edge function, which never submits it. The admin checks and
 // submits it there. Factory status reads the factory's progress back and
 // moves the order's shipping step forward to match (no message is sent).
@@ -1885,12 +1884,6 @@ function adminFactorySuit(suit, count, stateEl) {
   box.className = "admin-factory-suit";
   box.innerHTML =
     '<div class="admin-factory-head"><b></b><span class="admin-factory-state"></span></div>' +
-    '<div class="admin-ship-fields">' +
-    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-height" placeholder="Height (from order)" aria-label="Customer height"></div>' +
-    '<div class="measure-input-wrap"><select class="fac-height-unit" aria-label="Height unit"><option value="in">in</option><option value="cm">cm</option></select></div>' +
-    '<div class="measure-input-wrap"><input type="number" min="0" step="0.1" class="fac-weight" placeholder="Weight (from order)" aria-label="Customer weight"></div>' +
-    '<div class="measure-input-wrap"><select class="fac-weight-unit" aria-label="Weight unit"><option value="lb">lb</option><option value="kg">kg</option></select></div>' +
-    "</div>" +
     '<div class="admin-ship-actions">' +
     '<button type="button" class="admin-ship-factory fac-check">Check</button>' +
     '<button type="button" class="btn-primary fac-draft">Save draft at factory</button>' +
@@ -1910,13 +1903,8 @@ function adminFactorySuit(suit, count, stateEl) {
     draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
   };
   showState();
-  const params = () => ({
-    id: suit.id,
-    height: Number(box.querySelector(".fac-height").value) || 0,
-    heightUnit: box.querySelector(".fac-height-unit").value,
-    weight: Number(box.querySelector(".fac-weight").value) || 0,
-    weightUnit: box.querySelector(".fac-weight-unit").value,
-  });
+  // Height and weight always come from the order (kute-factory reads them).
+  const params = () => ({ id: suit.id });
   const run = async (label, fn) => {
     buttons.forEach((b) => (b.disabled = true));
     out.hidden = false;
