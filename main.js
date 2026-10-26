@@ -1552,6 +1552,46 @@ function adminFabricOption(value) {
   return opts.find((f) => f.name === value) || opts.find((f) => f.displayName === value) || null;
 }
 
+// "Redraw picture": draws the suit picture again from the order's saved
+// design (e.g. after a lining was changed on the order), then swaps it in.
+function adminRedrawButton(o, s, suitBox) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-ship-factory admin-suit-redraw";
+  btn.textContent = s.image_url ? "Redraw picture" : "Draw picture";
+  btn.addEventListener("click", async () => {
+    if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
+    const ids = { order_id: o.order_id, suit_number: s.suit_number || 1 };
+    btn.disabled = true;
+    btn.textContent = "Drawing…";
+    try {
+      const start = await callSuitImageFn(Object.assign({ redraw: true }, ids));
+      if (!start.ok && start.status !== 202) throw new Error((start.data && start.data.error) || "start failed");
+      const r = await pollSuitImage(Object.assign({ check: true }, ids));
+      if (r.status !== "done") throw new Error(r.status);
+      s.image_url = r.url;
+      let pic = suitBox.querySelector(".admin-suit-picture");
+      if (!pic) {
+        pic = document.createElement("img");
+        pic.className = "admin-suit-picture";
+        pic.alt = "Suit picture";
+        pic.addEventListener("click", () => {
+          document.getElementById("lightbox").classList.add("over-account");
+          openLightbox(s.image_url, o.customer_name || "Suit", "Suit picture", true);
+        });
+        suitBox.prepend(pic);
+      }
+      pic.src = r.url;
+      btn.textContent = "Redrawn ✓";
+    } catch (e) {
+      console.error(e);
+      btn.textContent = "Redraw failed, try again";
+    }
+    btn.disabled = false;
+  });
+  return btn;
+}
+
 // Per suit: the finished suit picture (when one was drawn) beside a line
 // with the fabric photo, name and code (admin only; the code never shows to
 // customers). Pants in a different fabric get their own line.
@@ -1575,6 +1615,7 @@ function adminFabricList(o) {
       });
       suitBox.appendChild(pic);
     }
+    suitBox.appendChild(adminRedrawButton(o, s, suitBox));
     const lines = document.createElement("div");
     lines.className = "admin-suit-fabrics";
     suitBox.appendChild(lines);
