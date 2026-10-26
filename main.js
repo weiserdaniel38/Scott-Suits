@@ -1586,7 +1586,7 @@ function adminRedrawButton(o, s, suitBox) {
           document.getElementById("lightbox").classList.add("over-account");
           openLightbox(s.image_url, o.customer_name || "Suit", "Suit picture", true);
         });
-        suitBox.querySelector(".admin-suit-head").after(pic);
+        suitBox.querySelector(".admin-suit-pic-col").prepend(pic);
       }
       pic.src = r.url;
       btn.textContent = "Redrawn ✓";
@@ -1658,6 +1658,14 @@ function adminFabricList(o) {
     const stateEl = head.querySelector(".admin-factory-state");
     if (s.factory) stateEl.textContent = adminFactorySuitState(s.factory);
     suitBox.appendChild(head);
+    const body = document.createElement("div");
+    body.className = "admin-suit-body";
+    const picCol = document.createElement("div");
+    picCol.className = "admin-suit-pic-col";
+    const infoCol = document.createElement("div");
+    infoCol.className = "admin-suit-info";
+    body.append(picCol, infoCol);
+    suitBox.appendChild(body);
     if (s.image_url) {
       const pic = document.createElement("img");
       pic.className = "admin-suit-picture";
@@ -1668,13 +1676,14 @@ function adminFabricList(o) {
         document.getElementById("lightbox").classList.add("over-account");
         openLightbox(s.image_url, (o.customer_name || "Suit") + (many ? " \u00b7 Suit " + (s.suit_number || 1) : ""), "Suit picture", true);
       });
-      suitBox.appendChild(pic);
+      picCol.appendChild(pic);
     }
-    suitBox.appendChild(adminRedrawButton(o, s, suitBox));
     const lines = document.createElement("div");
     lines.className = "admin-suit-fabrics";
-    suitBox.appendChild(lines);
-    suitBox.appendChild(adminSuitFactoryButton(o, s, suitBox, stateEl));
+    const actions = document.createElement("div");
+    actions.className = "admin-suit-actions";
+    actions.append(adminRedrawButton(o, s, suitBox), adminSuitFactoryButton(o, s, suitBox, stateEl));
+    infoCol.append(lines, actions);
     box.appendChild(suitBox);
     const parts = [];
     if (s.suit_type === "pants_only") parts.push(["Pants", s.pants_fabric || s.fabric]);
@@ -1714,35 +1723,54 @@ function adminFabricList(o) {
   return box;
 }
 
+// One order in All Orders: a summary line (customer, date, suits, shipping
+// step, total) that opens to the order's details, one card per suit and the
+// whole-order controls.
 function adminOrderRow(o) {
-  const row = document.createElement("div");
+  const row = document.createElement("details");
   row.className = "admin-ship-row";
   const date = o.created_at ? new Date(o.created_at).toLocaleDateString() : "";
   const suits = o.suits > 1 ? o.suits + " suits" : "1 suit";
-  const contact = [o.customer_email, o.customer_phone].filter(Boolean).join(" \u00b7 ");
   const statusOpts = SHIPPING_STATUSES.map((s) => '<option value="' + s[0] + '">' + s[1] + "</option>").join("");
   const carrierOpts = '<option value="">Carrier</option>' + SHIPPING_CARRIERS.map((c) => '<option value="' + c + '">' + c + "</option>").join("");
   row.innerHTML =
-    '<div class="admin-ship-head"><div><b></b><span class="admin-ship-contact"></span></div><span class="past-order-total"></span></div>' +
-    '<div class="admin-order-box"><span class="admin-order-label">Whole order \u00b7 shipping &amp; customer updates</span>' +
+    '<summary class="admin-order-summary"><div class="admin-order-who"><b></b><span class="admin-order-sub"></span></div>' +
+    '<div class="admin-order-tags"><span class="admin-badge admin-ship-badge"></span><span class="past-order-total"></span></div>' +
+    '<span class="account-collapse-chevron" aria-hidden="true"></span></summary>' +
+    '<div class="admin-order-body"><dl class="admin-order-info"></dl>' +
+    '<div class="admin-order-box"><span class="admin-order-label">Shipping &amp; customer updates</span>' +
     '<div class="admin-ship-fields">' +
     '<div class="measure-input-wrap"><select aria-label="Shipping status" class="ship-status">' + statusOpts + "</select></div>" +
     '<div class="measure-input-wrap"><select aria-label="Carrier" class="ship-carrier">' + carrierOpts + "</select></div>" +
     '<div class="measure-input-wrap ship-tracking"><input type="text" aria-label="Tracking number" placeholder="Tracking number" class="ship-number" autocomplete="off"></div>' +
     "</div>" +
     '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
-    '<button type="button" class="btn-primary ship-save">Save</button>' +
+    '<button type="button" class="btn-primary ship-save">Save</button><p class="admin-ship-result" hidden></p></div></div>' +
+    '<div class="admin-order-manage"><span class="admin-order-label">Order</span><div class="admin-ship-actions">' +
     '<button type="button" class="admin-ship-factory admin-ship-send">Send to factory</button>' +
     '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
-    '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div></div>';
+    '<button type="button" class="admin-ship-delete">Delete order</button></div></div></div>';
   // Customer-typed text goes in with textContent, never as HTML.
-  row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
-  const protection = adminProtectionLabel(o);
-  row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o) + (protection ? " \u00b7 " + protection : "");
+  const name = row.querySelector(".admin-order-who b");
+  name.textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
+  if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) name.textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
+  row.querySelector(".admin-order-sub").textContent = [date, suits].filter(Boolean).join(" \u00b7 ");
+  const shipBadge = row.querySelector(".admin-ship-badge");
+  const showShipBadge = (status) => (shipBadge.textContent = shippingLabel(status) || "Order received");
+  showShipBadge(o.shipping_status);
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
-  if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) row.querySelector("b").textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
+  const info = row.querySelector(".admin-order-info");
+  const protection = adminProtectionLabel(o).replace(/^Alteration Protection: /, "");
+  [["Email", o.customer_email], ["Phone", o.customer_phone], ["Payment", adminPaymentLabel(o)], ["Alteration Protection", protection]].forEach(([k, v]) => {
+    if (!v) return;
+    const dt = document.createElement("dt");
+    dt.textContent = k;
+    const dd = document.createElement("dd");
+    dd.textContent = v;
+    info.append(dt, dd);
+  });
   const hasSuitCards = !!(o.fabrics && o.fabrics.length);
-  if (hasSuitCards) row.querySelector(".admin-ship-head").after(adminFabricList(o));
+  if (hasSuitCards) info.after(adminFabricList(o));
   const statusSel = row.querySelector(".ship-status");
   const carrierSel = row.querySelector(".ship-carrier");
   const numberInput = row.querySelector(".ship-number");
@@ -1766,6 +1794,7 @@ function adminOrderRow(o) {
         p_tracking: numberInput.value.trim() || null,
       });
       if (error) throw error;
+      showShipBadge(status);
       if (!notifyBox.checked || !status) {
         result.textContent = "Saved." + (status && !notifyBox.checked ? " No message sent." : "");
         return;
@@ -1802,7 +1831,7 @@ function adminOrderRow(o) {
       return;
     }
     factoryPanel = adminFactoryPanel(o);
-    row.appendChild(factoryPanel);
+    row.querySelector(".admin-order-manage").appendChild(factoryPanel);
   });
   const deleteBtn = row.querySelector(".admin-ship-delete");
   deleteBtn.addEventListener("click", async () => {
