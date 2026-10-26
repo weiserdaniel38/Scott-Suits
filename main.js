@@ -4855,20 +4855,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const famRank = (f) => f === "dark" ? -1 : f === "light" ? 9 : famL[f].reduce((a, b) => a + b, 0) / famL[f].length;
     // Fabrics are grouped by price first (cheapest tier on top, under a
     // heading with that tier's price for the suit type being designed), then
-    // by color family and darkness within each price group.
+    // by color family and darkness within each price group. The New Fabrics
+    // (NEW_FABRICS in catalog.js) are mixed in with the rest (Daniel,
+    // 2026-10-26: no separate New Fabrics section).
     // No prices shown (brand.js): one group, by color only.
     tiles.forEach((t) => { t.tier = PRICES_HIDDEN ? 0 : fabricTierOf(t.opt.name); });
-    // New Fabrics (NEW_FABRICS in catalog.js) come last, in their own
-    // section: grouped by color (NEW_FABRIC_COLOR_GROUPS), then by price,
-    // then dark -> light.
-    const newGroups = typeof NEW_FABRIC_COLOR_GROUPS !== "undefined" ? NEW_FABRIC_COLOR_GROUPS : [];
-    tiles.forEach((t) => {
-      t.isNew = !!t.opt.isNew;
-      const gi = newGroups.findIndex((g) => g[1].includes(t.group));
-      t.newGroup = gi < 0 ? newGroups.length : gi;
-      t.newLabel = gi < 0 ? "Other" : newGroups[gi][0];
-    });
-    tiles.sort((x, y) => (x.isNew - y.isNew) || (x.isNew && y.isNew ? x.newGroup - y.newGroup : 0) || x.tier - y.tier || famRank(x.fam) - famRank(y.fam) || x.L - y.L || (x.opt.displayName || x.opt.name).localeCompare(y.opt.displayName || y.opt.name));
+    tiles.sort((x, y) => x.tier - y.tier || famRank(x.fam) - famRank(y.fam) || x.L - y.L || (x.opt.displayName || x.opt.name).localeCompare(y.opt.displayName || y.opt.name));
     // Display: each tile shows the fabric's REAL color (hue + chroma from its
     // photo), only lifted in lightness so dark fabrics are distinguishable.
     // The lift is one monotonic curve over the real lightness, so the tile
@@ -4876,8 +4868,6 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // with the lift so navy still reads navy, burgundy reads burgundy, etc.
     const Ls = tiles.map((t) => t.L), Lmin = Math.min.apply(null, Ls), Lmax = Math.max.apply(null, Ls);
     let lastTier = null;
-    let inNew = false;
-    let lastNewGroup = null;
     const divider = (cls, text) => {
       const h = document.createElement("h4");
       h.className = cls;
@@ -4886,18 +4876,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     };
     const priceText = (tier) => (isJacketOnlyType(currentSuitType) ? "Jacket " : isPantsOnlyType(currentSuitType) ? "Pants " : "Suit ") + "$" + suitPriceForType(currentSuitType, tier);
     tiles.forEach((t) => {
-      if (t.isNew && !inNew) {
-        inNew = true;
-        divider("opt-section-divider new-fabrics-title", "New Fabrics");
-      }
-      if (t.isNew && t.newGroup !== lastNewGroup) {
-        lastNewGroup = t.newGroup;
-        lastTier = null;
-        divider("opt-section-divider new-fabrics-color", t.newLabel);
-      }
       if (t.tier !== lastTier && !PRICES_HIDDEN) {
         lastTier = t.tier;
-        divider(t.isNew ? "opt-section-divider new-fabrics-price" : "opt-section-divider", priceText(t.tier));
+        divider("opt-section-divider", priceText(t.tier));
       }
       const u = Lmax > Lmin ? (t.L - Lmin) / (Lmax - Lmin) : 0;
       const L = 0.17 + 0.79 * Math.pow(u, 0.75);
