@@ -378,6 +378,12 @@ function describeSpec(spec: string): string {
     .filter((line) => !HIDDEN_OPTION_LABELS.some((l) => line.startsWith(l + ": ")))
     .map((line) => {
       const m = line.match(/^([^:]+): (.+)$/);
+      if (m && m[1] === "Button Color") {
+        const b = buttonChoice(spec);
+        if (b && b.matched) return line + " -- looks like: " + MATCHED_BUTTONS;
+        // The hex is an average of the whole photo; the photo and the material are what count.
+        if (b) return "Button Color: " + b.name + (b.material ? " (" + b.material + " button)" : "") + (b.material ? " -- looks like: " + BUTTON_MATERIAL_LOOKS[b.material] : "") + "; copy the button photo exactly";
+      }
       const look = m && (m[1] === "Lining" && /^matched to the fabric color/i.test(m[2]) ? PLAIN_MATCH_LINING : OPTION_LOOKS[m[1]] && OPTION_LOOKS[m[1]][m[2].trim()]);
       return look ? line + " -- looks like: " + look : line;
     })
@@ -557,7 +563,41 @@ function liningMatchesFabric(spec: string): boolean {
 }
 const PLAIN_MATCH_LINING = "a PLAIN, SOLID-COLOR lining in one single color matching the suit fabric's color (the same shade or a slightly lighter or darker tone of it), smooth and slightly lustrous like satin/bemberg; absolutely NO pattern, print, paisley, jacquard, stripes, dots, texture motif or design of any kind on it";
 
-function keyDetails(spec: string, ownLining = false): string {
+// Buttons. The spec line is "Button Color: <name> (<material> button,
+// approx. color #...)" and the button photo is sent as the "button" swatch.
+// With only a one-line "match the swatch" note the model drew generic flat
+// plastic buttons (a mother-of-pearl shell button came out matte gray), and
+// the averaged hex (photo highlights and shadows mixed) pulled the color off.
+// So the material is described in words, the photo is called out as the
+// exact button, and every button on the suit must be that same button.
+const BUTTON_MATERIAL_LOOKS: Record<string, string> = {
+  "Horn": "a real HORN button: natural horn, slightly translucent, with organic streaks and mottling in lighter and darker tones of its color, a polished satin sheen, a raised rim and the holes shown in the photo",
+  "Shell": "a real mother-of-pearl SHELL button: an iridescent, pearly, glossy surface with soft rainbow sheen and wavy layered streaks that catch the light, a slightly raised rim and the holes shown in the photo; never flat, matte or plastic-looking",
+  "Corozo": "a COROZO (tagua nut) button: dense and smooth with a satin finish and fine wood-like grain rings or streaks running through its color, a raised rim and the holes shown in the photo",
+  "Classic": "a classic polyester suit button: smooth, softly glossy, with the exact color and any marbling or streaks shown in the photo, a raised rim and the holes shown in the photo",
+};
+function buttonChoice(spec: string): { name: string; material: string; matched: boolean } | null {
+  const v = (spec.match(/^Button Color: (.+)$/m) || [])[1] || "";
+  if (!v) return null;
+  if (/^(matched to the fabric color|Best Match)/i.test(v)) return { name: v, material: "", matched: true };
+  const material = (v.match(/\((\w+) button\b/) || [])[1] || "";
+  return { name: v.replace(/\s*\(.*$/, "").trim(), material: BUTTON_MATERIAL_LOOKS[material] ? material : "", matched: false };
+}
+const MATCHED_BUTTONS = "plain four-hole suit buttons in a matte-to-satin tone matching the suit fabric's color (the same shade or slightly darker), all identical; no contrast color, no marbling, no metal";
+// Where buttons show: the jacket front and cuffs, and on suits also the
+// trouser waistband tab and back pockets (the trousers have no button choice of their own).
+function buttonText(spec: string, photo: boolean): string {
+  const b = buttonChoice(spec);
+  if (!b) return "";
+  const where = "EVERY button on the jacket front and sleeve cuffs" + (/^Suit type: Full suit/m.test(spec) ? " and on the trousers (waistband tab, back pockets)" : "");
+  if (b.matched) return where + ": " + MATCHED_BUTTONS;
+  return where + " is the customer's chosen button \"" + b.name + "\"" +
+    (b.material ? ", " + BUTTON_MATERIAL_LOOKS[b.material] : "") +
+    (photo ? ". Copy it EXACTLY from the button photo among the reference images: the same color, material, sheen, pattern/streaks, rim and holes" : "") +
+    ". All buttons are identical copies of it (only the size differs: front buttons larger, cuff buttons smaller); never generic plain plastic buttons, never metal, gold, brass or crested buttons, and never a different color on the front than on the cuffs";
+}
+
+function keyDetails(spec: string, ownLining = false, buttonPhoto = false): string {
   const out: string[] = [];
   // First: the image model kept drawing level hip pockets when this came later.
   const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
@@ -592,6 +632,7 @@ function keyDetails(spec: string, ownLining = false): string {
     out.push("- HIP POCKETS: " + WELT_NOT_FLAP + ".");
   }
   out.push(...monogramRules(spec));
+  if (buttonText(spec, buttonPhoto)) out.push("- BUTTONS: " + buttonText(spec, buttonPhoto) + ".");
   if (ownLining) {
     out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
   } else if (liningMatchesFabric(spec)) {
@@ -647,8 +688,9 @@ function monogramRules(spec: string): string[] {
 
 // Always added to the end of the final image prompt, whoever wrote the rest,
 // to correct mistakes the image model tends to make.
-function fixedRules(spec: string): string {
+function fixedRules(spec: string, buttonPhoto = false): string {
   const rules = ["Strict accuracy rules:"];
+  if (buttonText(spec, buttonPhoto)) rules.push("- Buttons: " + buttonText(spec, buttonPhoto) + ".");
   // First, because the image model ignores it most.
   if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
     rules.push("- MOST IMPORTANT: the cuff buttonholes are SLANTED, on both sleeves in every panel and in the cuff close-up: " + SLANT_HOLES + ".");
@@ -854,6 +896,8 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
     } else {
       lines.push(r.label.startsWith("lining (customer")
         ? `Image ${n++} is the customer's own lining fabric photo: the jacket lining must be THIS fabric, with its exact colors, pattern and pattern scale, wherever the inside of the jacket shows (it is not the suit fabric).`
+        : r.label === "button"
+        ? `Image ${n++} is a close-up PHOTO of the customer's chosen BUTTON${buttonChoice(spec) ? ` ("${buttonChoice(spec)!.name}"${buttonChoice(spec)!.material ? `, a ${buttonChoice(spec)!.material.toLowerCase()} button` : ""})` : ""}: every button on the suit (front, sleeve cuffs${/^Suit type: Full suit/m.test(spec) ? ", trousers" : ""}) must be an exact copy of THIS button: its exact color, material, sheen, pattern/streaks, rim and number of holes. Ignore its white background and do not invent another button style or color.`
         : `Image ${n++} is the real ${r.label} swatch: match its exact color, pattern and texture.`);
     }
   }
@@ -883,7 +927,7 @@ You receive the sheet layout, notes on the reference images the image model will
 - Describe the fabric color, pattern and texture precisely; use the approximate hex colors as guidance but describe colors in words. The jacket and trousers are cut from the fabric given for each.
 - Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
-- Buttons: use the given button color; "matched to the fabric" means buttons in a tone matching the cloth.
+- Buttons: every button (front, cuffs, trousers) is the one chosen button: name its material and look in words (e.g. iridescent mother-of-pearl shell, streaked horn, grained corozo) and tell the image model to copy the button photo exactly; never let it fall back to generic plain buttons. "Matched to the fabric" means plain buttons in a tone matching the cloth.
 - Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
 - "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
 - Monograms: only where a "Monogram Text" is given and its placement shows in a panel (the rules after your prompt say which panel): the exact letters, in the given font style and monogram thread color, small. Otherwise no monogram is visible.
@@ -1060,8 +1104,11 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const hipRef: Ref[] = hipRefSrc ? [{ label: "hip pocket reference", src: hipRefSrc }] : [];
   const chestRefSrc = CHEST_REF[(spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || ""];
   const chestRef: Ref[] = chestRefSrc ? [{ label: "chest pocket reference", src: chestRefSrc }] : [];
+  // Photos: the fabric first, then the button (it was drawn as a made-up
+  // button when it came after the lining), then the rest.
+  const swatchRank = (r: Ref) => (r.label === "fabric" ? 0 : r.label === "button" ? 1 : 2);
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
-    .concat(hipRef, chestRef, pocketRef, swatches.filter((r) => !isDrawing(r)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
+    .concat(hipRef, chestRef, pocketRef, swatches.filter((r) => !isDrawing(r)).sort((a, b) => swatchRank(a) - swatchRank(b)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   const loadOne = async (r: Ref) =>
     ventImg && r.label === "style Buttons On Sleeve Cuff" ? null :
     (ventImg && r.label === "style Sleeve Cuff Styles" && ventImg) ||
@@ -1076,8 +1123,9 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
 
   const layout = layoutFor(jacketOnly, spec);
   const notes = refsNote(loaded, !!layoutImg, spec);
-  const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")));
-  const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec);
+  const buttonPhoto = loaded.some((r) => r.label === "button");
+  const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")), buttonPhoto);
+  const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec, buttonPhoto);
   const jpeg = await drawImage(prompt, images);
 
   const path = folder + "/" + name + "-" + Date.now() + ".jpg";
