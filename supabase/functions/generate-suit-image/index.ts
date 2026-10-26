@@ -28,6 +28,8 @@
 //   * Optionally by the database when an order is marked completed
 //     (supabase/sql/2_suit_image_trigger.sql), or by hand to redraw:
 //       x-webhook-secret: <secret>   { id: "<order row id>", force: true }
+//   * Admin "Redraw picture" (All Orders), admin token required:
+//       { redraw: true, order_id, suit_number }  then poll with check
 //
 // What it does: reads the row's `visual_spec` (plain-English suit
 // description, no personal data -- built by buildVisualSpecText() in
@@ -1278,6 +1280,27 @@ Deno.serve(async (req) => {
     const n = Number(body?.suit_number);
     if (!UUID.test(id) || !UUID.test(oid) || !Number.isInteger(n) || n < 1 || n > 50) return json({ error: "Bad request" }, 400);
     return attachPreview(id, oid, n);
+  }
+
+  // Admin "Redraw picture" on All Orders: draws an order row's picture again
+  // from its current visual_spec (e.g. after the admin changed the lining).
+  if (body?.redraw) {
+    const oid = String(body?.order_id || "");
+    const n = Number(body?.suit_number);
+    if (!UUID.test(oid) || !Number.isInteger(n) || n < 1 || n > 50) return json({ error: "Bad request" }, 400);
+    if (!env("OPENAI_API_KEY")) return json({ status: "unavailable" }, 503);
+    const userId = await requestUserId(req);
+    if (!userId || !(await isAdmin(userId))) return json({ error: "Admins only" }, 403);
+    const { data: rows, error } = await supabase.from("orders").select("id").eq("order_id", oid).eq("suit_number", n).limit(1);
+    if (error) return json({ error: "Lookup failed" }, 500);
+    if (!rows || !rows[0]) return json({ error: "Order not found" }, 404);
+    const row = await claim(rows[0].id, true);
+    if (row) {
+      const p = runInBackground(generate(row));
+      // @ts-ignore see runInBackground
+      if (typeof EdgeRuntime === "undefined") await p;
+    }
+    return json({ status: "pending" }, 202);
   }
 
   // Shop / database-trigger path (needs the secret).
