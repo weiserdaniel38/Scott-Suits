@@ -5796,7 +5796,9 @@ function renderTailorChecklist() {
       name.appendChild(hint);
     }
     lines.push(m.label +
-      (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") + ": ");
+      (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") +
+      (m.id === "sleeve_length" || m.id === "body_sleeve" ? " (shoulder to wrist, NOT from the neck)" : "") +
+      (m.id === "leg_length" ? " (outseam: top of waistband to hem)" : "") + ": ");
     li.append(name);
     list.appendChild(li);
   });
