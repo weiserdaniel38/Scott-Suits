@@ -1470,7 +1470,7 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
@@ -1479,6 +1479,7 @@ async function loadAdminOrders() {
       client.rpc("admin_order_brands"),
       client.rpc("admin_order_fabrics"),
       client.rpc("admin_order_pictures"),
+      client.rpc("admin_order_factory"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1495,12 +1496,15 @@ async function loadAdminOrders() {
     if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
-    // Each suit's fabric(s) and suit picture, shown on the order row
-    // (supabase/sql/27 and 28).
+    // Each suit's fabric(s), suit picture and factory order, shown on its
+    // suit card in the order row (supabase/sql/27, 28 and 30).
     const pics = {};
     if (!pictures.error && pictures.data) pictures.data.forEach((x) => (pics[x.order_id + "/" + (x.suit_number || 1)] = x.image_url));
+    const facts = {};
+    if (!factory.error && factory.data) factory.data.forEach((x) => (facts[x.order_id + "/" + (x.suit_number || 1)] = x));
     if (!fabrics.error && fabrics.data) fabrics.data.forEach((x) => {
       x.image_url = pics[x.order_id + "/" + (x.suit_number || 1)] || null;
+      x.factory = facts[x.order_id + "/" + (x.suit_number || 1)] || null;
       const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
       (p.fabrics = p.fabrics || []).push(x);
     });
@@ -1582,7 +1586,7 @@ function adminRedrawButton(o, s, suitBox) {
           document.getElementById("lightbox").classList.add("over-account");
           openLightbox(s.image_url, o.customer_name || "Suit", "Suit picture", true);
         });
-        suitBox.prepend(pic);
+        suitBox.querySelector(".admin-suit-head").after(pic);
       }
       pic.src = r.url;
       btn.textContent = "Redrawn ✓";
@@ -1595,9 +1599,50 @@ function adminRedrawButton(o, s, suitBox) {
   return btn;
 }
 
-// Per suit: the finished suit picture (when one was drawn) beside a line
-// with the fabric photo, name and code (admin only; the code never shows to
-// customers). Pants in a different fabric get their own line.
+// "Send to factory" on one suit card: opens that suit's factory tools
+// (height/weight, Check, Save/Update draft, Factory status) inside the card.
+// The suit's factory fields are read fresh each time it opens.
+function adminSuitFactoryButton(o, s, suitBox, stateEl) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-ship-factory admin-suit-factory-btn";
+  btn.textContent = "Send to factory";
+  let panel = null;
+  btn.addEventListener("click", async () => {
+    if (panel) {
+      panel.remove();
+      panel = null;
+      btn.textContent = "Send to factory";
+      return;
+    }
+    panel = document.createElement("div");
+    panel.className = "admin-factory admin-suit-factory";
+    panel.innerHTML = '<p class="account-section-note">Loading...</p>';
+    suitBox.appendChild(panel);
+    btn.textContent = "Close factory tools";
+    const mine = panel;
+    const { data, error } = await getSupabase().rpc("admin_order_suits", { p_order_id: o.order_id });
+    if (panel !== mine) return;
+    const suit = !error && data ? data.find((x) => (x.suit_number || 1) === (s.suit_number || 1)) : null;
+    if (!suit) {
+      panel.innerHTML = '<p class="account-section-note">Couldn\u2019t load this suit' + (error ? ": " + escapeAttr(error.message) : "") + ".</p>";
+      return;
+    }
+    panel.innerHTML = "";
+    panel.appendChild(adminFactorySuit(suit, 1, stateEl));
+  });
+  return btn;
+}
+
+function adminSuitTypeLabel(type) {
+  return type === "jacket_only" ? "Jacket only" : type === "pants_only" ? "Pants only" : "Full suit";
+}
+
+// One card per suit: a header with the suit number, type and factory order,
+// then the finished suit picture (when one was drawn), Redraw picture, the
+// fabric photo, name and code (admin only; the code never shows to
+// customers; pants in a different fabric get their own line), and the
+// suit's own Send to factory tools.
 function adminFabricList(o) {
   const box = document.createElement("div");
   box.className = "admin-fabrics";
@@ -1606,6 +1651,13 @@ function adminFabricList(o) {
   suits.forEach((s) => {
     const suitBox = document.createElement("div");
     suitBox.className = "admin-suit";
+    const head = document.createElement("div");
+    head.className = "admin-suit-head";
+    head.innerHTML = '<b></b><span class="admin-factory-state"></span>';
+    head.querySelector("b").textContent = (many ? "Suit " + (s.suit_number || 1) + " \u00b7 " : "") + adminSuitTypeLabel(s.suit_type);
+    const stateEl = head.querySelector(".admin-factory-state");
+    if (s.factory) stateEl.textContent = adminFactorySuitState(s.factory);
+    suitBox.appendChild(head);
     if (s.image_url) {
       const pic = document.createElement("img");
       pic.className = "admin-suit-picture";
@@ -1622,6 +1674,7 @@ function adminFabricList(o) {
     const lines = document.createElement("div");
     lines.className = "admin-suit-fabrics";
     suitBox.appendChild(lines);
+    suitBox.appendChild(adminSuitFactoryButton(o, s, suitBox, stateEl));
     box.appendChild(suitBox);
     const parts = [];
     if (s.suit_type === "pants_only") parts.push(["Pants", s.pants_fabric || s.fabric]);
@@ -1642,7 +1695,7 @@ function adminFabricList(o) {
         sw.loading = "lazy";
       } else if (opt && opt.hex) sw.style.background = opt.hex;
       const text = document.createElement("div");
-      const label = [many ? "Suit " + (s.suit_number || 1) : "", piece].filter(Boolean).join(" \u00b7 ");
+      const label = piece;
       text.innerHTML = '<span class="admin-fabric-label"></span><b></b><span class="admin-fabric-code"></span>';
       text.querySelector(".admin-fabric-label").textContent = (label ? label + " \u00b7 " : "") + "Fabric";
       text.querySelector("b").textContent = opt ? opt.displayName || opt.name : value;
@@ -1671,6 +1724,7 @@ function adminOrderRow(o) {
   const carrierOpts = '<option value="">Carrier</option>' + SHIPPING_CARRIERS.map((c) => '<option value="' + c + '">' + c + "</option>").join("");
   row.innerHTML =
     '<div class="admin-ship-head"><div><b></b><span class="admin-ship-contact"></span></div><span class="past-order-total"></span></div>' +
+    '<div class="admin-order-box"><span class="admin-order-label">Whole order \u00b7 shipping &amp; customer updates</span>' +
     '<div class="admin-ship-fields">' +
     '<div class="measure-input-wrap"><select aria-label="Shipping status" class="ship-status">' + statusOpts + "</select></div>" +
     '<div class="measure-input-wrap"><select aria-label="Carrier" class="ship-carrier">' + carrierOpts + "</select></div>" +
@@ -1678,16 +1732,17 @@ function adminOrderRow(o) {
     "</div>" +
     '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
     '<button type="button" class="btn-primary ship-save">Save</button>' +
-    '<button type="button" class="admin-ship-factory">Send to factory</button>' +
+    '<button type="button" class="admin-ship-factory admin-ship-send">Send to factory</button>' +
     '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
-    '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div>';
+    '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   row.querySelector("b").textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
   const protection = adminProtectionLabel(o);
   row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o) + (protection ? " \u00b7 " + protection : "");
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) row.querySelector("b").textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
-  if (o.fabrics && o.fabrics.length) row.querySelector(".admin-ship-head").after(adminFabricList(o));
+  const hasSuitCards = !!(o.fabrics && o.fabrics.length);
+  if (hasSuitCards) row.querySelector(".admin-ship-head").after(adminFabricList(o));
   const statusSel = row.querySelector(".ship-status");
   const carrierSel = row.querySelector(".ship-carrier");
   const numberInput = row.querySelector(".ship-number");
@@ -1735,7 +1790,10 @@ function adminOrderRow(o) {
   });
   const editBtn = row.querySelector(".admin-ship-edit");
   editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn));
-  const factoryBtn = row.querySelector(".admin-ship-actions > .admin-ship-factory");
+  // Orders with suit cards send each suit from its own card; the order-wide
+  // Send to factory only stays for orders without them.
+  const factoryBtn = row.querySelector(".admin-ship-send");
+  if (hasSuitCards) factoryBtn.remove();
   let factoryPanel = null;
   factoryBtn.addEventListener("click", () => {
     if (factoryPanel) {
@@ -1820,7 +1878,9 @@ function adminFactorySuitState(suit) {
   );
 }
 
-function adminFactorySuit(suit, count) {
+// stateEl: inside a suit card, the card's header shows the factory order
+// line, so this block leaves out its own header.
+function adminFactorySuit(suit, count, stateEl) {
   const box = document.createElement("div");
   box.className = "admin-factory-suit";
   box.innerHTML =
@@ -1838,7 +1898,8 @@ function adminFactorySuit(suit, count) {
     "</div>" +
     '<pre class="admin-factory-out" hidden></pre>';
   box.querySelector("b").textContent = (count > 1 ? "Suit " + suit.suit_number + " \u00b7 " : "") + (suit.suit_type === "jacket_only" ? "Jacket only" : suit.suit_type === "pants_only" ? "Pants only" : "Full suit");
-  const state = box.querySelector(".admin-factory-state");
+  if (stateEl) box.querySelector(".admin-factory-head").remove();
+  const state = stateEl || box.querySelector(".admin-factory-state");
   const out = box.querySelector(".admin-factory-out");
   const draftBtn = box.querySelector(".fac-draft");
   const statusBtn = box.querySelector(".fac-status");
@@ -1909,7 +1970,7 @@ function adminFactorySuit(suit, count) {
       suit.factory_waybill = r.waybill;
       showState();
       const step = shippingLabel(r.shippingStatus);
-      return "Factory status: " + r.status + (step ? "\nCustomer sees: " + step + " (no message sent; use Save above to notify them)." : "");
+      return "Factory status: " + r.status + (step ? "\nCustomer sees: " + step + " (no message sent; use Save under Whole order to notify them)." : "");
     })
   );
   return box;
