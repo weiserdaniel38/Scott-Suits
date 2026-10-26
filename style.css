@@ -525,9 +525,9 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-ship-delete:hover{background:#b5553f;color:var(--ivory);}
 .admin-ship-delete:disabled{opacity:.5;cursor:default;}
 .admin-ship-result{flex-basis:100%;color:var(--brass);margin:0;}
-.admin-ship-factory{background:none;border:1px solid var(--brass);color:var(--brass);padding:9px 16px;font:inherit;font-size:13px;cursor:pointer;}
-.admin-ship-factory:hover{background:var(--brass);color:#111;}
-.admin-ship-factory:disabled,.admin-factory .btn-primary:disabled{opacity:.5;cursor:default;}
+.admin-ship-factory,.admin-suit-redraw{background:none;border:1px solid var(--brass);color:var(--brass);padding:9px 16px;font:inherit;font-size:13px;cursor:pointer;}
+.admin-ship-factory:hover,.admin-suit-redraw:hover{background:var(--brass);color:#111;}
+.admin-ship-factory:disabled,.admin-suit-redraw:disabled,.admin-factory .btn-primary:disabled{opacity:.5;cursor:default;}
 .admin-factory{margin-top:14px;padding-top:12px;border-top:1px solid rgba(var(--surface-rgb),.12);}
 .admin-factory-suit{margin-bottom:14px;}
 .admin-factory-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px;font-size:14px;}
