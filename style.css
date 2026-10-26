@@ -2022,3 +2022,69 @@ body.order-done-view > .process{display:none !important;}
 .tailor-finder-form{flex-direction:column;align-items:stretch;gap:0;}
 .tailor-finder-form .measure-field{flex:none;width:100%;max-width:520px;}
 .tailor-finder-form .tailor-locate-btn{align-self:flex-start;}
+
+/* Customer reviews (#reviewsSection), bottom of the landing page only:
+   hidden once the customer moves past the suit-type step, and on the order
+   confirmation page. Filled in by loadReviews() in main.js. */
+.reviews-section{padding:64px 24px 72px;border-top:1px solid var(--line);}
+#suitTypeSection:not(.active) ~ .reviews-section,
+body.order-done-view .reviews-section,
+html[data-brand]:not([data-brand="scott"]) .reviews-section{display:none;}
+.reviews-inner{max-width:1080px;margin:0 auto;}
+.reviews-inner > h2{font-size:30px;margin:6px 0 28px;}
+.rv-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:center;}
+.rv-summary{border:1px solid var(--line);border-radius:20px;background:var(--surface);padding:30px 24px;text-align:center;}
+.rv-score-wrap{display:flex;align-items:center;justify-content:center;gap:14px;}
+.rv-laurel{width:30px;height:62px;color:var(--brass);flex:0 0 auto;}
+.rv-laurel-r{transform:scaleX(-1);}
+.rv-score{font-size:46px;font-weight:500;line-height:1;color:var(--ivory);}
+.rv-count{font-size:15px;color:var(--ivory);margin-top:6px;}
+.rv-stars{color:var(--ivory);letter-spacing:2px;font-size:15px;line-height:1;white-space:nowrap;}
+.rv-stars .rv-off{color:rgba(var(--ivory-rgb),0.2);}
+.rv-stars-lg{font-size:22px;margin-top:8px;}
+.rv-write-btn{margin-top:24px;border:1px solid var(--line);background:none;border-radius:999px;padding:13px 32px;font-family:'Inter',sans-serif;font-size:15px;font-weight:500;color:var(--ivory);cursor:pointer;}
+.rv-write-btn:hover{border-color:var(--brass);}
+.rv-bars{display:flex;flex-direction:column;gap:14px;}
+.rv-bar-row{display:grid;grid-template-columns:auto 1fr 28px;align-items:center;gap:18px;}
+.rv-bar{height:6px;border-radius:999px;background:rgba(var(--ivory-rgb),0.07);overflow:hidden;}
+.rv-bar span{display:block;height:100%;border-radius:999px;background:var(--ivory);}
+.rv-bar-n{text-align:right;font-size:15px;color:var(--ivory);}
+.rv-empty{color:var(--ivory-dim);font-size:14px;text-align:center;margin:28px 0 0;}
+.rv-empty[hidden]{display:none;}
+.rv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:36px;}
+.rv-grid:empty{display:none;}
+.rv-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:22px 20px;display:flex;flex-direction:column;gap:12px;}
+.rv-card p{margin:0;font-size:14.5px;line-height:1.6;color:var(--ivory);white-space:pre-line;overflow-wrap:anywhere;}
+.rv-card-name{font-weight:600;font-size:14px;color:var(--ivory);margin-top:auto;}
+.rv-card-date{font-weight:400;color:var(--ivory-dim);font-size:12.5px;margin-left:6px;}
+@media(max-width:860px){
+  .rv-top{grid-template-columns:1fr;gap:28px;}
+  .rv-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  .reviews-section{padding:48px 16px 56px;}
+  .reviews-inner > h2{font-size:25px;}
+  .rv-grid{grid-template-columns:1fr;}
+  .rv-bar-row{gap:12px;}
+}
+
+/* Write a review dialog (reuses the .confirm-panel card). */
+.review-form{max-width:460px;text-align:left;max-height:calc(100vh - 32px);overflow-y:auto;}
+.review-form h3{text-align:center;}
+.review-form > div > p{text-align:center;margin-bottom:6px;}
+.review-form .measure-field{margin-top:16px;}
+.review-form label{display:block;font-size:12.5px;color:var(--ivory-dim);margin-bottom:6px;}
+.review-form textarea{background:none;border:none;color:var(--ivory);font-size:16px;padding:12px 0;width:100%;font-family:'Inter',sans-serif;resize:vertical;min-height:96px;}
+.review-form textarea:focus{outline:none;}
+.rv-hint{display:block;font-size:12px;color:var(--ivory-dim);margin-top:5px;}
+.rv-pick{display:flex;justify-content:center;gap:6px;margin-top:14px;}
+.rv-pick button{background:none;border:none;cursor:pointer;font-size:36px;line-height:1;padding:2px;color:rgba(var(--ivory-rgb),0.2);}
+.rv-pick button.on{color:var(--brass);}
+.rv-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;}
+.review-form.rv-done .confirm-actions .btn-ghost{display:none;}
+
+/* Admin: My Account > Reviews */
+.admin-review{border:1px solid var(--line);padding:12px 14px;margin-bottom:10px;}
+.admin-review-pending{border-color:var(--brass);}
+.admin-review p{margin:6px 0 10px;font-size:13.5px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere;}
+.admin-review-btns{display:flex;gap:16px;}
