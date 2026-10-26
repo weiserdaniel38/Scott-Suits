@@ -774,6 +774,11 @@ async function refreshAdminStatus() {
     shipWrap.hidden = !admin;
     if (admin) loadAdminOrders();
   }
+  const reviewsAdmin = document.getElementById("adminReviewsSection");
+  if (reviewsAdmin) {
+    reviewsAdmin.hidden = !admin;
+    if (admin) loadAdminReviews();
+  }
   const tailorsSection = document.getElementById("adminTailorsSection");
   if (tailorsSection) {
     tailorsSection.hidden = !admin;
@@ -9119,3 +9124,268 @@ setQaNavAllowed = (function () {
 // A reload that lands back on the Preview page (see restoreDraft) fills it
 // in too.
 if (previewSection.classList.contains("active")) setTimeout(updateDesignPreviewPanel, 0);
+
+// ---------------------------------------------------------------------------
+// REVIEWS: the "What our customers say" section at the bottom of the landing
+// page, the "Write a review" dialog, and the admin's approve/remove list in
+// My Account > Reviews. Table: public.customer_reviews
+// (supabase/sql/29_customer_reviews.sql). New reviews are saved unapproved
+// and only show once the admin approves them. Only real reviews go here.
+// ---------------------------------------------------------------------------
+const REVIEW_CARDS_SHOWN = 6;
+
+function reviewStarsHtml(rating) {
+  const n = Math.max(0, Math.min(5, Math.round(rating)));
+  return "★".repeat(n) + '<span class="rv-off">' + "★".repeat(5 - n) + "</span>";
+}
+
+function renderReviews(rows) {
+  const section = document.getElementById("reviewsSection");
+  if (!section) return;
+  const total = rows.length;
+  const counts = [0, 0, 0, 0, 0, 0];
+  let sum = 0;
+  rows.forEach((r) => {
+    counts[r.rating] = (counts[r.rating] || 0) + 1;
+    sum += r.rating;
+  });
+  const avg = total ? sum / total : 0;
+  document.getElementById("reviewsAverage").textContent = total ? avg.toFixed(1) : "–";
+  document.getElementById("reviewsAverageStars").innerHTML = reviewStarsHtml(avg);
+  document.getElementById("reviewsCount").textContent = total ? total + (total === 1 ? " review" : " reviews") : "No reviews yet";
+  document.getElementById("reviewsEmpty").hidden = total > 0;
+
+  const bars = document.getElementById("reviewsBars");
+  bars.innerHTML = "";
+  for (let star = 5; star >= 1; star--) {
+    const row = document.createElement("div");
+    row.className = "rv-bar-row";
+    row.setAttribute("aria-label", star + " star: " + counts[star]);
+    const pct = total ? Math.round((counts[star] / total) * 100) : 0;
+    row.innerHTML =
+      '<span class="rv-stars" aria-hidden="true">' + reviewStarsHtml(star) + "</span>" +
+      '<span class="rv-bar"><span style="width:' + pct + '%"></span></span>' +
+      '<span class="rv-bar-n">' + counts[star] + "</span>";
+    bars.appendChild(row);
+  }
+
+  const grid = document.getElementById("reviewsGrid");
+  grid.innerHTML = "";
+  rows.slice(0, REVIEW_CARDS_SHOWN).forEach((r) => {
+    const card = document.createElement("article");
+    card.className = "rv-card";
+    const stars = document.createElement("div");
+    stars.className = "rv-stars";
+    stars.setAttribute("aria-label", r.rating + " out of 5 stars");
+    stars.innerHTML = reviewStarsHtml(r.rating);
+    const text = document.createElement("p");
+    text.textContent = r.body;
+    const name = document.createElement("div");
+    name.className = "rv-card-name";
+    name.textContent = r.name;
+    const when = r.approved_at || r.created_at;
+    if (when) {
+      const date = document.createElement("span");
+      date.className = "rv-card-date";
+      date.textContent = new Date(when).toLocaleDateString(undefined, { month: "short", year: "numeric" });
+      name.appendChild(date);
+    }
+    card.append(stars, text, name);
+    grid.appendChild(card);
+  });
+}
+
+async function loadReviews() {
+  if (!document.getElementById("reviewsSection")) return;
+  renderReviews([]);
+  try {
+    const { data, error } = await getSupabase()
+      .from("customer_reviews")
+      .select("id,name,rating,body,created_at,approved_at")
+      .eq("approved", true)
+      .order("approved_at", { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    renderReviews(data || []);
+  } catch (err) {
+    console.error("Failed to load reviews:", err);
+  }
+}
+
+(function () {
+  const overlay = document.getElementById("reviewFormOverlay");
+  const form = document.getElementById("reviewForm");
+  const openBtn = document.getElementById("writeReviewBtn");
+  if (!overlay || !form || !openBtn) return;
+  const fields = document.getElementById("reviewFormFields");
+  const submitBtn = document.getElementById("reviewSubmitBtn");
+  const cancelBtn = document.getElementById("reviewCancelBtn");
+  const starBtns = Array.from(document.querySelectorAll("#reviewStarPicker button"));
+  let rating = 0;
+  let sent = false;
+
+  function setRating(n) {
+    rating = n;
+    starBtns.forEach((b) => {
+      const v = Number(b.dataset.rating);
+      b.classList.toggle("on", v <= n);
+      b.setAttribute("aria-checked", v === n ? "true" : "false");
+    });
+  }
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+  function open() {
+    if (sent) {
+      // Fresh form for a second review.
+      sent = false;
+      form.classList.remove("rv-done");
+      fields.innerHTML = fields.dataset.html;
+      bindFields();
+    }
+    overlay.classList.add("open");
+    document.addEventListener("keydown", onKeydown);
+    const nameInput = document.getElementById("reviewNameInput");
+    if (nameInput && !nameInput.value && currentUser) {
+      const meta = currentUser.user_metadata || {};
+      nameInput.value = meta.full_name || meta.name || "";
+    }
+    (starBtns[4] || submitBtn).focus();
+  }
+  function close() {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    openBtn.focus();
+  }
+  function bindFields() {
+    starBtns.length = 0;
+    document.querySelectorAll("#reviewStarPicker button").forEach((b) => {
+      starBtns.push(b);
+      b.addEventListener("click", () => setRating(Number(b.dataset.rating)));
+    });
+    setRating(0);
+    submitBtn.textContent = "Send review";
+    submitBtn.disabled = false;
+  }
+  fields.dataset.html = fields.innerHTML;
+  bindFields();
+
+  openBtn.addEventListener("click", open);
+  cancelBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (sent) {
+      close();
+      return;
+    }
+    const statusEl = document.getElementById("reviewFormStatus");
+    const name = document.getElementById("reviewNameInput").value.trim().replace(/\s+/g, " ");
+    const body = document.getElementById("reviewTextInput").value.trim();
+    const honeypot = document.getElementById("reviewWebsiteInput").value;
+    if (!rating) return showAccountStatus(statusEl, "Please tap the stars to give a rating.");
+    if (name.length < 2) return showAccountStatus(statusEl, "Please enter your name.");
+    if (body.length < 10) return showAccountStatus(statusEl, "Please write a few words about your suit.");
+    submitBtn.disabled = true;
+    showAccountStatus(statusEl, "Sending…");
+    try {
+      if (!honeypot) {
+        const { error } = await getSupabase().from("customer_reviews").insert({ name: name.slice(0, 60), rating, body: body.slice(0, 1000) });
+        if (error) throw error;
+      }
+      sent = true;
+      form.classList.add("rv-done");
+      fields.innerHTML = "<p>Thank you for your review! It will show on the site once we've checked it.</p>";
+      submitBtn.textContent = "Done";
+      submitBtn.disabled = false;
+      if (currentIsAdmin) loadAdminReviews();
+    } catch (err) {
+      console.error("Failed to send review:", err);
+      showAccountStatus(statusEl, "Couldn’t send your review. Please try again.");
+      submitBtn.disabled = false;
+    }
+  });
+})();
+
+loadReviews();
+
+async function loadAdminReviews() {
+  const list = document.getElementById("adminReviewsList");
+  const badge = document.getElementById("adminReviewsCount");
+  if (!list) return;
+  try {
+    const { data, error } = await getSupabase()
+      .from("customer_reviews")
+      .select("*")
+      .order("approved", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    const rows = data || [];
+    const pending = rows.filter((r) => !r.approved).length;
+    if (badge) {
+      badge.hidden = !pending;
+      badge.textContent = pending ? String(pending) : "";
+    }
+    if (!rows.length) {
+      list.innerHTML = '<p class="account-section-note">No reviews yet.</p>';
+      return;
+    }
+    list.innerHTML = "";
+    rows.forEach((r) => {
+      const item = document.createElement("div");
+      item.className = "admin-review" + (r.approved ? "" : " admin-review-pending");
+      const head = document.createElement("div");
+      const stars = document.createElement("span");
+      stars.className = "rv-stars";
+      stars.innerHTML = reviewStarsHtml(r.rating);
+      const who = document.createElement("b");
+      who.textContent = " " + r.name;
+      const meta = document.createElement("span");
+      meta.className = "admin-notif-meta";
+      meta.textContent = " · " + new Date(r.created_at).toLocaleDateString() + (r.approved ? " · showing on the site" : " · waiting for approval");
+      head.append(stars, who, meta);
+      const text = document.createElement("p");
+      text.textContent = r.body;
+      const btns = document.createElement("div");
+      btns.className = "admin-review-btns";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn-ghost";
+      toggle.textContent = r.approved ? "Hide from site" : "Approve";
+      toggle.addEventListener("click", async () => {
+        toggle.disabled = true;
+        const { error: upErr } = await getSupabase().from("customer_reviews").update({ approved: !r.approved }).eq("id", r.id);
+        if (upErr) console.error("Failed to update review:", upErr);
+        loadAdminReviews();
+        loadReviews();
+      });
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-ghost";
+      del.textContent = "Delete";
+      del.addEventListener("click", async () => {
+        if (del.dataset.confirm !== "1") {
+          del.dataset.confirm = "1";
+          del.textContent = "Tap again to delete";
+          setTimeout(() => {
+            del.dataset.confirm = "";
+            del.textContent = "Delete";
+          }, 4000);
+          return;
+        }
+        const { error: delErr } = await getSupabase().from("customer_reviews").delete().eq("id", r.id);
+        if (delErr) console.error("Failed to delete review:", delErr);
+        loadAdminReviews();
+        loadReviews();
+      });
+      btns.append(toggle, del);
+      item.append(head, text, btns);
+      list.appendChild(item);
+    });
+  } catch (err) {
+    console.error("Failed to load reviews:", err);
+    list.innerHTML = '<p class="account-section-note">Couldn’t load reviews right now.</p>';
+  }
+}
