@@ -264,18 +264,12 @@ async function saveDraft(input: Record<string, unknown>) {
     ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
   }
   if (!ok && /duplicate customer/i.test(String(d.errorMessage || res.msg || res.message || ""))) {
-    // A deleted draft (or a test draft) still holds this suit's reference
-    // at the factory: save under a reference of its own, updating this
-    // suit's draft if it's still there, else as a new draft.
-    body.customerNo = String(body.customerNo) + "-" + Date.now().toString(36).slice(-4).toUpperCase();
-    for (const no of [...new Set([String(row.factory_order_no || ""), ""])]) {
-      body.orderNo = no;
-      r = await kute("POST", "/order/saveOrder", {}, body);
-      res = (r.data || {}) as Record<string, any>;
-      d = res.data || {};
-      ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
-      if (ok) break;
-    }
+    // The factory already has an order with this suit's reference. Never
+    // save it again under another reference: that made the same suit twice
+    // (DWNYP2610006/07). Daniel's rule: never a duplicate suit (2026-10-26).
+    const msg = "The factory already has an order for this suit (" + body.customerNo + "). Not sending it again; check the factory site.";
+    await supabase.from("orders").update({ factory_error: msg }).eq("id", row.id);
+    return { ok: false, orderNo: row.factory_order_no || null, error: msg, warnings };
   }
   const err = ok ? (d.errorMessage || null) : (d.errorMessage || res.msg || res.message || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300));
   const update: Record<string, unknown> = { factory_error: err, factory_sent_at: new Date().toISOString() };
