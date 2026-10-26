@@ -1470,13 +1470,14 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
       client.rpc("admin_order_extras"),
       client.rpc("admin_order_protection"),
       client.rpc("admin_order_brands"),
+      client.rpc("admin_order_fabrics"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1493,6 +1494,11 @@ async function loadAdminOrders() {
     if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    // Each suit's fabric(s), shown on the order row (supabase/sql/27).
+    if (!fabrics.error && fabrics.data) fabrics.data.forEach((x) => {
+      const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
+      (p.fabrics = p.fabrics || []).push(x);
+    });
     adminOrdersList.innerHTML = "";
     data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
   } catch (err) {
@@ -1533,6 +1539,60 @@ function adminProtectionLabel(o) {
   return "";
 }
 
+// The catalog fabric for a saved fabric value: the code, or (older orders)
+// the shade's name. null when the site no longer offers it.
+function adminFabricOption(value) {
+  if (!value || typeof JACKET_CATALOG === "undefined") return null;
+  const opts = JACKET_CATALOG.fabric.options;
+  return opts.find((f) => f.name === value) || opts.find((f) => f.displayName === value) || null;
+}
+
+// One line per suit with the fabric photo, name and code (admin only; the
+// code never shows to customers). Pants in a different fabric get their own.
+function adminFabricList(o) {
+  const box = document.createElement("div");
+  box.className = "admin-fabrics";
+  const suits = o.fabrics || [];
+  const many = suits.length > 1;
+  suits.forEach((s) => {
+    const parts = [];
+    if (s.suit_type === "pants_only") parts.push(["Pants", s.pants_fabric || s.fabric]);
+    else {
+      parts.push([s.suit_type === "jacket_only" ? "Jacket" : s.pants_fabric && s.pants_fabric !== s.fabric ? "Jacket" : "", s.fabric]);
+      if (s.suit_type !== "jacket_only" && s.pants_fabric && s.pants_fabric !== s.fabric) parts.push(["Pants", s.pants_fabric]);
+    }
+    parts.forEach(([piece, value]) => {
+      if (!value) return;
+      const opt = adminFabricOption(value);
+      const line = document.createElement("div");
+      line.className = "admin-fabric";
+      const sw = document.createElement(opt && opt.img ? "img" : "span");
+      sw.className = "admin-fabric-swatch";
+      if (opt && opt.img) {
+        sw.src = opt.img;
+        sw.alt = "";
+        sw.loading = "lazy";
+      } else if (opt && opt.hex) sw.style.background = opt.hex;
+      const text = document.createElement("div");
+      const label = [many ? "Suit " + (s.suit_number || 1) : "", piece].filter(Boolean).join(" \u00b7 ");
+      text.innerHTML = '<span class="admin-fabric-label"></span><b></b><span class="admin-fabric-code"></span>';
+      text.querySelector(".admin-fabric-label").textContent = (label ? label + " \u00b7 " : "") + "Fabric";
+      text.querySelector("b").textContent = opt ? opt.displayName || opt.name : value;
+      text.querySelector(".admin-fabric-code").textContent = opt && opt.name !== (opt.displayName || opt.name) ? opt.name : "";
+      line.append(sw, text);
+      if (opt && opt.img) {
+        line.classList.add("admin-fabric-zoom");
+        line.addEventListener("click", () => {
+          document.getElementById("lightbox").classList.add("over-account");
+          openLightbox(opt.img, opt.displayName || opt.name, "Fabric", true, opt.name, null, "fabric");
+        });
+      }
+      box.appendChild(line);
+    });
+  });
+  return box;
+}
+
 function adminOrderRow(o) {
   const row = document.createElement("div");
   row.className = "admin-ship-row";
@@ -1559,6 +1619,7 @@ function adminOrderRow(o) {
   row.querySelector(".admin-ship-contact").textContent = date + " \u00b7 " + suits + (contact ? " \u00b7 " + contact : "") + " \u00b7 " + adminPaymentLabel(o) + (protection ? " \u00b7 " + protection : "");
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) row.querySelector("b").textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
+  if (o.fabrics && o.fabrics.length) row.querySelector(".admin-ship-head").after(adminFabricList(o));
   const statusSel = row.querySelector(".ship-status");
   const carrierSel = row.querySelector(".ship-carrier");
   const numberInput = row.querySelector(".ship-number");
