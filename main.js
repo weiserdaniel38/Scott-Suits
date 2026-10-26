@@ -1557,7 +1557,7 @@ function adminFabricOption(value) {
 function adminRedrawButton(o, s, suitBox) {
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "admin-ship-factory admin-suit-redraw";
+  btn.className = "admin-suit-redraw";
   btn.textContent = s.image_url ? "Redraw picture" : "Draw picture";
   btn.addEventListener("click", async () => {
     if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
@@ -1735,7 +1735,7 @@ function adminOrderRow(o) {
   });
   const editBtn = row.querySelector(".admin-ship-edit");
   editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn));
-  const factoryBtn = row.querySelector(".admin-ship-factory");
+  const factoryBtn = row.querySelector(".admin-ship-actions > .admin-ship-factory");
   let factoryPanel = null;
   factoryBtn.addEventListener("click", () => {
     if (factoryPanel) {
