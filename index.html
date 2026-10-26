@@ -116,7 +116,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261026neat">
+<link rel="stylesheet" href="./style.css?v=20261026pastfold">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261026decocaps"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026decocaps">
@@ -866,36 +866,11 @@
         <div id="adminNotificationsList" class="brand-keep"></div>
       </details>
 
-      <!-- Shop admin only: the partner tailors customers see on the
-           Measurements step. See loadAdminTailors() in main.js. -->
-      <details class="account-collapse" id="adminTailorsSection" hidden>
-        <summary><h3>Partner Tailors</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
-        <p class="account-section-note">Only you see this (shop admin). Customers find these tailors by address on the Measurements step, closest first. Hidden tailors stay here but aren't shown to customers.</p>
-        <div id="adminTailorsList"></div>
-        <form class="admin-tailor-form" id="adminTailorForm">
-          <h4 id="adminTailorFormTitle">Add a tailor</h4>
-          <div class="admin-tailor-grid">
-            <div class="measure-field admin-tailor-full"><label for="tailorNameInput">Name</label><div class="measure-input-wrap"><input type="text" id="tailorNameInput" required></div></div>
-            <div class="measure-field admin-tailor-full"><label for="tailorAddressInput">Street address</label><div class="measure-input-wrap"><input type="text" id="tailorAddressInput"></div></div>
-            <div class="measure-field"><label for="tailorCityInput">City</label><div class="measure-input-wrap"><input type="text" id="tailorCityInput"></div></div>
-            <div class="measure-field"><label for="tailorStateInput">State</label><div class="measure-input-wrap"><input type="text" id="tailorStateInput"></div></div>
-            <div class="measure-field"><label for="tailorZipAdminInput">ZIP code</label><div class="measure-input-wrap"><input type="text" id="tailorZipAdminInput" inputmode="numeric" required></div></div>
-            <div class="measure-field"><label for="tailorPhoneInput">Phone</label><div class="measure-input-wrap"><input type="tel" id="tailorPhoneInput"></div></div>
-            <div class="measure-field admin-tailor-full"><label for="tailorWebsiteInput">Website (optional)</label><div class="measure-input-wrap"><input type="text" id="tailorWebsiteInput"></div></div>
-            <div class="measure-field admin-tailor-full"><label for="tailorHoursInput">Hours (optional)</label><div class="measure-input-wrap"><input type="text" id="tailorHoursInput" placeholder="Mon-Sat 10am-6pm"></div></div>
-            <div class="measure-field admin-tailor-full"><label for="tailorNoteInput">Note for customers (optional)</label><div class="measure-input-wrap"><input type="text" id="tailorNoteInput" placeholder="By appointment, mention Scott's Suits"></div></div>
-          </div>
-          <label class="save-measurements-toggle"><input type="checkbox" id="tailorActiveInput" checked> Show to customers</label>
-          <div class="admin-tailor-actions">
-            <button type="submit" class="btn-primary" id="adminTailorSaveBtn">Add tailor</button>
-            <button type="button" class="btn-ghost" id="adminTailorCancelBtn" hidden>Cancel</button>
-          </div>
-          <p class="account-status-msg" id="adminTailorStatus" hidden></p>
-        </form>
+      <!-- Collapsed by default, like the sections above. -->
+      <details class="account-collapse" id="pastOrdersSection">
+        <summary><h3>Past Orders</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <div id="pastOrdersList"></div>
       </details>
-
-      <h3>Past Orders</h3>
-      <div id="pastOrdersList"></div>
 
       <div id="adminShippingWrap" hidden>
         <h3>All Orders &amp; Shipping</h3>
@@ -1002,7 +977,7 @@
 <script src="./config.js?v=20261022protect"></script>
 <script src="./catalog.js?v=20261026measurehint"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<script src="./main.js?v=20261026neat"></script>
+<script src="./main.js?v=20261026pastfold"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261025newfab"></script> -->
 

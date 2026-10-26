@@ -2014,21 +2014,9 @@ body.order-done-view > .process{display:none !important;}
 .tailor-card a{color:var(--ivory-dim);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;}
 .tailor-card a:hover{color:var(--brass);}
 .tailor-card-note{font-style:italic;}
-.admin-tailor{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:8px;margin-bottom:8px;}
-.admin-tailor b{display:block;font-weight:600;}
-.admin-tailor-hidden{opacity:0.6;}
-.admin-tailor-warn{display:block;font-size:12px;color:#a8402f;margin-top:4px;}
-.admin-tailor-btns{display:flex;gap:10px;white-space:nowrap;}
-.admin-tailor-form{margin-top:16px;}
-.admin-tailor-form h4{margin:0 0 12px;}
-.admin-tailor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:12px;}
-.admin-tailor-full{grid-column:1 / -1;}
-.admin-tailor-actions{display:flex;gap:14px;align-items:center;margin-top:12px;}
-.admin-tailor-actions [hidden]{display:none;}
 @media (max-width:560px){
   .tailor-finder-form .measure-field{flex:1 1 100%;}
   .tailor-finder-form .btn-primary{width:100%;}
-  .admin-tailor{flex-direction:column;}
 }
 .tailor-card a.tailor-card-map{align-self:flex-start;margin-top:4px;color:var(--brass);text-decoration:underline;text-decoration-color:currentColor;font-weight:600;font-size:13px;}
 .tailor-card a.tailor-card-map:hover{color:var(--ivory);}
