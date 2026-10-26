@@ -1,0 +1,29 @@
+# Tells Bing (which powers ChatGPT search) and the other IndexNow engines
+# that scottssuits.com changed, on every push to main, so new pages and
+# prices get picked up without waiting for a crawl. The key file
+# 7ab8564fb23d79c276ce5356d30b7570.txt at the site root proves we own the
+# domain; keep the two in step. Waits a bit first so the live site has
+# the new version when Bing comes to look.
+name: IndexNow
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the site to update
+        run: sleep 120
+      - name: Submit the sitemap pages
+        run: |
+          KEY=7ab8564fb23d79c276ce5356d30b7570
+          URLS=$(curl -fsS https://scottssuits.com/sitemap.xml | grep -o '<loc>[^<]*</loc>' | sed 's#</\?loc>##g' | jq -R . | jq -s -c '. + ["https://scottssuits.com/llms.txt"]')
+          echo "$URLS"
+          BODY=$(jq -n -c --arg key "$KEY" --argjson urls "$URLS" \
+            '{host:"scottssuits.com",key:$key,keyLocation:("https://scottssuits.com/"+$key+".txt"),urlList:$urls}')
+          curl -sS -o /dev/null -w "IndexNow HTTP %{http_code}\n" --fail-with-body \
+            -X POST https://api.indexnow.org/IndexNow \
+            -H 'Content-Type: application/json; charset=utf-8' -d "$BODY"
