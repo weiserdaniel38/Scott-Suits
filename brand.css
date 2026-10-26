@@ -116,16 +116,17 @@ html[data-sw-theme="midnight"] .lightbox-frame,
 html[data-sw-theme="midnight"] .suit-type-icon,
 html[data-sw-theme="midnight"] .suit-preview-img{background:#fff !important;}
 /* Option drawings (lapels, pockets, vents...) inverted to white lines on
-   black (Daniel, 2026-10-25). Photos (fabric, lining, buttons, thread) keep
+   black (Daniel, 2026-10-25). Fabric, felt and button color photos are
+   jacket- files too, so they are left out (2026-10-26). Photos (fabric, lining, buttons, thread) keep
    their real colors; hue-rotate keeps any colored marks close to the original. */
-html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/jacket-"],
+html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/jacket-"]:not([src*="assets/jacket-fabric-"]):not([src*="assets/jacket-feltcolor-"]):not([src*="assets/jacket-buttoncolor-"]):not([src*="assets/jacket-tex-"]),
 html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/pants-"],
 html[data-sw-theme="midnight"] img.opt-swatch[src*="assets/buttonnail-"],
 html[data-sw-theme="midnight"] .suit-type-icon,
-html[data-sw-theme="midnight"] #lightboxImg[src*="assets/jacket-"],
+html[data-sw-theme="midnight"] #lightboxImg[src*="assets/jacket-"]:not([src*="assets/jacket-fabric-"]):not([src*="assets/jacket-feltcolor-"]):not([src*="assets/jacket-buttoncolor-"]):not([src*="assets/jacket-tex-"]),
 html[data-sw-theme="midnight"] #lightboxImg[src*="assets/pants-"],
 html[data-sw-theme="midnight"] #lightboxImg[src*="assets/buttonnail-"]{filter:invert(1) hue-rotate(180deg);}
-html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/jacket-"]),
+html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/jacket-"]:not([src*="assets/jacket-fabric-"]):not([src*="assets/jacket-feltcolor-"]):not([src*="assets/jacket-buttoncolor-"]):not([src*="assets/jacket-tex-"])),
 html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/pants-"]),
 html[data-sw-theme="midnight"] .lightbox-frame:has(#lightboxImg[src*="assets/buttonnail-"]){background:#000 !important;}
 /* The suit picture preview card is cream on Scott's Suits; dark here so
