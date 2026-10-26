@@ -1629,6 +1629,126 @@ function adminSuitFactoryButton(o, s, suitBox, stateEl) {
   return btn;
 }
 
+// "Customer's original": every choice a suit was ordered with, kept in
+// orders.original when the order was placed (supabase/sql/31), laid out like
+// the "Review selections" list. A choice changed since then (Edit order /
+// Edit suit) also shows what it is now.
+function adminOrderReviewSections(row) {
+  const opt = (cat, key, value) => {
+    const o = (cat[key].options || []).find((x) => x.name === value);
+    if (o && o.pattern) return (o.displayName || o.name) + " (" + o.pattern + ")";
+    return (o && o.displayName) || value;
+  };
+  const garment = (cat, groups, textCol) => {
+    const keys = groups ? groups.reduce((acc, g) => acc.concat(g.keys), []) : Object.keys(cat);
+    return keys
+      .filter((k) => cat[k] && cat[k].column && row[cat[k].column])
+      .map((k) => {
+        let value = opt(cat, k, row[cat[k].column]);
+        if (cat[k].textInput && row[textCol]) value += " \u2014 \u201c" + row[textCol] + "\u201d";
+        return { label: cat[k].label, value };
+      });
+  };
+  const sections = [];
+  if (row.suit_type !== "pants_only") sections.push(["Jacket", garment(JACKET_CATALOG, typeof JACKET_CATALOG_GROUPS !== "undefined" ? JACKET_CATALOG_GROUPS : null, "jacket_monogram_text")]);
+  if (row.suit_type !== "jacket_only") sections.push(["Pants", garment(PANTS_CATALOG, typeof PANTS_CATALOG_GROUPS !== "undefined" ? PANTS_CATALOG_GROUPS : null, "pants_monogram_text")]);
+  const measures = [{ label: "Measured as", value: row.measure_type === "body" ? "Body measurements" : "Finished garment" }];
+  if (row.jacket_fit) measures.push({ label: "Jacket fit", value: row.jacket_fit });
+  if (row.pants_fit) measures.push({ label: "Pants fit", value: row.pants_fit });
+  MEASUREMENTS.forEach((m) => {
+    const v = parseFloat(row[m.id]);
+    if (!isNaN(v) && v > 0) measures.push({ label: m.label + (m.mode === "body" ? " (body)" : ""), value: v + " " + (m.unit || "cm") });
+  });
+  sections.push(["Measurements", measures]);
+  const address = [row.shipping_address_line1, row.shipping_address_line2, [row.shipping_city, row.shipping_state, row.shipping_zip].filter(Boolean).join(" "), row.shipping_country].filter(Boolean).join(", ");
+  sections.push(["Contact & delivery", [
+    { label: "Name", value: row.customer_name },
+    { label: "Email", value: row.customer_email },
+    { label: "Phone", value: row.customer_phone },
+    { label: "Delivery", value: row.fulfillment === "pickup" ? "In-store pickup" : "Ship" },
+    { label: "Address", value: row.fulfillment === "pickup" ? "" : address },
+  ].filter((r) => r.value)]);
+  return sections;
+}
+
+function adminOriginalButton(o, s, suitBox) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-ship-factory admin-suit-original-btn";
+  btn.textContent = "Customer\u2019s original";
+  let panel = null;
+  btn.addEventListener("click", async () => {
+    if (panel) {
+      panel.remove();
+      panel = null;
+      btn.textContent = "Customer\u2019s original";
+      return;
+    }
+    panel = document.createElement("div");
+    panel.className = "admin-original selections-review-list";
+    panel.innerHTML = '<p class="account-section-note">Loading...</p>';
+    suitBox.appendChild(panel);
+    btn.textContent = "Hide original";
+    const mine = panel;
+    const client = getSupabase();
+    const [orig, now] = await Promise.all([
+      client.rpc("admin_order_originals", { p_order_id: o.order_id }),
+      client.rpc("admin_order_rows", { p_order_id: o.order_id }),
+    ]);
+    if (panel !== mine) return;
+    const num = s.suit_number || 1;
+    const hit = !orig.error && orig.data ? orig.data.find((x) => (x.suit_number || 1) === num) : null;
+    if (!hit || !hit.original) {
+      panel.innerHTML = '<p class="account-section-note">No original saved for this suit' + (orig.error ? ": " + escapeAttr(orig.error.message) : "") + ".</p>";
+      return;
+    }
+    const current = !now.error && now.data ? now.data.find((x) => (x.suit_number || 1) === num) : null;
+    const nowValues = {};
+    if (current) adminOrderReviewSections(current).forEach(([title, rows]) => rows.forEach((r) => (nowValues[title + "|" + r.label] = r.value)));
+    let changes = 0;
+    panel.innerHTML = "";
+    const note = document.createElement("p");
+    note.className = "admin-original-note";
+    panel.appendChild(note);
+    const origSections = adminOrderReviewSections(hit.original);
+    origSections.forEach(([title, rows]) => {
+      const h = document.createElement("h4");
+      h.className = "selections-review-part";
+      h.textContent = title;
+      panel.appendChild(h);
+      const shown = rows.slice();
+      // A choice the original didn't have but the suit has now.
+      if (current) Object.keys(nowValues).forEach((k) => {
+        const [t, label] = k.split("|");
+        if (t === title && !rows.some((r) => r.label === label)) shown.push({ label, value: "" });
+      });
+      shown.forEach((r) => {
+        const line = document.createElement("div");
+        line.className = "selections-review-row";
+        const k = document.createElement("span");
+        k.textContent = r.label;
+        const v = document.createElement("span");
+        v.textContent = r.value || "\u2014";
+        const nowVal = nowValues[title + "|" + r.label] || "";
+        if (current && nowVal !== (r.value || "")) {
+          changes++;
+          line.classList.add("admin-original-changed");
+          const n = document.createElement("small");
+          n.textContent = "Now: " + (nowVal || "\u2014");
+          v.appendChild(n);
+        }
+        line.append(k, v);
+        panel.appendChild(line);
+      });
+    });
+    const placed = hit.original._backfilled
+      ? "Saved on " + new Date(hit.original._backfilled).toLocaleDateString() + " (this order was placed before originals were kept, so it may already include an earlier edit)."
+      : "Exactly as the customer placed it" + (hit.original.created_at ? " on " + new Date(hit.original.created_at).toLocaleDateString() : "") + ".";
+    note.textContent = placed + " " + (changes ? changes + (changes === 1 ? " choice has" : " choices have") + " changed since (shown as Now)." : "Nothing has changed since.");
+  });
+  return btn;
+}
+
 function adminSuitTypeLabel(type) {
   return type === "jacket_only" ? "Jacket only" : type === "pants_only" ? "Pants only" : "Full suit";
 }
@@ -1682,7 +1802,7 @@ function adminFabricList(o) {
     editBtn.className = "admin-ship-factory admin-suit-edit";
     editBtn.textContent = "Edit suit";
     editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn, s.suit_number || 1));
-    actions.append(editBtn, adminRedrawButton(o, s, suitBox), adminSuitFactoryButton(o, s, suitBox, stateEl));
+    actions.append(editBtn, adminOriginalButton(o, s, suitBox), adminRedrawButton(o, s, suitBox), adminSuitFactoryButton(o, s, suitBox, stateEl));
     infoCol.append(lines, actions);
     box.appendChild(suitBox);
     const parts = [];
