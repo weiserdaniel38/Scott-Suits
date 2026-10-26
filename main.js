@@ -1565,7 +1565,10 @@ function adminRedrawButton(o, s, suitBox) {
     btn.disabled = true;
     btn.textContent = "Drawing…";
     try {
-      const start = await callSuitImageFn(Object.assign({ redraw: true }, ids));
+      // Clear the old picture (supabase/sql/29), then ask for a new drawing.
+      const reset = await getSupabase().rpc("admin_reset_picture", { p_order_id: ids.order_id, p_suit_number: ids.suit_number });
+      if (reset.error || !reset.data) throw new Error((reset.error && reset.error.message) || "suit not found");
+      const start = await callSuitImageFn(ids);
       if (!start.ok && start.status !== 202) throw new Error((start.data && start.data.error) || "start failed");
       const r = await pollSuitImage(Object.assign({ check: true }, ids));
       if (r.status !== "done") throw new Error(r.status);
