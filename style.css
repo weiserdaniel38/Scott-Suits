@@ -536,7 +536,6 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-suit-factory{margin-top:0;}
 .admin-suit-factory .admin-ship-actions{margin-top:0;}
 .admin-order-box,.admin-order-manage{padding:14px;border:1px solid var(--line);border-radius:10px;}
-.admin-order-box .admin-ship-fields{margin-top:8px;}
 .admin-order-manage .admin-ship-actions{margin-top:8px;}
 .admin-order-label{display:block;color:var(--ivory-dim);font-size:11px;letter-spacing:.04em;text-transform:uppercase;}
 @media(max-width:560px){
@@ -553,8 +552,6 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-fabric b{font-weight:600;}
 .admin-fabric-code{color:var(--ivory-dim);font-size:12px;margin-left:6px;}
 .admin-suit-fabrics{display:flex;flex-direction:column;gap:8px;min-width:0;}
-.admin-ship-fields{display:grid;grid-template-columns:1.3fr 1fr 1.6fr;gap:10px;margin-top:12px;}
-.admin-ship-fields .measure-input-wrap select,.admin-ship-fields .measure-input-wrap input{padding:10px 0;font-size:14px;}
 .admin-ship-actions{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:13px;color:var(--ivory-dim);}
 .admin-ship-actions label{display:flex;align-items:center;gap:7px;cursor:pointer;}
 .admin-ship-actions input{accent-color:var(--brass);width:15px;height:15px;}
@@ -571,10 +568,6 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-factory-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px;font-size:14px;}
 .admin-factory-state{font-size:13px;color:var(--ivory-dim);}
 .admin-factory-out{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;margin:10px 0 0;padding:10px;background:rgba(0,0,0,.25);font-size:12px;line-height:1.45;color:var(--ivory-dim);}
-@media(max-width:640px){
-  .admin-ship-fields{grid-template-columns:1fr 1fr;}
-  .admin-ship-fields .ship-tracking{grid-column:1 / -1;}
-}
 @media(max-width:640px){
   #profileMeasureGrid{grid-template-columns:repeat(2,1fr);}
 }
