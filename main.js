@@ -8389,8 +8389,8 @@ updateProcessBar();
 // only (the logo is ours). No WebGL, reduced motion, or a clip that won't
 // play: go straight to the step / fade the cover out.
 const CURTAIN_SOURCES = [
-  ["./assets/curtain/curtain-reveal.mp4?v=20261027a", "video/mp4"],
-  ["./assets/curtain/curtain-reveal.webm?v=20261027a", "video/webm"],
+  ["./assets/curtain/curtain-reveal.mp4?v=20261027c", "video/mp4"],
+  ["./assets/curtain/curtain-reveal.webm?v=20261027c", "video/webm"],
 ];
 const CURTAIN_ASPECT = 720 / 1164; // width / height of one half of the clip
 const CURTAIN_SLOPE = 1.316; // the split's diagonal, in clip UV (dv per du)

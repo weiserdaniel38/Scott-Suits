@@ -13,11 +13,12 @@ right half; main.js draws them through WebGL so the real page shows through.
     -pix_fmt yuv420p -movflags +faststart -an assets/curtain/curtain-reveal.mp4
   ffmpeg -framerate 30 -i work/out/%03d.png -c:v libvpx-vp9 -crf 34 -b:v 0 \
     -pix_fmt yuv420p -an assets/curtain/curtain-reveal.webm
-  ffmpeg -i work/fr/001.png -q:v 4 assets/curtain/curtain-poster.jpg
+  ffmpeg -i work/out/000.png -vf crop=720:1164:0:0 -q:v 4 assets/curtain/curtain-poster.jpg
 """
 import sys,glob,os,numpy as np
 from PIL import Image, ImageFilter
 d=sys.argv[1]; N=58; BAND=96
+CREAM=np.array([248,244,238],np.int16)
 allf=sorted(glob.glob(d+'/fr/*.png'))
 def load(p):
     a=np.asarray(Image.open(p).convert('RGB')).astype(np.int16).copy()
@@ -41,7 +42,9 @@ for t in range(N):
     if t==N-1: r[:]=True
     A=np.asarray(Image.fromarray(((~r)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.5)))
     cov.append(round(float(A.mean()/255),3))
-    c=fr[t].astype(np.uint8)
+    # One flat cream, no white box behind the logo (Daniel, 2026-10-27):
+    # nothing in the colour half is lighter than the page's cream.
+    c=np.minimum(fr[t],CREAM).astype(np.uint8)
     out=np.zeros((c.shape[0],c.shape[1]*2,3),np.uint8)
     out[:,:c.shape[1]]=c; out[:,c.shape[1]:]=A[:,:,None]
     Image.fromarray(out).save(d+'/out/%03d.png'%t)
