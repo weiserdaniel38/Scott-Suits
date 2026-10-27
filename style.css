@@ -2054,3 +2054,15 @@ body.order-done-view > .process{display:none !important;}
 .tailor-finder-form{flex-direction:column;align-items:stretch;gap:0;}
 .tailor-finder-form .measure-field{flex:none;width:100%;max-width:520px;}
 .tailor-finder-form .tailor-locate-btn{align-self:flex-start;}
+
+/* Start Designing curtain reveal (see playCurtainReveal in main.js). The
+   poster is the clip's first frame, shown the instant they tap; once the
+   canvas has a frame it takes over and the poster goes. */
+.curtain-reveal{position:fixed;inset:0;z-index:100000;touch-action:none;
+  background:#f8f4ee url("./assets/curtain/curtain-poster.jpg?v=20261027a") center/auto 100% no-repeat;
+  opacity:1;transition:opacity .3s ease;}
+.curtain-reveal[hidden]{display:none;}
+.curtain-reveal.is-playing{background:none;}
+.curtain-reveal.is-leaving{opacity:0;}
+.curtain-reveal canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.curtain-reveal-video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
