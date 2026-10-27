@@ -8378,16 +8378,18 @@ updateProcessBar();
 // The hero "Start Designing" button always means "take me to the suit-type
 // choice", even if a saved draft currently has a later step showing
 // (otherwise scrollIntoView has nothing to do, since that section is hidden).
-// Curtain reveal (Daniel, 2026-10-27): tapping Start Designing covers the
-// screen with the logo, which splits and slides apart on a diagonal to
-// uncover "What are we building?". The clip (assets/curtain/, built by
+// Curtain intro (Daniel, 2026-10-27): when the site first opens, the logo
+// covers the screen, then splits and slides apart on a diagonal to uncover
+// the landing page. Once per browser session; the inline script in
+// index.html's <head> decides (html.curtain-intro) so the cover is there
+// from the first paint. The clip (assets/curtain/, built by
 // scripts/curtain_reveal_matte.py) is 1.9s, muted, ~170KB, and carries its
 // own matte: colour on the left half, alpha on the right. WebGL composites it
 // over the real page, so whatever is underneath (phone or desktop layout)
 // shows through the opening. Past the clip's sides (wide screens) the shader
 // carries the edge on along the curtain's diagonal. Scott's Suits brand
 // only (the logo is ours). No WebGL, reduced motion, or a clip that won't
-// play: go straight to the step / fade the cover out.
+// play: no cover / fade the cover out.
 const CURTAIN_SOURCES = [
   ["./assets/curtain/curtain-reveal.mp4?v=20261027c", "video/mp4"],
   ["./assets/curtain/curtain-reveal.webm?v=20261027c", "video/webm"],
@@ -8498,6 +8500,7 @@ function playCurtainReveal(onCovered) {
     video.pause();
     const hide = () => {
       wrap.hidden = true;
+      document.documentElement.classList.remove("curtain-intro");
       wrap.classList.remove("is-playing", "is-leaving");
       gl.clear(gl.COLOR_BUFFER_BIT);
     };
@@ -8546,9 +8549,9 @@ function playCurtainReveal(onCovered) {
     else requestAnimationFrame(draw);
   };
 
-  // If the clip hasn't started within 2.5s (slow line, autoplay blocked),
-  // fade the logo cover off and let them carry on.
-  const stallTimer = setTimeout(() => { if (!drewFrame) finish(true); }, 2500);
+  // If the clip hasn't started within 3s (slow line, autoplay blocked e.g.
+  // iPhone Low Power Mode), fade the logo cover off and let them carry on.
+  const stallTimer = setTimeout(() => { if (!drewFrame) finish(true); }, 3000);
   const hardTimer = setTimeout(() => finish(true), 6000);
   video.addEventListener("ended", () => setTimeout(() => finish(false), 50), { once: true });
   video.addEventListener("error", () => finish(true), { once: true });
@@ -8556,7 +8559,7 @@ function playCurtainReveal(onCovered) {
   try {
     video.currentTime = 0;
   } catch (e) { /* not loaded yet */ }
-  // play() inside the tap itself, so phones allow it.
+  // Muted + inline, so phones let it autoplay.
   const p = video.play();
   if (p && typeof p.catch === "function") p.catch(() => finish(true));
   draw();
@@ -8564,14 +8567,9 @@ function playCurtainReveal(onCovered) {
   return true;
 }
 
-// Fetch the ~170KB clip quietly once the landing page has settled, so the
-// reveal is instant when they tap.
-window.addEventListener("load", () => {
-  if (!curtainRevealEnabled()) return;
-  const warm = () => { try { getCurtainVideo().load(); } catch (e) { /* ignore */ } };
-  if (window.requestIdleCallback) requestIdleCallback(warm, { timeout: 3000 });
-  else setTimeout(warm, 1500);
-});
+if (document.documentElement.classList.contains("curtain-intro") && !playCurtainReveal(() => {})) {
+  document.documentElement.classList.remove("curtain-intro");
+}
 
 function startDesigning() {
   markDesignStarted();
@@ -8584,8 +8582,6 @@ function startDesigning() {
     scrollToStepTop(suitTypeSection);
     saveDraft();
   };
-  // Under the curtain the swap can happen straight away: nothing is visible.
-  if (playCurtainReveal(swap)) return;
   // Same "scroll up before hiding" order as goToStep -- see its comment.
   const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
   const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
