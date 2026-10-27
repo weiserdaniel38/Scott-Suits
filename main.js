@@ -625,6 +625,23 @@ function ensureScrollRoom(targetY) {
   slack.style.height = (shortfall > 0 ? shortfall : 0) + "px";
 }
 
+// Soft fade between pages/questions instead of an instant cut (Daniel,
+// 2026-10-27). Runs once any scroll back up has landed: the old content
+// fades out (.is-fading, see style.css), `doSwap` changes it, then the
+// class comes off so the new content fades back in. A step that becomes
+// active also fades in on its own via .step.active's animation.
+const FADE_OUT_MS = 150;
+function fadeSwapContent(el, doSwap) {
+  if (prefersReducedMotion) { doSwap(); return; }
+  el.classList.add("is-fading");
+  window.setTimeout(() => {
+    doSwap();
+    // Next frame, so the new content is laid out at opacity 0 before it
+    // transitions back up to 1.
+    requestAnimationFrame(() => el.classList.remove("is-fading"));
+  }, FADE_OUT_MS);
+}
+
 // Swapping which step is "active" hides the outgoing section immediately
 // (display:none) and shows the incoming one -- if the customer is scrolled
 // down into a tall section (say, deep in the jacket options) when that
@@ -636,7 +653,7 @@ function ensureScrollRoom(targetY) {
 // still fully visible, means there's nothing left above the fold to yank the
 // scroll position around when it's hidden a moment later.
 function goToStep(hideEl, showEl) {
-  const swap = () => {
+  const swap = () => fadeSwapContent(hideEl, () => {
     hideEl.classList.remove("active");
     showEl.classList.add("active");
     if (showEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
@@ -644,7 +661,7 @@ function goToStep(hideEl, showEl) {
     if (showEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
     scrollToStepTop(showEl);
     saveDraft();
-  };
+  });
   const hideTop = window.scrollY + hideEl.getBoundingClientRect().top - getNavClearance();
   if (window.scrollY > hideTop + 2) {
     smoothScrollWindowTo(hideTop, swap);
@@ -4145,13 +4162,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // fresh grid this click was supposed to reveal (e.g. landing on the "Your
   // Suit" summary instead of the 2 shades inside "Purple"). `doSwap` is
   // whatever state change + renderOptions() call this action needs to make.
-  function scrollToTopThenSwap(doSwap) {
+  function scrollToTopThenSwap(rawSwap) {
     // Inside the interactive jacket's panel: swap, then show the panel's top.
     if (embedHost) {
-      doSwap();
+      rawSwap();
       embedHost.scrollTop = 0;
       return;
     }
+    // Fade the old question out and the new one in, rather than cutting
+    // over instantly after each pick -- see fadeSwapContent.
+    const doSwap = () => fadeSwapContent(optionsEl, rawSwap);
     // Used to bail out immediately on desktop (doSwap() with no scroll),
     // on the assumption that the full grid was always already in view
     // there. That assumption doesn't hold: .tabs is a sidebar on desktop,
