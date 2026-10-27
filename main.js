@@ -8378,6 +8378,201 @@ updateProcessBar();
 // The hero "Start Designing" button always means "take me to the suit-type
 // choice", even if a saved draft currently has a later step showing
 // (otherwise scrollIntoView has nothing to do, since that section is hidden).
+// Curtain reveal (Daniel, 2026-10-27): tapping Start Designing covers the
+// screen with the logo, which splits and slides apart on a diagonal to
+// uncover "What are we building?". The clip (assets/curtain/, built by
+// scripts/curtain_reveal_matte.py) is 1.9s, muted, ~170KB, and carries its
+// own matte: colour on the left half, alpha on the right. WebGL composites it
+// over the real page, so whatever is underneath (phone or desktop layout)
+// shows through the opening. Past the clip's sides (wide screens) the shader
+// carries the edge on along the curtain's diagonal. Scott's Suits brand
+// only (the logo is ours). No WebGL, reduced motion, or a clip that won't
+// play: go straight to the step / fade the cover out.
+const CURTAIN_SOURCES = [
+  ["./assets/curtain/curtain-reveal.mp4?v=20261027a", "video/mp4"],
+  ["./assets/curtain/curtain-reveal.webm?v=20261027a", "video/webm"],
+];
+const CURTAIN_ASPECT = 720 / 1164; // width / height of one half of the clip
+const CURTAIN_SLOPE = 1.316; // the split's diagonal, in clip UV (dv per du)
+let curtainVideo = null;
+
+function curtainRevealEnabled() {
+  if (prefersReducedMotion) return false;
+  if (typeof SITE_BRAND !== "undefined" && SITE_BRAND.id !== "scott") return false;
+  return !!document.getElementById("curtainReveal");
+}
+
+function getCurtainVideo() {
+  if (curtainVideo) return curtainVideo;
+  const v = document.createElement("video");
+  // muted + playsinline set before any source so iPhone treats it as a
+  // silent inline clip that's allowed to play.
+  v.muted = true;
+  v.defaultMuted = true;
+  v.playsInline = true;
+  v.setAttribute("muted", "");
+  v.setAttribute("playsinline", "");
+  v.setAttribute("webkit-playsinline", "");
+  v.setAttribute("aria-hidden", "true");
+  v.preload = "auto";
+  v.className = "curtain-reveal-video";
+  CURTAIN_SOURCES.forEach(([src, type]) => {
+    const s = document.createElement("source");
+    s.src = src;
+    s.type = type;
+    v.appendChild(s);
+  });
+  document.getElementById("curtainReveal").appendChild(v);
+  curtainVideo = v;
+  return v;
+}
+
+function setupCurtainGl(canvas) {
+  let gl = null;
+  try {
+    gl = canvas.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: false }) ||
+      canvas.getContext("experimental-webgl");
+  } catch (e) { gl = null; }
+  if (!gl) return null;
+  const vs = "attribute vec2 a;varying vec2 p;void main(){p=vec2(a.x*.5+.5,.5-a.y*.5);gl_Position=vec4(a,0.,1.);}";
+  const fs = "precision mediump float;uniform sampler2D t;uniform float s;uniform float k;varying vec2 p;" +
+    "void main(){vec2 uv=vec2((p.x-.5)*s+.5,p.y);" +
+    "float o=max(-uv.x,uv.x-1.);" +
+    "if(uv.x<0.)uv.y+=uv.x*k;else if(uv.x>1.)uv.y+=(uv.x-1.)*k;" +
+    "uv=clamp(uv,vec2(.002),vec2(.998));" +
+    "vec3 c=texture2D(t,vec2(uv.x*.5,uv.y)).rgb;float al=texture2D(t,vec2(uv.x*.5+.5,uv.y)).r;" +
+    // Past the sides, plain curtain cream (no smeared logo), eased in.
+    "c=mix(c,vec3(.973,.957,.933),smoothstep(0.,.12,o));" +
+    "gl_FragColor=vec4(c*al,al);}";
+  const compile = (type, src) => {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    return gl.getShaderParameter(sh, gl.COMPILE_STATUS) ? sh : null;
+  };
+  const v = compile(gl.VERTEX_SHADER, vs);
+  const f = compile(gl.FRAGMENT_SHADER, fs);
+  if (!v || !f) return null;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, v);
+  gl.attachShader(prog, f);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, "a");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return { gl, uScale: gl.getUniformLocation(prog, "s"), uSlope: gl.getUniformLocation(prog, "k") };
+}
+
+// Covers the screen, runs `onCovered` (the step swap) underneath, plays the
+// reveal and takes the cover away when it ends. Returns false (doing
+// nothing) when the reveal can't run, so the caller just swaps as usual.
+function playCurtainReveal(onCovered) {
+  if (!curtainRevealEnabled()) return false;
+  const wrap = document.getElementById("curtainReveal");
+  const canvas = wrap.querySelector("canvas");
+  const ctx = setupCurtainGl(canvas);
+  if (!ctx) return false;
+  const { gl, uScale, uSlope } = ctx;
+  const video = getCurtainVideo();
+
+  wrap.classList.remove("is-playing", "is-leaving");
+  wrap.hidden = false;
+  let done = false;
+  let drewFrame = false;
+  const finish = (fade) => {
+    if (done) return;
+    done = true;
+    clearTimeout(stallTimer);
+    clearTimeout(hardTimer);
+    video.pause();
+    const hide = () => {
+      wrap.hidden = true;
+      wrap.classList.remove("is-playing", "is-leaving");
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    };
+    if (fade) {
+      wrap.classList.add("is-leaving");
+      setTimeout(hide, 320);
+    } else {
+      hide();
+    }
+  };
+
+  const draw = () => {
+    if (done) return;
+    if (video.readyState >= 2 && video.videoWidth) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.round(window.innerWidth * dpr);
+      const h = Math.round(window.innerHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      gl.viewport(0, 0, w, h);
+      try {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+      } catch (e) {
+        finish(true);
+        return;
+      }
+      // The clip is always fitted to the screen height and centred.
+      gl.uniform1f(uScale, w / (h * CURTAIN_ASPECT));
+      gl.uniform1f(uSlope, CURTAIN_SLOPE);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (!drewFrame && video.currentTime > 0) {
+        drewFrame = true;
+        clearTimeout(stallTimer);
+        wrap.classList.add("is-playing"); // canvas now covers; drop the poster
+      }
+    }
+    if (video.ended) {
+      finish(false);
+      return;
+    }
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(draw);
+    else requestAnimationFrame(draw);
+  };
+
+  // If the clip hasn't started within 2.5s (slow line, autoplay blocked),
+  // fade the logo cover off and let them carry on.
+  const stallTimer = setTimeout(() => { if (!drewFrame) finish(true); }, 2500);
+  const hardTimer = setTimeout(() => finish(true), 6000);
+  video.addEventListener("ended", () => setTimeout(() => finish(false), 50), { once: true });
+  video.addEventListener("error", () => finish(true), { once: true });
+
+  try {
+    video.currentTime = 0;
+  } catch (e) { /* not loaded yet */ }
+  // play() inside the tap itself, so phones allow it.
+  const p = video.play();
+  if (p && typeof p.catch === "function") p.catch(() => finish(true));
+  draw();
+  onCovered();
+  return true;
+}
+
+// Fetch the ~170KB clip quietly once the landing page has settled, so the
+// reveal is instant when they tap.
+window.addEventListener("load", () => {
+  if (!curtainRevealEnabled()) return;
+  const warm = () => { try { getCurtainVideo().load(); } catch (e) { /* ignore */ } };
+  if (window.requestIdleCallback) requestIdleCallback(warm, { timeout: 3000 });
+  else setTimeout(warm, 1500);
+});
+
 function startDesigning() {
   markDesignStarted();
   const swap = () => {
@@ -8389,6 +8584,8 @@ function startDesigning() {
     scrollToStepTop(suitTypeSection);
     saveDraft();
   };
+  // Under the curtain the swap can happen straight away: nothing is visible.
+  if (playCurtainReveal(swap)) return;
   // Same "scroll up before hiding" order as goToStep -- see its comment.
   const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
   const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
