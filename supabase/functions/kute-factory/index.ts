@@ -22,10 +22,11 @@
 //       there) and keeps the factory's order number on the row. Sending
 //       again updates the same draft.
 //   { action: "factory_status", id }  the suit's factory status; moves the
-//       order's shipping step forward to match
+//       order's shipping step forward to match and, when it moves, emails
+//       (and texts) the customer through send-shipping-update
 //   { action: "factory_status_all" }  factory_status for every suit still
-//       at the factory; run once a day by pg_cron (see
-//       supabase/sql/15_factory_status_daily.sql), which signs in with the
+//       at the factory; run every hour by pg_cron (see
+//       supabase/sql/32_factory_status_hourly.sql), which signs in with the
 //       x-cron-token header and may run only this action
 //   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
 //       saves a TEST draft of that suit with some choices changed, to see
@@ -340,18 +341,38 @@ async function factoryStatus(id: string) {
   const stage = FACTORY_STAGE[String(d.status)];
   const current = String(row.shipping_status || "");
   // Like the admin's own shipping updates, the step is set for the whole
-  // order. No email or text goes out; the admin's Save button does that.
+  // order, and the customer gets the same email/text as the admin's Save
+  // with "Send update" ticked (Daniel, 2026-10-27: automatic, instead of
+  // setting it by hand). Only a move forward sends, so each step goes out
+  // once per order even when it has several suits.
   const moved = !!stage && SHIPPING_ORDER.indexOf(stage) > SHIPPING_ORDER.indexOf(current);
   await supabase.from("orders").update(update).eq("id", row.id);
+  let notified: unknown = null;
   if (moved) {
     await supabase.from("orders").update({ shipping_status: stage, shipping_updated_at: new Date().toISOString() })
       .eq("order_id", row.order_id);
+    notified = await notifyCustomer(String(row.order_id));
   }
-  return { ok: true, status: update.factory_status, deliveryDate: update.factory_delivery_date, waybill: update.factory_waybill, shippingStatus: moved ? stage : current || null };
+  return { ok: true, status: update.factory_status, deliveryDate: update.factory_delivery_date, waybill: update.factory_waybill, shippingStatus: moved ? stage : current || null, notified };
+}
+
+// The customer's progress email/text for the order's new step.
+async function notifyCustomer(orderId: string) {
+  try {
+    const res = await fetch(env("SUPABASE_URL") + "/functions/v1/send-shipping-update", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-webhook-secret": env("WEBHOOK_SECRET") },
+      body: JSON.stringify({ order_id: orderId }),
+    });
+    const r = await res.json().catch(() => ({}));
+    return res.ok ? r : { error: r.error || "send-shipping-update said " + res.status };
+  } catch (e) {
+    return { error: String(e) };
+  }
 }
 
 // Every suit sent to the factory and not yet shipped from it: refresh its
-// factory status (the daily job).
+// factory status (the hourly job).
 async function factoryStatusAll() {
   const { data, error } = await supabase.from("orders").select("id, shipping_status")
     .not("factory_order_no", "is", null).limit(200);

@@ -445,11 +445,15 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
 // 10035 "Saving" and 10039 "Stay Payments" change nothing: a draft saved
 // from here already shows "Stay Payments" before the admin submits it.
 export const FACTORY_STAGE: Record<string, string> = {
+  "10371": "sent_to_factory", // Under Checking
+  "10374": "sent_to_factory", // Audit
+  "206012": "sent_to_factory", // In procurement
   "10030": "cutting", // Pattern Making
   "10031": "sewing", // Production
   "10032": "finishing", // Stocked
   "10033": "factory_shipped", // On Delivery
   "10034": "factory_shipped", // Signed (received)
+  "10044": "factory_shipped", // Delivered
 };
 export const SHIPPING_ORDER = [
   "", "sent_to_factory", "cutting", "sewing", "finishing", "factory_shipped",

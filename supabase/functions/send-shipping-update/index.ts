@@ -6,14 +6,19 @@
 // scottssuits.com, right after supabase/sql/8_shipping_updates.sql's
 // admin_update_shipping() saved the new status:
 //   Authorization: Bearer <admin's sign-in token>   { order_id: "..." }
-// Only an account listed in public.admins can trigger a send. The function
-// reads the status, tracking and the customer's email/phone from the order
-// itself, so the request can't point a message at anyone else.
+// or by kute-factory when the factory's status moves an order to its next
+// step (the hourly check, supabase/sql/32_factory_status_hourly.sql):
+//   x-webhook-secret: <WEBHOOK_SECRET>              { order_id: "..." }
+// Only an account listed in public.admins (or that server job) can trigger
+// a send. The function reads the status, tracking and the customer's
+// email/phone from the order itself, so the request can't point a message
+// at anyone else.
 //
 // Test mode (public.shipping_notify_settings.live = false, the default):
 // the email goes to the admin's own address and the text to
-// SHIPPING_TEST_PHONE, never to the customer. The admin turns test mode
-// off in My Account ("Send updates to customers").
+// SHIPPING_TEST_PHONE, never to the customer (for the factory job, to the
+// first address in public.admins). The admin turns test mode off in My
+// Account ("Send updates to customers").
 //
 // Email is sent through Resend (same account as send-welcome-email), texts
 // through Twilio. Without the Twilio secrets, texts are skipped and only the
@@ -29,6 +34,7 @@
 //   SHIPPING_FROM         optional, default "Scott Suits <hello@scottssuits.com>"
 //   SHIPPING_REPLY_TO     optional, default scottsuits4@gmail.com
 //   SITE_URL              optional, default https://scottssuits.com
+//   WEBHOOK_SECRET        already set; lets kute-factory send updates
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -44,7 +50,7 @@ const supabase = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KE
 
 const CORS = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "content-type, apikey, authorization",
+  "access-control-allow-headers": "content-type, apikey, authorization, x-webhook-secret",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) =>
@@ -229,14 +235,22 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
-  // Only the shop admin.
-  const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
-  if (!m) return json({ error: "sign in as the shop admin" }, 401);
-  const { data: who, error: whoErr } = await supabase.auth.getUser(m[1]);
-  if (whoErr || !who?.user) return json({ error: "sign in as the shop admin" }, 401);
-  const admin = who.user;
-  const { data: adminRow } = await supabase.from("admins").select("user_id").eq("user_id", admin.id).maybeSingle();
-  if (!adminRow) return json({ error: "only the shop admin can send shipping updates" }, 403);
+  // Only the shop admin, or kute-factory's automatic factory updates.
+  const hook = env("WEBHOOK_SECRET");
+  const byFactory = !!hook && req.headers.get("x-webhook-secret") === hook;
+  let adminEmail = "";
+  if (byFactory) {
+    const { data: admins } = await supabase.from("admins").select("email");
+    adminEmail = (admins || []).map((a) => String(a.email || "").trim()).filter(Boolean)[0] || "";
+  } else {
+    const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
+    if (!m) return json({ error: "sign in as the shop admin" }, 401);
+    const { data: who, error: whoErr } = await supabase.auth.getUser(m[1]);
+    if (whoErr || !who?.user) return json({ error: "sign in as the shop admin" }, 401);
+    const { data: adminRow } = await supabase.from("admins").select("user_id").eq("user_id", who.user.id).maybeSingle();
+    if (!adminRow) return json({ error: "only the shop admin can send shipping updates" }, 403);
+    adminEmail = String(who.user.email || "");
+  }
 
   let orderId = "";
   try {
@@ -266,7 +280,7 @@ Deno.serve(async (req) => {
   const { data: settings } = await supabase.from("shipping_notify_settings").select("live").eq("id", 1).maybeSingle();
   const live = settings?.live === true;
 
-  const emailTo = live ? String(o.customer_email || "").trim() : String(admin.email || "");
+  const emailTo = live ? String(o.customer_email || "").trim() : adminEmail;
   const phoneTo = toE164(live ? String(o.customer_phone || "") : env("SHIPPING_TEST_PHONE"));
   const prefix = live ? "" : "[TEST -- would go to " + (o.customer_email || "no email") + " / " + (o.customer_phone || "no phone") + "] ";
 
@@ -278,8 +292,8 @@ Deno.serve(async (req) => {
     : { ok: false, skipped: true, detail: live ? "no usable phone number on the order" : "no test phone set (SHIPPING_TEST_PHONE)" };
 
   await supabase.from("shipping_notifications").insert([
-    { order_id: orderId, shipping_status: o.shipping_status, channel: "email", recipient: emailTo || null, test_mode: !live, ok: email.ok, detail: email.detail },
-    { order_id: orderId, shipping_status: o.shipping_status, channel: "sms", recipient: phoneTo || null, test_mode: !live, ok: sms.ok, detail: sms.detail },
+    { order_id: orderId, shipping_status: o.shipping_status, channel: "email", recipient: emailTo || null, test_mode: !live, ok: email.ok, detail: (byFactory ? "auto (factory) " : "") + email.detail },
+    { order_id: orderId, shipping_status: o.shipping_status, channel: "sms", recipient: phoneTo || null, test_mode: !live, ok: sms.ok, detail: (byFactory ? "auto (factory) " : "") + sms.detail },
   ]);
 
   return json({ live, email: { to: emailTo, ...email }, sms: { to: phoneTo, ...sms } });
