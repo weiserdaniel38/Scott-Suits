@@ -10,15 +10,15 @@
 // step (the hourly check, supabase/sql/32_factory_status_hourly.sql):
 //   x-webhook-secret: <WEBHOOK_SECRET>              { order_id: "..." }
 // Only an account listed in public.admins (or that server job) can trigger
-// a send. The function
-// reads the status, tracking and the customer's email/phone from the order
-// itself, so the request can't point a message at anyone else.
+// a send. The function reads the status, tracking and the customer's
+// email/phone from the order itself, so the request can't point a message
+// at anyone else.
 //
 // Test mode (public.shipping_notify_settings.live = false, the default):
 // the email goes to the admin's own address and the text to
 // SHIPPING_TEST_PHONE, never to the customer (for the factory job, to the
-// addresses in public.admins). The admin turns test mode
-// off in My Account ("Send updates to customers").
+// first address in public.admins). The admin turns test mode off in My
+// Account ("Send updates to customers").
 //
 // Email is sent through Resend (same account as send-welcome-email), texts
 // through Twilio. Without the Twilio secrets, texts are skipped and only the
