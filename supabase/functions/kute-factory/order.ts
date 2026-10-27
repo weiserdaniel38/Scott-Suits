@@ -56,7 +56,7 @@ const BUCKLE_CODES = new Set(["3352", "33TG"]);
 const BUCKLE = "QZMAB01-2";
 
 // Steps handled by hand below rather than by the catalog's own codes.
-const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "monogramThreadColor", "fabric"]);
+const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "monogramThreadColor", "fabric"]);
 const PANTS_BY_HAND = new Set(["monogram", "monogramFont", "monogramThreadColor", "threadColor", "fabric"]);
 
 const CUFF_BUTTON_CODES: Record<string, string> = {
@@ -312,16 +312,27 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     const thread = s(row.jacket_thread_color);
     jc.push(matched(jacket.threadColor, thread) ? "064C" : "064D:" + thread);
 
-    // Buttonhole thread: lapel, and front + sleeve.
+    // Buttonhole thread: lapel, and front + sleeve. The front/sleeve color
+    // can go on the front and all sleeve buttonholes (no placement saved =
+    // orders from before that step), the sleeves only, or only the bottom
+    // sleeve buttonhole (nearest the cuff edge = factory 1st, 0921).
     const lapelHole = s(row.jacket_buttonhole_thread_color);
     const frontHole = s(row.jacket_front_buttonhole_thread_color);
+    const holePlace = s(row.jacket_buttonhole_color_placement) || "Front & Sleeves";
     const lapelMatched = matched(jacket.buttonholeThreadColor, lapelHole);
     const frontMatched = matched(jacket.frontButtonholeThreadColor, frontHole);
     if (lapelMatched && frontMatched) jc.push("064A");
-    else if (!lapelMatched && !frontMatched && lapelHole === frontHole) jc.push("064B:" + lapelHole);
+    else if (!lapelMatched && !frontMatched && lapelHole === frontHole && holePlace === "Front & Sleeves") jc.push("064B:" + lapelHole);
     else {
       if (!lapelMatched) jc.push("05A3:" + lapelHole);
-      if (!frontMatched) jc.push("06M2:" + frontHole, "06C2:" + frontHole);
+      if (!frontMatched) {
+        if (holePlace === "Sleeves Only") jc.push("06C2:" + frontHole);
+        else if (holePlace === "Bottom Sleeve Buttonhole") jc.push("0921:" + frontHole);
+        else {
+          if (holePlace !== "Front & Sleeves") warnings.push("Jacket: unknown buttonhole color placement \"" + holePlace + "\"; sent as front & sleeves.");
+          jc.push("06M2:" + frontHole, "06C2:" + frontHole);
+        }
+      }
     }
 
     // Felt under collar.

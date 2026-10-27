@@ -333,7 +333,7 @@ const JACKET_CATALOG_GROUPS = [
   { label: "Shape & Lapel", keys: ["frontbutton", "collar", "lapelwidth"] },
   { label: "Pockets & Vents", keys: ["pockettype", "lowerpocket", "backvent"] },
   { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
-  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "frontButtonholeThreadColor", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
   // Technical tailoring questions go last so they don't slow down the
   // visible style choices above.
@@ -2653,6 +2653,22 @@ JACKET_CATALOG.frontButtonholeThreadColor = {
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
   options: [MATCH_FABRIC_COLOR_OPTION].concat(flattenColorFamilies(BUTTONHOLE_THREAD_COLOR_FAMILIES)),
 };
+// Which of those buttonholes get the color (Daniel, 2026-10-27): only asked
+// once a color other than Match Fabric is picked above. The factory takes
+// each placement as its own thread code (see kute-factory order.ts); the
+// "bottom" sleeve buttonhole is the one nearest the cuff edge (factory 1st
+// sleeve buttonhole). Orders from before this step have no value and mean
+// Front & Sleeves.
+JACKET_CATALOG.buttonholeColorPlacement = {
+  label: "Which Buttonholes Get the Color",
+  column: "jacket_buttonhole_color_placement",
+  requiresOtherThan: { key: "frontButtonholeThreadColor", value: "Match Fabric Color" },
+  options: [
+    { name: "Front & Sleeves", specName: "Front & Sleeves", displayName: "Front & All Sleeve Buttonholes", img: "./assets/jacket-contrastholes-front-and-sleeves.jpg" },
+    { name: "Sleeves Only", specName: "Sleeves Only", displayName: "Sleeve Buttonholes Only", img: "./assets/jacket-contrastholes-sleeves-only.jpg" },
+    { name: "Bottom Sleeve Buttonhole", specName: "Bottom Sleeve Buttonhole", displayName: "Just the Bottom Sleeve Buttonhole", img: "./assets/jacket-contrastholes-cuff-edge-only.jpg" },
+  ],
+};
 // Felt under collar: the hidden structural layer sewn beneath the outer
 // collar fabric (not visible when worn) -- a plain style pick like Facing
 // Style above, not a colorFamilies swatch picker, since the supplier's own
@@ -2830,6 +2846,7 @@ JACKET_CATALOG.threadColor.label = "Button Thread Color";
 JACKET_CATALOG.threadColor.description = "The thread your jacket's buttons are sewn on with.";
 JACKET_CATALOG.buttonholeThreadColor.description = "The thread stitched around the buttonhole on your lapel.";
 JACKET_CATALOG.frontButtonholeThreadColor.description = "The thread stitched around the buttonholes on your jacket front and sleeves.";
+JACKET_CATALOG.buttonholeColorPlacement.description = "Pick where your buttonhole color shows. The other buttonholes match the fabric.";
 JACKET_CATALOG.monogramThreadColor.description = "The thread your jacket monogram is embroidered in.";
 PANTS_CATALOG.threadColor.label = "Button Thread Color";
 PANTS_CATALOG.threadColor.description = "The thread your pants buttons are sewn on with.";
@@ -3067,6 +3084,7 @@ const JACKET_STEP_TAGLINES = {
   threadColor: "Blend in quietly or let your seams show off.",
   buttonholeThreadColor: "Match the suit or let your buttonholes flirt a little.",
   frontButtonholeThreadColor: "Matching thread or a tiny bit of mischief up front.",
+  buttonholeColorPlacement: "Go all in, or let one little cuff buttonhole do the talking.",
   feltundercollar: "", // intentionally no one-liner
   feltColor: "A sneaky pop of color for dramatic collar flips.",
   monogramThreadColor: "Whisper your initials or shout them.",
