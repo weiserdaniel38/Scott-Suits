@@ -52,11 +52,30 @@ const JACKET_CATALOG = {
         "Diamond Lapel": "8 cm",
       },
     },
+    // Peak and Semi-Notch come only in the widths the factory's Place Order
+    // accepts for them (it refused 11 cm on a Peak and 8 cm on a Semi-Notch,
+    // 2026-10-27, and listed the allowed sizes). Peak: 8.0, 8.9, 9.7, 10.8
+    // (also 6.4, 7.6, 8.3, 8.7, 11.1, 11.4, 11.5, 12.7, 14.0). Semi-Notch:
+    // 8.3, 10.0 (also 6.0, 7.0, 7.4). So those lapels get their own nearest
+    // sizes under the same four names; a width they can't have is hidden
+    // and moves to the nearest one (replaceWith) or is asked again.
     options: [
-      { name: "9 cm", displayName: "Standard", factoryCode: "00N5", img: "./assets/jacket-lapelwidth-new-9.jpg" },
-      { name: "8 cm", displayName: "Thin", factoryCode: "00X6", img: "./assets/jacket-lapelwidth-new-8.jpg" },
-      { name: "10 cm", displayName: "Wide", factoryCode: "00N0", img: "./assets/jacket-lapelwidth-new-10.jpg" },
-      { name: "11 cm", displayName: "Extra Wide", factoryCode: "00S2", img: "./assets/jacket-lapelwidth-new-11.jpg" },
+      { name: "9 cm", displayName: "Standard", factoryCode: "00N5", img: "./assets/jacket-lapelwidth-new-9.jpg",
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: "8.9 cm" },
+      { name: "8.9 cm", displayName: "Standard", factoryCode: "00N4", img: "./assets/jacket-lapelwidth-new-9.jpg",
+        onlyWhen: { collar: ["Peak Lapel"] } },
+      { name: "8 cm", displayName: "Thin", factoryCode: "00X6", img: "./assets/jacket-lapelwidth-new-8.jpg",
+        hiddenWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: "8.3 cm" },
+      { name: "8.3 cm", displayName: "Thin", factoryCode: "00N2", img: "./assets/jacket-lapelwidth-new-8.jpg",
+        onlyWhen: { collar: ["Semi-Notch Lapel"] } },
+      { name: "10 cm", displayName: "Wide", factoryCode: "00N0", img: "./assets/jacket-lapelwidth-new-10.jpg",
+        hiddenWhen: { collar: ["Peak Lapel"] }, replaceWith: "9.7 cm" },
+      { name: "9.7 cm", displayName: "Wide", factoryCode: "00Y3", img: "./assets/jacket-lapelwidth-new-10.jpg",
+        onlyWhen: { collar: ["Peak Lapel"] } },
+      { name: "11 cm", displayName: "Extra Wide", factoryCode: "00S2", img: "./assets/jacket-lapelwidth-new-11.jpg",
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: "10.8 cm" },
+      { name: "10.8 cm", displayName: "Extra Wide", factoryCode: "00S1", img: "./assets/jacket-lapelwidth-new-11.jpg",
+        onlyWhen: { collar: ["Peak Lapel"] } },
     ],
   },
   lapelbuttonhole: {
@@ -3124,6 +3143,9 @@ const CLASSIC_SUIT_PRESET = {
       collar: {
         "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
         "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole", lapelwidth: "8 cm" },
+        // The factory's nearest sizes to standard 9 cm for these lapels.
+        "Peak Lapel": { lapelwidth: "8.9 cm" },
+        "Semi-Notch Lapel": { lapelwidth: "8.3 cm" },
       },
     },
   },
