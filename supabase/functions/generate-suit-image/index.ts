@@ -302,6 +302,14 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Front Pockets": "pick stitching on the trousers: a fine row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge of each front pocket opening; subtle, visible up close",
   },
 
+  // Where the "Front & Sleeve Buttonhole Color" thread goes (asked only when
+  // it isn't matched to the fabric).
+  "Which Buttonholes Get the Color": {
+    "Front & Sleeves": "the front buttonholes AND every sleeve cuff buttonhole are stitched in the front & sleeve buttonhole thread color",
+    "Sleeves Only": "ONLY the sleeve cuff buttonholes are stitched in the front & sleeve buttonhole thread color; the front buttonholes are stitched in thread matching the fabric",
+    "Bottom Sleeve Buttonhole": "ONLY ONE buttonhole on each sleeve, the bottom one nearest the cuff edge, is stitched in the front & sleeve buttonhole thread color as a single contrast accent; every other cuff buttonhole and the front buttonholes are stitched in thread matching the fabric",
+  },
+
   // -------------------------------------------------------------- PANTS
   "Waist Line Height": {
     Standard: "standard waistband, about 4 cm tall",
@@ -813,6 +821,10 @@ function fixedRules(spec: string, buttonPhoto = false): string {
           : "") +
         "Stitch them in the lapel buttonhole thread color.",
     );
+  }
+  const holePlace = (spec.match(/^Which Buttonholes Get the Color: (.+)$/m) || [])[1] || "";
+  if (holePlace && holePlace !== "Front & Sleeves" && OPTION_LOOKS["Which Buttonholes Get the Color"][holePlace]) {
+    rules.push("- MOST IMPORTANT, contrast buttonhole thread on both sleeves and in the cuff close-up: " + OPTION_LOOKS["Which Buttonholes Get the Color"][holePlace] + ".");
   }
   rules.push("- Jacket length, in every view: " + JACKET_LENGTH + ".");
   const db = front.match(/double breasted (\d)x(\d)/i);

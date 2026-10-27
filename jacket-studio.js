@@ -98,7 +98,7 @@
   const AREAS = [
     { id: "fabric", label: "Fabric", view: "front", lp: "below", keys: ["fabric"], at: { front: [201, 217], back: [400, 300] } },
     { id: "lapel", label: "Lapel", view: "front", lp: "below", keys: ["collar", "lapelwidth"], at: { front: [489, 240] } },
-    { id: "buttons", label: "Front Buttons", view: "front", keys: ["frontbutton", "buttoncolor", "threadColor", "buttonNail", "frontButtonholeThreadColor"], at: { front: "topButton" } },
+    { id: "buttons", label: "Front Buttons", view: "front", keys: ["frontbutton", "buttoncolor", "threadColor", "buttonNail", "frontButtonholeThreadColor", "buttonholeColorPlacement"], at: { front: "topButton" } },
     { id: "pockets", label: "Pockets", view: "front", lp: "below", keys: ["lowerpocket", "pockettype"], at: { front: "pocket" } },
     { id: "cuff", label: "Sleeve Buttons", view: "front", lp: "below", keys: ["cuffbuttons", "sleevecuffstyle"], at: { front: [62, 772], back: [62, 772] }, zoom: { front: [130, 740, 2.4], back: [130, 740, 2.4] } },
     { id: "lining", label: "Lining", view: "inside", keys: ["lining", "facing", "insidepocket"], at: { inside: [400, 560] } },
@@ -285,6 +285,19 @@
     const o = opt(key, v[key] || v._raw[key]);
     if (o && o.hex) return o.hex;
     return lum(fabricHex) < 60 ? mix(fabricHex, "#000000", 0.3) : mix(fabricHex, "#000000", 0.38);
+  }
+  // The front & sleeve buttonhole color goes on the front, the sleeves, or
+  // only the bottom sleeve buttonhole (buttonholeColorPlacement); the rest
+  // match the fabric.
+  function buttonholeHexes(v, fabricHex) {
+    const color = threadHex("frontButtonholeThreadColor", v, fabricHex);
+    const plain = threadHex("_matched", { _raw: {} }, fabricHex);
+    const place = v.buttonholeColorPlacement || v._raw.buttonholeColorPlacement || "Front & Sleeves";
+    return {
+      front: place === "Front & Sleeves" ? color : plain,
+      sleeve: place === "Bottom Sleeve Buttonhole" ? plain : color,
+      cuff1: color,
+    };
   }
   function feltHex(v, fabricHex) {
     if (v.feltundercollar === "Customer-Appointed Felt") {
@@ -673,7 +686,8 @@
     const lay = frontLayout(v.frontbutton);
     const look = buttonLook(v, fabricHex);
     const threadV = threadHex("threadColor", v, fabricHex);
-    const holeHex = threadHex("frontButtonholeThreadColor", v, fabricHex);
+    const holes = buttonholeHexes(v, fabricHex);
+    const holeHex = holes.front;
     lay.buttons.forEach((b) => {
       if (lay.db) { if (b.holed) hole(g, [b.x + 14, b.y + 1], [b.x + 31, b.y + 1], holeHex, 2.4); }
       else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + 13, b.y], holeHex, 2.4);
@@ -684,7 +698,7 @@
     anchors.topButton = [top.x, top.y];
 
     // Sleeve buttons: seen edge on at the back of each cuff.
-    drawCuffs(g, v, look, holeHex, false);
+    drawCuffs(g, v, look, holes, false);
     sleeveHeads(g, v, [[141, 130], [150, 180], [163, 213], [170, 243], [180, 290]]);
     return true;
   }
@@ -715,7 +729,7 @@
       }
     });
   }
-  function drawCuffs(g, v, look, holeHex, back) {
+  function drawCuffs(g, v, look, holes, back) {
     const c = cuffLayout(v);
     const step = c.overlap ? 14.5 : 19;
     const n = c.holes;
@@ -728,7 +742,7 @@
       // sleeve), level or tilted up away from the button.
       const a = c.holeTilt ? -0.61 : 0;
       const hx = 32 + dx + (c.count ? 5 : 0);
-      hole(g, [hx, y], [hx + 11 * Math.cos(a), y + 11 * Math.sin(a)], holeHex, 1.8);
+      hole(g, [hx, y], [hx + 11 * Math.cos(a), y + 11 * Math.sin(a)], i === 0 ? holes.cuff1 : holes.sleeve, 1.8);
       if (!c.count) continue;
       // Viewer's left sleeve: the button edge faces us.
       button(g, 32 + dx, y, 9.5, look, { sx: 0.62, rot: -0.04 });
@@ -803,7 +817,7 @@
     clothPiece(g, layer, "M316,58 Q400,26 484,58 L490,86 Q400,62 310,86 Z", { shadow: 0.45, blur: 4, drop: 2, stitch: "M320,62 Q400,32 480,62" });
     if (v.monogram === "Monogram On Middle Under Collar") monogramText(g, 400, 66, v, 9, 0);
     const look = buttonLook(v, fp.hex);
-    drawCuffs(g, v, look, threadHex("frontButtonholeThreadColor", v, fp.hex), true);
+    drawCuffs(g, v, look, buttonholeHexes(v, fp.hex), true);
     anchors.vent = [400, 820];
     return true;
   }
