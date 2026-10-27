@@ -116,12 +116,30 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261027curtainc">
+<link rel="stylesheet" href="./style.css?v=20261027intro">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261026fabricphotos"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
+<script>
+// Curtain intro: decided here, before first paint, so the logo cover is up
+// from the start. Once per browser session, Scott's Suits only, and not on
+// links that land somewhere specific (Stripe return, sign-in, admin, #steps).
+(function () {
+  try {
+    var q = location.search.replace(/^\?/, "").split("&").filter(function (p) { return p && !/^brand=/.test(p); });
+    if (SITE_BRAND.id !== "scott" || q.length || location.hash) return;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (sessionStorage.getItem("ssCurtainSeen")) return;
+    sessionStorage.setItem("ssCurtainSeen", "1");
+    document.documentElement.classList.add("curtain-intro");
+  } catch (e) { /* storage blocked: skip the intro */ }
+})();
+</script>
 </head>
 <body>
+<!-- Curtain intro (see playCurtainReveal in main.js). First in <body> so the
+     cover paints before the page under it. -->
+<div id="curtainReveal" class="curtain-reveal" hidden aria-hidden="true"><canvas></canvas></div>
 
 <!-- The nav is sticky (see style.css) so Start Over stays reachable no matter
      how far down the page you are -- a separate fixed floating button was
@@ -977,9 +995,7 @@
 <script src="./config.js?v=20261022protect"></script>
 <script src="./catalog.js?v=20261027holecolor"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
-<!-- Start Designing curtain reveal (see playCurtainReveal in main.js). -->
-<div id="curtainReveal" class="curtain-reveal" hidden aria-hidden="true"><canvas></canvas></div>
-<script src="./main.js?v=20261027curtainc"></script>
+<script src="./main.js?v=20261027intro"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261027holecolor"></script> -->
 
