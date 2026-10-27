@@ -2666,7 +2666,7 @@ JACKET_CATALOG.buttonholeColorPlacement = {
   options: [
     { name: "Front & Sleeves", specName: "Front & Sleeves", displayName: "Front & All Sleeve Buttonholes", img: "./assets/jacket-contrastholes-front-and-sleeves.jpg" },
     { name: "Sleeves Only", specName: "Sleeves Only", displayName: "Sleeve Buttonholes Only", img: "./assets/jacket-contrastholes-sleeves-only.jpg" },
-    { name: "Bottom Sleeve Buttonhole", specName: "Bottom Sleeve Buttonhole", displayName: "Just the Bottom Sleeve Buttonhole", img: "./assets/jacket-contrastholes-cuff-edge-only.jpg" },
+    { name: "Bottom Sleeve Buttonhole", specName: "Bottom Sleeve Buttonhole", displayName: "Bottom Sleeve Buttonhole Only", img: "./assets/jacket-contrastholes-cuff-edge-only.jpg" },
   ],
 };
 // Felt under collar: the hidden structural layer sewn beneath the outer
