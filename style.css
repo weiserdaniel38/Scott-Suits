@@ -2059,7 +2059,7 @@ body.order-done-view > .process{display:none !important;}
    poster is the clip's first frame, shown the instant they tap; once the
    canvas has a frame it takes over and the poster goes. */
 .curtain-reveal{position:fixed;inset:0;z-index:100000;touch-action:none;
-  background:#f8f4ee url("./assets/curtain/curtain-poster.jpg?v=20261027a") center/auto 100% no-repeat;
+  background:#f8f4ee url("./assets/curtain/curtain-poster.jpg?v=20261027c") center/auto 100% no-repeat;
   opacity:1;transition:opacity .3s ease;}
 .curtain-reveal[hidden]{display:none;}
 .curtain-reveal.is-playing{background:none;}
