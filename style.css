@@ -739,6 +739,19 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 /* Multi-step flow: jacket -> pants -> measurements -> confirmation */
 .step{display:none;}
 .step.active{display:block;}
+/* Smooth page/question changes (Daniel, 2026-10-27): the outgoing content
+   fades out (.is-fading, added by fadeSwapContent in main.js) and the new
+   step or question fades in, instead of cutting over instantly. No fill
+   mode on the keyframes, so once they finish .is-fading can fade a step
+   back out again. */
+@keyframes ssFadeIn{from{opacity:0;}to{opacity:1;}}
+.step.active{animation:ssFadeIn .32s ease;}
+.step,.options{transition:opacity .24s ease;}
+.step.is-fading,.options.is-fading{opacity:0;transition-duration:.15s;}
+@media (prefers-reduced-motion: reduce){
+  .step.active{animation:none;}
+  .step,.options{transition:none;}
+}
 .measurements.step.active{padding:90px 32px;max-width:900px;margin:0 auto;}
 .personalinfo.step.active{padding:90px 32px;max-width:900px;margin:0 auto;}
 .confirmation.step.active{display:block;padding:90px 32px;max-width:900px;margin:0 auto;}
