@@ -2107,7 +2107,9 @@ function adminFactorySuit(suit, count, stateEl) {
       suit.factory_waybill = r.waybill;
       showState();
       const step = shippingLabel(r.shippingStatus);
-      return "Factory status: " + r.status + (step ? "\nCustomer sees: " + step + " (no message sent; use Save under Whole order to notify them)." : "");
+      const n = r.notified;
+      const sent = !n ? "" : n.email && n.email.ok ? (n.live ? " Emailed the customer." : " Test mode: emailed you, not the customer.") : " The email didn\u2019t go out" + (n.error ? ": " + n.error : n.email && n.email.detail ? ": " + n.email.detail : "") + ".";
+      return "Factory status: " + r.status + (step ? "\nCustomer sees: " + step + "." + sent : "");
     })
   );
   return box;
