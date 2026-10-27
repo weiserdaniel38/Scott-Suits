@@ -1396,9 +1396,10 @@ if (pastOrdersList) {
 
 // ============================================================
 // Shipping updates (supabase/sql/8_shipping_updates.sql and the
-// send-shipping-update edge function). The admin sets each order's status
-// and tracking number under My Account; the customer sees it under Past
-// Orders and, if the admin ticks the box, gets an email and a text.
+// send-shipping-update edge function). Each order's status follows the
+// factory's (kute-factory, hourly) and the customer is emailed at each
+// step; they see it under Past Orders. The admin's manual status box was
+// removed (Daniel, 2026-10-27).
 // ============================================================
 // In order: each order moves through the factory, comes to the shop for a
 // final check, then goes out to the customer. Same keys as the SQL check in
@@ -1418,8 +1419,6 @@ const SHIPPING_STATUSES = [
 // Tracking numbers are for the parcel to the customer, so they only show
 // from "Shipped to you" on.
 const SHIPPING_WITH_TRACKING = ["shipped", "out_for_delivery", "delivered"];
-const SHIPPING_CARRIERS = ["UPS", "USPS", "FedEx", "DHL", "Other"];
-const SHIPPING_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/send-shipping-update" : "";
 
 function trackingUrl(carrier, number) {
   const n = encodeURIComponent(String(number || "").trim());
@@ -1851,33 +1850,22 @@ function adminOrderRow(o) {
   row.className = "admin-ship-row";
   const date = o.created_at ? new Date(o.created_at).toLocaleDateString() : "";
   const suits = o.suits > 1 ? o.suits + " suits" : "1 suit";
-  const statusOpts = SHIPPING_STATUSES.map((s) => '<option value="' + s[0] + '">' + s[1] + "</option>").join("");
-  const carrierOpts = '<option value="">Carrier</option>' + SHIPPING_CARRIERS.map((c) => '<option value="' + c + '">' + c + "</option>").join("");
   row.innerHTML =
     '<summary class="admin-order-summary"><div class="admin-order-who"><b></b><span class="admin-order-sub"></span></div>' +
     '<div class="admin-order-tags"><span class="admin-badge admin-ship-badge"></span><span class="past-order-total"></span></div>' +
     '<span class="account-collapse-chevron" aria-hidden="true"></span></summary>' +
     '<div class="admin-order-body"><dl class="admin-order-info"></dl>' +
-    '<div class="admin-order-box"><span class="admin-order-label">Shipping &amp; customer updates</span>' +
-    '<div class="admin-ship-fields">' +
-    '<div class="measure-input-wrap"><select aria-label="Shipping status" class="ship-status">' + statusOpts + "</select></div>" +
-    '<div class="measure-input-wrap"><select aria-label="Carrier" class="ship-carrier">' + carrierOpts + "</select></div>" +
-    '<div class="measure-input-wrap ship-tracking"><input type="text" aria-label="Tracking number" placeholder="Tracking number" class="ship-number" autocomplete="off"></div>' +
-    "</div>" +
-    '<div class="admin-ship-actions"><label><input type="checkbox" class="ship-notify" checked> Email &amp; text the customer</label>' +
-    '<button type="button" class="btn-primary ship-save">Save</button><p class="admin-ship-result" hidden></p></div></div>' +
     '<div class="admin-order-manage"><span class="admin-order-label">Order</span><div class="admin-ship-actions">' +
     '<button type="button" class="admin-ship-factory admin-ship-send">Send to factory</button>' +
     '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
-    '<button type="button" class="admin-ship-delete">Delete order</button></div></div></div>';
+    '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div></div></div>';
   // Customer-typed text goes in with textContent, never as HTML.
   const name = row.querySelector(".admin-order-who b");
   name.textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
   if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) name.textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
   row.querySelector(".admin-order-sub").textContent = [date, suits].filter(Boolean).join(" \u00b7 ");
   const shipBadge = row.querySelector(".admin-ship-badge");
-  const showShipBadge = (status) => (shipBadge.textContent = shippingLabel(status) || "Order received");
-  showShipBadge(o.shipping_status);
+  shipBadge.textContent = shippingLabel(o.shipping_status) || "Order received";
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   const info = row.querySelector(".admin-order-info");
   const protection = adminProtectionLabel(o).replace(/^Alteration Protection: /, "");
@@ -1891,52 +1879,7 @@ function adminOrderRow(o) {
   });
   const hasSuitCards = !!(o.fabrics && o.fabrics.length);
   if (hasSuitCards) info.after(adminFabricList(o));
-  const statusSel = row.querySelector(".ship-status");
-  const carrierSel = row.querySelector(".ship-carrier");
-  const numberInput = row.querySelector(".ship-number");
-  const notifyBox = row.querySelector(".ship-notify");
-  const saveBtn = row.querySelector(".ship-save");
   const result = row.querySelector(".admin-ship-result");
-  statusSel.value = o.shipping_status || "";
-  carrierSel.value = o.tracking_carrier || "";
-  numberInput.value = o.tracking_number || "";
-
-  saveBtn.addEventListener("click", async () => {
-    const status = statusSel.value || null;
-    saveBtn.disabled = true;
-    result.hidden = false;
-    result.textContent = "Saving...";
-    try {
-      const { error } = await getSupabase().rpc("admin_update_shipping", {
-        p_order_id: o.order_id,
-        p_status: status,
-        p_carrier: carrierSel.value || null,
-        p_tracking: numberInput.value.trim() || null,
-      });
-      if (error) throw error;
-      showShipBadge(status);
-      if (!notifyBox.checked || !status) {
-        result.textContent = "Saved." + (status && !notifyBox.checked ? " No message sent." : "");
-        return;
-      }
-      result.textContent = "Saved. Sending...";
-      const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
-      const res = await fetch(SHIPPING_FN_URL, { method: "POST", headers, body: JSON.stringify({ order_id: o.order_id }) });
-      const r = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        result.textContent = "Saved, but the update wasn\u2019t sent: " + (r.error || "error " + res.status);
-        return;
-      }
-      const part = (label, x) =>
-        x && x.ok ? label + " sent to " + x.to : label + " not sent" + (x && x.detail ? " (" + x.detail + ")" : "");
-      result.textContent = "Saved. " + (r.live ? "" : "Test mode: ") + part("Email", r.email) + ". " + part("Text", r.sms) + ".";
-    } catch (err) {
-      console.error(err);
-      result.textContent = "Couldn\u2019t save: " + (err.message || err);
-    } finally {
-      saveBtn.disabled = false;
-    }
-  });
   const editBtn = row.querySelector(".admin-ship-edit");
   editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn));
   // Orders with suit cards send each suit from its own card; the order-wide
