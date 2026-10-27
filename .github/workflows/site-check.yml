@@ -1,0 +1,16 @@
+name: Site check (temporary)
+on:
+  push:
+    branches: [claude/project-thread-pe9omg]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for h in scottssuits.com www.scottssuits.com; do
+            echo "== $h"; dig +short $h
+            echo | openssl s_client -connect $h:443 -servername $h 2>/dev/null | openssl x509 -noout -subject -dates -ext subjectAltName || true
+            curl -sS -o /dev/null -w "https %{http_code} -> %{redirect_url}\n" https://$h/ || true
+            curl -sS -o /dev/null -w "http %{http_code} -> %{redirect_url}\n" http://$h/ || true
+          done
+          for ua in "ChatGPT-User/1.0; +https://openai.com/bot" "OAI-SearchBot/1.0"; do curl -sS -A "Mozilla/5.0 (compatible; $ua)" -o /dev/null -w "$ua %{http_code}\n" https://scottssuits.com/; done
