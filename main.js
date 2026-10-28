@@ -2988,6 +2988,7 @@ function openLightbox(src, name, catLabel, large, fabricCode, onConfirm, catKey)
       }
     : null;
   document.getElementById("lightbox").classList.add("open");
+  setLbView(catKey === "fabric");
   updateLbNav();
   if (large && fabricCode) {
     if (catKey === "fabric") {
@@ -3036,7 +3037,48 @@ function lbNavigate(d) {
   const a = lbSeq[k];
   openLightbox(a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
 }
+// Fabrics open "Draped": the photo on a hanging piece of cloth (see
+// fabric-drape.js), with the flat close-up one tap away. The choice sticks
+// while browsing. Other categories, and browsers without WebGL, only get
+// the close-up.
+let fabricDrape; // undefined until first needed, null when unavailable
+let lbView = "drape";
+function setLbView(isFabric) {
+  const card = document.querySelector("#lightbox .lightbox-card");
+  const toggle = document.getElementById("lbViewToggle");
+  if (isFabric && fabricDrape === undefined) {
+    fabricDrape = window.FabricDrape ? FabricDrape.create(document.getElementById("fabricDrape")) : null;
+  }
+  const drape = isFabric && !!fabricDrape && lbView === "drape";
+  toggle.hidden = !isFabric || !fabricDrape;
+  card.classList.toggle("lb-drape-on", drape);
+  toggle.querySelectorAll("button").forEach((b) => {
+    const on = b.dataset.view === (drape ? "drape" : "closeup");
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  if (!fabricDrape) return;
+  if (drape) {
+    if (lightboxImg.complete && lightboxImg.naturalWidth) fabricDrape.setImage(lightboxImg);
+    fabricDrape.start();
+  } else {
+    fabricDrape.stop();
+  }
+}
+document.getElementById("lbViewToggle").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-view]");
+  if (!b) return;
+  lbView = b.dataset.view;
+  setLbView(true);
+});
+// The close-up photo arrives in steps (thumbnail, then the sharp crop), so
+// the cloth picks up each one as it loads.
+lightboxImg.addEventListener("load", () => {
+  if (fabricDrape && document.querySelector("#lightbox .lightbox-card").classList.contains("lb-drape-on")) fabricDrape.setImage(lightboxImg);
+});
+
 function closeLightbox() {
+  if (fabricDrape) fabricDrape.stop();
   document.getElementById("lightbox").classList.remove("open");
   lbSeq = null;
   lbIdx = -1;
@@ -5625,6 +5667,53 @@ function previewStepActive() {
 function stepAfterDesign() {
   return previewStepActive() ? previewSection : measurementsSection;
 }
+
+// Fabric chips catch the light: the chip under the pointer tilts a little
+// toward it and a soft shine follows it, like turning cloth under a lamp.
+// On touch only the shine shows, where the finger presses. Styles in
+// glass.css (--tilt-x/--tilt-y/--shine-*).
+(function () {
+  const finePointer = window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let current = null;
+  const clear = (t) => {
+    if (!t) return;
+    ["--tilt-x", "--tilt-y", "--shine"].forEach((v) => t.style.removeProperty(v));
+  };
+  const light = (e) => {
+    const t = e.target.closest ? e.target.closest(".fabric-tile") : null;
+    if (t !== current) {
+      clear(current);
+      current = t;
+    }
+    if (!t) return;
+    const r = t.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    t.style.setProperty("--shine-x", Math.round(px * 100) + "%");
+    t.style.setProperty("--shine-y", Math.round(py * 100) + "%");
+    t.style.setProperty("--shine", "1");
+    if (finePointer && !still) {
+      t.style.setProperty("--tilt-x", ((0.5 - py) * 12).toFixed(1) + "deg");
+      t.style.setProperty("--tilt-y", ((px - 0.5) * 14).toFixed(1) + "deg");
+    }
+  };
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "mouse" || current) light(e);
+  }, { passive: true });
+  document.addEventListener("pointerdown", light, { passive: true });
+  const end = (e) => {
+    if (e.pointerType === "mouse") return;
+    clear(current);
+    current = null;
+  };
+  document.addEventListener("pointerup", end, { passive: true });
+  document.addEventListener("pointercancel", end, { passive: true });
+  document.addEventListener("pointerleave", () => {
+    clear(current);
+    current = null;
+  });
+})();
 
 // Leaving the designer for the step after it, with a short "here's your
 // suit" moment on top (see showSuitReveal).
