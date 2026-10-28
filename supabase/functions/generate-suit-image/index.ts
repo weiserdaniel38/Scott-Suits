@@ -208,7 +208,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Lower Pockets": {
     "Besom Pocket": "two straight, horizontal double-besom hip pockets (two thin piped lips each), no flaps",
     "Besom + Besom Ticket": "two straight, horizontal double-besom hip pockets (two thin piped lips each, no flaps), plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only",
-    "Flat Welt Pocket": "two hip pockets that look exactly like the normal chest welt pocket, only lower (at hip level) and a little wider: each is a flat, upright rectangular welt strip of the suit fabric about 1.5 cm tall sewn over a straight horizontal opening, with neatly stitched ends. NO flaps and NO besom (thin piped) openings",
+    "Flat Welt Pocket": "two hip pockets that look like a classic suit breast welt pocket (the ordinary chest pocket on most suits), only lower (at hip level) and a little wider: each is a flat, upright rectangular welt strip of the suit fabric about 2 cm tall sewn over a straight horizontal opening, with neatly stitched ends, clearly visible as a raised band. NO flaps and NO besom (thin piped slit) openings",
     "Besom Slant Pocket": "two double-besom hip pockets (two thin piped lips each, no flaps) cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right)",
     "Flap Pockets": "two straight horizontal hip pockets with rectangular flaps",
     "Flap Pockets + Besom Ticket": "two straight horizontal hip pockets with rectangular flaps, plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only",
@@ -528,7 +528,14 @@ const CHEST_REF: Record<string, string> = {
 
 // Flat welt hip pockets kept coming out as flap pockets.
 const WELT_NOT_FLAP =
-  "single WELT pockets, NOT flap pockets: on each hip a narrow rectangular welt strip of the suit fabric stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like the chest pocket; nothing hangs down over the opening, there is no flap and no shadow under a flap";
+  "single WELT pockets, NOT flap pockets and NOT besom slits: on each hip a clearly visible rectangular welt strip of the suit fabric, about 2 cm tall and 15 cm wide, stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like a classic suit breast welt pocket only lower; nothing hangs down over the opening, there is no flap and no shadow under a flap, and it is never a thin slit edged by piped lips";
+// The Flat Welt hip pockets were described as "like the chest pocket", so on a
+// jacket with a besom chest pocket the model drew besom hip pockets too.
+function weltHipNote(spec: string): string {
+  const chest = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
+  return /Normal Pocket|Boat Shape/.test(chest) ? "" :
+    " This jacket's chest pocket is a different style (" + (chest || "none") + "); do NOT copy it for the hip pockets: the hip pockets have the raised welt strip, the chest pocket does not";
+}
 
 // Slanted hip pockets came out level (straight flaps) even with the old
 // "end nearest the front buttons higher" wording and a 17 degree reference,
@@ -797,7 +804,7 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
     out.push("- CHEST POCKET (" + chest + "): " + OPTION_LOOKS["Chest Pocket"][chest] + ". " + CHEST_NOT[chest] + "." + (chest === "No Pocket" ? "" : " " + BESOM_CHEST_NOT + "."));
   }
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
-    out.push("- HIP POCKETS: " + WELT_NOT_FLAP + ".");
+    out.push("- HIP POCKETS: " + WELT_NOT_FLAP + "." + weltHipNote(spec) + (weltHipNote(spec) ? "." : ""));
   }
   out.push(...monogramRules(spec));
   if (buttonText(spec, buttonPhoto)) out.push("- BUTTONS: " + buttonText(spec, buttonPhoto) + ".");
@@ -957,7 +964,7 @@ function fixedRules(spec: string, buttonPhoto = false): string {
   }
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     rules.push(
-      "- The hip pockets are WELT pockets identical in style to the chest welt pocket, just lower: a flat rectangular fabric welt strip over each opening. They have NO flaps and are NOT besom (thin piped slit) pockets.",
+      "- MOST IMPORTANT: the hip pockets are WELT pockets like a classic suit breast welt pocket, just lower: a clearly visible flat rectangular fabric welt strip, about 2 cm tall, over each opening, in the front view and every close-up. They have NO flaps and are NOT besom (thin piped slit) pockets." + weltHipNote(spec) + (weltHipNote(spec) ? "." : ""),
     );
   }
   const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
