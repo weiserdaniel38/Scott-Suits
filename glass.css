@@ -116,7 +116,7 @@ html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-ti
 html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,0%),rgba(255,255,255,0.42),rgba(255,255,255,0.10) 32%,rgba(255,255,255,0) 60%);opacity:var(--shine,0);transition:opacity .3s ease;}
 /* Tapping a chip: rings of light spread from the finger and the chip gives a
    small wave, like touching cloth. */
-html[data-brand="scott"] .fabric-tile .chip-ripple{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;pointer-events:none;border:1.5px solid rgba(255,255,255,0.55);box-shadow:0 0 0 6px rgba(255,255,255,0.10),0 0 0 14px rgba(255,255,255,0.05);animation:chipRipple .85s cubic-bezier(.2,.7,.3,1) forwards;}
-@keyframes chipRipple{from{transform:scale(1);opacity:1;}to{transform:scale(18);opacity:0;}}
-html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile.chip-pressed{animation:chipWave .6s ease;}
-@keyframes chipWave{0%{scale:1;}25%{scale:.955 1.02;}55%{scale:1.025 .98;}100%{scale:1;}}
+html[data-brand="scott"] .fabric-tile .chip-ripple{position:absolute;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,0.16),rgba(255,255,255,0) 70%);animation:chipRipple .9s ease-out forwards;}
+@keyframes chipRipple{from{transform:scale(.6);opacity:1;}to{transform:scale(1.6);opacity:0;}}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile.chip-pressed{animation:chipWave .7s ease;}
+@keyframes chipWave{0%{scale:1;}35%{scale:.988 1.004;}70%{scale:1.004 .997;}100%{scale:1;}}

@@ -13,29 +13,30 @@ uniform float uTime, uYaw, uAspect;
 // Up to four touch ripples: x, y on the sheet, start time, strength.
 uniform vec4 uRip[4];
 varying vec2 vUv;
-varying vec3 vNormal, vPos;
-// Depth of the cloth at (x, y): folds that start small at the top edge,
-// where the cloth is held, and deepen toward the hem, drifting slowly.
+varying vec3 vNormal, vPos, vBase;
+// Depth of the cloth at (x, y): the top quarter hangs flat from where it is
+// held, then a few broad, soft folds open up toward the hem, drifting slowly.
 float fold(vec2 p) {
   float hang = clamp((1.0 - p.y) * 0.5, 0.0, 1.0);
-  float a = 0.006 + 0.26 * pow(hang, 1.1);
+  float open = smoothstep(0.18, 1.0, hang);
+  float a = 0.15 * pow(open, 1.3);
   float t = uTime;
-  float z = sin(p.x * 7.0 + 0.6 + sin(t * 0.7) * 0.35 * hang) * 0.55
-          + sin(p.x * 12.5 - 1.3 + t * 0.45 * hang) * 0.25
-          + sin(p.x * 3.1 + 2.0 + sin(t * 0.5) * 0.5 * hang) * 0.35;
-  // Ripples spread out from where the cloth was touched and fade. The held
-  // top edge stays still.
+  float z = sin(p.x * 4.6 + 0.6 + sin(t * 0.5) * 0.25 * open) * 0.6
+          + sin(p.x * 2.3 + 2.0 + sin(t * 0.35) * 0.3 * open) * 0.4;
+  // A touch gives the cloth a faint, slow push under the finger that eases
+  // back, the way linen gives, with no rings travelling outward. The held
+  // top stays still.
   float r = 0.0;
   for (int i = 0; i < 4; i++) {
     vec4 rp = uRip[i];
     float age = t - rp.z;
-    if (rp.w <= 0.0 || age < 0.0 || age > 2.5) continue;
-    float dist = length(p - rp.xy);
-    float front = age * 1.5;
-    float reach = 1.0 - smoothstep(front - 0.25, front + 0.05, dist);
-    r += rp.w * 0.075 * exp(-age * 1.5) * exp(-dist * 0.9) * reach * sin(dist * 15.0 - age * 22.0);
+    if (rp.w <= 0.0 || age < 0.0 || age > 2.0) continue;
+    vec2 dv = p - rp.xy;
+    float spread = 0.18 + age * 0.12;
+    float bump = exp(-dot(dv, dv) / spread);
+    r -= rp.w * 0.022 * bump * exp(-age * 2.2) * cos(age * 4.0);
   }
-  return z * a + r * clamp(hang * 3.0, 0.0, 1.0);
+  return z * a + r * smoothstep(0.05, 0.35, hang);
 }
 vec3 place(vec2 p) {
   float hang = clamp((1.0 - p.y) * 0.5, 0.0, 1.0);
@@ -57,6 +58,7 @@ void main() {
   n = vec3(c * n.x + s * n.z, n.y, -s * n.x + c * n.z);
   vPos = pos;
   vNormal = n;
+  vBase = vec3(s, 0.0, c);
   vUv = vec2(p.x * 0.5 + 0.5, 0.5 - p.y * 0.5);
   // Simple perspective: the camera sits in front, a little above center.
   float d = 3.1;
@@ -70,7 +72,7 @@ uniform sampler2D uTex;
 uniform vec4 uCrop;
 uniform float uRepeat;
 varying vec2 vUv;
-varying vec3 vNormal, vPos;
+varying vec3 vNormal, vPos, vBase;
 void main() {
   vec2 uv = vUv * uRepeat;
   uv = abs(mod(uv + 1.0, 2.0) - 1.0);
@@ -84,8 +86,20 @@ void main() {
   float wrap = max((dot(n, L) + 0.35) / 1.35, 0.0);
   vec3 H = normalize(L + V);
   float sheen = pow(max(dot(n, H), 0.0), 18.0) * 0.18 + pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.12;
-  float light = 0.24 + 0.78 * wrap + 0.16 * diff;
-  gl_FragColor = vec4(col * light + vec3(sheen), 1.0);
+  // Shading is relative to the unfolded panel at its current turn, so a flat panel shows
+  // the photo's true color. Light fabrics get gentler shading and almost no
+  // sheen, and a soft shoulder stops whites from blowing out.
+  float bl = dot(normalize(vBase), L);
+  float flatShade = 0.24 + 0.78 * max((bl + 0.35) / 1.35, 0.0) + 0.16 * max(bl, 0.0);
+  float shade = 0.24 + 0.78 * wrap + 0.16 * diff - flatShade;
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  float bright = smoothstep(0.45, 0.85, lum);
+  float light = 1.0 + shade * mix(1.1, 0.75, bright);
+  sheen *= 1.0 - 0.85 * bright;
+  vec3 c = col * light + vec3(sheen);
+  vec3 over = max(c - 0.9, 0.0);
+  c = c - over + 0.1 * (1.0 - exp(-over / 0.1));
+  gl_FragColor = vec4(c, 1.0);
 }`;
 
   function compile(gl, type, src) {
@@ -181,8 +195,8 @@ void main() {
     // Drag sideways to turn the cloth; it settles back to a slow sway.
     let yaw = 0, dragYaw = 0, dragging = null, raf = 0, t0 = performance.now();
     const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // Touching the cloth sends a ripple out from the finger; dragging keeps
-    // making smaller ones along the way (not with reduced motion).
+    // Touching the cloth gives it a faint push under the finger; dragging
+    // keeps giving softer ones along the way (not with reduced motion).
     const rips = new Float32Array(16);
     let ripNext = 0, lastRip = 0;
     function ripple(e, strength) {
@@ -206,7 +220,7 @@ void main() {
     canvas.addEventListener("pointermove", (e) => {
       if (!dragging) return;
       dragYaw = Math.max(-1.1, Math.min(1.1, dragging.yaw + (e.clientX - dragging.x) / 160));
-      if (performance.now() - lastRip > 140) ripple(e, 0.55);
+      if (performance.now() - lastRip > 220) ripple(e, 0.45);
       if (still) draw();
     });
     const release = () => (dragging = null);
