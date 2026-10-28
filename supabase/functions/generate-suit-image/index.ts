@@ -208,7 +208,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Lower Pockets": {
     "Besom Pocket": "two straight, horizontal double-besom hip pockets (two thin piped lips each), no flaps",
     "Besom + Besom Ticket": "two straight, horizontal double-besom hip pockets (two thin piped lips each, no flaps), plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only",
-    "Flat Welt Pocket": "two hip pockets that look like a classic suit breast welt pocket (the ordinary chest pocket on most suits), only lower (at hip level) and a little wider: each is a flat, upright rectangular welt strip of the suit fabric about 2 cm tall sewn over a straight horizontal opening, with neatly stitched ends, clearly visible as a raised band. NO flaps and NO besom (thin piped slit) openings",
+    "Flat Welt Pocket": "two hip pockets that look like a classic suit breast welt pocket (the ordinary chest pocket on most suits), only lower (at hip level) and a little wider: each is a THIN, flat, upright rectangular welt strip of the suit fabric only about 2 cm tall (about one-seventh as tall as it is wide, far thinner than a pocket flap) sewn over a straight horizontal opening, with neatly stitched ends, clearly visible as a raised band. NO flaps and NO besom (thin piped slit) openings",
     "Besom Slant Pocket": "two double-besom hip pockets (two thin piped lips each, no flaps) cut on a DIAGONAL of about 20 degrees, each rising toward the front buttons ('/' on the left of the picture, '\\' on the right)",
     "Flap Pockets": "two straight horizontal hip pockets with rectangular flaps",
     "Flap Pockets + Besom Ticket": "two straight horizontal hip pockets with rectangular flaps, plus ONE smaller double-besom ticket pocket (two thin lips, no flap) about 4 cm above the wearer's right hip pocket only",
@@ -528,7 +528,7 @@ const CHEST_REF: Record<string, string> = {
 
 // Flat welt hip pockets kept coming out as flap pockets.
 const WELT_NOT_FLAP =
-  "single WELT pockets, NOT flap pockets and NOT besom slits: on each hip a clearly visible rectangular welt strip of the suit fabric, about 2 cm tall and 15 cm wide, stands UP from the pocket opening (the opening is along its top edge) and is stitched down flat at both short ends, exactly like a classic suit breast welt pocket only lower; nothing hangs down over the opening, there is no flap and no shadow under a flap, and it is never a thin slit edged by piped lips";
+  "single WELT pockets, NOT flap pockets and NOT besom slits: on each hip a clearly visible but THIN rectangular welt strip of the suit fabric, only about 2 cm tall and 15 cm wide (about one-seventh as tall as it is wide, less than half the height of a pocket flap), stands UP from the pocket opening (the opening is along its top edge) and is sewn flat to the jacket along its bottom edge and both short ends (no free hanging edge anywhere), exactly like a classic suit breast welt pocket only lower; nothing hangs down over the opening, there is no flap and no shadow under a flap, and it is never a thin slit edged by piped lips";
 // The Flat Welt hip pockets were described as "like the chest pocket", so on a
 // jacket with a besom chest pocket the model drew besom hip pockets too.
 function weltHipNote(spec: string): string {
@@ -964,7 +964,7 @@ function fixedRules(spec: string, buttonPhoto = false): string {
   }
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     rules.push(
-      "- MOST IMPORTANT: the hip pockets are WELT pockets like a classic suit breast welt pocket, just lower: a clearly visible flat rectangular fabric welt strip, about 2 cm tall, over each opening, in the front view and every close-up. They have NO flaps and are NOT besom (thin piped slit) pockets." + weltHipNote(spec) + (weltHipNote(spec) ? "." : ""),
+      "- MOST IMPORTANT: the hip pockets are WELT pockets like a classic suit breast welt pocket, just lower: a clearly visible but THIN flat rectangular fabric welt strip, only about 2 cm tall (about one-seventh as tall as it is wide, never a tall flap-sized rectangle), over each opening, exactly like the pocket reference photo, in the front view and every close-up. They have NO flaps and are NOT besom (thin piped slit) pockets." + weltHipNote(spec) + (weltHipNote(spec) ? "." : ""),
     );
   }
   const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
@@ -1046,7 +1046,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       const slanted = /Slant/.test(lower);
       lines.push(`Image ${n++} is a black-and-white catalog line drawing, a close-up of the lower front of the jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type${/Ticket/.test(lower) ? ", the ticket pocket (above the wearer's right hip pocket, the left one in the picture, and on that side only)" : ""} and their angle: ${slanted ? SLANT_HIP + ", at least as steep as in this drawing" : "exactly as drawn, not slanted"}. Copy only the pockets. Render them photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "pocket reference") {
-      lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen single welt (flat welt) hip pocket, two close-ups: copy EXACTLY its look: ${WELT_NOT_FLAP}, with no besom piping. Render the pockets photorealistically in the suit fabric, never as a drawing.`);
+      lines.push(`Image ${n++} is a grey 3D render of the customer's chosen single welt (flat welt) hip pockets (top: the lower front of the jacket; bottom: a close-up of one pocket): copy EXACTLY their look, especially how THIN the welt strip is and where it sits: ${WELT_NOT_FLAP}, with no besom piping. Copy only the pockets, not the render's color, buttons or lapels. Render them photorealistically in the suit fabric.`);
     } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
@@ -1273,7 +1273,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
   const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
   const drawings = swatches.filter(isDrawing).sort((a, b) => rank(a) - rank(b)).slice(0, 8);
-  // Single welt hip pockets: Daniel's own drawing of how they look.
+  // Single welt hip pockets: a crop of the 3D model's welt (Daniel, 2026-10-28).
   const pocketRef: Ref[] = /^Lower Pockets: Flat Welt Pocket$/m.test(spec)
     ? [{ label: "pocket reference", src: "./assets/jacket-pocketref-flatwelt.jpg" }]
     : [];
