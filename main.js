@@ -5668,7 +5668,6 @@ function stepAfterDesign() {
   return previewStepActive() ? previewSection : measurementsSection;
 }
 
-<<<<<<< HEAD
 // Fabric chips catch the light: the chip under the pointer tilts a little
 // toward it and a soft shine follows it, like turning cloth under a lamp.
 // On touch only the shine shows, where the finger presses. Styles in
@@ -5716,8 +5715,6 @@ function stepAfterDesign() {
   });
 })();
 
-=======
->>>>>>> origin/main
 // Leaving the designer for the step after it, with a short "here's your
 // suit" moment on top (see showSuitReveal).
 function finishDesign(fromSection) {
