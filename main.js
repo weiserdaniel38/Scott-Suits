@@ -5586,7 +5586,7 @@ document.getElementById("continueBtn").addEventListener("click", () => {
   // "Jacket Only" and the Classic Suit preset have no Pants step -- skip
   // straight to Measurements.
   if (!hasPantsStep()) {
-    goToStep(jacketSection, stepAfterDesign());
+    finishDesign(jacketSection);
     return;
   }
   // First time into Pants starts at its first question; coming back to
@@ -5612,7 +5612,7 @@ document.getElementById("continuePantsBtn").addEventListener("click", () => {
     alert("Select an option for: " + pantsDesigner.missingLabels().join(", "));
     return;
   }
-  goToStep(pantsSection, stepAfterDesign());
+  finishDesign(pantsSection);
 });
 
 // The Preview page (see index.html) sits between designing and
@@ -5624,6 +5624,100 @@ function previewStepActive() {
 }
 function stepAfterDesign() {
   return previewStepActive() ? previewSection : measurementsSection;
+}
+
+// Leaving the designer for the step after it, with a short "here's your
+// suit" moment on top (see showSuitReveal).
+function finishDesign(fromSection) {
+  goToStep(fromSection, stepAfterDesign());
+  showSuitReveal();
+}
+
+// "Your Smoky Onyx Double Breasted Suit": a glass card that rises over the
+// page when a design is finished, with the fabric photo, the jacket
+// drawing, the suit's name (fabric + single/double breasted) and a few of
+// its details. Shown once per design: finishing again without changes
+// doesn't show it again.
+let lastRevealedSpec = "";
+function showSuitReveal() {
+  const spec = currentDesignSpec();
+  if (!spec || spec === lastRevealedSpec || document.querySelector(".suit-reveal")) return;
+  const jacket = hasJacketStep();
+  const sel = jacket ? jacketDesigner.getSelections() : pantsDesigner.getSelections();
+  const cat = jacket ? JACKET_CATALOG : PANTS_CATALOG;
+  const fabric = (cat.fabric.options || []).find((o) => o.name === sel.fabric);
+  if (!fabric) return;
+  lastRevealedSpec = spec;
+
+  const fabricName = fabric.displayName || fabric.name;
+  let kind = "Pants";
+  let sketch = "./assets/suit-type-pants-only.png?v=20261022";
+  let details = [pantsDesigner.displayValue("frontPleat"), pantsDesigner.displayValue("frontPocket"), pantsDesigner.displayValue("bottomStyle")];
+  if (jacket) {
+    const front = JACKET_CATALOG.frontbutton.options.find((o) => o.name === sel.frontbutton) || {};
+    kind = (front.section ? front.section + " " : "") + (isJacketOnlyType(currentSuitType) ? "Jacket" : "Suit");
+    sketch = front.img || "./assets/suit-type-jacket-only.png?v=20261006d";
+    const buttons = String(front.displayName || "").split(", ").slice(1).join(", ");
+    const lining = jacketDesigner.displayValue("lining");
+    details = [jacketDesigner.displayValue("collar"), buttons, lining ? "Lining: " + lining : ""];
+  }
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text) n.textContent = text;
+    return n;
+  };
+  const wrap = el("div", "suit-reveal");
+  wrap.setAttribute("role", "dialog");
+  wrap.setAttribute("aria-modal", "true");
+  wrap.setAttribute("aria-labelledby", "suitRevealTitle");
+  const card = el("div", "suit-reveal-card");
+  const close = el("button", "suit-reveal-close", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Close");
+
+  const art = el("div", "suit-reveal-art");
+  const swatch = el("div", "suit-reveal-swatch");
+  swatch.style.backgroundColor = fabric.hex || "";
+  if (fabric.img) swatch.style.backgroundImage = 'url("' + fabric.img + '")';
+  swatch.appendChild(el("span", "suit-reveal-shine"));
+  const drawing = el("div", "suit-reveal-sketch");
+  const img = el("img");
+  img.src = sketch;
+  img.alt = "";
+  drawing.appendChild(img);
+  art.append(swatch, drawing);
+
+  const title = el("h2", "suit-reveal-title");
+  title.id = "suitRevealTitle";
+  title.append(el("span", "", "Your " + fabricName), el("span", "", kind));
+  const list = el("ul", "suit-reveal-details");
+  details.filter(Boolean).forEach((d) => list.appendChild(el("li", "", d)));
+  const go = el("button", "btn-primary suit-reveal-go", (previewStepActive() ? "Preview your suit" : "Add your measurements") + " →");
+  go.type = "button";
+
+  card.append(close, art, el("div", "suit-reveal-eyebrow", "Designed by you"), title, list, go);
+  wrap.appendChild(card);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => wrap.classList.add("open"));
+  go.focus({ preventScroll: true });
+
+  const dismiss = () => {
+    document.removeEventListener("keydown", onKey);
+    wrap.classList.remove("open");
+    wrap.classList.add("closing");
+    setTimeout(() => wrap.remove(), 320);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") dismiss();
+  };
+  document.addEventListener("keydown", onKey);
+  go.addEventListener("click", dismiss);
+  close.addEventListener("click", dismiss);
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap) dismiss();
+  });
 }
 
 document.getElementById("backFromPreviewBtn").addEventListener("click", () => {
