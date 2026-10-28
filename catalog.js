@@ -2858,6 +2858,79 @@ PANTS_CATALOG.monogramThreadColor.description = "The thread your pants monogram 
 // packed 6x6 per sheet) + grid position. Regenerated for the 26SU10 Elite
 // Wool fabric set (74 fabrics) -- see pack_sprites.py.
 const FABRIC_ZOOM_TILE_SIZE = 1560;
+// Fabrics whose pop-up opens on the flat Close-up instead of Draped (Daniel,
+// 2026-10-28: "wherever it looks best draped have that as a preset").
+// Chosen by rendering every fabric draped: these are the very dark ones,
+// where the cloth turns into a dark shape and the weave or pattern only
+// shows up close. Every other fabric, including any added later, opens
+// Draped. Customers can still switch either way.
+const FABRIC_CLOSEUP_FIRST = new Set([
+  "26SU218.DBV3529", // Smoky Onyx
+  "26SU209.DLL0177", // Rich Ink
+  "26SU204.DPP0191", // Rich Onyx
+  "26SU203.DLL0160", // Dark Smoke
+  "26SU245.DZZ0072", // Rich Raven
+  "26SU244.DZZ0071", // Dark Charcoal
+  "26SU112.DAV7777", // Onyx
+  "26L8.DBT6768", // Black
+  "26SU281.DZZ0017", // Classic Onyx
+  "26SU275.DZZ0021", // Fine Onyx
+  "26SU377.DEB526A", // Heritage Onyx
+  "26SU207.DLL0175", // Sterling Cobalt
+  "26SU230.DZZ0129", // Deep Steel Blue
+  "26SU208.DLL0176", // Dark Slate Blue
+  "26SU185.DZZ0105", // Deep Slate Blue
+  "26SU229.DZZ0128", // Deepest Indigo Blue
+  "26SU247.DZZ0073", // Rich Steel Blue
+  "26SU217.DBV3530", // Sterling Midnight Blue
+  "26SU216.DBV3531", // Sterling Navy
+  "26SU213.DEE1018", // Sterling Indigo Blue
+  "26SU212.DBQ796A", // Rich Slate Blue
+  "26SU246.DZZ0069", // Deepest Steel Blue
+  "26SU206.DLL0174", // Rich Cobalt
+  "26SU087.DBV402A", // Fine Cobalt
+  "26SU088.DBV403A", // Midnight Navy
+  "26SU110.DBV4765", // Classic Midnight Navy
+  "26SU111.DBV5304", // Rich Midnight Navy
+  "26SU280.DZZ0016", // Fine Midnight Navy
+  "26SU376.DEB524A", // Navy
+  "26SU235.DZZ0132", // Deepest Amethyst
+  "26SU241.DZZ0057", // Smoky Plum
+  "26SU201.DLL0168", // Deep Berry
+  "26SU211.DBP323A", // Deepest Mulberry Red
+  "26SU199.DLL0169", // Sterling Crimson
+  "26SU200.DLL0170", // Dark Terracotta
+  "26SU198.DLL0172", // Rich Chestnut
+  "26SU243.DZZ0070", // Deepest Brick
+  "26SU190.DPP0193", // Rich Midnight Blue
+  "26SU188.DZZ0109", // Smoky Eggplant
+  "26SU187.DZZ0108", // Dark Midnight Blue
+  "26SU234.DZZ0061", // Deepest Cobalt
+  "26SU096.DZZ0013", // Classic Navy Stripe
+  "26SU098.DZZ0086", // Midnight Navy Stripe
+  "26RE104.DAY9251", // Rich Midnight Navy Stripe
+  "26SU237.DZZ0134", // Deepest Onyx
+  "26SU236.DZZ0133", // Smoky Mulberry
+  "26SU242.DZZ0054", // Rich Black
+  "26SU192.DZZ0102", // Dark Mulberry
+  "26SU231.DZZ0130", // Sterling Jet
+  "26SU233.DZZ0060", // Deepest Charcoal
+  "26SU184.DZZ0103", // Deep Graphite
+  "26SU195.DZZ0099", // Smoky Olive
+  "26SU232.DZZ0131", // Deep Smoke
+  "26SU191.DZZ0101", // Deep Raven
+  "26SU186.DZZ0107", // Deep Indigo Blue
+  "26SU228.DZZ0127", // Smoky Slate Blue
+  "26SU240.DZZ0056", // Deepest Midnight Blue
+  "26SU238.DZZ0053", // Deepest Sienna
+  "26SU194.DZZ0100", // Deep Walnut
+  "26SU224.DZZ0124", // Dark Steel Blue
+  "26SU223.DZZ0125", // Deepest Slate Blue
+  "26SU179.DZZ0114", // Dark Cobalt
+  "26SU183.DGG1120", // Deep Cobalt
+  "26SU181.DGG1118", // Deep Midnight Blue
+]);
+
 const FABRIC_ZOOM_MAP = {
   "26SU173.DZZ0110": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 0, row: 0 },
   "26SU175.DGG1132": { sprite: "./assets/fabric-zoom-sprite-00.avif", col: 1, row: 0 },

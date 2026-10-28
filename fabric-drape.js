@@ -10,6 +10,8 @@
   const VERT = `
 attribute vec2 aPos;
 uniform float uTime, uYaw, uAspect;
+// Up to four touch ripples: x, y on the sheet, start time, strength.
+uniform vec4 uRip[4];
 varying vec2 vUv;
 varying vec3 vNormal, vPos;
 // Depth of the cloth at (x, y): folds that start small at the top edge,
@@ -21,7 +23,19 @@ float fold(vec2 p) {
   float z = sin(p.x * 7.0 + 0.6 + sin(t * 0.7) * 0.35 * hang) * 0.55
           + sin(p.x * 12.5 - 1.3 + t * 0.45 * hang) * 0.25
           + sin(p.x * 3.1 + 2.0 + sin(t * 0.5) * 0.5 * hang) * 0.35;
-  return z * a;
+  // Ripples spread out from where the cloth was touched and fade. The held
+  // top edge stays still.
+  float r = 0.0;
+  for (int i = 0; i < 4; i++) {
+    vec4 rp = uRip[i];
+    float age = t - rp.z;
+    if (rp.w <= 0.0 || age < 0.0 || age > 2.5) continue;
+    float dist = length(p - rp.xy);
+    float front = age * 1.5;
+    float reach = 1.0 - smoothstep(front - 0.25, front + 0.05, dist);
+    r += rp.w * 0.075 * exp(-age * 1.5) * exp(-dist * 0.9) * reach * sin(dist * 15.0 - age * 22.0);
+  }
+  return z * a + r * clamp(hang * 3.0, 0.0, 1.0);
 }
 vec3 place(vec2 p) {
   float hang = clamp((1.0 - p.y) * 0.5, 0.0, 1.0);
@@ -128,7 +142,7 @@ void main() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
     const u = {};
-    ["uTime", "uYaw", "uAspect", "uTex", "uCrop", "uRepeat"].forEach((n) => (u[n] = gl.getUniformLocation(prog, n)));
+    ["uTime", "uYaw", "uAspect", "uTex", "uCrop", "uRepeat", "uRip"].forEach((n) => (u[n] = gl.getUniformLocation(prog, n)));
 
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -143,8 +157,8 @@ void main() {
     gl.enable(gl.DEPTH_TEST);
 
     // Both photos have pinked (zigzag) edges, so only their inside is used:
-    // the middle of a small thumbnail, or nearly all of the sharp close-up,
-    // mirrored once so the weave reads at a natural size across the cloth.
+    // the middle of a small thumbnail, or nearly all of the sharp close-up.
+    // The cloth is a little taller than the photo, so the hem mirrors it.
     function setImage(img) {
       if (!img || !img.naturalWidth) return;
       const size = Math.min(1024, Math.max(img.naturalWidth, img.naturalHeight));
@@ -160,20 +174,39 @@ void main() {
       const small = img.naturalWidth < 400;
       if (small) gl.uniform4f(u.uCrop, 0.22, 0.22, 0.56, 0.56);
       else gl.uniform4f(u.uCrop, 0.06, 0.06, 0.88, 0.88);
-      gl.uniform1f(u.uRepeat, small ? 1.0 : 1.25);
+      gl.uniform1f(u.uRepeat, 1.0);
       draw();
     }
 
     // Drag sideways to turn the cloth; it settles back to a slow sway.
     let yaw = 0, dragYaw = 0, dragging = null, raf = 0, t0 = performance.now();
     const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Touching the cloth sends a ripple out from the finger; dragging keeps
+    // making smaller ones along the way (not with reduced motion).
+    const rips = new Float32Array(16);
+    let ripNext = 0, lastRip = 0;
+    function ripple(e, strength) {
+      if (still) return;
+      const r = canvas.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+      const ny = 1 - ((e.clientY - r.top) / r.height) * 2;
+      const k = 3.1 / 1.95;
+      const x = (nx * (r.width / r.height) * k) / Math.max(0.4, Math.cos(yaw));
+      const y = ny * k + 0.05;
+      rips.set([x, y, (performance.now() - t0) / 1000, strength], ripNext * 4);
+      ripNext = (ripNext + 1) % 4;
+      lastRip = performance.now();
+    }
     canvas.addEventListener("pointerdown", (e) => {
       dragging = { x: e.clientX, yaw: dragYaw };
       canvas.setPointerCapture(e.pointerId);
+      ripple(e, 1);
     });
     canvas.addEventListener("pointermove", (e) => {
       if (!dragging) return;
       dragYaw = Math.max(-1.1, Math.min(1.1, dragging.yaw + (e.clientX - dragging.x) / 160));
+      if (performance.now() - lastRip > 140) ripple(e, 0.55);
       if (still) draw();
     });
     const release = () => (dragging = null);
@@ -197,6 +230,7 @@ void main() {
       gl.uniform1f(u.uTime, t);
       gl.uniform1f(u.uYaw, yaw);
       gl.uniform1f(u.uAspect, w / h);
+      gl.uniform4fv(u.uRip, rips);
       gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
     }
     function loop() {
