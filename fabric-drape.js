@@ -23,9 +23,10 @@ float fold(vec2 p) {
   float t = uTime;
   float z = sin(p.x * 4.6 + 0.6 + sin(t * 0.5) * 0.25 * open) * 0.6
           + sin(p.x * 2.3 + 2.0 + sin(t * 0.35) * 0.3 * open) * 0.4;
-  // A touch gives the cloth a faint push under the finger and a slight,
-  // fine ripple that spreads a short way and dies out quickly, the way
-  // linen moves rather than water. The held top stays still.
+  // A touch gives the cloth a faint push under the finger and a slight
+  // ripple of straight, upright waves that runs sideways across the folds
+  // and dies out quickly, the way linen moves rather than water. The held
+  // top stays still.
   float r = 0.0;
   for (int i = 0; i < 4; i++) {
     vec4 rp = uRip[i];
@@ -35,8 +36,9 @@ float fold(vec2 p) {
     float spread = 0.18 + age * 0.12;
     float bump = exp(-dot(dv, dv) / spread);
     r -= rp.w * 0.022 * bump * exp(-age * 2.2) * cos(age * 4.0);
-    float front = (length(dv) - age * 0.7) / 0.2;
-    r += rp.w * 0.045 * sin(front * 2.8) * exp(-front * front) * exp(-age * 1.7);
+    float front = (abs(dv.x) - age * 0.7) / 0.2;
+    float reach = exp(-dv.y * dv.y / 0.6);
+    r += rp.w * 0.045 * sin(front * 2.8) * exp(-front * front) * reach * exp(-age * 1.7);
   }
   return z * a + r * smoothstep(0.05, 0.35, hang);
 }
