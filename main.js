@@ -2988,6 +2988,7 @@ function openLightbox(src, name, catLabel, large, fabricCode, onConfirm, catKey)
       }
     : null;
   document.getElementById("lightbox").classList.add("open");
+  if (catKey === "fabric") lbView = lbDefaultView(fabricCode);
   setLbView(catKey === "fabric");
   updateLbNav();
   if (large && fabricCode) {
@@ -3037,12 +3038,16 @@ function lbNavigate(d) {
   const a = lbSeq[k];
   openLightbox(a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
 }
-// Fabrics open "Draped": the photo on a hanging piece of cloth (see
-// fabric-drape.js), with the flat close-up one tap away. The choice sticks
-// while browsing. Other categories, and browsers without WebGL, only get
-// the close-up.
+// Fabrics can show "Draped": the photo on a hanging piece of cloth (see
+// fabric-drape.js), or the flat close-up, one tap apart. Other categories,
+// and browsers without WebGL, only get the close-up.
 let fabricDrape; // undefined until first needed, null when unavailable
 let lbView = "drape";
+// Each fabric opens on its own best view (see FABRIC_CLOSEUP_FIRST in
+// catalog.js); the switch then changes it for that fabric only.
+function lbDefaultView(fabricCode) {
+  return typeof FABRIC_CLOSEUP_FIRST !== "undefined" && FABRIC_CLOSEUP_FIRST.has(fabricCode) ? "closeup" : "drape";
+}
 function setLbView(isFabric) {
   const card = document.querySelector("#lightbox .lightbox-card");
   const toggle = document.getElementById("lbViewToggle");
@@ -5701,7 +5706,26 @@ function stepAfterDesign() {
   document.addEventListener("pointermove", (e) => {
     if (e.pointerType === "mouse" || current) light(e);
   }, { passive: true });
-  document.addEventListener("pointerdown", light, { passive: true });
+  // A tap also sends a ripple across the chip from the finger, like
+  // touching cloth (glass.css .chip-ripple; Scott's Suits only).
+  const ripple = (e) => {
+    const t = e.target.closest ? e.target.closest(".fabric-tile") : null;
+    if (!t || still || document.documentElement.getAttribute("data-brand") !== "scott") return;
+    const r = t.getBoundingClientRect();
+    const dot = document.createElement("span");
+    dot.className = "chip-ripple";
+    dot.style.left = e.clientX - r.left + "px";
+    dot.style.top = e.clientY - r.top + "px";
+    t.appendChild(dot);
+    t.classList.remove("chip-pressed");
+    void t.offsetWidth;
+    t.classList.add("chip-pressed");
+    setTimeout(() => dot.remove(), 900);
+  };
+  document.addEventListener("pointerdown", (e) => {
+    light(e);
+    ripple(e);
+  }, { passive: true });
   const end = (e) => {
     if (e.pointerType === "mouse") return;
     clear(current);

@@ -114,3 +114,9 @@ html[data-brand="scott"] .zoom-btn{background:rgba(34,30,25,0.62);border:1px sol
    toward the pointer and a soft shine follows it. */
 html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile{transform:perspective(520px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease;}
 html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,0%),rgba(255,255,255,0.42),rgba(255,255,255,0.10) 32%,rgba(255,255,255,0) 60%);opacity:var(--shine,0);transition:opacity .3s ease;}
+/* Tapping a chip: rings of light spread from the finger and the chip gives a
+   small wave, like touching cloth. */
+html[data-brand="scott"] .fabric-tile .chip-ripple{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;pointer-events:none;border:1.5px solid rgba(255,255,255,0.55);box-shadow:0 0 0 6px rgba(255,255,255,0.10),0 0 0 14px rgba(255,255,255,0.05);animation:chipRipple .85s cubic-bezier(.2,.7,.3,1) forwards;}
+@keyframes chipRipple{from{transform:scale(1);opacity:1;}to{transform:scale(18);opacity:0;}}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile.chip-pressed{animation:chipWave .6s ease;}
+@keyframes chipWave{0%{scale:1;}25%{scale:.955 1.02;}55%{scale:1.025 .98;}100%{scale:1;}}
