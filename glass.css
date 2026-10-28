@@ -109,3 +109,8 @@ html[data-brand="scott"] .zoom-btn{background:rgba(34,30,25,0.62);border:1px sol
   html[data-brand="scott"] .nav-cart-dropdown,
   html[data-brand="scott"] #lightbox .lightbox-card{background:#F6F1EC;}
 }
+
+/* Fabric chips catch the light (pointer code in main.js): the chip leans
+   toward the pointer and a soft shine follows it. */
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile{transform:perspective(520px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease;}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,0%),rgba(255,255,255,0.42),rgba(255,255,255,0.10) 32%,rgba(255,255,255,0) 60%);opacity:var(--shine,0);transition:opacity .3s ease;}
