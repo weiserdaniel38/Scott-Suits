@@ -3029,6 +3029,42 @@ function updateLbNav() {
     p.disabled = lbIdx <= 0;
     n.disabled = lbIdx >= lbSeq.length - 1;
   }
+  renderLbStrip();
+}
+// A row of small swatches under the big view: the same options as the grid,
+// the open one ringed, tap any to switch to it without closing.
+let lbStripSeq = null;
+function renderLbStrip() {
+  const strip = document.getElementById("lbStrip");
+  const on = !!lbSeq && lbSeq.length > 1;
+  strip.hidden = !on;
+  if (!on) {
+    lbStripSeq = null;
+    strip.textContent = "";
+    return;
+  }
+  if (lbStripSeq !== lbSeq) {
+    lbStripSeq = lbSeq;
+    strip.textContent = "";
+    lbSeq.forEach((a, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "lb-chip";
+      b.setAttribute("role", "option");
+      b.setAttribute("aria-label", a[1]);
+      b.title = a[1];
+      b.innerHTML = '<img src="' + a[0] + '" alt="" loading="lazy" draggable="false">';
+      b.onclick = () => lbNavigate(i - lbIdx);
+      strip.appendChild(b);
+    });
+  }
+  Array.from(strip.children).forEach((c, i) => {
+    const cur = i === lbIdx;
+    c.classList.toggle("active", cur);
+    c.setAttribute("aria-selected", String(cur));
+  });
+  const cur = strip.children[lbIdx];
+  if (cur) strip.scrollTo({ left: cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
 function lbNavigate(d) {
   if (!lbSeq || !document.getElementById("lightbox").classList.contains("open")) return;
