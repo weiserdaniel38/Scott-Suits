@@ -2101,7 +2101,7 @@ body.order-done-view > .process{display:none !important;}
 }
 
 /* Fabric pop-up: Draped / Close-up switch, and the hanging-cloth view
-   (fabric-drape.js). The cloth turns full circle; drag sideways to spin it. */
+   (fabric-drape.js). Drag sideways on the cloth to turn it. */
 .lb-view-toggle{display:inline-flex;gap:4px;padding:4px;margin-bottom:14px;border-radius:999px;background:rgba(var(--brass-rgb),0.12);border:1px solid rgba(255,255,255,0.6);}
 .lb-view-toggle[hidden]{display:none;}
 .lb-view-toggle button{border:0;background:none;border-radius:999px;padding:7px 18px;font:600 12.5px 'Inter',sans-serif;color:var(--ivory-dim);cursor:pointer;transition:background .15s ease,color .15s ease;}
