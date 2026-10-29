@@ -2106,14 +2106,16 @@ body.order-done-view > .process{display:none !important;}
 .lb-view-toggle[hidden]{display:none;}
 .lb-view-toggle button{border:0;background:none;border-radius:999px;padding:7px 18px;font:600 12.5px 'Inter',sans-serif;color:var(--ivory-dim);cursor:pointer;transition:background .15s ease,color .15s ease;}
 .lb-view-toggle button.active{background:var(--surface);color:var(--ivory);box-shadow:inset 0 1px 0 rgba(255,255,255,0.9),0 1px 5px rgba(var(--ivory-rgb),0.14);}
-.fabric-drape{display:none;width:min(76vw,360px);aspect-ratio:4/5;max-width:100%;max-height:calc(100vh - 330px);min-height:240px;}
+.fabric-drape{display:none;flex-shrink:0;width:min(76vw,360px);aspect-ratio:4/5;max-width:100%;max-height:calc(100vh - 330px);min-height:240px;}
+/* With the swatch row showing, leave it room under the cloth */
+#lightbox .lightbox-card:has(.lb-strip:not([hidden])) .fabric-drape{max-height:calc(100vh - 410px);}
 .lb-drape-on .fabric-drape{display:block;}
 .lb-drape-on .lightbox-frame,.lb-drape-on .lightbox-hint{display:none !important;}
 .fabric-drape-canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab;}
 .fabric-drape-canvas:active{cursor:grabbing;}
 
 /* Swatch row under the big fabric/lining view (renderLbStrip in main.js) */
-#lightbox .lb-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:min(440px,100%);margin-top:16px;padding:4px 2px 6px;}
+#lightbox .lb-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:min(440px,100%);flex-shrink:0;margin-top:16px;padding:4px 2px 6px;}
 #lightbox .lb-strip::-webkit-scrollbar{display:none;}
 #lightbox .lb-strip[hidden]{display:none;}
 #lightbox .lb-chip{flex:0 0 auto;width:54px;height:54px;padding:0;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--surface);cursor:pointer;scroll-snap-align:center;transition:transform .15s ease,box-shadow .15s ease;}
