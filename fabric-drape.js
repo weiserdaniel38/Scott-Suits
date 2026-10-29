@@ -1,7 +1,7 @@
 // Draped fabric view for the fabric pop-up (Daniel, 2026-10-28: make picking
 // fabric feel physical). The fabric photo is laid on a piece of cloth that
-// hangs from the top edge in soft folds, slowly turns all the way round
-// (Daniel, 2026-10-29: full 360), and spins freely when dragged sideways. Plain WebGL, no library: one subdivided sheet whose folds
+// hangs from the top edge in soft folds, sways a little, and turns when
+// dragged sideways. Plain WebGL, no library: one subdivided sheet whose folds
 // are computed in the vertex shader, lit by a soft key light with a gentle
 // sheen. FabricDrape.create(container) returns { setImage(img), start(),
 // stop() }, or null when the browser has no WebGL (the pop-up then keeps
@@ -93,8 +93,7 @@ void main() {
   // Shading is relative to the unfolded panel at its current turn, so a flat panel shows
   // the photo's true color. Light fabrics get gentler shading and almost no
   // sheen, and a soft shoulder stops whites from blowing out.
-  // Seen from behind, the back of the panel faces the camera.
-  float bl = dot(normalize(gl_FrontFacing ? vBase : -vBase), L);
+  float bl = dot(normalize(vBase), L);
   float flatShade = 0.24 + 0.78 * max((bl + 0.35) / 1.35, 0.0) + 0.16 * max(bl, 0.0);
   float shade = 0.24 + 0.78 * wrap + 0.16 * diff - flatShade;
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
@@ -197,11 +196,8 @@ void main() {
       draw();
     }
 
-    // The cloth turns slowly all the way round. Dragging sideways spins it
-    // freely, a flick keeps it going for a moment, and it then eases back
-    // into the slow turn in whichever direction it was last pushed.
-    const AUTO = (Math.PI * 2) / 30; // one full turn every 30 seconds
-    let yaw = 0.18, vel = AUTO, dir = 1, dragging = null, raf = 0, t0 = performance.now(), last = 0;
+    // Drag sideways to turn the cloth; it settles back to a slow sway.
+    let yaw = 0, dragYaw = 0, dragging = null, raf = 0, t0 = performance.now();
     const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Touching the cloth gives it a faint push under the finger; dragging
     // keeps giving softer ones along the way (not with reduced motion).
@@ -214,37 +210,24 @@ void main() {
       const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
       const ny = 1 - ((e.clientY - r.top) / r.height) * 2;
       const k = 3.1 / 1.95;
-      const c = Math.cos(yaw);
-      const x = (nx * (r.width / r.height) * k) / ((c < 0 ? -1 : 1) * Math.max(0.4, Math.abs(c)));
+      const x = (nx * (r.width / r.height) * k) / Math.max(0.4, Math.cos(yaw));
       const y = ny * k + 0.05;
       rips.set([x, y, (performance.now() - t0) / 1000, strength], ripNext * 4);
       ripNext = (ripNext + 1) % 4;
       lastRip = performance.now();
     }
     canvas.addEventListener("pointerdown", (e) => {
-      dragging = { x: e.clientX, yaw, px: e.clientX, pt: performance.now() };
-      vel = 0;
+      dragging = { x: e.clientX, yaw: dragYaw };
       canvas.setPointerCapture(e.pointerId);
       ripple(e, 1);
     });
     canvas.addEventListener("pointermove", (e) => {
       if (!dragging) return;
-      yaw = dragging.yaw + (e.clientX - dragging.x) / 160;
-      const now = performance.now(), dt = Math.max(1, now - dragging.pt) / 1000;
-      vel = vel * 0.6 + (((e.clientX - dragging.px) / 160) / dt) * 0.4;
-      dragging.px = e.clientX;
-      dragging.pt = now;
+      dragYaw = Math.max(-1.1, Math.min(1.1, dragging.yaw + (e.clientX - dragging.x) / 160));
       if (performance.now() - lastRip > 220) ripple(e, 0.45);
       if (still) draw();
     });
-    const release = () => {
-      if (!dragging) return;
-      // A finger held still before lifting leaves no flick.
-      if (performance.now() - dragging.pt > 120) vel = 0;
-      vel = Math.max(-8, Math.min(8, vel));
-      if (Math.abs(vel) > 0.05) dir = vel < 0 ? -1 : 1;
-      dragging = null;
-    };
+    const release = () => (dragging = null);
     canvas.addEventListener("pointerup", release);
     canvas.addEventListener("pointercancel", release);
 
@@ -259,15 +242,9 @@ void main() {
       gl.viewport(0, 0, w, h);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      const now = performance.now();
-      const t = still ? 0 : (now - t0) / 1000;
-      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
-      last = now;
-      if (!dragging && !still) {
-        vel += (AUTO * dir - vel) * (1 - Math.exp(-dt * 1.4));
-        yaw += vel * dt;
-      }
-      yaw %= Math.PI * 2;
+      const t = still ? 0 : (performance.now() - t0) / 1000;
+      if (!dragging) dragYaw *= 0.94;
+      yaw = dragYaw + (still ? 0.18 : 0.18 + Math.sin(t * 0.35) * 0.1);
       gl.uniform1f(u.uTime, t);
       gl.uniform1f(u.uYaw, yaw);
       gl.uniform1f(u.uAspect, w / h);
@@ -281,13 +258,6 @@ void main() {
     return {
       setImage,
       start() {
-        // Opening the pop-up starts facing front; switching fabric keeps turning.
-        if (!raf) {
-          yaw = 0.18;
-          vel = AUTO;
-          dir = 1;
-        }
-        last = 0;
         cancelAnimationFrame(raf);
         if (still) draw();
         else loop();
