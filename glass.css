@@ -96,8 +96,13 @@ html[data-brand="scott"] .suit-type-go{border:1px solid rgba(var(--brass-rgb),0.
 html[data-brand="scott"] .nav-cta:hover,
 html[data-brand="scott"] .nav-startover-btn:hover,
 html[data-brand="scott"] .wiz-back:hover{background:var(--glass-fill-strong);}
-html[data-brand="scott"] .wiz-more,
-html[data-brand="scott"] .zoom-btn{background:rgba(34,30,25,0.82);border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 6px 18px rgba(20,14,8,0.25);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+/* Magnifying glass on cards and swatches: light, not dark (Daniel,
+   2026-10-30). White chip, thin gold edge, gray-brown glass icon. */
+html[data-brand="scott"] .zoom-btn{background:rgba(255,255,255,0.95);border:1px solid var(--card-edge);box-shadow:0 2px 8px rgba(70,52,32,0.14);}
+html[data-brand="scott"] .zoom-btn svg{stroke:#6E625A;}
+html[data-brand="scott"] .zoom-btn:hover{background:var(--brass);border-color:var(--brass);}
+html[data-brand="scott"] .zoom-btn:hover svg{stroke:#FFFFFF;}
+html[data-brand="scott"] .wiz-more{background:rgba(34,30,25,0.82);border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 6px 18px rgba(20,14,8,0.25);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 
 /* No blur support, or the visitor asked for less see-through (iPhone:
    Accessibility > Reduce Transparency): solid panels instead. */
