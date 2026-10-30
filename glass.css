@@ -16,6 +16,9 @@ html[data-brand="scott"]{
   --glass-shine:inset 0 1px 0 rgba(255,255,255,0.95),inset 0 -1px 0 rgba(255,255,255,0.28);
   --glass-drop:0 10px 30px rgba(70,52,32,0.10),0 1px 3px rgba(70,52,32,0.06);
   --glass-drop-big:0 30px 80px rgba(40,28,16,0.28),0 2px 8px rgba(40,28,16,0.10);
+  --card-solid:#FFFCF8;
+  --card-edge:rgba(var(--brass-rgb),0.24);
+  --card-drop:0 2px 10px rgba(70,52,32,0.07);
   --glass-dark:linear-gradient(180deg,rgba(64,55,46,0.92) 0%,rgba(28,24,20,0.94) 100%);
 }
 
@@ -39,22 +42,23 @@ html[data-brand="scott"] .process{border-top:none;border-bottom:1px solid rgba(2
 html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.96);border-top:1px solid rgba(255,255,255,0.75);box-shadow:0 -10px 28px rgba(70,52,32,0.06);-webkit-backdrop-filter:blur(14px) saturate(130%);backdrop-filter:blur(14px) saturate(130%);}
 html[data-brand="scott"] footer{border-top:1px solid rgba(255,255,255,0.6);}
 
-/* Glass cards */
+/* Cards (Daniel, 2026-10-30: the home card still looked glassy): plain
+   solid ivory with a thin edge and a soft shadow, no frost or shine. */
 html[data-brand="scott"] #suitTypeSection .suit-type-card,
 html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card),
 html[data-brand="scott"] .welcome-intro,
 html[data-brand="scott"] .opening-soon-notice,
 html[data-brand="scott"] #designPreview.suit-preview.design-preview,
-html[data-brand="scott"] .size-estimate{background:var(--glass-fill);border:1px solid var(--glass-edge);box-shadow:var(--glass-shine),var(--glass-drop);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);}
+html[data-brand="scott"] .size-estimate{background:var(--card-solid);border:1px solid var(--card-edge);box-shadow:var(--card-drop);}
 html[data-brand="scott"] .welcome-intro,
-html[data-brand="scott"] .opening-soon-notice{border-radius:18px;padding:16px 20px 17px;}
+html[data-brand="scott"] .opening-soon-notice{border-radius:14px;padding:16px 20px 17px;}
 html[data-brand="scott"] .size-estimate{border-radius:18px;overflow:hidden;}
 html[data-brand="scott"] #suitTypeSection .suit-type-card{border-radius:22px;}
-html[data-brand="scott"] #suitTypeSection .suit-type-card:hover{border-color:rgba(var(--brass-rgb),0.7);box-shadow:var(--glass-shine),0 18px 40px rgba(70,52,32,0.16);}
-html[data-brand="scott"] #suitTypeSection .suit-type-icon{background:rgba(255,255,255,0.82);border-bottom:1px solid rgba(255,255,255,0.8);}
+html[data-brand="scott"] #suitTypeSection .suit-type-card:hover{border-color:rgba(var(--brass-rgb),0.7);box-shadow:0 10px 26px rgba(70,52,32,0.12);}
+html[data-brand="scott"] #suitTypeSection .suit-type-icon{background:#FFFFFF;border-bottom:1px solid var(--card-edge);}
 html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card){border-radius:18px;}
 html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card):hover{border-color:rgba(var(--brass-rgb),0.7);}
-html[data-brand="scott"] .designer-grid .opt-card.selected:not(.fabric-tile):not(.same-as-card){background:linear-gradient(150deg,rgba(var(--brass-rgb),0.26) 0%,rgba(var(--brass-rgb),0.10) 100%),var(--glass-fill);border:1.5px solid var(--brass);box-shadow:var(--glass-shine),0 10px 26px rgba(var(--brass-rgb),0.22);}
+html[data-brand="scott"] .designer-grid .opt-card.selected:not(.fabric-tile):not(.same-as-card){background:linear-gradient(150deg,rgba(var(--brass-rgb),0.26) 0%,rgba(var(--brass-rgb),0.10) 100%),var(--card-solid);border:1.5px solid var(--brass);box-shadow:0 8px 20px rgba(var(--brass-rgb),0.22);}
 
 /* Fabric tiles keep their real color; they just get rounder corners and a
    glassy shine across the top, like a polished chip. */
