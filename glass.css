@@ -176,7 +176,14 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
   html[data-brand="scott"] #lightbox{padding:0;background:#efe7dc;}
   html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:64px 18px 24px;
     background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030nolines") 88% center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
-  html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
+  /* Daniel, 2026-10-30: "blur graphics more around the fabrics card". Then:
+     "ground needs to be very clear and empty" behind the lettering. A
+     near-solid ivory oval covers the fabric, name, swatches and button, so
+     the window and plant shadow show only around the edges. */
+  html[data-brand="scott"] #lightbox .lightbox-card::before{display:block;content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:1;border-radius:0;
+    background:radial-gradient(ellipse 78% 58% at 50% 54%,rgba(246,241,234,0.97) 0%,rgba(246,241,234,0.94) 62%,rgba(246,241,234,0.6) 82%,rgba(246,241,234,0) 100%);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 54%,#000 70%,transparent 100%);mask-image:radial-gradient(ellipse 80% 60% at 50% 54%,#000 70%,transparent 100%);}
   html[data-brand="scott"] #lightbox .lightbox-close{top:16px;right:16px;}
   html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.85);position:absolute;top:14px;left:50%;transform:translateX(-50%);margin:0;}
   html[data-brand="scott"] #lightbox .lb-view-toggle button{white-space:nowrap;}
