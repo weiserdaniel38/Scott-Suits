@@ -128,13 +128,9 @@ html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-ti
 /* Faint tailoring line art (Daniel, 2026-10-30: "add these subtle
    graphics"): a pattern-piece sketch with dashed seam lines, sweeping
    thread lines, soft folds and a herringbone swell, drawn very light so
-   fabrics and text stay the focus. In the fabric zoom card and, fainter,
-   fixed behind the whole page. Art lives in assets/deco-*.svg. */
-html[data-brand="scott"] body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;
-  background:
-    url("./assets/deco-pattern-piece.svg") left -40px top 70px/clamp(220px,26vw,400px) auto no-repeat,
-    url("./assets/deco-herringbone.svg") right -30px bottom -30px/clamp(280px,40vw,620px) auto no-repeat,
-    url("./assets/deco-folds.svg") left bottom/clamp(220px,30vw,480px) auto no-repeat;}
+   fabrics and text stay the focus, in the fabric zoom card. Art lives in
+   assets/deco-*.svg. (The copy behind every page was removed the same day
+   per Daniel.) */
 html[data-brand="scott"] #lightbox .lightbox-card{isolation:isolate;}
 html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;opacity:.6;
   background:
@@ -142,7 +138,6 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
     url("./assets/deco-herringbone.svg") right -24px bottom -24px/clamp(260px,66%,600px) auto no-repeat,
     url("./assets/deco-folds.svg") left bottom/clamp(180px,42%,440px) auto no-repeat;}
 @media (max-width:640px){
-  html[data-brand="scott"] body::after{opacity:.16;}
   html[data-brand="scott"] #lightbox .lightbox-card::before{opacity:.5;}
 }
 
@@ -172,4 +167,19 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
   html[data-brand="scott"] #lightbox .lb-strip{width:min(640px,100%);gap:16px;justify-content:safe center;margin-top:22px;}
   html[data-brand="scott"] #lightbox .lb-chip{width:68px;height:68px;border-radius:14px;}
   html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;padding:17px 56px;font-size:16px;margin-top:26px;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
+}
+
+/* Phone fabric zoom (Daniel, 2026-10-30, picked "B"): the same full-screen
+   cloth picture, showing its right side (window light and plant shadow),
+   with the Draped/Close-up switch pinned at the top. */
+@media (max-width:900px){
+  html[data-brand="scott"] #lightbox{padding:0;background:#efe7dc;}
+  html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:64px 18px 24px;
+    background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030") 88% center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+  html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
+  html[data-brand="scott"] #lightbox .lightbox-close{top:16px;right:16px;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.85);position:absolute;top:14px;left:50%;transform:translateX(-50%);margin:0;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle button{white-space:nowrap;}
+  html[data-brand="scott"] #lightbox .lb-nav{background:rgba(255,255,255,0.55);}
+  html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
 }
