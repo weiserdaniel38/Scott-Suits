@@ -153,14 +153,15 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
    card with the faint line art above. */
 @media (min-width:901px){
   html[data-brand="scott"] #lightbox{padding:0;background:#efe7dc;}
-  html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:28px 40px;
+  html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:18px 40px;
     background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030nolines") center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
   html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
   html[data-brand="scott"] #lightbox .lightbox-close{top:26px;right:30px;}
-  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.45);border-color:rgba(255,255,255,0.8);margin-bottom:22px;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.45);border-color:rgba(255,255,255,0.8);margin-bottom:14px;}
   html[data-brand="scott"] #lightbox .lb-view-toggle button{padding:9px 26px;font-size:14.5px;}
-  html[data-brand="scott"] #lightbox .fabric-drape{width:min(30vw,380px);max-height:calc(100vh - 400px);}
-  html[data-brand="scott"] #lightbox .lightbox-card:has(.lb-strip:not([hidden])) .fabric-drape{max-height:calc(100vh - 430px);}
+  /* Daniel, 2026-10-30: "make draped fabric bigger" on desktop. */
+  html[data-brand="scott"] #lightbox .fabric-drape{width:min(40vw,520px);max-height:calc(100vh - 350px);}
+  html[data-brand="scott"] #lightbox .lightbox-card:has(.lb-strip:not([hidden])) .fabric-drape{max-height:calc(100vh - 385px);}
   html[data-brand="scott"] #lightbox .lightbox-frame,
   html[data-brand="scott"] #lightbox .lightbox-frame.lightbox-frame-xl{max-height:calc(100vh - 430px);max-width:min(60vw,calc(100vh - 430px));}
   html[data-brand="scott"] #lightbox .lightbox-caption{font-size:32px;}
@@ -168,9 +169,9 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
   html[data-brand="scott"] #lightbox .lightbox-sub{font-size:15px;}
   html[data-brand="scott"] #lightbox .lightbox-sub .lb-pattern{font-size:14.5px;}
   html[data-brand="scott"] #lightbox .lightbox-desc{font-size:15.5px;max-width:560px;}
-  html[data-brand="scott"] #lightbox .lb-strip{width:min(640px,100%);gap:16px;justify-content:safe center;margin-top:22px;}
+  html[data-brand="scott"] #lightbox .lb-strip{width:min(640px,100%);gap:16px;justify-content:safe center;margin-top:16px;}
   html[data-brand="scott"] #lightbox .lb-chip{width:68px;height:68px;border-radius:14px;}
-  html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;padding:17px 56px;font-size:16px;margin-top:26px;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
+  html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;padding:16px 56px;font-size:16px;margin-top:18px;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
 }
 
 /* Phone fabric zoom (Daniel, 2026-10-30, picked "B"): the same full-screen
