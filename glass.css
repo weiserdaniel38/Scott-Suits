@@ -3,12 +3,16 @@
    soft warm glow behind the page, in the spirit of Apple's Liquid Glass.
    Scott's Suits only (html[data-brand="scott"]), so S.W. Atelier keeps its
    own look. Loaded after style.css and brand.css on every page, and only
-   restyles surfaces: no layout or sizes change here. */
+   restyles surfaces: no layout or sizes change here.
+   2026-10-30, Daniel: "make much less glassy". Panels, pop-ups and cards
+   are now nearly solid with only a light frost, so the page behind no
+   longer shows through the content; the look keeps just a hint of glass. */
 html[data-brand="scott"]{
-  --glass-fill:linear-gradient(150deg,rgba(255,255,255,0.66) 0%,rgba(255,255,255,0.34) 100%);
-  --glass-fill-strong:linear-gradient(150deg,rgba(255,255,255,0.86) 0%,rgba(255,255,255,0.64) 100%);
+  --glass-fill:linear-gradient(150deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);
+  --glass-fill-strong:linear-gradient(150deg,rgba(255,255,255,0.97) 0%,rgba(255,255,255,0.93) 100%);
+  --glass-panel:linear-gradient(150deg,rgba(250,247,243,0.985) 0%,rgba(246,241,236,0.97) 100%);
   --glass-edge:rgba(255,255,255,0.75);
-  --glass-blur:blur(22px) saturate(175%);
+  --glass-blur:blur(12px) saturate(130%);
   --glass-shine:inset 0 1px 0 rgba(255,255,255,0.95),inset 0 -1px 0 rgba(255,255,255,0.28);
   --glass-drop:0 10px 30px rgba(70,52,32,0.10),0 1px 3px rgba(70,52,32,0.06);
   --glass-drop-big:0 30px 80px rgba(40,28,16,0.28),0 2px 8px rgba(40,28,16,0.10);
@@ -19,20 +23,20 @@ html[data-brand="scott"]{
    so it stays put while the frosted panels slide over it. */
 html[data-brand="scott"] body::before{content:"";position:fixed;inset:-15vmax;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(42vmax 34vmax at 12% 8%,rgba(var(--brass-rgb),0.38),transparent 70%),
-    radial-gradient(40vmax 36vmax at 92% 22%,rgba(214,166,156,0.36),transparent 70%),
-    radial-gradient(46vmax 38vmax at 78% 96%,rgba(150,170,196,0.36),transparent 70%),
-    radial-gradient(38vmax 30vmax at 6% 88%,rgba(232,214,184,0.55),transparent 70%);}
+    radial-gradient(42vmax 34vmax at 12% 8%,rgba(var(--brass-rgb),0.24),transparent 70%),
+    radial-gradient(40vmax 36vmax at 92% 22%,rgba(214,166,156,0.22),transparent 70%),
+    radial-gradient(46vmax 38vmax at 78% 96%,rgba(150,170,196,0.22),transparent 70%),
+    radial-gradient(38vmax 30vmax at 6% 88%,rgba(232,214,184,0.38),transparent 70%);}
 
 /* Sticky bars: top nav, the Jacket/Pants/Preview steps and the Back/Next
    bar. Content shows through them, blurred, as it scrolls underneath. */
 html[data-brand="scott"] nav,
 html[data-brand="scott"] .process,
-html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.58);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);}
+html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.9);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);}
 html[data-brand="scott"] nav{border-bottom:1px solid rgba(255,255,255,0.6);box-shadow:0 1px 0 rgba(var(--ivory-rgb),0.06),0 8px 24px rgba(70,52,32,0.05);}
 html[data-brand="scott"] .process{border-top:none;border-bottom:1px solid rgba(255,255,255,0.6);}
-/* Back/Next bar: thicker frost, since option cards scroll under it. */
-html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.84);border-top:1px solid rgba(255,255,255,0.75);box-shadow:0 -10px 28px rgba(70,52,32,0.06);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);}
+/* Back/Next bar: nearly solid, since option cards scroll under it. */
+html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.96);border-top:1px solid rgba(255,255,255,0.75);box-shadow:0 -10px 28px rgba(70,52,32,0.06);-webkit-backdrop-filter:blur(14px) saturate(130%);backdrop-filter:blur(14px) saturate(130%);}
 html[data-brand="scott"] footer{border-top:1px solid rgba(255,255,255,0.6);}
 
 /* Glass cards */
@@ -58,18 +62,18 @@ html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-ti
 html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.same-as-card{border-radius:10px;}
 
 /* Typing boxes on the measurements and checkout steps */
-html[data-brand="scott"] .measure-input-wrap{background:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.8);border-radius:12px;box-shadow:inset 0 1px 2px rgba(70,52,32,0.06),0 1px 0 rgba(255,255,255,0.7);}
+html[data-brand="scott"] .measure-input-wrap{background:rgba(255,255,255,0.88);border-color:rgba(255,255,255,0.8);border-radius:12px;box-shadow:inset 0 1px 2px rgba(70,52,32,0.06),0 1px 0 rgba(255,255,255,0.7);}
 
-/* Pop-up panels: thicker frost over a blurred, dimmed page. */
+/* Pop-up panels: nearly solid, over a softly blurred, dimmed page. */
 html[data-brand="scott"] .how-it-works-overlay,
 html[data-brand="scott"] .confirm-overlay,
-html[data-brand="scott"] .wiz-sheet{-webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%);}
+html[data-brand="scott"] .wiz-sheet{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
 html[data-brand="scott"] #howItWorksOverlay .how-it-works-panel,
 html[data-brand="scott"] #accountOverlay .account-panel,
 html[data-brand="scott"] .confirm-panel,
 html[data-brand="scott"] .wiz-sheet-card,
 html[data-brand="scott"] .nav-cart-dropdown,
-html[data-brand="scott"] #lightbox .lightbox-card{background:var(--glass-fill-strong);border:1px solid var(--glass-edge);box-shadow:var(--glass-shine),var(--glass-drop-big);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);}
+html[data-brand="scott"] #lightbox .lightbox-card{background:var(--glass-panel);border:1px solid var(--glass-edge);box-shadow:var(--glass-shine),var(--glass-drop-big);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 
 /* Buttons. Dark buttons become dark glass with a lit top edge; outlined
    pills become light glass. */
@@ -89,7 +93,7 @@ html[data-brand="scott"] .nav-cta:hover,
 html[data-brand="scott"] .nav-startover-btn:hover,
 html[data-brand="scott"] .wiz-back:hover{background:var(--glass-fill-strong);}
 html[data-brand="scott"] .wiz-more,
-html[data-brand="scott"] .zoom-btn{background:rgba(34,30,25,0.62);border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 6px 18px rgba(20,14,8,0.25);-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);}
+html[data-brand="scott"] .zoom-btn{background:rgba(34,30,25,0.82);border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 6px 18px rgba(20,14,8,0.25);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 
 /* No blur support, or the visitor asked for less see-through (iPhone:
    Accessibility > Reduce Transparency): solid panels instead. */
