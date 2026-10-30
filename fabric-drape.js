@@ -2,8 +2,8 @@
 // fabric feel physical). The fabric photo is laid on a piece of cloth that
 // hangs from the top edge in soft folds, sways a little, and turns when
 // dragged sideways. Plain WebGL, no library: one subdivided sheet whose folds
-// are computed in the vertex shader, lit by a soft key light with a gentle
-// sheen. FabricDrape.create(container) returns { setImage(img), start(),
+// are computed in the vertex shader, lit by a soft key light, matte like
+// wool. FabricDrape.create(container) returns { setImage(img), start(),
 // stop() }, or null when the browser has no WebGL (the pop-up then keeps
 // only the close-up view).
 (function () {
@@ -88,8 +88,11 @@ void main() {
   vec3 V = normalize(vec3(0.0, 0.05, 3.1) - vPos);
   float diff = max(dot(n, L), 0.0);
   float wrap = max((dot(n, L) + 0.35) / 1.35, 0.0);
+  // Wool suiting is nearly matte (Daniel, 2026-10-30: "very glossy"): no shiny
+  // highlight, only a faint, very broad lift and a soft fuzz at the edges of folds,
+  // both in the cloth's own color rather than white.
   vec3 H = normalize(L + V);
-  float sheen = pow(max(dot(n, H), 0.0), 18.0) * 0.18 + pow(1.0 - max(dot(n, V), 0.0), 3.0) * 0.12;
+  float sheen = pow(max(dot(n, H), 0.0), 4.0) * 0.025 + pow(1.0 - max(dot(n, V), 0.0), 4.0) * 0.035;
   // Shading is relative to the unfolded panel at its current turn, so a flat panel shows
   // the photo's true color. Light fabrics get gentler shading and almost no
   // sheen, and a soft shoulder stops whites from blowing out.
@@ -98,9 +101,11 @@ void main() {
   float shade = 0.24 + 0.78 * wrap + 0.16 * diff - flatShade;
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
   float bright = smoothstep(0.45, 0.85, lum);
+  // Folds facing the light brighten only a little; folds turned away still darken.
+  shade = shade > 0.0 ? shade * 0.55 : shade;
   float light = 1.0 + shade * mix(1.1, 0.75, bright);
   sheen *= 1.0 - 0.85 * bright;
-  vec3 c = col * light + vec3(sheen);
+  vec3 c = col * light + mix(col, vec3(1.0), 0.35) * sheen;
   vec3 over = max(c - 0.9, 0.0);
   c = c - over + 0.1 * (1.0 - exp(-over / 0.1));
   gl_FragColor = vec4(c, 1.0);
