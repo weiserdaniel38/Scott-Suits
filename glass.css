@@ -144,13 +144,13 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
 /* Desktop fabric zoom (Daniel, 2026-10-30, sent a mock-up: "use these
    graphics exactly ... desktop site, not mobile yet"). The zoom fills the
    whole window over a photo of soft ivory cloth, window light and a
-   plant shadow, with dashed tailor's pattern lines at the sides
-   (assets/fabric-zoom-bg.jpg, made from his mock-up). Phones keep the
+   plant shadow (assets/fabric-zoom-bg.jpg, made from his mock-up; its
+   dashed pattern lines were taken out per Daniel). Phones keep the
    card with the faint line art above. */
 @media (min-width:901px){
   html[data-brand="scott"] #lightbox{padding:0;background:#efe7dc;}
   html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:28px 40px;
-    background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030") center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+    background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030nolines") center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
   html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
   html[data-brand="scott"] #lightbox .lightbox-close{top:26px;right:30px;}
   html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.45);border-color:rgba(255,255,255,0.8);margin-bottom:22px;}
@@ -175,7 +175,7 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
 @media (max-width:900px){
   html[data-brand="scott"] #lightbox{padding:0;background:#efe7dc;}
   html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:64px 18px 24px;
-    background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030") 88% center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+    background:#f1ebe2 url("./assets/fabric-zoom-bg.jpg?v=20261030nolines") 88% center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
   html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
   html[data-brand="scott"] #lightbox .lightbox-close{top:16px;right:16px;}
   html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.85);position:absolute;top:14px;left:50%;transform:translateX(-50%);margin:0;}
