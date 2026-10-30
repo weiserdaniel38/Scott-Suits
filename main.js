@@ -4896,7 +4896,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // greys and ivories), and sorted darkest -> lightest WITHIN each family.
     // Families themselves run dark to light too: dark neutrals first, the
     // colored families ordered by their average darkness, lights last.
-    const FAMILY = { "Jet Black": "dark", "Deep Charcoal": "dark", "Navy": "blue", "Aubergine": "purple", "Plum": "purple", "Burgundy": "red", "Wine": "red", "Chocolate Brown": "brown", "Forest Green": "green", "Teal": "green" };
+    const FAMILY = { "Jet Black": "dark", "Deep Charcoal": "dark", "Navy": "blue", "Aubergine": "purple", "Plum": "purple", "Mauve": "pink", "Dusty Rose": "pink", "Blush": "pink", "Burgundy": "red", "Wine": "red", "Chocolate Brown": "brown", "Forest Green": "green", "Teal": "green" };
     tiles.forEach((t) => { t.fam = FAMILY[t.group] || "light"; });
     const famL = {};
     tiles.forEach((t) => { (famL[t.fam] = famL[t.fam] || []).push(t.L); });

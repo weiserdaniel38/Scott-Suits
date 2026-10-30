@@ -1871,9 +1871,9 @@ const FABRIC_PATTERN_TYPES = [
 // New Fabrics (Daniel, 2026-10-25): 100% wool fabrics from the factory's
 // other 26FW books, $15-45/m and in stock when added (no brown, coffee,
 // jacquard, pink or orange; whites, greens and khakis taken out later the
-// same day). They are filed into FABRIC_PATTERN_TYPES
-// below like every other fabric (so the order, picture generator and 3D
-// jacket all see them), flagged isNew so the Fabric step shows them in
+// same day; some pink and purple added back 2026-10-30). They are filed
+// into FABRIC_PATTERN_TYPES below like every other fabric (so the order,
+// picture generator and 3D jacket all see them), flagged isNew so the Fabric step shows them in
 // their own "New Fabrics" section, grouped by color (NEW_FABRIC_COLOR_GROUPS)
 // and then by site price. Their zoom photos are single 1200 px tiles
 // (FABRIC_ZOOM_MAP entries with tile: 1200).
@@ -2002,6 +2002,13 @@ const NEW_FABRICS = [
   { name: "26VB111.DAY9294", displayName: "Savile Onyx", img: "./assets/jacket-fabric-26vb111-day9294.jpg", hex: "#1b1e1b", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
   { name: "26RE079.DAY9302", displayName: "Rich Slate Gray Check", img: "./assets/jacket-fabric-26re079-day9302.jpg", hex: "#4f4a47", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray check in pure wool from Reda, Italy. Versatile for any season." }, // $45/m
   { name: "26RE080.DAY9303", displayName: "Rich Charcoal Check", img: "./assets/jacket-fabric-26re080-day9303.jpg", hex: "#323333", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal check in pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  // Pink and purple (Daniel, 2026-10-30: "Add back some pink and purple
+  // fabrics"). Plum came back after PR #260 took it out; the two Marzotto
+  // ones are a wool, silk and linen blend, the only light purples in range.
+  { name: "26VB043.DAY9091", displayName: "Plum", img: "./assets/jacket-fabric-26vb043-day9091.jpg", hex: "#431a37", pattern: "Solid", family: "Purple", palette: "Plum", tier: 2, description: "Plum solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
+  { name: "26VB042.DAY9090", displayName: "Rose Pink", img: "./assets/jacket-fabric-26vb042-day9090.jpg", hex: "#a9517f", pattern: "Solid", family: "Pink", palette: "Dusty Rose", tier: 2, description: "Rose pink solid in pure wool from Vitale Barberis Canonico, Italy. A bold color for spring and summer occasions." }, // $45/m
+  { name: "26MZ055.DAU7636", displayName: "Dusty Mauve", img: "./assets/jacket-fabric-26mz055-dau7636.jpg", hex: "#8a6f70", pattern: "Solid", family: "Pink", palette: "Mauve", tier: 2, description: "Dusty mauve in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
+  { name: "26MZ054.DAU7640", displayName: "Soft Blush", img: "./assets/jacket-fabric-26mz054-dau7640.jpg", hex: "#c2a6aa", pattern: "Solid", family: "Pink", palette: "Blush", tier: 2, description: "Soft blush pink in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
 ];
 // Color headings inside the New Fabrics section, in order, each listing the
 // FABRIC_PALETTE colors it covers.
@@ -3067,6 +3074,10 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26VB103.DAY9290": { sprite: "./assets/fabric-zoom-26vb103-day9290.avif", col: 0, row: 0, tile: 1200 },
   "26VB104.DAY9291": { sprite: "./assets/fabric-zoom-26vb104-day9291.avif", col: 0, row: 0, tile: 1200 },
   "26VB105.DAY9292": { sprite: "./assets/fabric-zoom-26vb105-day9292.avif", col: 0, row: 0, tile: 1200 },
+  "26VB043.DAY9091": { sprite: "./assets/fabric-zoom-26vb043-day9091.avif", col: 0, row: 0, tile: 1200 },
+  "26VB042.DAY9090": { sprite: "./assets/fabric-zoom-26vb042-day9090.avif", col: 0, row: 0, tile: 1200 },
+  "26MZ055.DAU7636": { sprite: "./assets/fabric-zoom-26mz055-dau7636.avif", col: 0, row: 0, tile: 1200 },
+  "26MZ054.DAU7640": { sprite: "./assets/fabric-zoom-26mz054-dau7640.avif", col: 0, row: 0, tile: 1200 },
   "26VB109.DAY9293": { sprite: "./assets/fabric-zoom-26vb109-day9293.avif", col: 0, row: 0, tile: 1200 },
   "26VB111.DAY9294": { sprite: "./assets/fabric-zoom-26vb111-day9294.avif", col: 0, row: 0, tile: 1200 },
   "26RE079.DAY9302": { sprite: "./assets/fabric-zoom-26re079-day9302.avif", col: 0, row: 0, tile: 1200 },
