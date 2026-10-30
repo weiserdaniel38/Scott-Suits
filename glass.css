@@ -124,3 +124,24 @@ html[data-brand="scott"] .fabric-tile .chip-ripple{position:absolute;width:80px;
 @keyframes chipRipple{from{transform:scale(.6);opacity:1;}to{transform:scale(1.6);opacity:0;}}
 html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile.chip-pressed{animation:chipWave .7s ease;}
 @keyframes chipWave{0%{scale:1;}35%{scale:.988 1.004;}70%{scale:1.004 .997;}100%{scale:1;}}
+
+/* Faint tailoring line art (Daniel, 2026-10-30: "add these subtle
+   graphics"): a pattern-piece sketch with dashed seam lines, sweeping
+   thread lines, soft folds and a herringbone swell, drawn very light so
+   fabrics and text stay the focus. In the fabric zoom card and, fainter,
+   fixed behind the whole page. Art lives in assets/deco-*.svg. */
+html[data-brand="scott"] body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;
+  background:
+    url("./assets/deco-pattern-piece.svg") left -40px top 70px/clamp(220px,26vw,400px) auto no-repeat,
+    url("./assets/deco-herringbone.svg") right -30px bottom -30px/clamp(280px,40vw,620px) auto no-repeat,
+    url("./assets/deco-folds.svg") left bottom/clamp(220px,30vw,480px) auto no-repeat;}
+html[data-brand="scott"] #lightbox .lightbox-card{isolation:isolate;}
+html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;opacity:.6;
+  background:
+    url("./assets/deco-pattern-piece.svg") left -36px top 54px/clamp(150px,28%,330px) auto no-repeat,
+    url("./assets/deco-herringbone.svg") right -24px bottom -24px/clamp(260px,66%,600px) auto no-repeat,
+    url("./assets/deco-folds.svg") left bottom/clamp(180px,42%,440px) auto no-repeat;}
+@media (max-width:640px){
+  html[data-brand="scott"] body::after{opacity:.16;}
+  html[data-brand="scott"] #lightbox .lightbox-card::before{opacity:.5;}
+}
