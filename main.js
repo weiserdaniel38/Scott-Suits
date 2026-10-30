@@ -1,0 +1,9422 @@
+try { if (window.self !== window.top) document.documentElement.classList.add("is-framed"); } catch (e) { document.documentElement.classList.add("is-framed"); }
+// Step background graphics (cloth / lapel / felt / button / pocket sketches) are
+// switched OFF for now and saved for later -- see saved_step_backgrounds.css.txt
+// and the hero-*-sketch.jpg / hero-fabric-drape.jpg files in assets/. Set to
+// true (and paste the saved CSS back into style.css) to bring them back.
+const STEP_BACKGROUNDS_ENABLED = false;
+const suitTypeSection = document.getElementById("suitTypeSection");
+const jacketSection = document.getElementById("designer");
+const pantsSection = document.getElementById("pantsSection");
+const previewSection = document.getElementById("previewSection");
+const measurementsSection = document.getElementById("measurementsSection");
+const personalInfoSection = document.getElementById("personalInfoSection");
+const confirmationSection = document.getElementById("confirmationSection");
+const measureGrid = document.getElementById("measureGrid");
+const ALL_STEPS = [suitTypeSection, jacketSection, pantsSection, previewSection, measurementsSection, personalInfoSection, confirmationSection];
+// Index (into ALL_STEPS) of the furthest page the customer has reached for
+// the suit being designed. Pages up to here can be jumped to from the
+// progress bar in either direction (see goToStepById); picking a suit type
+// starts it over (see updateProcessBar).
+let furthestStepIndex = 0;
+const MOBILE_BREAKPOINT = 900;
+
+// The flat price for one whole suit (jacket + pants together), and for a
+// jacket ordered on its own -- see the suitTypeSection fork right after
+// "Start Designing" (chooseSuitType() below). The price itself depends on
+// the fabric's price tier (FABRIC_PRICE_TIERS in catalog.js), so the designer
+// summary, cart total, and PayPal amount all go through suitPriceForType()
+// and can never drift out of sync with what the customer was shown while
+// designing. Declared up here (rather than down by the rest of the cart
+// code) because renderMeasurementFields() -- which runs immediately, right
+// after it's defined, further down this file -- already needs
+// activeMeasurements() below, which in turn needs currentSuitType to already
+// exist.
+
+// Which suit type is currently loaded into the jacket/pants/measurements
+// designer -- "full" (jacket + pants) or "jacketOnly". Set by chooseSuitType()
+// when a customer picks one of the two cards on suitTypeSection, and read
+// everywhere pricing, the progress bar, required measurements, or the
+// Continue/Back button wording needs to know which flow is active. Defaults
+// to "full" so anything that runs before a type is ever chosen (or an old
+// saved draft from before this feature existed) behaves exactly as before.
+let currentSuitType = "full";
+
+// Whether the order has a Pants step to design: the full suit, the Preset
+// Suit (whose Pants step only asks hem or cuff) and pants on their own. Use
+// isJacketOnlyType(currentSuitType) for "are there pants in the order".
+function hasPantsStep() {
+  return currentSuitType === "full" || currentSuitType === "preset" || currentSuitType === "pantsOnly";
+}
+
+// Pants ordered on their own ("pantsOnly"): no jacket in the order, so the
+// jacket designer, jacket measurements and jacket price are all skipped.
+function isPantsOnlyType(type) {
+  return type === "pantsOnly";
+}
+// Whether the order has a Jacket step (everything except pants only).
+function hasJacketStep() {
+  return !isPantsOnlyType(currentSuitType);
+}
+// Whether a measurement field is needed for an order of this type: no pants
+// sizes for a jacket alone, no jacket sizes for pants alone. The body seat
+// is the one jacket-side body measurement trousers need as well.
+function measurementForType(m, type) {
+  if (isJacketOnlyType(type)) return m.part !== "pants";
+  if (isPantsOnlyType(type)) return m.part !== "jacket" || !!m.pantsToo;
+  return true;
+}
+
+// Suit types with no pants in the order: "jacketOnly" and the preset jacket
+// ("presetJacket", the jacket half of the Preset Suit -- see applySuitType).
+function isJacketOnlyType(type) {
+  return type === "jacketOnly" || type === "presetJacket";
+}
+
+// Price of a suit type in a fabric price tier (0 = the cheapest fabrics,
+// which is also the "from" price shown before a fabric is chosen).
+function suitPriceForType(type, tier) {
+  const t = FABRIC_PRICE_TIERS[tier || 0];
+  return isJacketOnlyType(type) ? t.jacketUsd : isPantsOnlyType(type) ? t.pantsUsd : t.suitUsd;
+}
+
+// Price tier of one fabric code. No fabric yet means the cheapest tier; a
+// fabric missing from FABRIC_PRICE_TIER is charged at the top tier so it is
+// never sold below cost.
+function fabricTierOf(code) {
+  if (!code) return 0;
+  return code in FABRIC_PRICE_TIER ? FABRIC_PRICE_TIER[code] : FABRIC_PRICE_TIERS.length - 1;
+}
+
+// An item is priced by its dearest fabric: the jacket fabric, or the pants
+// fabric when the customer picked a different, pricier one for the pants.
+function fabricPriceTier(jacketSel, pantsSel) {
+  return Math.max(fabricTierOf(jacketSel && jacketSel.fabric), fabricTierOf(pantsSel && pantsSel.fabric));
+}
+
+// Fabric price tier of the suit being designed right now.
+function currentFabricTier() {
+  let jacketSel = null, pantsSel = null;
+  if (hasJacketStep()) {
+    try { jacketSel = jacketDesigner.getSelections(); } catch (e) { jacketSel = null; }
+  }
+  if (!isJacketOnlyType(currentSuitType)) {
+    try { pantsSel = pantsDesigner.getSelections(); } catch (e) { pantsSel = null; }
+  }
+  return fabricPriceTier(jacketSel, pantsSel);
+}
+
+// Extra charge for the customer's own lining photo (catalog option
+// LINING_UPLOAD_OPTION, +$80) -- 0 unless that exact lining is selected.
+function liningUploadSurcharge(jacketSel) {
+  return jacketSel && jacketSel.lining === LINING_UPLOAD_OPTION.name ? LINING_UPLOAD_OPTION.surchargeUsd : 0;
+}
+// Extra charge for full canvas construction (+$200, Daniel 2026-10-21).
+function constructionSurcharge(jacketSel) {
+  const opt = jacketSel && (JACKET_CATALOG.construction.options || []).find((o) => o.name === jacketSel.construction);
+  return (opt && opt.surchargeUsd) || 0;
+}
+// All option surcharges on a jacket: the custom lining photo and full canvas.
+function jacketSurchargeUsd(jacketSel) {
+  return liningUploadSurcharge(jacketSel) + constructionSurcharge(jacketSel);
+}
+// Price of one suit in the cart: the suit-type price for its fabric tier
+// plus any option surcharge.
+function itemPriceUsd(item) {
+  return suitPriceForType(item.type, fabricPriceTier(item.jacket, item.pants)) + jacketSurchargeUsd(item.jacket);
+}
+
+// The measurement fields relevant to the suit type currently being designed
+// -- a "Jacket Only" order only asks for (and only requires) the 8 jacket
+// measurements (plus height and weight), not the 8 pants ones nobody needs
+// for an order with no pants in it. See the "part" field on each
+// MEASUREMENTS entry in catalog.js.
+// Body measurements replace the finished ones when the customer picks
+// "Body measurements" (measureMode); height and weight are always asked.
+function activeMeasurements() {
+  return MEASUREMENTS.filter(
+    (m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === measureMode) && measurementForType(m, currentSuitType)
+  );
+}
+
+// "Finished suit sizes" or "Body measurements". Saved with the
+// measurements as measure_type (body orders also save jacket_fit /
+// pants_fit as "Regular", the factory's standard allowance; customers no
+// longer pick a fit), so they reach the order row and the factory order.
+let measureMode = "finished";
+// Values typed in the other mode's fields, kept while switching back and
+// forth (cleared with the form).
+let measureStash = {};
+const jacketFitSelect = document.getElementById("jacketFitSelect");
+const pantsFitSelect = document.getElementById("pantsFitSelect");
+[jacketFitSelect, pantsFitSelect].forEach((sel) => {
+  if (!sel) return;
+  sel.innerHTML = BODY_FITS.map((f) => '<option value="' + f + '">' + f + "</option>").join("");
+  sel.value = "Regular";
+  sel.addEventListener("change", () => saveDraft());
+});
+function setMeasureMode(mode) {
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && el.value !== "") measureStash[m.id] = el.value;
+  });
+  measureMode = mode === "body" ? "body" : "finished";
+  document.querySelectorAll(".measure-mode-btn").forEach((b) => {
+    const on = b.dataset.mode === measureMode;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  const fitRow = document.getElementById("measureFitRow");
+  if (fitRow) fitRow.hidden = measureMode !== "body";
+  const pantsFitField = document.getElementById("pantsFitField");
+  if (pantsFitField) pantsFitField.hidden = isJacketOnlyType(currentSuitType);
+  const jacketFitField = document.getElementById("jacketFitField");
+  if (jacketFitField) jacketFitField.hidden = !hasJacketStep();
+  // The size estimate fills in finished sizes only.
+  const estimateBox = document.getElementById("sizeEstimateBox");
+  if (estimateBox) estimateBox.hidden = measureMode === "body";
+  if (typeof measureGrid !== "undefined" && measureGrid) {
+    renderMeasurementFields();
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el && el.value === "" && measureStash[m.id] !== undefined) el.value = measureStash[m.id];
+    });
+  }
+}
+// The mode and fits as saved alongside the measurement values.
+function measureExtras() {
+  const extras = { measure_type: measureMode };
+  if (measureMode === "body") {
+    if (hasJacketStep()) extras.jacket_fit = jacketFitSelect ? jacketFitSelect.value : "Regular";
+    if (!isJacketOnlyType(currentSuitType)) extras.pants_fit = pantsFitSelect ? pantsFitSelect.value : "Regular";
+  }
+  return extras;
+}
+// Puts a saved mode and fits back (before the values, since switching mode
+// rebuilds the fields).
+function applyMeasureExtras(saved) {
+  if (!saved) return;
+  if (saved.jacket_fit && jacketFitSelect) jacketFitSelect.value = saved.jacket_fit;
+  if (saved.pants_fit && pantsFitSelect) pantsFitSelect.value = saved.pants_fit;
+  setMeasureMode(saved.measure_type || "finished");
+}
+document.querySelectorAll(".measure-mode-btn").forEach((b) =>
+  b.addEventListener("click", () => {
+    setMeasureMode(b.dataset.mode);
+    saveDraft();
+  })
+);
+// Height and weight. Height is stored in inches and weight in pounds, in a
+// hidden input with the usual "m_"/"pm_" id, so drafts, saved profiles and
+// the order row keep working unchanged; the customer types feet + inches or
+// centimeters, and pounds or kilograms. bindBodyMeasure() ties the two.
+function bodyMeasureHtml(prefix, m) {
+  const box = (cls, unit, ph, label, extra) =>
+    '<div class="measure-input-wrap ' + cls + '"' + (extra || "") + '><input type="number" min="0" step="' +
+    (cls === "mb-ft-wrap" ? "1" : "0.5") + '" class="' + cls.replace("-wrap", "") + '" placeholder="' + ph + '" aria-label="' +
+    label + '">' + (unit ? '<span class="unit">' + unit + "</span>" : "") + "</div>";
+  const pick = (cls, label, opts) =>
+    '<div class="measure-input-wrap measure-unit-pick"><select class="' + cls + '" aria-label="' + label + '">' +
+    opts.map((o) => '<option value="' + o[0] + '">' + o[1] + "</option>").join("") + "</select></div>";
+  if (m.id === "height") {
+    return (
+      '<div class="measure-body-row"><input type="hidden" id="' + prefix + m.id + '">' +
+      box("mb-ft-wrap", "ft", "5", "Height, feet") + box("mb-in-wrap", "in", "10", "Height, inches") +
+      box("mb-cm-wrap", "cm", "178", "Height, centimeters", " hidden") +
+      pick("mb-unit", "Height unit", [["ft", "ft / in"], ["cm", "cm"]]) + "</div>"
+    );
+  }
+  return (
+    '<div class="measure-body-row"><input type="hidden" id="' + prefix + m.id + '">' +
+    box("mb-w-wrap", "", "180", "Weight") + pick("mb-unit", "Weight unit", [["lb", "lb"], ["kg", "kg"]]) + "</div>"
+  );
+}
+function bindBodyMeasure(field, prefix, m) {
+  if (m.part !== "body") return;
+  const hidden = field.querySelector("#" + prefix + m.id);
+  const unit = field.querySelector(".mb-unit");
+  const num = (el) => {
+    const v = parseFloat(el.value);
+    return isNaN(v) ? null : v;
+  };
+  const round1 = (v) => Math.round(v * 10) / 10;
+  // The unit the boxes are showing (the select already holds the new one
+  // when its change event runs).
+  let shown = unit.value;
+  let get, set, show;
+  if (m.id === "height") {
+    const ft = field.querySelector(".mb-ft");
+    const inch = field.querySelector(".mb-in");
+    const cm = field.querySelector(".mb-cm");
+    show = () => {
+      const isCm = unit.value === "cm";
+      field.querySelector(".mb-ft-wrap").hidden = isCm;
+      field.querySelector(".mb-in-wrap").hidden = isCm;
+      field.querySelector(".mb-cm-wrap").hidden = !isCm;
+    };
+    get = () => {
+      if (shown === "cm") {
+        const c = num(cm);
+        return c === null ? "" : String(round1(c / 2.54));
+      }
+      const f = num(ft);
+      const i = num(inch);
+      return f === null && i === null ? "" : String(round1((f || 0) * 12 + (i || 0)));
+    };
+    set = (v) => {
+      const n = parseFloat(v);
+      if (v === "" || v === null || v === undefined || isNaN(n)) {
+        ft.value = inch.value = cm.value = "";
+        return;
+      }
+      const whole = Math.floor(n / 12);
+      ft.value = whole;
+      inch.value = round1(n - whole * 12);
+      cm.value = Math.round(n * 2.54);
+    };
+  } else {
+    const w = field.querySelector(".mb-w");
+    show = () => {};
+    get = () => {
+      const v = num(w);
+      return v === null ? "" : String(round1(shown === "kg" ? v * 2.20462 : v));
+    };
+    set = (v) => {
+      const n = parseFloat(v);
+      w.value = v === "" || v === null || v === undefined || isNaN(n) ? "" : round1(shown === "kg" ? n / 2.20462 : n);
+    };
+  }
+  Object.defineProperty(hidden, "value", { get, set, configurable: true });
+  unit.addEventListener("change", () => {
+    const current = get();
+    shown = unit.value;
+    show();
+    set(current);
+  });
+}
+
+// A field's name with its garment where the same name is used twice
+// ("Pants Thigh"), for messages.
+function measurePartLabel(m) {
+  const dup = MEASUREMENTS.filter((x) => x.label === m.label && (x.mode || "finished") === (m.mode || "finished")).length > 1;
+  return dup ? (m.part === "pants" ? "Pants " : "Jacket ") + m.label : m.label;
+}
+// Heading over each group of measurement fields.
+function measurePartHeading(part) {
+  return part === "pants" ? "Pants" : part === "body" ? "Height & Weight" : "Jacket";
+}
+// One measurement's number input (unit after it; cm unless the field says).
+// Height and weight are composite: see bodyMeasureHtml.
+function measureInputHtml(prefix, m) {
+  if (m.part === "body") return bodyMeasureHtml(prefix, m);
+  return (
+    '<div class="measure-input-wrap"><input type="number" step="' + (m.step || "0.1") + '" min="' + (m.min || 0) + '"' +
+    (m.max ? ' max="' + m.max + '"' : "") + ' id="' + prefix +
+    m.id + '" placeholder="' + (m.step === "1" ? "0" : "0.0") + '"><span class="unit">' + (m.unit || "cm") + "</span></div>"
+  );
+}
+// Each measurement's allowed range (the factory's limits, see MEASUREMENTS
+// in catalog.js), as the customer reads it.
+function measureInRange(m, val) {
+  return !(m.min !== undefined && val < m.min) && !(m.max !== undefined && val > m.max);
+}
+function measureRangeText(m) {
+  if (m.id === "height") {
+    const ftIn = (n) => Math.floor(n / 12) + " ft " + (n % 12) + " in";
+    return ftIn(m.min) + " to " + ftIn(m.max) + " (" + Math.round(m.min * 2.54) + " to " + Math.round(m.max * 2.54) + " cm)";
+  }
+  if (m.id === "weight") {
+    return m.min + " to " + m.max + " lb (" + Math.round(m.min / 2.20462) + " to " + Math.round(m.max / 2.20462) + " kg)";
+  }
+  return m.min + " to " + m.max + " " + (m.unit || "cm");
+}
+// Shows "Must be 72 to 211 cm." under a field once a value outside its range
+// is entered, and clears it as soon as the value is fixed.
+function bindMeasureRange(field, prefix, m) {
+  if (m.min === undefined && m.max === undefined) return;
+  const el = field.querySelector("#" + prefix + m.id);
+  const msg = document.createElement("p");
+  msg.className = "measure-field-error";
+  msg.hidden = true;
+  msg.textContent = "Must be " + measureRangeText(m) + ".";
+  field.appendChild(msg);
+  const check = (strict) => {
+    const raw = el.value;
+    const val = parseFloat(raw);
+    const bad = raw !== "" && !isNaN(val) && !measureInRange(m, val);
+    if (bad && !strict && msg.hidden) return; // only clear while typing
+    msg.hidden = !bad;
+    field.classList.toggle("measure-field-invalid", bad);
+  };
+  field.addEventListener("input", () => check(false));
+  field.addEventListener("change", () => check(true));
+  field.addEventListener("focusout", () => check(true));
+}
+// Set true only once an order has actually been saved -- used solely to mark
+// the "Order" step in the progress bar as done; see updateProcessBar().
+let orderSubmitted = false;
+
+// Soft, custom-eased smooth scrolling -- the browser's native
+// `behavior:"smooth"` varies a lot across browsers and OSes, and on several
+// mobile browsers it reads as a quick, hard snap rather than a gentle glide.
+// Animating the scroll position ourselves with an ease-in-out curve gives
+// the same soft motion everywhere, for both the vertical page scroll and the
+// horizontal category-tab strip.
+const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function scrollDuration(distance) {
+  // Short hops stay quick, long ones take a little longer, both capped so
+  // nothing ever feels sluggish.
+  return Math.min(900, Math.max(380, Math.abs(distance) * 0.6));
+}
+
+function animateScrollValue(getPos, setPos, targetPos, onComplete) {
+  const startPos = getPos();
+  const delta = targetPos - startPos;
+  if (Math.abs(delta) < 1) {
+    if (onComplete) onComplete();
+    return;
+  }
+  if (prefersReducedMotion) {
+    setPos(targetPos);
+    if (onComplete) onComplete();
+    return;
+  }
+  const duration = scrollDuration(delta);
+  const startTime = performance.now();
+  function step(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    setPos(startPos + delta * easeInOutCubic(t));
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function smoothScrollWindowTo(targetY, onComplete) {
+  animateScrollValue(() => window.scrollY, (y) => window.scrollTo(0, y), Math.max(targetY, 0), onComplete);
+}
+
+// A fast flick through a long list (e.g. picking a shade near the bottom of
+// a 50+ option color family right after scrolling to it) can still be
+// decelerating under the phone's own native inertial/momentum scrolling at
+// the moment the tap registers. Starting our own scrollTo-driven animation
+// while that's still happening doesn't fail loudly -- it races it: the
+// browser keeps overwriting window.scrollY with the momentum's own values
+// every frame, silently overriding whatever position our animation just
+// set, right up until momentum finally decays. Our animation still runs to
+// completion on its own internal clock regardless (it isn't watching the
+// real scroll position, just counting elapsed time against the distance it
+// was told to cover) and still fires onComplete/swaps the tab content on
+// schedule -- so the net effect is exactly "nothing visibly moved, but the
+// category changed anyway". Waiting here until scrollY has actually held
+// still for a few consecutive frames (bailing out after a short cap so a
+// genuinely idle page -- nothing to wait for -- doesn't stall) means the
+// scroll animation that follows starts from a real, settled position
+// instead of racing a target the phone is still moving on its own.
+function afterScrollSettles(cb) {
+  let lastY = window.scrollY;
+  let stableFrames = 0;
+  const REQUIRED_STABLE_FRAMES = 3;
+  const MAX_WAIT_MS = 500;
+  const startTime = performance.now();
+  function check() {
+    const y = window.scrollY;
+    if (Math.abs(y - lastY) < 0.5) {
+      stableFrames++;
+    } else {
+      stableFrames = 0;
+      lastY = y;
+    }
+    if (stableFrames >= REQUIRED_STABLE_FRAMES || performance.now() - startTime > MAX_WAIT_MS) {
+      cb();
+      return;
+    }
+    requestAnimationFrame(check);
+  }
+  requestAnimationFrame(check);
+}
+
+// afterScrollSettles (above) waits out native momentum, but "wait up to
+// 500ms" is a guess, not a guarantee -- a fast enough flick through a
+// genuinely long list (Navy's 59 shades, Charcoal's 78) can keep drifting
+// well past that cap on a real phone (our own testing only ever simulated
+// a mild, short-lived momentum, which is why this slipped through). When
+// that happens, afterScrollSettles gives up and proceeds anyway against a
+// scroll position that's still actively changing on its own, and our
+// subsequent scrollTo-driven animation races that ongoing native momentum
+// frame by frame -- the browser keeps silently overwriting window.scrollY
+// with the momentum's own values, so the animation still completes and
+// swaps content right on schedule, but the screen can visibly end up
+// wherever the momentum happened to drift to. Once the post-swap content
+// is shorter (e.g. a 2-shade "Purple" grid instead of the 59-shade list
+// that was just scrolled through), that stray position can clamp all the
+// way down to the very bottom of the now-shorter page -- which, on
+// mobile, is where the "Your Suit" summary lives (see .summary's
+// position:static override in the mobile media query in style.css).
+//
+// Rather than hoping the wait was long enough, this stops native momentum
+// outright: toggling overflow:hidden on the scrolling root is a
+// well-established way to hard-cancel a browser's in-progress inertial
+// scroll (the technique behind most "scroll lock" libraries) -- it drops
+// whatever velocity the browser was carrying, and that velocity does not
+// resume once overflow is restored. Call this instead of/in addition to
+// afterScrollSettles immediately before reading scroll position or
+// starting our own animation, so there is nothing left to race.
+function killScrollMomentum() {
+  const htmlEl = document.documentElement;
+  const bodyEl = document.body;
+  const prevHtmlOverflow = htmlEl.style.overflow;
+  const prevBodyOverflow = bodyEl.style.overflow;
+  htmlEl.style.overflow = "hidden";
+  bodyEl.style.overflow = "hidden";
+  // Force layout so the browser actually applies the overflow change (and
+  // drops the momentum) before it's undone -- without reading a layout
+  // property here, the two style writes could get coalesced into a single
+  // no-op paint and never actually take effect.
+  void htmlEl.offsetHeight;
+  htmlEl.style.overflow = prevHtmlOverflow;
+  bodyEl.style.overflow = prevBodyOverflow;
+}
+
+// The nav AND the process (step progress) bar are both sticky (see
+// style.css) and together permanently occupy this many px at the top of the
+// viewport. Any scroll target computed as "land at the top of the viewport"
+// needs this subtracted first, or the target lands right underneath them
+// instead of actually clearing them. The +12 is just a little breathing
+// room so a heading's own edge doesn't sit flush against the process bar's
+// bottom border.
+function getNavClearance() {
+  const navEl = document.querySelector("nav");
+  const processEl = document.querySelector(".process");
+  const navHeight = navEl ? navEl.getBoundingClientRect().height + (parseFloat(getComputedStyle(navEl).top) || 0) : 0;
+  const processHeight = processEl ? processEl.getBoundingClientRect().height : 0;
+  return navHeight + processHeight + 12;
+}
+
+// Keeps --nav-height in sync with the real nav bar's rendered height, since
+// it varies by breakpoint and content (e.g. Start Over vs Start Designing)
+// and a fixed CSS value would drift out of sync. This is what lets the
+// process bar's `top: var(--nav-height)` (see style.css) sit flush against
+// the bottom of the nav instead of overlapping it or leaving a gap.
+//
+// Also sets --tabs-sticky-top (nav height + process height, no extra
+// breathing room -- unlike getNavClearance() above, this one wants the
+// category tab strip flush against the process bar's bottom edge, not
+// offset from it) so the mobile category tabs (.tabs on the Jacket/Pants
+// steps -- see style.css) can stick right underneath both bars instead of
+// scrolling away with the options list. Both bars vary by breakpoint and
+// content, so this is computed rather than hardcoded, same reasoning as
+// --nav-height itself.
+function syncStickyOffsets() {
+  const navEl = document.querySelector("nav");
+  if (!navEl) return;
+  // The nav may stick a little below the top of the screen (see .is-framed in
+  // style.css), so everything that sticks under it offsets by that too.
+  const navStickyTop = parseFloat(getComputedStyle(navEl).top) || 0;
+  const navHeight = navEl.getBoundingClientRect().height + navStickyTop;
+  document.documentElement.style.setProperty("--nav-height", navHeight + "px");
+  const processEl = document.querySelector(".process");
+  const processHeight = processEl ? processEl.getBoundingClientRect().height : 0;
+  document.documentElement.style.setProperty("--tabs-sticky-top", (navHeight + processHeight) + "px");
+}
+syncStickyOffsets();
+window.addEventListener("resize", syncStickyOffsets);
+window.addEventListener("load", syncStickyOffsets);
+if (window.ResizeObserver) { const _nav = document.querySelector("nav"); if (_nav) new ResizeObserver(syncStickyOffsets).observe(_nav); }
+
+// The step-by-step Back/Next bar and Review sheet sit at the bottom of the
+// screen; the temporary QA nav bar is fixed there too, so tell the CSS how
+// tall it currently is (0 when hidden or removed) and keep clear of it.
+function syncQaOffset() {
+  const qa = document.getElementById("qaNavBar");
+  const h = qa && !qa.hidden && getComputedStyle(qa).display !== "none" ? qa.getBoundingClientRect().height : 0;
+  document.documentElement.style.setProperty("--qa-nav-height", h + "px");
+}
+syncQaOffset();
+window.addEventListener("resize", syncQaOffset);
+window.addEventListener("load", syncQaOffset);
+(function () {
+  const qa = document.getElementById("qaNavBar");
+  if (qa && window.MutationObserver) new MutationObserver(syncQaOffset).observe(qa, { attributes: true, attributeFilter: ["hidden", "class", "style"] });
+})();
+
+function smoothScrollContainerToX(container, targetX) {
+  animateScrollValue(() => container.scrollLeft, (x) => { container.scrollLeft = x; }, Math.max(targetX, 0));
+}
+
+// On phones the hero + progress bar can be a full screen tall, so jumping to
+// the very top of the page after every Continue/Back click buried whatever
+// step you'd just moved to. Desktop has room to spare, so it keeps the
+// original "back to top" behavior unchanged.
+// Each step has a header/description block before the part where the
+// customer actually starts picking things -- when jumping to a step, skip
+// straight past that header so they land right where they can start
+// selecting, instead of at the top of the page or the top of the section.
+const STEP_FOCUS_SELECTOR = {
+  designer: "#designerModeBar",
+  pantsSection: "#pantsGrid",
+  previewSection: ".designer-head",
+  // On a phone, land with the "Your measurements" heading right under the
+  // sticky step bar, skipping the big page title and progress strip above it
+  // (Daniel's reference screenshot, 2026-10-22).
+  measurementsSection: ".meas-intro",
+  personalInfoSection: ".customer-name-field",
+  // suitTypeSection now centers its content inside a taller box (see
+  // style.css), so landing on the section's own top edge stops short,
+  // right at the start of that centering whitespace, instead of at the
+  // actual heading/cards -- targeting the heading here skips past it, the
+  // same trick the other steps above use to land on their real content.
+  suitTypeSection: ".designer-head",
+};
+
+function scrollToStepTop(el, onComplete) {
+  // Every caller (goToStep, startDesigning, executeStartOver, goToStepById)
+  // already marks `el` "active" in the DOM before calling this, but doesn't
+  // sync the process bar's own visibility (show/hide -- see updateProcessBar)
+  // until afterward, via saveDraft(). That left a window where this
+  // function's own measurements below, and ensureScrollRoom's page-height
+  // check, ran against the OLD process-bar state -- e.g. still visible (and
+  // occupying ~74px of real layout space) a moment before it's hidden for
+  // suitTypeSection, which both threw off getNavClearance() and undercut the
+  // scroll-room buffer just after it was set, clamping the scroll short.
+  // Doing it here first means every measurement below reflects the page's
+  // actual final layout for the step being navigated to.
+  updateProcessBar();
+  // Measurements is the exception: on a phone, skipping the page title and
+  // progress strip down to the "Your measurements" heading matters because
+  // that header eats real screen space. On desktop there's room for the heading, the
+  // intro line, the estimator AND the full measurement grid to all land in
+  // view together, so there's nothing to skip past -- land at the actual
+  // top of the section instead.
+  const useFocusSelector = el.id !== "measurementsSection" || window.innerWidth <= MOBILE_BREAKPOINT;
+  const selector = useFocusSelector ? STEP_FOCUS_SELECTOR[el.id] : null;
+  let target = el;
+  if (selector) {
+    target = (typeof selector === "function" ? selector() : el.querySelector(selector)) || el;
+  }
+  const targetY = window.scrollY + target.getBoundingClientRect().top - getNavClearance();
+  ensureScrollRoom(targetY);
+  smoothScrollWindowTo(targetY, onComplete);
+}
+
+// A short step -- namely suitTypeSection, which now centers its content in
+// a viewport-sized box (see style.css) -- can leave too little real page
+// height below it for the browser to actually reach a scroll target near
+// its own bottom: window.scrollTo silently clamps to whatever the page's
+// true max scroll is, so the animation above stops short and the target
+// content never quite reaches the nav, no matter what target Y was asked
+// for. #scrollSlack (an empty div right after the footer, see index.html)
+// is grown just enough, right before scrolling, to guarantee the target is
+// actually reachable -- and left there afterward rather than shrunk back,
+// since removing it once scrolled that far would yank the scroll position
+// back up the instant the page's height changed under it.
+function ensureScrollRoom(targetY) {
+  const slack = document.getElementById("scrollSlack");
+  if (!slack) return;
+  slack.style.height = "0px";
+  const shortfall = targetY + window.innerHeight - document.documentElement.scrollHeight;
+  slack.style.height = (shortfall > 0 ? shortfall : 0) + "px";
+}
+
+// Soft fade between pages/questions instead of an instant cut (Daniel,
+// 2026-10-27). Runs once any scroll back up has landed: the old content
+// fades out (.is-fading, see style.css), `doSwap` changes it, then the
+// class comes off so the new content fades back in. A step that becomes
+// active also fades in on its own via .step.active's animation.
+const FADE_OUT_MS = 150;
+function fadeSwapContent(el, doSwap) {
+  if (prefersReducedMotion) { doSwap(); return; }
+  el.classList.add("is-fading");
+  window.setTimeout(() => {
+    doSwap();
+    // Next frame, so the new content is laid out at opacity 0 before it
+    // transitions back up to 1.
+    requestAnimationFrame(() => el.classList.remove("is-fading"));
+  }, FADE_OUT_MS);
+}
+
+// Swapping which step is "active" hides the outgoing section immediately
+// (display:none) and shows the incoming one -- if the customer is scrolled
+// down into a tall section (say, deep in the jacket options) when that
+// happens, the page's scrollable height shrinks the instant the old content
+// disappears, and the browser is forced to snap the scroll position up right
+// then, with no animation possible. That instant, un-animated snap is what
+// read as a harsh jump even though the scroll that followed it was smoothly
+// eased. Scrolling up to the top of the section being left FIRST, while it's
+// still fully visible, means there's nothing left above the fold to yank the
+// scroll position around when it's hidden a moment later.
+function goToStep(hideEl, showEl) {
+  const swap = () => fadeSwapContent(hideEl, () => {
+    hideEl.classList.remove("active");
+    showEl.classList.add("active");
+    if (showEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+    if (showEl === previewSection) setTimeout(updateDesignPreviewPanel, 0);
+    if (showEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
+    scrollToStepTop(showEl);
+    saveDraft();
+  });
+  const hideTop = window.scrollY + hideEl.getBoundingClientRect().top - getNavClearance();
+  if (window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+
+// "How It Works" overlay -- reachable from the nav link and the hero button.
+// A small accessible modal: focus moves to the close button on open and back
+// to whatever was clicked to open it once closed, Escape closes it, and
+// clicking the dark backdrop (outside the panel) closes it too.
+(function () {
+  const overlay = document.getElementById("howItWorksOverlay");
+  if (!overlay) return;
+  const closeBtn = document.getElementById("howItWorksClose");
+  const navBtn = document.getElementById("howItWorksNavBtn");
+  const heroBtn = document.getElementById("howItWorksHeroBtn");
+  const startBtn = document.getElementById("howItWorksStartBtn");
+  let lastFocused = null;
+
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+
+  function open(triggerEl) {
+    lastFocused = triggerEl || document.activeElement;
+    overlay.classList.add("open");
+    closeBtn.focus();
+    document.addEventListener("keydown", onKeydown);
+  }
+
+  function close() {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  }
+
+  if (navBtn) navBtn.addEventListener("click", (e) => open(e.currentTarget));
+  if (heroBtn) heroBtn.addEventListener("click", (e) => open(e.currentTarget));
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  if (startBtn) {
+    startBtn.addEventListener("click", () => {
+      close();
+      startDesigning();
+    });
+  }
+})();
+
+// ============================================================
+// CUSTOMER ACCOUNTS -- optional. Guest checkout keeps working exactly as it
+// always has; signing in (a one-time link emailed to you, no password) adds
+// two conveniences on top: measurements saved to a profile so they don't
+// need retyping on a future visit, and a "Past Orders" list. Needs
+// add_customer_profiles_migration.sql run once in Supabase before any of
+// this actually works -- everything below fails silently (console-only,
+// never a broken page) until then, same as the rest of the site's optional
+// integrations when their setup step hasn't been done yet.
+// ============================================================
+
+// Mirrors the check inside getSupabase() (see supabaseClient.js) without
+// throwing -- this whole feature needs to quietly no-op on page load if
+// Supabase isn't configured yet, not take down every other script below it.
+function isSupabaseConfigured() {
+  return (
+    typeof SUPABASE_URL !== "undefined" &&
+    typeof SUPABASE_ANON_KEY !== "undefined" &&
+    !!SUPABASE_URL &&
+    !!SUPABASE_ANON_KEY &&
+    !SUPABASE_URL.includes("PASTE_YOUR") &&
+    !SUPABASE_ANON_KEY.includes("PASTE_YOUR")
+  );
+}
+
+// The signed-in customer (a Supabase auth "user" object) and their saved
+// profile row ({ id, email, measurements }), or null/null when signed out.
+// Kept as plain module state, same pattern as currentSuitType/cartItems.
+let currentUser = null;
+let currentProfile = null;
+// The shop admin (see supabase/sql/6_admin_account.sql) gets a "Place order
+// without payment" button. This only decides what's shown: the database
+// itself refuses a no-payment order from anyone who isn't an admin.
+let currentIsAdmin = false;
+// The new-order email's "Open in admin" button links to /?admin=orders:
+// open My Account at All Orders once the admin is signed in (the sign-in
+// form first if they aren't).
+let openAdminOrdersPending = new URLSearchParams(window.location.search).get("admin") === "orders";
+if (openAdminOrdersPending) window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+// Set by the QA nav bar code near the end of this file.
+let setQaNavAllowed = null;
+
+// The order the admin is editing ("Edit order" under All Orders), or null.
+// Kept in this tab's storage so a reload stays in edit mode. See
+// startAdminOrderEdit() below.
+const ADMIN_EDIT_KEY = "scottSuitsAdminEdit";
+let adminEditState = readAdminEditState();
+function readAdminEditState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(ADMIN_EDIT_KEY) || "null");
+  } catch (e) {
+    return null;
+  }
+}
+
+async function refreshAdminStatus() {
+  const user = currentUser;
+  let admin = false;
+  if (user) {
+    try {
+      const { data, error } = await getSupabase().rpc("is_admin");
+      admin = !error && data === true;
+    } catch (e) {
+      admin = false;
+    }
+  }
+  if (user !== currentUser) return;
+  currentIsAdmin = admin;
+  document.body.classList.toggle("admin-skip", admin);
+  if (setQaNavAllowed) setQaNavAllowed(admin);
+  const wrap = document.getElementById("adminOrderWrap");
+  if (wrap) wrap.hidden = !admin;
+  const shipWrap = document.getElementById("adminShippingWrap");
+  if (shipWrap) {
+    shipWrap.hidden = !admin;
+    if (admin) loadAdminOrders();
+  }
+  if (adminNotificationsSection) {
+    adminNotificationsSection.hidden = !admin;
+    if (admin) loadAdminNotifications();
+    else setAdminUnread(0);
+  }
+  if (openAdminOrdersPending && openAccountOverlay) {
+    if (admin) {
+      openAdminOrdersPending = false;
+      openAccountOverlay();
+      if (shipWrap) shipWrap.scrollIntoView({ block: "start" });
+    } else if (!user) {
+      openAccountOverlay();
+    } else {
+      openAdminOrdersPending = false;
+    }
+  }
+}
+
+// ---- Admin notifications: one per order placed (supabase/sql/16) ----
+const adminNotificationsSection = document.getElementById("adminNotificationsSection");
+const adminNotificationsList = document.getElementById("adminNotificationsList");
+const adminNotifCount = document.getElementById("adminNotifCount");
+let adminUnread = 0;
+
+// The count shows next to "Notifications" and on the account icon.
+function setAdminUnread(n) {
+  adminUnread = n;
+  if (adminNotifCount) {
+    adminNotifCount.hidden = !n;
+    adminNotifCount.textContent = n + " new";
+  }
+  const badge = document.getElementById("accountBadge");
+  if (badge) {
+    badge.textContent = n ? String(n) : "\u2713";
+    badge.classList.toggle("nav-account-badge-alert", !!n);
+  }
+}
+
+async function loadAdminNotifications() {
+  if (!adminNotificationsList) return;
+  try {
+    const [{ data, error }, brandRes] = await Promise.all([
+      getSupabase().rpc("admin_list_notifications"),
+      getSupabase().rpc("admin_order_brands"),
+    ]);
+    if (error) throw error;
+    const brandOf = {};
+    if (!brandRes.error && brandRes.data) brandRes.data.forEach((x) => (brandOf[x.order_id] = x.brand));
+    const rows = data || [];
+    setAdminUnread(rows.filter((n) => !n.read_at).length);
+    if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length;
+    if (!rows.length) {
+      adminNotificationsList.innerHTML = '<p class="account-section-note">No notifications.</p>';
+      return;
+    }
+    adminNotificationsList.innerHTML = "";
+    rows.forEach((n) => {
+      const item = document.createElement("div");
+      item.className = "admin-notif" + (n.read_at ? "" : " admin-notif-new");
+      const when = n.created_at ? new Date(n.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+      const suits = n.suits > 1 ? n.suits + " suits" : "1 suit";
+      item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>' +
+        '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
+      item.querySelector(".admin-notif-clear").addEventListener("click", () => clearAdminNotifications(n.id));
+      // Customer-typed text goes in with textContent, never as HTML.
+      const nb = SITE_BRANDS[brandOf[n.order_id]];
+      item.querySelector("b").textContent = "New " + (nb && nb.id !== "scott" ? nb.name + " " : "") + "order from " + (n.customer_name || "a customer");
+      item.querySelector(".admin-notif-meta").textContent = when + " \u00b7 " + suits + " \u00b7 " +
+        (nb && nb.payments === false && !n.admin_no_payment ? "Request, no payment" : n.admin_no_payment ? "No payment (admin)" : n.payment_status === "paid" ? "Paid" : n.payment_status === "awaiting_payment" ? "Awaiting payment" : "Not paid");
+      item.querySelector(".admin-notif-total").textContent = nb && nb.hidePrices ? "" : "$" + Number(n.total || 0).toFixed(0);
+      adminNotificationsList.appendChild(item);
+    });
+  } catch (err) {
+    console.error("Failed to load notifications:", err);
+    adminNotificationsList.innerHTML = '<p class="account-section-note">Couldn\u2019t load notifications right now.</p>';
+  }
+}
+
+const adminNotifClearAll = document.getElementById("adminNotifClearAll");
+// Clears one notification (id) or all of them, then reloads the list.
+async function clearAdminNotifications(id) {
+  try {
+    const { error } = await getSupabase().rpc("admin_clear_notifications", id ? { p_id: id } : {});
+    if (error) throw error;
+  } catch (e) {
+    console.error("Failed to clear notifications:", e);
+  }
+  loadAdminNotifications();
+}
+if (adminNotifClearAll) adminNotifClearAll.addEventListener("click", () => clearAdminNotifications(null));
+
+// Opening the list marks everything read; the "new" marks stay until it is
+// closed so the admin can see which ones they were.
+if (adminNotificationsSection) {
+  adminNotificationsSection.addEventListener("toggle", async () => {
+    if (adminNotificationsSection.open) {
+      if (!adminUnread) return;
+      try {
+        await getSupabase().rpc("admin_mark_notifications_read");
+        setAdminUnread(0);
+      } catch (e) {
+        console.error(e);
+      }
+    } else if (currentIsAdmin) {
+      loadAdminNotifications();
+    }
+  });
+}
+
+const accountIconBtn = document.getElementById("accountIconBtn");
+const accountBadge = document.getElementById("accountBadge");
+const accountOverlay = document.getElementById("accountOverlay");
+const accountLoggedOutView = document.getElementById("accountLoggedOutView");
+const accountLoggedInView = document.getElementById("accountLoggedInView");
+const googleAuthBtn = document.getElementById("googleAuthBtn");
+const showSignupTabBtn = document.getElementById("showSignupTabBtn");
+const showLoginTabBtn = document.getElementById("showLoginTabBtn");
+const signupForm = document.getElementById("signupForm");
+const loginForm = document.getElementById("loginForm");
+const signupNameInput = document.getElementById("signupNameInput");
+const signupEmailInput = document.getElementById("signupEmailInput");
+const signupPasswordInput = document.getElementById("signupPasswordInput");
+const signupSubmitBtn = document.getElementById("signupSubmitBtn");
+const loginEmailInput = document.getElementById("loginEmailInput");
+const loginPasswordInput = document.getElementById("loginPasswordInput");
+const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+const accountStatusMsg = document.getElementById("accountStatusMsg");
+const accountIntro = document.getElementById("accountIntro");
+const ACCOUNT_INTRO_DEFAULT = accountIntro ? accountIntro.textContent : "";
+let openAccountOverlay = null;
+let closeAccountOverlay = null;
+let pendingSignInAction = null;
+const accountNameDisplay = document.getElementById("accountNameDisplay");
+const accountLogoutBtn = document.getElementById("accountLogoutBtn");
+const profileMeasureGrid = document.getElementById("profileMeasureGrid");
+const saveProfileMeasurementsBtn = document.getElementById("saveProfileMeasurementsBtn");
+const profileMeasurementsStatusMsg = document.getElementById("profileMeasurementsStatusMsg");
+const pastOrdersList = document.getElementById("pastOrdersList");
+const savedMeasurementsBanner = document.getElementById("savedMeasurementsBanner");
+const savedMeasurementsEmail = document.getElementById("savedMeasurementsEmail");
+const saveMeasurementsToggleWrap = document.getElementById("saveMeasurementsToggleWrap");
+const saveMeasurementsToProfileCheckbox = document.getElementById("saveMeasurementsToProfileCheckbox");
+
+// Builds the same 16-field measurement grid the real designer uses (see
+// renderMeasurementFields above it in this file), just always the full set
+// -- a saved profile isn't tied to one suit's jacket-only-vs-full-suit
+// choice the way a single order's measurements are. Re-run every time the
+// account overlay opens with fresh data, same idea as renderMeasurementFields.
+function renderProfileMeasureGrid(values) {
+  if (!profileMeasureGrid) return;
+  profileMeasureGrid.innerHTML = "";
+  let lastPart = null;
+  MEASUREMENTS.forEach((m) => {
+    if (m.factoryOptional) return;
+    if (m.part !== lastPart) {
+      const h = document.createElement("h4");
+      h.className = "measure-part-heading";
+      h.textContent = measurePartHeading(m.part);
+      profileMeasureGrid.appendChild(h);
+    }
+    lastPart = m.part;
+    const field = document.createElement("div");
+    field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
+    field.innerHTML =
+      '<label for="pm_' + m.id + '">' + m.label + "</label>" + measureInputHtml("pm_", m);
+    bindBodyMeasure(field, "pm_", m);
+    bindMeasureRange(field, "pm_", m);
+    profileMeasureGrid.appendChild(field);
+  });
+  if (values) {
+    MEASUREMENTS.forEach((m) => {
+      const el = document.getElementById("pm_" + m.id);
+      if (el && values[m.id] !== undefined && values[m.id] !== null) el.value = values[m.id];
+    });
+  }
+}
+
+function collectProfileMeasurements() {
+  const values = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("pm_" + m.id);
+    const val = el ? parseFloat(el.value) : NaN;
+    if (!isNaN(val) && val > 0) values[m.id] = val;
+  });
+  return values;
+}
+// Saved measurements outside their allowed range, as "Chest (72 to 211 cm)".
+function profileMeasurementsOutOfRange(values) {
+  return MEASUREMENTS.filter((m) => values[m.id] !== undefined && !measureInRange(m, values[m.id]))
+    .map((m) => measurePartLabel(m) + " (" + measureRangeText(m) + ")");
+}
+
+// Prefers the name collected at signup (available immediately off the
+// session's own user object, in user_metadata -- no profile row fetch
+// needed) over the profiles table's copy of it, over falling back to email
+// for an account created before this field existed.
+function customerDisplayName() {
+  if (!currentUser) return "";
+  return (
+    (currentUser.user_metadata && currentUser.user_metadata.full_name) ||
+    (currentProfile && currentProfile.full_name) ||
+    currentUser.email
+  );
+}
+
+// First name only, for the "Welcome, Bob" greeting: Google sign-ins carry
+// given_name/name, email signups carry the full_name typed on the form.
+// Empty when there's no name at all, so the greeting just says "Welcome back".
+function customerFirstName() {
+  if (!currentUser) return "";
+  const meta = currentUser.user_metadata || {};
+  if (meta.given_name) return String(meta.given_name).trim();
+  const full = meta.full_name || meta.name || (currentProfile && currentProfile.full_name) || "";
+  return String(full).trim().split(/\s+/)[0] || "";
+}
+
+// "Welcome" vs "Welcome back": an account is greeted as new the first time
+// this browser sees it, if it was created in the last few days (covers the
+// gap between signing up and clicking the confirmation email). Decided once
+// per user per page load, so a just-signed-up customer keeps seeing
+// "Welcome" until they reload, then "Welcome back" from then on.
+const NEW_ACCOUNT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+let welcomeDecidedForUserId = null;
+let welcomeAsNewCustomer = false;
+function greetAsNewCustomer() {
+  if (!currentUser) return false;
+  if (welcomeDecidedForUserId === currentUser.id) return welcomeAsNewCustomer;
+  const key = "scottSuitsWelcomed_" + currentUser.id;
+  let seenBefore = false;
+  try {
+    seenBefore = localStorage.getItem(key) === "1";
+    localStorage.setItem(key, "1");
+  } catch (err) {}
+  const created = Date.parse(currentUser.created_at);
+  const recent = !isNaN(created) && Date.now() - created < NEW_ACCOUNT_WINDOW_MS;
+  welcomeDecidedForUserId = currentUser.id;
+  welcomeAsNewCustomer = !seenBefore && recent;
+  return welcomeAsNewCustomer;
+}
+
+function updateWelcomeGreeting() {
+  const heroWelcome = document.getElementById("heroWelcome");
+  const accountGreetingWord = document.getElementById("accountGreetingWord");
+  if (!currentUser) {
+    if (heroWelcome) heroWelcome.hidden = true;
+    return;
+  }
+  const word = greetAsNewCustomer() ? "Welcome" : "Welcome back";
+  const first = customerFirstName();
+  if (heroWelcome) {
+    heroWelcome.textContent = first ? word + ", " + first : word;
+    heroWelcome.hidden = false;
+  }
+  if (accountGreetingWord) accountGreetingWord.textContent = word;
+}
+
+// Reflects currentUser/currentProfile into every place the UI depends on
+// them: the nav badge, which of the two account-overlay views shows, the
+// "use my saved measurements" banner on the real Measurements step, and the
+// "save to profile" checkbox there. Called any time either changes.
+function updateAccountUI() {
+  const loggedIn = !!currentUser;
+  if (accountLoggedOutView) accountLoggedOutView.hidden = loggedIn;
+  if (accountLoggedInView) accountLoggedInView.hidden = !loggedIn;
+  if (accountBadge) accountBadge.hidden = !loggedIn;
+  if (accountNameDisplay) accountNameDisplay.textContent = customerDisplayName();
+  updateWelcomeGreeting();
+  if (saveMeasurementsToggleWrap) saveMeasurementsToggleWrap.hidden = !loggedIn;
+
+  const hasSaved = !!(currentProfile && currentProfile.measurements && Object.keys(currentProfile.measurements).length);
+  if (savedMeasurementsBanner) savedMeasurementsBanner.hidden = !(loggedIn && hasSaved);
+  if (savedMeasurementsEmail) savedMeasurementsEmail.textContent = customerDisplayName();
+}
+
+async function loadProfile() {
+  if (!currentUser) {
+    currentProfile = null;
+    renderProfileMeasureGrid(null);
+    return;
+  }
+  try {
+    const client = getSupabase();
+    const { data, error } = await client
+      .from("profiles")
+      .select("id, email, full_name, measurements")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.error("Failed to load saved profile:", error);
+      return;
+    }
+    currentProfile = data || null;
+    renderProfileMeasureGrid(currentProfile ? currentProfile.measurements : null);
+    updateAccountUI();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Merges (never replaces outright) new measurement values into whatever's
+// already saved -- so, say, saving a Jacket Only order's 8 measurements
+// never wipes out pants measurements saved from an earlier full-suit order.
+async function saveProfileMeasurements(values) {
+  if (!currentUser) return false;
+  const merged = Object.assign({}, (currentProfile && currentProfile.measurements) || {}, values);
+  try {
+    const client = getSupabase();
+    const { error } = await client.from("profiles").upsert({
+      id: currentUser.id,
+      email: currentUser.email,
+      measurements: merged,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error("Failed to save profile measurements:", error);
+      return false;
+    }
+    currentProfile = Object.assign({}, currentProfile, { id: currentUser.id, email: currentUser.email, measurements: merged });
+    updateAccountUI();
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Past orders are grouped back into one row per order_id (an order can have
+// several suits, several rows) -- same grouping idea as the multi-suit cart,
+// just read back out of Supabase instead of built live from cartItems.
+async function loadOrderHistory() {
+  if (!pastOrdersList) return;
+  if (!currentUser) {
+    pastOrdersList.innerHTML = "";
+    return;
+  }
+  pastOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
+  try {
+    const client = getSupabase();
+    const runQuery = (cols) =>
+      client
+        .from("orders")
+        .select(cols)
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending: false });
+    // Try with the finished-suit-image columns first; if the migration that
+    // adds them hasn't been run yet, quietly fall back to the original columns.
+    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd");
+    if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status"));
+    if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number"));
+    if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url"));
+    if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd"));
+    if (error) {
+      console.error("Failed to load order history:", error);
+      pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
+      return;
+    }
+    // An order still waiting on Stripe isn't placed yet.
+    if (data) data = data.filter((row) => row.payment_status !== "awaiting_payment");
+    if (!data || !data.length) {
+      pastOrdersList.innerHTML = '<p class="account-section-note">No past orders yet.</p>';
+      return;
+    }
+    const byOrder = {};
+    const order = [];
+    data.forEach((row) => {
+      const key = row.order_id || row.created_at;
+      if (!byOrder[key]) {
+        byOrder[key] = { orderId: row.order_id, created_at: row.created_at, suits: [], suitNumbers: [], total: 0, images: [], completed: true, paid: false, ship: row };
+        order.push(key);
+      }
+      byOrder[key].suits.push(row.suit_type === "jacket_only" ? "Jacket Only" : row.suit_type === "pants_only" ? "Pants Only" : "Full Suit");
+      byOrder[key].total += (Number(row.item_price_usd) || 0) + (Number(row.alteration_protection_usd) || 0);
+      if (row.status !== "completed") byOrder[key].completed = false;
+      if (row.suit_number) byOrder[key].suitNumbers.push(Number(row.suit_number));
+      // Reorder is only offered on orders that were actually paid for.
+      if (row.payment_status === "paid") byOrder[key].paid = true;
+      if (row.image_url) byOrder[key].images.push(row.image_url);
+    });
+    pastOrdersList.innerHTML = order
+      .map((key) => {
+        const o = byOrder[key];
+        const date = o.created_at ? new Date(o.created_at).toLocaleDateString() : "";
+        // Finished-suit pictures (generated once the shop marks the order
+        // completed). The URLs come from our own storage bucket, but are still
+        // only ever placed in an attribute via setAttribute-safe escaping.
+        const imgs = o.images
+          .map(
+            (u) =>
+              '<a class="past-order-img-link" href="' + escapeAttr(u) + '" target="_blank" rel="noopener">' +
+              '<img class="past-order-img" loading="lazy" alt="Your finished suit" src="' + escapeAttr(u) + '"></a>'
+          )
+          .join("");
+        return (
+          '<div class="past-order-row"><div><b>' +
+          o.suits.join(" + ") +
+          '</b><span class="past-order-date">' +
+          date +
+          (o.completed ? " \u00b7 Completed" : "") +
+          '</span></div><span class="past-order-total">$' +
+          o.total.toFixed(0) +
+          "</span>" +
+          shippingLineHtml(o.ship) +
+          (imgs ? '<div class="past-order-imgs">' + imgs + "</div>" : "") +
+          reorderButtonsHtml(o) +
+          "</div>"
+        );
+      })
+      .join("");
+  } catch (err) {
+    console.error(err);
+    pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
+  }
+}
+
+// ============================================================
+// Reorder (My Account > Past Orders). A paid order's suits go back in the
+// cart with the same design, fabric, monograms, lining photo and
+// measurements, at today's prices. Anything no longer offered is left
+// unanswered and that suit opens in the designer to choose again;
+// otherwise the customer goes straight to checkout.
+// ============================================================
+function reorderButtonsHtml(o) {
+  if (!o.paid || !o.orderId) return "";
+  const id = escapeAttr(o.orderId);
+  let html = '<div class="past-order-reorder"><button type="button" class="past-order-reorder-btn" data-reorder="' + id + '">Reorder</button>';
+  // Several suits in one order: each can also be reordered on its own.
+  const nums = o.suitNumbers.slice().sort((a, b) => a - b);
+  if (o.suits.length > 1 && nums.length === o.suits.length) {
+    html += '<span class="past-order-reorder-one">or just ' +
+      nums.map((n) => '<button type="button" class="past-order-reorder-link" data-reorder="' + id + '" data-suit="' + n + '">Suit ' + n + "</button>").join(", ") +
+      "</span>";
+  }
+  return html + "</div>";
+}
+
+// Whether a saved option value is still one the catalog offers.
+function catalogStillOffers(cat, value) {
+  if (!cat || value === undefined || value === null || value === "") return false;
+  if (cat.retiredOptions && cat.retiredOptions.indexOf(value) !== -1) return false;
+  return (cat.options || []).some((o) => o.name === value);
+}
+
+function selectionsFromRow(catalog, row) {
+  const sel = {};
+  Object.keys(catalog).forEach((key) => {
+    const v = row[catalog[key].column];
+    if (catalogStillOffers(catalog[key], v)) sel[key] = v;
+  });
+  return sel;
+}
+
+// The customer's own lining photo, back as a data URL from the public
+// lining-photos bucket (see uploadLiningPhotos). null when it's gone.
+async function reorderLiningPhoto(row) {
+  try {
+    const client = getSupabase();
+    const url = client.storage.from("lining-photos").getPublicUrl(row.order_id + "/suit-" + (row.suit_number || 1) + ".jpg").data.publicUrl;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn("Couldn't load the lining photo for a reorder:", err);
+    return null;
+  }
+}
+
+// One order row -> a cart item, run through the designers so their own
+// rules (options that depend on other choices, a lining photo that's
+// missing, a monogram with no text) apply exactly as in the designer.
+// Leaves the designers holding this suit; the caller resets them.
+async function cartItemFromOrderRow(row) {
+  const type = row.suit_type === "jacket_only" ? "jacketOnly" : row.suit_type === "pants_only" ? "pantsOnly" : "full";
+  const jacketOnly = isJacketOnlyType(type);
+  const pantsOnly = isPantsOnlyType(type);
+  const jacket = pantsOnly ? {} : selectionsFromRow(JACKET_CATALOG, row);
+  const pants = jacketOnly ? {} : selectionsFromRow(PANTS_CATALOG, row);
+  const texts = {
+    jacket: row.jacket_monogram_text ? { monogram: row.jacket_monogram_text } : {},
+    pants: row.pants_monogram_text ? { monogram: row.pants_monogram_text } : {},
+  };
+  const liningPhoto = jacket.lining === LINING_UPLOAD_OPTION.name ? await reorderLiningPhoto(row) : null;
+
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  applySuitType(type);
+  if (liningPhoto) jacketDesigner.setLiningPhoto(liningPhoto);
+  jacketDesigner.setTexts(texts.jacket);
+  pantsDesigner.setTexts(texts.pants);
+  if (!pantsOnly) jacketDesigner.setSelections(jacket);
+  if (!jacketOnly) pantsDesigner.setSelections(pants);
+
+  const missing = []
+    .concat(pantsOnly ? [] : jacketDesigner.missingLabels())
+    .concat(jacketOnly ? [] : pantsDesigner.missingLabels());
+
+  // Measurements: the same fields the Measurements page would ask for now.
+  const measurements = { measure_type: row.measure_type === "body" ? "body" : "finished" };
+  if (row.jacket_fit) measurements.jacket_fit = row.jacket_fit;
+  if (row.pants_fit) measurements.pants_fit = row.pants_fit;
+  applyMeasureExtras(measurements);
+  let measurementsOk = true;
+  activeMeasurements().forEach((m) => {
+    const val = parseFloat(row[m.id]);
+    if (isNaN(val) || val <= 0 || !measureInRange(m, val)) measurementsOk = false;
+    else measurements[m.id] = val;
+  });
+  Object.assign(measurements, measureExtras());
+
+  const item = {
+    type,
+    jacket: pantsOnly ? {} : jacketDesigner.getSelections(),
+    pants: jacketOnly ? null : pantsDesigner.getSelections(),
+    measurements,
+    liningPhoto: pantsOnly ? null : jacketDesigner.getLiningPhoto(),
+    texts: { jacket: pantsOnly ? {} : jacketDesigner.getTexts(), pants: jacketOnly ? {} : pantsDesigner.getTexts() },
+    previewId: null,
+  };
+  if (!measurementsOk) missing.push("Measurements");
+  // Checked again at checkout (collectAndValidateOrderInput) and cleared
+  // once the suit is saved from the designer.
+  if (missing.length) item.needsReview = missing;
+  return item;
+}
+
+// Puts the designer back to a blank new suit (the cart is left alone).
+function resetDesignerForNewSuit() {
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  measureStash = {};
+  applySuitType("full");
+  setMeasureMode("finished");
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el) el.value = "";
+  });
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+}
+
+async function reorderPastOrder(orderId, suitNumber, btn) {
+  if (!currentUser || !orderId) return;
+  const label = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Adding..."; }
+  try {
+    const { data, error } = await getSupabase()
+      .from("orders")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .eq("order_id", orderId)
+      .eq("payment_status", "paid")
+      .order("suit_number", { ascending: true });
+    if (error) throw error;
+    const rows = (data || []).filter((r) => !suitNumber || Number(r.suit_number) === suitNumber);
+    if (!rows.length) {
+      alert("Sorry, that order couldn't be found to reorder.");
+      return;
+    }
+    const items = [];
+    for (const row of rows) items.push(await cartItemFromOrderRow(row));
+    resetDesignerForNewSuit();
+    const firstIndex = cartItems.length;
+    items.forEach((item) => cartItems.push(item));
+    if (closeAccountOverlay) closeAccountOverlay();
+    markDesignStarted();
+    renderCartBar();
+    updateOrderSummaryUI();
+    updateProcessBar();
+    const reviewAt = items.findIndex((item) => item.needsReview);
+    if (reviewAt !== -1) {
+      const n = firstIndex + reviewAt;
+      loadCartItemIntoDesigner(n);
+      alert(reorderReviewMessage(n, cartItems[n].needsReview));
+    } else {
+      prefillContactDetails();
+      saveDraft();
+      goToCheckout();
+    }
+  } catch (err) {
+    console.error("Reorder failed:", err);
+    alert("Sorry, something went wrong adding that order to your cart. Please try again.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
+}
+
+function reorderReviewMessage(index, missing) {
+  const choices = missing.filter((m) => m !== "Measurements");
+  const parts = [];
+  if (choices.length) parts.push("pick a new " + choices.join(", ") + " (what you chose last time isn't offered anymore)");
+  if (missing.indexOf("Measurements") !== -1) parts.push("check your measurements");
+  return "Suit " + (index + 1) + " is in your cart with everything filled in as before. Please " + parts.join(" and ") + ", then continue to checkout.";
+}
+
+if (pastOrdersList) {
+  pastOrdersList.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-reorder]");
+    if (!btn) return;
+    const orderId = btn.getAttribute("data-reorder");
+    const suitNumber = Number(btn.getAttribute("data-suit")) || null;
+    const go = () => reorderPastOrder(orderId, suitNumber, btn);
+    if (!designerHasUnsavedWork()) return go();
+    openEditSuitConfirm(null, {
+      title: "Reorder this?",
+      text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+      confirm: "Yes, reorder",
+      onConfirm: go,
+    });
+  });
+}
+
+// ============================================================
+// Shipping updates (supabase/sql/8_shipping_updates.sql and the
+// send-shipping-update edge function). Each order's status follows the
+// factory's (kute-factory, hourly) and the customer is emailed at each
+// step; they see it under Past Orders. The admin's manual status box was
+// removed (Daniel, 2026-10-27).
+// ============================================================
+// In order: each order moves through the factory, comes to the shop for a
+// final check, then goes out to the customer. Same keys as the SQL check in
+// admin_update_shipping and STATUS_TEXT in send-shipping-update.
+const SHIPPING_STATUSES = [
+  ["", "Order received"],
+  ["sent_to_factory", "Sent to the factory"],
+  ["cutting", "Fabric being cut"],
+  ["sewing", "Being sewn"],
+  ["finishing", "Finishing and quality check"],
+  ["factory_shipped", "On its way from the factory"],
+  ["final_check", "Final inspection with us"],
+  ["shipped", "Shipped to you"],
+  ["out_for_delivery", "Out for delivery"],
+  ["delivered", "Delivered"],
+];
+// Tracking numbers are for the parcel to the customer, so they only show
+// from "Shipped to you" on.
+const SHIPPING_WITH_TRACKING = ["shipped", "out_for_delivery", "delivered"];
+
+function trackingUrl(carrier, number) {
+  const n = encodeURIComponent(String(number || "").trim());
+  if (!n) return "";
+  const c = String(carrier || "").toLowerCase();
+  if (c === "ups") return "https://www.ups.com/track?tracknum=" + n;
+  if (c === "usps") return "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + n;
+  if (c === "fedex") return "https://www.fedex.com/fedextrack/?trknbr=" + n;
+  if (c === "dhl") return "https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=" + n;
+  return "";
+}
+
+function shippingLabel(status) {
+  const hit = SHIPPING_STATUSES.find((s) => s[0] === (status || ""));
+  return hit ? hit[1] : "";
+}
+
+// Under a customer's past order: "Step 4 of 10: Being sewn", a progress
+// bar, and "UPS 1Z999 · Track" once it has shipped. Nothing when the
+// shipping columns haven't been added yet (older database).
+function shippingLineHtml(row) {
+  if (!row || !("shipping_status" in row)) return "";
+  const i = Math.max(0, SHIPPING_STATUSES.findIndex((s) => s[0] === (row.shipping_status || "")));
+  const pct = Math.round(((i + 1) / SHIPPING_STATUSES.length) * 100);
+  let html =
+    '<span class="past-order-step">Step ' + (i + 1) + " of " + SHIPPING_STATUSES.length + ": <b>" + escapeAttr(SHIPPING_STATUSES[i][1]) + "</b></span>" +
+    '<span class="past-order-progress" role="progressbar" aria-valuemin="1" aria-valuemax="' + SHIPPING_STATUSES.length + '" aria-valuenow="' + (i + 1) + '"><span style="width:' + pct + '%"></span></span>';
+  if (row.tracking_number && SHIPPING_WITH_TRACKING.includes(row.shipping_status)) {
+    const carrier = row.tracking_carrier && row.tracking_carrier !== "Other" ? row.tracking_carrier + " " : "";
+    html += '<span class="past-order-step">' + escapeAttr(carrier + row.tracking_number);
+    const url = trackingUrl(row.tracking_carrier, row.tracking_number);
+    if (url) html += ' \u00b7 <a href="' + escapeAttr(url) + '" target="_blank" rel="noopener">Track</a>';
+    html += "</span>";
+  }
+  return '<div class="past-order-ship">' + html + "</div>";
+}
+
+const adminOrdersList = document.getElementById("adminOrdersList");
+const shippingLiveToggle = document.getElementById("shippingLiveToggle");
+
+async function loadAdminOrders() {
+  if (!adminOrdersList) return;
+  adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
+  try {
+    const client = getSupabase();
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory] = await Promise.all([
+      client.rpc("admin_list_orders"),
+      client.rpc("admin_shipping_live"),
+      client.rpc("admin_order_payments"),
+      client.rpc("admin_order_extras"),
+      client.rpc("admin_order_protection"),
+      client.rpc("admin_order_brands"),
+      client.rpc("admin_order_fabrics"),
+      client.rpc("admin_order_pictures"),
+      client.rpc("admin_order_factory"),
+    ]);
+    if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
+    if (error) {
+      console.error("Failed to load orders:", error);
+      adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
+      return;
+    }
+    if (!data || !data.length) {
+      adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      return;
+    }
+    const payments = {};
+    if (!pay.error && pay.data) pay.data.forEach((p) => (payments[p.order_id] = p));
+    if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    // Each suit's fabric(s), suit picture and factory order, shown on its
+    // suit card in the order row (supabase/sql/27, 28 and 30).
+    const pics = {};
+    if (!pictures.error && pictures.data) pictures.data.forEach((x) => (pics[x.order_id + "/" + (x.suit_number || 1)] = x.image_url));
+    const facts = {};
+    if (!factory.error && factory.data) factory.data.forEach((x) => (facts[x.order_id + "/" + (x.suit_number || 1)] = x));
+    if (!fabrics.error && fabrics.data) fabrics.data.forEach((x) => {
+      x.image_url = pics[x.order_id + "/" + (x.suit_number || 1)] || null;
+      x.factory = facts[x.order_id + "/" + (x.suit_number || 1)] || null;
+      const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
+      (p.fabrics = p.fabrics || []).push(x);
+    });
+    adminOrdersList.innerHTML = "";
+    data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
+  } catch (err) {
+    console.error(err);
+    adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
+  }
+}
+
+// Only "Paid" means Stripe confirmed the money. Orders from before Stripe,
+// or saved with the QA bar's skip button, say "Not paid".
+function adminPaymentLabel(o) {
+  if (o.admin_no_payment) return "No payment (admin)";
+  // Orders from a storefront with no payment (S.W. Atelier) are requests.
+  const brand = SITE_BRANDS[o.brand];
+  if (brand && brand.payments === false) return brand.name + " request, no payment";
+  const pickup = o.fulfillment === "pickup" ? "In-store pickup \u00b7 " : "";
+  if (o.payment_status === "paid") {
+    const extra = [];
+    if (Number(o.shipping_usd)) extra.push("shipping $" + Number(o.shipping_usd).toFixed(2));
+    if (Number(o.tax_usd)) extra.push("tax $" + Number(o.tax_usd).toFixed(2));
+    return pickup + "Paid $" + Number(o.amount_paid_usd || 0).toFixed(2) + (extra.length ? " (incl. " + extra.join(", ") + ")" : "");
+  }
+  if (o.payment_status === "awaiting_payment") return pickup + "Awaiting payment";
+  return pickup + "Not paid";
+}
+
+// No price on orders from a storefront without prices (S.W. Atelier).
+function adminBrandHidesPrice(id) {
+  return !!(SITE_BRANDS[id] && SITE_BRANDS[id].hidePrices);
+}
+
+// "Alteration Protection: Yes ($100)", "...: No (declined)", or "" for
+// orders from before it existed.
+function adminProtectionLabel(o) {
+  if (o.protection_items > 0 && adminBrandHidesPrice(o.brand)) return "Alteration Protection: Yes (3 free alterations" + (o.protection_items > 1 ? " each" : "") + ")";
+  if (o.protection_items > 0) return "Alteration Protection: Yes ($" + Number(o.protection_usd || 0).toFixed(0) + ", 3 free alterations" + (o.protection_items > 1 ? " each" : "") + ")";
+  if (o.protection_declined) return "Alteration Protection: No (declined)";
+  return "";
+}
+
+// The catalog fabric for a saved fabric value: the code, or (older orders)
+// the shade's name. null when the site no longer offers it.
+function adminFabricOption(value) {
+  if (!value || typeof JACKET_CATALOG === "undefined") return null;
+  const opts = JACKET_CATALOG.fabric.options;
+  return opts.find((f) => f.name === value) || opts.find((f) => f.displayName === value) || null;
+}
+
+// "Redraw picture": draws the suit picture again from the order's saved
+// design (e.g. after a lining was changed on the order), then swaps it in.
+function adminRedrawButton(o, s, suitBox) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-suit-redraw";
+  btn.textContent = s.image_url ? "Redraw picture" : "Draw picture";
+  btn.addEventListener("click", async () => {
+    if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
+    const ids = { order_id: o.order_id, suit_number: s.suit_number || 1 };
+    btn.disabled = true;
+    btn.textContent = "Drawing…";
+    try {
+      // Clear the old picture (supabase/sql/29), then ask for a new drawing.
+      const reset = await getSupabase().rpc("admin_reset_picture", { p_order_id: ids.order_id, p_suit_number: ids.suit_number });
+      if (reset.error || !reset.data) throw new Error((reset.error && reset.error.message) || "suit not found");
+      const start = await callSuitImageFn(ids);
+      if (!start.ok && start.status !== 202) throw new Error((start.data && start.data.error) || "start failed");
+      const r = await pollSuitImage(Object.assign({ check: true }, ids));
+      if (r.status !== "done") throw new Error(r.status);
+      s.image_url = r.url;
+      let pic = suitBox.querySelector(".admin-suit-picture");
+      if (!pic) {
+        pic = document.createElement("img");
+        pic.className = "admin-suit-picture";
+        pic.alt = "Suit picture";
+        pic.addEventListener("click", () => {
+          document.getElementById("lightbox").classList.add("over-account");
+          openLightbox(s.image_url, o.customer_name || "Suit", "Suit picture", true);
+        });
+        suitBox.querySelector(".admin-suit-pic-col").prepend(pic);
+      }
+      pic.src = r.url;
+      btn.textContent = "Redrawn ✓";
+    } catch (e) {
+      console.error(e);
+      btn.textContent = "Redraw failed, try again";
+    }
+    btn.disabled = false;
+  });
+  return btn;
+}
+
+// "Send to factory" on one suit card: opens that suit's factory tools
+// (height/weight, Check, Save/Update draft, Factory status) inside the card.
+// The suit's factory fields are read fresh each time it opens.
+function adminSuitFactoryButton(o, s, suitBox, stateEl) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-ship-factory admin-suit-factory-btn";
+  btn.textContent = "Send to factory";
+  let panel = null;
+  btn.addEventListener("click", async () => {
+    if (panel) {
+      panel.remove();
+      panel = null;
+      btn.textContent = "Send to factory";
+      return;
+    }
+    panel = document.createElement("div");
+    panel.className = "admin-factory admin-suit-factory";
+    panel.innerHTML = '<p class="account-section-note">Loading...</p>';
+    suitBox.appendChild(panel);
+    btn.textContent = "Close factory tools";
+    const mine = panel;
+    const { data, error } = await getSupabase().rpc("admin_order_suits", { p_order_id: o.order_id });
+    if (panel !== mine) return;
+    const suit = !error && data ? data.find((x) => (x.suit_number || 1) === (s.suit_number || 1)) : null;
+    if (!suit) {
+      panel.innerHTML = '<p class="account-section-note">Couldn\u2019t load this suit' + (error ? ": " + escapeAttr(error.message) : "") + ".</p>";
+      return;
+    }
+    panel.innerHTML = "";
+    panel.appendChild(adminFactorySuit(suit, 1, stateEl));
+  });
+  return btn;
+}
+
+// "Customer's original": every choice a suit was ordered with, kept in
+// orders.original when the order was placed (supabase/sql/31), laid out like
+// the "Review selections" list. A choice changed since then (Edit order /
+// Edit suit) also shows what it is now.
+function adminOrderReviewSections(row) {
+  const opt = (cat, key, value) => {
+    const o = (cat[key].options || []).find((x) => x.name === value);
+    if (o && o.pattern) return (o.displayName || o.name) + " (" + o.pattern + ")";
+    return (o && o.displayName) || value;
+  };
+  const garment = (cat, groups, textCol) => {
+    const keys = groups ? groups.reduce((acc, g) => acc.concat(g.keys), []) : Object.keys(cat);
+    return keys
+      .filter((k) => cat[k] && cat[k].column && row[cat[k].column])
+      .map((k) => {
+        let value = opt(cat, k, row[cat[k].column]);
+        if (cat[k].textInput && row[textCol]) value += " \u2014 \u201c" + row[textCol] + "\u201d";
+        return { label: cat[k].label, value };
+      });
+  };
+  const sections = [];
+  if (row.suit_type !== "pants_only") sections.push(["Jacket", garment(JACKET_CATALOG, typeof JACKET_CATALOG_GROUPS !== "undefined" ? JACKET_CATALOG_GROUPS : null, "jacket_monogram_text")]);
+  if (row.suit_type !== "jacket_only") sections.push(["Pants", garment(PANTS_CATALOG, typeof PANTS_CATALOG_GROUPS !== "undefined" ? PANTS_CATALOG_GROUPS : null, "pants_monogram_text")]);
+  const measures = [{ label: "Measured as", value: row.measure_type === "body" ? "Body measurements" : "Finished garment" }];
+  if (row.jacket_fit) measures.push({ label: "Jacket fit", value: row.jacket_fit });
+  if (row.pants_fit) measures.push({ label: "Pants fit", value: row.pants_fit });
+  MEASUREMENTS.forEach((m) => {
+    const v = parseFloat(row[m.id]);
+    if (!isNaN(v) && v > 0) measures.push({ label: m.label + (m.mode === "body" ? " (body)" : ""), value: v + " " + (m.unit || "cm") });
+  });
+  sections.push(["Measurements", measures]);
+  const address = [row.shipping_address_line1, row.shipping_address_line2, [row.shipping_city, row.shipping_state, row.shipping_zip].filter(Boolean).join(" "), row.shipping_country].filter(Boolean).join(", ");
+  sections.push(["Contact & delivery", [
+    { label: "Name", value: row.customer_name },
+    { label: "Email", value: row.customer_email },
+    { label: "Phone", value: row.customer_phone },
+    { label: "Delivery", value: row.fulfillment === "pickup" ? "In-store pickup" : "Ship" },
+    { label: "Address", value: row.fulfillment === "pickup" ? "" : address },
+  ].filter((r) => r.value)]);
+  return sections;
+}
+
+function adminOriginalButton(o, s, suitBox) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-ship-factory admin-suit-original-btn";
+  btn.textContent = "Customer\u2019s original";
+  let panel = null;
+  btn.addEventListener("click", async () => {
+    if (panel) {
+      panel.remove();
+      panel = null;
+      btn.textContent = "Customer\u2019s original";
+      return;
+    }
+    panel = document.createElement("div");
+    panel.className = "admin-original selections-review-list";
+    panel.innerHTML = '<p class="account-section-note">Loading...</p>';
+    suitBox.appendChild(panel);
+    btn.textContent = "Hide original";
+    const mine = panel;
+    const client = getSupabase();
+    const [orig, now] = await Promise.all([
+      client.rpc("admin_order_originals", { p_order_id: o.order_id }),
+      client.rpc("admin_order_rows", { p_order_id: o.order_id }),
+    ]);
+    if (panel !== mine) return;
+    const num = s.suit_number || 1;
+    const hit = !orig.error && orig.data ? orig.data.find((x) => (x.suit_number || 1) === num) : null;
+    if (!hit || !hit.original) {
+      panel.innerHTML = '<p class="account-section-note">No original saved for this suit' + (orig.error ? ": " + escapeAttr(orig.error.message) : "") + ".</p>";
+      return;
+    }
+    const current = !now.error && now.data ? now.data.find((x) => (x.suit_number || 1) === num) : null;
+    const nowValues = {};
+    if (current) adminOrderReviewSections(current).forEach(([title, rows]) => rows.forEach((r) => (nowValues[title + "|" + r.label] = r.value)));
+    let changes = 0;
+    panel.innerHTML = "";
+    const note = document.createElement("p");
+    note.className = "admin-original-note";
+    panel.appendChild(note);
+    const origSections = adminOrderReviewSections(hit.original);
+    origSections.forEach(([title, rows]) => {
+      const h = document.createElement("h4");
+      h.className = "selections-review-part";
+      h.textContent = title;
+      panel.appendChild(h);
+      const shown = rows.slice();
+      // A choice the original didn't have but the suit has now.
+      if (current) Object.keys(nowValues).forEach((k) => {
+        const [t, label] = k.split("|");
+        if (t === title && !rows.some((r) => r.label === label)) shown.push({ label, value: "" });
+      });
+      shown.forEach((r) => {
+        const line = document.createElement("div");
+        line.className = "selections-review-row";
+        const k = document.createElement("span");
+        k.textContent = r.label;
+        const v = document.createElement("span");
+        v.textContent = r.value || "\u2014";
+        const nowVal = nowValues[title + "|" + r.label] || "";
+        if (current && nowVal !== (r.value || "")) {
+          changes++;
+          line.classList.add("admin-original-changed");
+          const n = document.createElement("small");
+          n.textContent = "Now: " + (nowVal || "\u2014");
+          v.appendChild(n);
+        }
+        line.append(k, v);
+        panel.appendChild(line);
+      });
+    });
+    const placed = hit.original._backfilled
+      ? "Saved on " + new Date(hit.original._backfilled).toLocaleDateString() + " (this order was placed before originals were kept, so it may already include an earlier edit)."
+      : "Exactly as the customer placed it" + (hit.original.created_at ? " on " + new Date(hit.original.created_at).toLocaleDateString() : "") + ".";
+    note.textContent = placed + " " + (changes ? changes + (changes === 1 ? " choice has" : " choices have") + " changed since (shown as Now)." : "Nothing has changed since.");
+  });
+  return btn;
+}
+
+function adminSuitTypeLabel(type) {
+  return type === "jacket_only" ? "Jacket only" : type === "pants_only" ? "Pants only" : "Full suit";
+}
+
+// One card per suit: a header with the suit number, type and factory order,
+// then the finished suit picture (when one was drawn), Redraw picture, the
+// fabric photo, name and code (admin only; the code never shows to
+// customers; pants in a different fabric get their own line), and the
+// suit's own Send to factory tools.
+function adminFabricList(o) {
+  const box = document.createElement("div");
+  box.className = "admin-fabrics";
+  const suits = o.fabrics || [];
+  const many = suits.length > 1;
+  suits.forEach((s) => {
+    const suitBox = document.createElement("div");
+    suitBox.className = "admin-suit";
+    const head = document.createElement("div");
+    head.className = "admin-suit-head";
+    head.innerHTML = '<b></b><span class="admin-factory-state"></span>';
+    head.querySelector("b").textContent = (many ? "Suit " + (s.suit_number || 1) + " \u00b7 " : "") + adminSuitTypeLabel(s.suit_type);
+    const stateEl = head.querySelector(".admin-factory-state");
+    if (s.factory) stateEl.textContent = adminFactorySuitState(s.factory);
+    suitBox.appendChild(head);
+    const body = document.createElement("div");
+    body.className = "admin-suit-body";
+    const picCol = document.createElement("div");
+    picCol.className = "admin-suit-pic-col";
+    const infoCol = document.createElement("div");
+    infoCol.className = "admin-suit-info";
+    body.append(picCol, infoCol);
+    suitBox.appendChild(body);
+    if (s.image_url) {
+      const pic = document.createElement("img");
+      pic.className = "admin-suit-picture";
+      pic.src = s.image_url;
+      pic.alt = "Suit picture";
+      pic.loading = "lazy";
+      pic.addEventListener("click", () => {
+        document.getElementById("lightbox").classList.add("over-account");
+        openLightbox(s.image_url, (o.customer_name || "Suit") + (many ? " \u00b7 Suit " + (s.suit_number || 1) : ""), "Suit picture", true);
+      });
+      picCol.appendChild(pic);
+    }
+    const lines = document.createElement("div");
+    lines.className = "admin-suit-fabrics";
+    const actions = document.createElement("div");
+    actions.className = "admin-suit-actions";
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "admin-ship-factory admin-suit-edit";
+    editBtn.textContent = "Edit suit";
+    editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn, s.suit_number || 1));
+    actions.append(editBtn, adminOriginalButton(o, s, suitBox), adminRedrawButton(o, s, suitBox), adminSuitFactoryButton(o, s, suitBox, stateEl));
+    infoCol.append(lines, actions);
+    box.appendChild(suitBox);
+    const parts = [];
+    if (s.suit_type === "pants_only") parts.push(["Pants", s.pants_fabric || s.fabric]);
+    else {
+      parts.push([s.suit_type === "jacket_only" ? "Jacket" : s.pants_fabric && s.pants_fabric !== s.fabric ? "Jacket" : "", s.fabric]);
+      if (s.suit_type !== "jacket_only" && s.pants_fabric && s.pants_fabric !== s.fabric) parts.push(["Pants", s.pants_fabric]);
+    }
+    parts.forEach(([piece, value]) => {
+      if (!value) return;
+      const opt = adminFabricOption(value);
+      const line = document.createElement("div");
+      line.className = "admin-fabric";
+      const sw = document.createElement(opt && opt.img ? "img" : "span");
+      sw.className = "admin-fabric-swatch";
+      if (opt && opt.img) {
+        sw.src = opt.img;
+        sw.alt = "";
+        sw.loading = "lazy";
+      } else if (opt && opt.hex) sw.style.background = opt.hex;
+      const text = document.createElement("div");
+      const label = piece;
+      text.innerHTML = '<span class="admin-fabric-label"></span><b></b><span class="admin-fabric-code"></span>';
+      text.querySelector(".admin-fabric-label").textContent = (label ? label + " \u00b7 " : "") + "Fabric";
+      text.querySelector("b").textContent = opt ? opt.displayName || opt.name : value;
+      text.querySelector(".admin-fabric-code").textContent = opt && opt.name !== (opt.displayName || opt.name) ? opt.name : "";
+      line.append(sw, text);
+      if (opt && opt.img) {
+        line.classList.add("admin-fabric-zoom");
+        line.addEventListener("click", () => {
+          document.getElementById("lightbox").classList.add("over-account");
+          openLightbox(opt.img, opt.displayName || opt.name, "Fabric", true, opt.name, null, "fabric");
+        });
+      }
+      lines.appendChild(line);
+    });
+  });
+  return box;
+}
+
+// One order in All Orders: a summary line (customer, date, suits, shipping
+// step, total) that opens to the order's details, one card per suit and the
+// whole-order controls.
+function adminOrderRow(o) {
+  const row = document.createElement("details");
+  row.className = "admin-ship-row";
+  const date = o.created_at ? new Date(o.created_at).toLocaleDateString() : "";
+  const suits = o.suits > 1 ? o.suits + " suits" : "1 suit";
+  row.innerHTML =
+    '<summary class="admin-order-summary"><div class="admin-order-who"><b></b><span class="admin-order-sub"></span></div>' +
+    '<div class="admin-order-tags"><span class="admin-badge admin-ship-badge"></span><span class="past-order-total"></span></div>' +
+    '<span class="account-collapse-chevron" aria-hidden="true"></span></summary>' +
+    '<div class="admin-order-body"><dl class="admin-order-info"></dl>' +
+    '<div class="admin-order-manage"><span class="admin-order-label">Order</span><div class="admin-ship-actions">' +
+    '<button type="button" class="admin-ship-factory admin-ship-send">Send to factory</button>' +
+    '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
+    '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div></div></div>';
+  // Customer-typed text goes in with textContent, never as HTML.
+  const name = row.querySelector(".admin-order-who b");
+  name.textContent = (o.customer_name || "No name") + (o.admin_no_payment ? " (admin order)" : "");
+  if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) name.textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
+  row.querySelector(".admin-order-sub").textContent = [date, suits].filter(Boolean).join(" \u00b7 ");
+  const shipBadge = row.querySelector(".admin-ship-badge");
+  shipBadge.textContent = shippingLabel(o.shipping_status) || "Order received";
+  row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
+  const info = row.querySelector(".admin-order-info");
+  const protection = adminProtectionLabel(o).replace(/^Alteration Protection: /, "");
+  [["Email", o.customer_email], ["Phone", o.customer_phone], ["Payment", adminPaymentLabel(o)], ["Alteration Protection", protection]].forEach(([k, v]) => {
+    if (!v) return;
+    const dt = document.createElement("dt");
+    dt.textContent = k;
+    const dd = document.createElement("dd");
+    dd.textContent = v;
+    info.append(dt, dd);
+  });
+  const hasSuitCards = !!(o.fabrics && o.fabrics.length);
+  if (hasSuitCards) info.after(adminFabricList(o));
+  const result = row.querySelector(".admin-ship-result");
+  const editBtn = row.querySelector(".admin-ship-edit");
+  editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn));
+  // Orders with suit cards send each suit from its own card; the order-wide
+  // Send to factory only stays for orders without them.
+  const factoryBtn = row.querySelector(".admin-ship-send");
+  if (hasSuitCards) factoryBtn.remove();
+  let factoryPanel = null;
+  factoryBtn.addEventListener("click", () => {
+    if (factoryPanel) {
+      factoryPanel.remove();
+      factoryPanel = null;
+      return;
+    }
+    factoryPanel = adminFactoryPanel(o);
+    row.querySelector(".admin-order-manage").appendChild(factoryPanel);
+  });
+  const deleteBtn = row.querySelector(".admin-ship-delete");
+  deleteBtn.addEventListener("click", async () => {
+    const name = o.customer_name || "No name";
+    const msg =
+      "Delete this order?\n\n" + name + " \u00b7 " + date + " \u00b7 " + suits + " \u00b7 $" + Number(o.total || 0).toFixed(0) +
+      "\nOrder " + o.order_id + "\n\nThis can\u2019t be undone.";
+    if (!window.confirm(msg)) return;
+    deleteBtn.disabled = true;
+    saveBtn.disabled = true;
+    result.hidden = false;
+    result.textContent = "Deleting...";
+    try {
+      const { data, error } = await getSupabase().rpc("admin_delete_order", { p_order_id: o.order_id });
+      if (error) throw error;
+      if (!data) throw new Error("order not found");
+      row.remove();
+      if (adminOrdersList && !adminOrdersList.querySelector(".admin-ship-row")) {
+        adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      }
+      loadOrderHistory();
+    } catch (err) {
+      console.error(err);
+      result.textContent = "Couldn\u2019t delete: " + (err.message || err);
+      deleteBtn.disabled = false;
+      saveBtn.disabled = false;
+    }
+  });
+  return row;
+}
+
+// "Send to factory": one block per suit of the order. Height and weight
+// come from the order (the customer enters them with their measurements).
+// Check shows the factory order the suit would make (codes, measurements,
+// anything to fix by hand); Save draft saves it as a DRAFT on the factory site through the
+// kute-factory edge function, which never submits it. The admin checks and
+// submits it there. Factory status reads the factory's progress back and
+// moves the order's shipping step forward to match (no message is sent).
+const KUTE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/kute-factory" : "";
+
+async function callKuteFn(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
+  const res = await fetch(KUTE_FN_URL, { method: "POST", headers, body: JSON.stringify(payload) });
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(r.error || "error " + res.status);
+  return r;
+}
+
+function adminFactoryPanel(o) {
+  const panel = document.createElement("div");
+  panel.className = "admin-factory";
+  panel.innerHTML = '<p class="account-section-note">Loading suits...</p>';
+  (async () => {
+    const { data, error } = await getSupabase().rpc("admin_order_suits", { p_order_id: o.order_id });
+    if (error || !data || !data.length) {
+      panel.innerHTML = '<p class="account-section-note">Couldn\u2019t load this order\u2019s suits' + (error ? ": " + escapeAttr(error.message) : "") + ".</p>";
+      return;
+    }
+    panel.innerHTML = "";
+    data.forEach((suit) => panel.appendChild(adminFactorySuit(suit, data.length)));
+  })();
+  return panel;
+}
+
+function adminFactorySuitState(suit) {
+  if (!suit.factory_order_no) return suit.factory_error ? "Not saved: " + suit.factory_error : "Not sent yet";
+  return (
+    "Factory order " + suit.factory_order_no + " \u00b7 " + (suit.factory_status || "Draft") +
+    (suit.factory_delivery_date ? " \u00b7 due " + suit.factory_delivery_date : "") +
+    (suit.factory_waybill ? " \u00b7 waybill " + suit.factory_waybill : "") +
+    (suit.factory_error ? " \u00b7 " + suit.factory_error : "")
+  );
+}
+
+// stateEl: inside a suit card, the card's header shows the factory order
+// line, so this block leaves out its own header.
+function adminFactorySuit(suit, count, stateEl) {
+  const box = document.createElement("div");
+  box.className = "admin-factory-suit";
+  box.innerHTML =
+    '<div class="admin-factory-head"><b></b><span class="admin-factory-state"></span></div>' +
+    '<div class="admin-ship-actions">' +
+    '<button type="button" class="admin-ship-factory fac-check">Check</button>' +
+    '<button type="button" class="btn-primary fac-draft">Save draft at factory</button>' +
+    '<button type="button" class="admin-ship-factory fac-status">Factory status</button>' +
+    "</div>" +
+    '<pre class="admin-factory-out" hidden></pre>';
+  box.querySelector("b").textContent = (count > 1 ? "Suit " + suit.suit_number + " \u00b7 " : "") + (suit.suit_type === "jacket_only" ? "Jacket only" : suit.suit_type === "pants_only" ? "Pants only" : "Full suit");
+  if (stateEl) box.querySelector(".admin-factory-head").remove();
+  const state = stateEl || box.querySelector(".admin-factory-state");
+  const out = box.querySelector(".admin-factory-out");
+  const draftBtn = box.querySelector(".fac-draft");
+  const statusBtn = box.querySelector(".fac-status");
+  const buttons = box.querySelectorAll("button");
+  const showState = () => {
+    state.textContent = adminFactorySuitState(suit);
+    statusBtn.hidden = !suit.factory_order_no;
+    draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
+  };
+  showState();
+  // Height and weight always come from the order (kute-factory reads them).
+  const params = () => ({ id: suit.id });
+  const run = async (label, fn) => {
+    buttons.forEach((b) => (b.disabled = true));
+    out.hidden = false;
+    out.textContent = label;
+    try {
+      out.textContent = await fn();
+    } catch (err) {
+      console.error(err);
+      out.textContent = "Couldn\u2019t reach the factory link: " + (err.message || err);
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  };
+  const lines = (title, list) => (list && list.length ? title + "\n" + list.map((w) => "\u2022 " + w).join("\n") + "\n\n" : "");
+
+  box.querySelector(".fac-check").addEventListener("click", () =>
+    run("Checking...", async () => {
+      const r = await callKuteFn(Object.assign({ action: "factory_preview" }, params()));
+      return (
+        lines("Fix before sending:", r.blocking) +
+        lines("Check on the factory site:", r.warnings) +
+        (r.blocking && r.blocking.length ? "" : "Ready to save as a draft.\n\n") +
+        "What the factory gets:\n" + JSON.stringify(r.body, null, 2)
+      );
+    })
+  );
+  draftBtn.addEventListener("click", () =>
+    run("Saving the draft at the factory...", async () => {
+      const r = await callKuteFn(Object.assign({ action: "factory_draft" }, params()));
+      if (r.blocking) return lines("Not sent. Fix first:", r.blocking) + lines("Also check:", r.warnings);
+      suit.factory_error = r.error || null;
+      if (r.ok) {
+        suit.factory_order_no = r.orderNo;
+        suit.factory_status = "Draft";
+        suit.factory_delivery_date = r.deliveryDate || suit.factory_delivery_date;
+      }
+      showState();
+      return (
+        (r.ok
+          ? "Saved as a draft: factory order " + r.orderNo + ". Check it on the factory site and submit it there.\n\n"
+          : "The factory didn\u2019t take it: " + r.error + "\n\n") + lines("Check on the factory site:", r.warnings)
+      );
+    })
+  );
+  statusBtn.addEventListener("click", () =>
+    run("Asking the factory...", async () => {
+      const r = await callKuteFn({ action: "factory_status", id: suit.id });
+      if (!r.ok) return "Couldn\u2019t get the status: " + r.error;
+      suit.factory_status = r.status;
+      suit.factory_delivery_date = r.deliveryDate;
+      suit.factory_waybill = r.waybill;
+      showState();
+      const step = shippingLabel(r.shippingStatus);
+      const n = r.notified;
+      const sent = !n ? "" : n.email && n.email.ok ? (n.live ? " Emailed the customer." : " Test mode: emailed you, not the customer.") : " The email didn\u2019t go out" + (n.error ? ": " + n.error : n.email && n.email.detail ? ": " + n.email.detail : "") + ".";
+      return "Factory status: " + r.status + (step ? "\nCustomer sees: " + step + "." + sent : "");
+    })
+  );
+  return box;
+}
+
+// ---------------------------------------------------------------------------
+// "Edit order" (admin): loads a placed order's suits into the cart, so the
+// admin changes them in the designer itself, where every option rule applies
+// exactly as for a customer (hidden options, conflicts, measurement limits).
+// Contact and shipping details are edited on the Personal Info page. "Save
+// changes to order" writes the same order rows back (admin_update_order,
+// supabase/sql/25_admin_edit_order.sql); payment, prices, shipping progress
+// and factory fields never change. Whatever was in the admin's own cart is
+// put aside and comes back when editing ends.
+// ---------------------------------------------------------------------------
+// suitNumber (from a suit card's "Edit suit"): opens that suit in the
+// designer instead of going to checkout; the rest of the order still loads.
+async function startAdminOrderEdit(o, btn, suitNumber) {
+  if (!currentIsAdmin) return;
+  if (adminEditState) {
+    alert("You're already editing " + (adminEditState.name || "an order") + "'s order. Save or cancel that first (the bar at the top of the designer).");
+    return;
+  }
+  if ((cartItems.length || designerHasUnsavedWork()) &&
+      !window.confirm("Edit " + (o.customer_name || "this") + "'s order?\n\nYour own cart and design are put aside while you edit and come back when you save or cancel.")) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading...";
+  try {
+    const { data, error } = await getSupabase().rpc("admin_order_rows", { p_order_id: o.order_id });
+    if (error) throw error;
+    if (!data || !data.length) throw new Error("order not found");
+    saveDraft();
+    let draft = null;
+    let photos = null;
+    try {
+      draft = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      photos = sessionStorage.getItem(DRAFT_STORAGE_KEY + "_photos");
+    } catch (e) {
+      // nothing to put back later
+    }
+    const items = [];
+    for (const row of data) {
+      const item = await cartItemFromOrderRow(row);
+      item.adminRowId = row.id;
+      item.adminSuitNumber = row.suit_number;
+      items.push(item);
+    }
+    resetDesignerForNewSuit();
+    designPreview = null;
+    cartItems = items;
+    const first = data[0];
+    customerNameInput.value = first.customer_name || "";
+    customerPhoneInput.value = formatUSPhoneNumber(first.customer_phone || "");
+    customerEmailInput.value = first.customer_email || "";
+    shippingAddress1Input.value = first.shipping_address_line1 || "";
+    shippingAddress2Input.value = first.shipping_address_line2 || "";
+    shippingCityInput.value = first.shipping_city || "";
+    shippingStateInput.value = first.shipping_state || "";
+    shippingZipInput.value = first.shipping_zip || "";
+    shippingCountryInput.value = first.shipping_country || "";
+    setFulfillmentChoice(first.fulfillment === "pickup" ? "pickup" : "ship");
+    // Not editable here (it changes the price); kept only so the page's own
+    // check passes.
+    setAlterationChoice(first.alteration_protection ? "yes" : "no");
+    adminEditState = {
+      orderId: o.order_id,
+      name: first.customer_name || "No name",
+      rowIds: data.map((r) => r.id),
+      atFactory: data.some((r) => r.factory_order_no),
+      savedDraft: draft,
+      savedPhotos: photos,
+    };
+    try {
+      sessionStorage.setItem(ADMIN_EDIT_KEY, JSON.stringify(adminEditState));
+    } catch (e) {
+      // edit mode just won't survive a reload
+    }
+    if (closeAccountOverlay) closeAccountOverlay();
+    markDesignStarted();
+    renderCartBar();
+    updateAdminEditUI();
+    updateOrderSummaryUI();
+    const reviewAt = items.findIndex((item) => item.needsReview);
+    const suitAt = suitNumber ? items.findIndex((item) => (item.adminSuitNumber || 1) === suitNumber) : -1;
+    if (suitAt !== -1) {
+      loadCartItemIntoDesigner(suitAt);
+      saveDraft();
+      if (items[suitAt].needsReview) alert("This suit has " + items[suitAt].needsReview.join(", ") + " to fix (a choice that isn't offered anymore, or a missing or out-of-range measurement). Fix it, finish Measurements, then save the order.");
+    } else if (reviewAt !== -1) {
+      loadCartItemIntoDesigner(reviewAt);
+      saveDraft();
+      alert("Suit " + (reviewAt + 1) + " has " + items[reviewAt].needsReview.join(", ") + " to fix (a choice that isn't offered anymore, or a missing or out-of-range measurement). Fix it, finish Measurements, then save the order.");
+    } else {
+      saveDraft();
+      goToCheckout();
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Couldn’t open that order for editing: " + (err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+// The bar at the top while editing, the Save button's label, and the parts
+// of Personal Info that don't apply to an order already placed.
+function updateAdminEditUI() {
+  document.body.classList.toggle("admin-editing-order", !!adminEditState);
+  const bar = document.getElementById("adminEditBar");
+  if (bar) bar.hidden = !adminEditState;
+  const who = document.getElementById("adminEditWho");
+  if (who && adminEditState) who.textContent = "Editing " + adminEditState.name + "’s order";
+}
+
+async function saveAdminOrderEdit() {
+  if (!adminEditState) return;
+  // The suit open in the designer goes into the order as it is now, so a
+  // change can be saved straight away from any step (no need to go through
+  // Measurements and checkout first).
+  if (pendingCommitIndex !== null && cartItems[pendingCommitIndex]) {
+    const missing = []
+      .concat(hasJacketStep() ? jacketDesigner.missingLabels() : [])
+      .concat(isJacketOnlyType(currentSuitType) ? [] : pantsDesigner.missingLabels());
+    if (missing.length) {
+      alert("Suit " + (pendingCommitIndex + 1) + " still needs: " + missing.join(", "));
+      return;
+    }
+    if (!commitCurrentSuitToCart()) return;
+  }
+  if (cartItems.some((item) => !item.adminRowId)) {
+    alert("A suit was added while editing. Suits can't be added to an order already placed: remove it from the cart (or place it as a new order) and save again.");
+    return;
+  }
+  const input = collectAndValidateOrderInput();
+  if (!input) return;
+  const removed = adminEditState.rowIds.length - cartItems.length;
+  if (removed > 0 && !window.confirm(removed + (removed === 1 ? " suit was" : " suits were") + " removed from the cart. Save and delete " + (removed === 1 ? "it" : "them") + " from the order? Its price and payment don't change.")) return;
+  const orderId = adminEditState.orderId;
+  const btns = [submitBtn, document.getElementById("adminEditSaveBtn")].filter(Boolean);
+  btns.forEach((b) => { b.disabled = true; b.textContent = "Saving..."; });
+  try {
+    const client = getSupabase();
+    const liningUrls = await uploadLiningPhotos(orderId);
+    // Every measurement field a suit can have is cleared first, so one the
+    // suit no longer uses (finished sizes changed to body measurements, a
+    // full suit changed to jacket only) doesn't stay on the row.
+    const blank = { jacket_fit: null, pants_fit: null };
+    MEASUREMENTS.forEach((m) => { if (!m.factoryOptional) blank[m.id] = null; });
+    [JACKET_CATALOG, PANTS_CATALOG].forEach((cat) => Object.keys(cat).forEach((k) => (blank[cat[k].column] = null)));
+    const suits = cartItems.map((item, i) => {
+      let lining = liningUrls[i];
+      // The photo already on the order, when re-uploading it didn't work.
+      if (!lining && item.liningPhoto && liningUploadSurcharge(item.jacket) && item.adminSuitNumber === i + 1) {
+        lining = client.storage.from("lining-photos").getPublicUrl(orderId + "/suit-" + (i + 1) + ".jpg").data.publicUrl;
+      }
+      const spec = suitSpecRow(item, i, cartItems.length, input.customerName, lining);
+      Object.keys(spec).forEach((k) => spec[k] === undefined && delete spec[k]);
+      return Object.assign({}, blank, spec, {
+        id: item.adminRowId,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail,
+        shipping_address_line1: input.address1,
+        shipping_address_line2: input.address2,
+        shipping_city: input.city,
+        shipping_state: input.state,
+        shipping_zip: input.zip,
+        shipping_country: input.country,
+        fulfillment: input.fulfillment === "pickup" ? "pickup" : "ship",
+      });
+    });
+    const { error } = await client.rpc("admin_update_order", { p_order_id: orderId, p_suits: suits });
+    if (error) throw error;
+    alert("Order saved." + (adminEditState.atFactory ? "\n\nThis order already has a factory draft: open Send to factory and press Update draft at factory to send the changes." : ""));
+    endAdminOrderEdit();
+  } catch (err) {
+    console.error(err);
+    alert("Couldn’t save the order: " + (err.message || err));
+    btns.forEach((b) => (b.disabled = false));
+    updateOrderSummaryUI();
+    const barSave = document.getElementById("adminEditSaveBtn");
+    if (barSave) barSave.textContent = "Save changes to order";
+  }
+}
+
+// Puts the admin's own cart and design back and reopens All Orders.
+function endAdminOrderEdit() {
+  const state = adminEditState;
+  try {
+    sessionStorage.removeItem(ADMIN_EDIT_KEY);
+    if (state && state.savedDraft) sessionStorage.setItem(DRAFT_STORAGE_KEY, state.savedDraft);
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (state && state.savedPhotos) sessionStorage.setItem(DRAFT_STORAGE_KEY + "_photos", state.savedPhotos);
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+  } catch (e) {
+    // ignore
+  }
+  adminEditState = null;
+  window.location.href = window.location.pathname + "?admin=orders";
+}
+
+(function () {
+  const saveBtn = document.getElementById("adminEditSaveBtn");
+  const cancelBtn = document.getElementById("adminEditCancelBtn");
+  if (saveBtn) saveBtn.addEventListener("click", () => saveAdminOrderEdit());
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      if (window.confirm("Stop editing this order? Changes you haven't saved are dropped.")) endAdminOrderEdit();
+    });
+  }
+})();
+
+if (shippingLiveToggle) {
+  shippingLiveToggle.addEventListener("change", async () => {
+    const want = shippingLiveToggle.checked;
+    if (want && !window.confirm("Send shipping updates to real customers from now on?")) {
+      shippingLiveToggle.checked = false;
+      return;
+    }
+    try {
+      const { data, error } = await getSupabase().rpc("admin_shipping_live", { p_live: want });
+      if (error) throw error;
+      shippingLiveToggle.checked = data === true;
+    } catch (err) {
+      console.error(err);
+      shippingLiveToggle.checked = !want;
+      alert("Couldn\u2019t change that right now.");
+    }
+  });
+}
+
+function refreshAccountData() {
+  updateAccountUI();
+  loadProfile();
+  loadOrderHistory();
+  refreshAdminStatus();
+  prefillContactDetails();
+}
+
+// A signed-in customer who has ordered before gets the Personal Info page
+// filled in from their most recent order (name, phone, email, shipping
+// address); with no past order, just their name and email from the account.
+// Only empty fields are filled, so nothing typed (or restored from the
+// draft) is ever overwritten, and they can still change anything.
+async function prefillContactDetails() {
+  const user = currentUser;
+  if (!user) return;
+  let last = null;
+  try {
+    const { data } = await getSupabase()
+      .from("orders")
+      .select("customer_name, customer_phone, customer_email, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    last = data && data[0];
+  } catch (e) {
+    console.error(e);
+  }
+  if (user !== currentUser) return;
+  const meta = user.user_metadata || {};
+  const values = last
+    ? {
+        customerName: last.customer_name,
+        customerPhone: last.customer_phone,
+        customerEmail: last.customer_email,
+        shippingAddress1: last.shipping_address_line1,
+        shippingAddress2: last.shipping_address_line2,
+        shippingCity: last.shipping_city,
+        shippingState: last.shipping_state,
+        shippingZip: last.shipping_zip,
+        shippingCountry: last.shipping_country,
+      }
+    : {
+        customerName: (currentProfile && currentProfile.full_name) || meta.full_name || meta.name || "",
+        customerEmail: user.email || "",
+      };
+  Object.keys(values).forEach((id) => {
+    const el = document.getElementById(id);
+    // Country starts out as "United States", so that counts as empty.
+    const empty = !el || !el.value.trim() || (id === "shippingCountry" && el.value === "United States");
+    if (el && empty && values[id]) el.value = values[id];
+  });
+}
+
+// Accessible modal, same open()/close() shape as the How It Works overlay
+// above -- focus to the close button on open, Escape/backdrop-click close,
+// focus returns to whatever was clicked to open it.
+(function () {
+  if (!accountOverlay) return;
+  const closeBtn = document.getElementById("accountOverlayClose");
+  let lastFocused = null;
+
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+  function open(triggerEl) {
+    lastFocused = triggerEl || document.activeElement;
+    accountOverlay.classList.add("open");
+    closeBtn.focus();
+    // Fresh notifications each time the admin opens My Account.
+    if (currentIsAdmin && adminNotificationsSection && !adminNotificationsSection.open) loadAdminNotifications();
+    document.addEventListener("keydown", onKeydown);
+  }
+  function close() {
+    pendingSignInAction = null;
+    if (accountIntro) accountIntro.textContent = ACCOUNT_INTRO_DEFAULT;
+    accountOverlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+    // Leave the signed-in view exactly as it was, but reset the signed-out
+    // forms (fields + status message) each time the overlay closes, so
+    // reopening it never shows a stale error or a half-filled password field
+    // left over from a previous attempt.
+    if (accountStatusMsg) hideAccountStatus(accountStatusMsg);
+    if (signupForm) signupForm.reset();
+    if (loginForm) loginForm.reset();
+    const savedMeasurements = document.getElementById("savedMeasurementsSection");
+    if (savedMeasurements) savedMeasurements.open = false;
+    const pastOrders = document.getElementById("pastOrdersSection");
+    if (pastOrders) pastOrders.open = false;
+    if (adminNotificationsSection) adminNotificationsSection.open = false;
+  }
+
+  if (accountIconBtn) accountIconBtn.addEventListener("click", (e) => open(e.currentTarget));
+  if (closeBtn) closeBtn.addEventListener("click", close);
+  accountOverlay.addEventListener("click", (e) => {
+    if (e.target === accountOverlay) close();
+  });
+  openAccountOverlay = open;
+  closeAccountOverlay = close;
+})();
+
+// Signed-in-only actions (drawing a suit picture). A guest gets the account
+// popup with a line saying why; once they sign in or create an account the
+// popup closes and the action runs. Closing the popup instead drops it.
+// (Continue with Google leaves the page, so after it they tap again.)
+function requireSignIn(triggerEl, introText, action) {
+  if (currentUser) return action();
+  if (!openAccountOverlay) return;
+  openAccountOverlay(triggerEl);
+  pendingSignInAction = action;
+  if (accountIntro) accountIntro.textContent = introText;
+}
+
+function showAccountStatus(el, message) {
+  if (!el) return;
+  el.textContent = message;
+  el.hidden = false;
+}
+function hideAccountStatus(el) {
+  if (!el) return;
+  el.hidden = true;
+  el.textContent = "";
+}
+
+// Supabase's own error text ("email rate limit exceeded", "Email not
+// confirmed", ...) reads like a broken site to a customer, so the common
+// account errors get plain-English versions that say what to do next.
+function friendlyAuthError(error) {
+  const code = (error && (error.code || error.error_code)) || "";
+  const msg = ((error && error.message) || "").toLowerCase();
+  if (code === "over_email_send_rate_limit" || msg.includes("rate limit")) {
+    return "We couldn't send the confirmation email right now -- too many sign-ups at once. Please try again in a little while, or use Continue with Google.";
+  }
+  if (code === "email_not_confirmed" || msg.includes("email not confirmed")) {
+    return "Please confirm your email first -- click the link we emailed you, then log in.";
+  }
+  if (code === "user_already_exists" || msg.includes("already registered")) {
+    return "An account with this email already exists. Log in instead, or use Continue with Google.";
+  }
+  if (code === "invalid_credentials" || msg.includes("invalid login credentials")) {
+    return "That email and password don't match an account. Check them, or create an account first.";
+  }
+  if (code === "weak_password" || msg.includes("password should")) {
+    return (error && error.message) || "Please choose a stronger password.";
+  }
+  if (code === "email_address_invalid" || (msg.includes("email address") && msg.includes("invalid"))) {
+    return "That email address doesn't look right -- please check it.";
+  }
+  return (error && error.message) || "Something went wrong. Please try again.";
+}
+
+// Toggles between the Create Account and Log In forms -- plain show/hide,
+// same tab idea as the category tabs in the jacket/pants designer, just far
+// simpler (two panes, not a scrollable strip). Switching clears whatever
+// status message the other form left behind so it can't read as still
+// applying to the one now showing.
+if (showSignupTabBtn && showLoginTabBtn && signupForm && loginForm) {
+  function showSignupTab() {
+    signupForm.hidden = false;
+    loginForm.hidden = true;
+    showSignupTabBtn.classList.add("active");
+    showLoginTabBtn.classList.remove("active");
+    showSignupTabBtn.setAttribute("aria-selected", "true");
+    showLoginTabBtn.setAttribute("aria-selected", "false");
+    hideAccountStatus(accountStatusMsg);
+  }
+  function showLoginTab() {
+    signupForm.hidden = true;
+    loginForm.hidden = false;
+    showSignupTabBtn.classList.remove("active");
+    showLoginTabBtn.classList.add("active");
+    showSignupTabBtn.setAttribute("aria-selected", "false");
+    showLoginTabBtn.setAttribute("aria-selected", "true");
+    hideAccountStatus(accountStatusMsg);
+  }
+  showSignupTabBtn.addEventListener("click", showSignupTab);
+  showLoginTabBtn.addEventListener("click", showLoginTab);
+}
+
+if (googleAuthBtn) {
+  googleAuthBtn.addEventListener("click", async () => {
+    if (!isSupabaseConfigured()) {
+      showAccountStatus(accountStatusMsg, "Accounts aren't set up yet -- check back soon.");
+      return;
+    }
+    googleAuthBtn.disabled = true;
+    try {
+      // No signupForm.reset()/onAuthStateChange handling needed here the
+      // way the email/password forms below have it -- a successful call
+      // navigates the whole page away to Google immediately, and back to
+      // this same page (baseUrl) once they approve, at which point
+      // supabase-js reads the returned session out of the URL on its own
+      // and onAuthStateChange fires exactly like any other sign-in.
+      const baseUrl = window.location.href.split("?")[0].split("#")[0];
+      const { error } = await getSupabase().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: baseUrl },
+      });
+      if (error) {
+        showAccountStatus(accountStatusMsg, error.message);
+        googleAuthBtn.disabled = false;
+      }
+      // On success the redirect happens immediately; leave the button
+      // disabled rather than re-enabling it under a page that's about to
+      // navigate away.
+    } catch (err) {
+      showAccountStatus(accountStatusMsg, err.message);
+      googleAuthBtn.disabled = false;
+    }
+  });
+}
+
+if (signupForm) {
+  signupForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = (signupNameInput.value || "").trim();
+    const email = (signupEmailInput.value || "").trim();
+    const password = signupPasswordInput.value || "";
+    if (!name) {
+      showAccountStatus(accountStatusMsg, "Please enter your full name.");
+      return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showAccountStatus(accountStatusMsg, "Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      showAccountStatus(accountStatusMsg, "Password must be at least 6 characters.");
+      return;
+    }
+    if (!isSupabaseConfigured()) {
+      showAccountStatus(accountStatusMsg, "Accounts aren't set up yet -- check back soon.");
+      return;
+    }
+    signupSubmitBtn.disabled = true;
+    signupSubmitBtn.textContent = "Creating Account...";
+    try {
+      const client = getSupabase();
+      const baseUrl = window.location.href.split("?")[0].split("#")[0];
+      // full_name goes into the auth user's own metadata immediately (so it's
+      // available for display the instant a session exists, with no extra
+      // fetch -- see customerDisplayName() above) -- a database trigger (see
+      // add_customer_profiles_migration.sql) copies it into the profiles
+      // table row it creates for every new signup, confirmed or not.
+      const { data, error } = await client.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name }, emailRedirectTo: baseUrl },
+      });
+      if (error) {
+        showAccountStatus(accountStatusMsg, friendlyAuthError(error));
+      } else if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        // Supabase's answer when the email already has an account (from an
+        // earlier sign-up or Continue with Google): it looks like a success
+        // but sends no email, so saying "check your email" would leave the
+        // customer waiting for a message that never comes.
+        showAccountStatus(accountStatusMsg, "An account with this email already exists. Log in instead, or use Continue with Google.");
+      } else if (data && data.session) {
+        // Email confirmation is off for this project -- signed in right
+        // away. onAuthStateChange fires on its own and swaps the overlay to
+        // the logged-in view; nothing else to do here.
+        signupForm.reset();
+      } else {
+        showAccountStatus(accountStatusMsg, "Account created -- check your email to confirm it, then log in.");
+        signupForm.reset();
+      }
+    } catch (err) {
+      showAccountStatus(accountStatusMsg, err.message);
+    } finally {
+      signupSubmitBtn.disabled = false;
+      signupSubmitBtn.textContent = "Create Account";
+    }
+  });
+}
+
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = (loginEmailInput.value || "").trim();
+    const password = loginPasswordInput.value || "";
+    if (!email || !password) {
+      showAccountStatus(accountStatusMsg, "Please enter your email and password.");
+      return;
+    }
+    if (!isSupabaseConfigured()) {
+      showAccountStatus(accountStatusMsg, "Accounts aren't set up yet -- check back soon.");
+      return;
+    }
+    loginSubmitBtn.disabled = true;
+    loginSubmitBtn.textContent = "Logging In...";
+    try {
+      const client = getSupabase();
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      if (error) {
+        showAccountStatus(accountStatusMsg, friendlyAuthError(error));
+      } else {
+        loginForm.reset();
+      }
+    } catch (err) {
+      showAccountStatus(accountStatusMsg, err.message);
+    } finally {
+      loginSubmitBtn.disabled = false;
+      loginSubmitBtn.textContent = "Log In";
+    }
+  });
+}
+
+if (accountLogoutBtn) {
+  accountLogoutBtn.addEventListener("click", async () => {
+    try {
+      await getSupabase().auth.signOut();
+    } catch (err) {
+      console.error(err);
+    }
+  });
+}
+
+if (saveProfileMeasurementsBtn) {
+  saveProfileMeasurementsBtn.addEventListener("click", async () => {
+    saveProfileMeasurementsBtn.disabled = true;
+    saveProfileMeasurementsBtn.textContent = "Saving...";
+    const values = collectProfileMeasurements();
+    const outOfRange = profileMeasurementsOutOfRange(values);
+    if (outOfRange.length) {
+      showAccountStatus(profileMeasurementsStatusMsg, "Please fix these to save: " + outOfRange.join(", ") + ".");
+      saveProfileMeasurementsBtn.disabled = false;
+      saveProfileMeasurementsBtn.textContent = "Save Measurements";
+      return;
+    }
+    const ok = await saveProfileMeasurements(values);
+    showAccountStatus(
+      profileMeasurementsStatusMsg,
+      ok ? "Saved." : "Something went wrong saving your measurements -- please try again."
+    );
+    saveProfileMeasurementsBtn.disabled = false;
+    saveProfileMeasurementsBtn.textContent = "Save Measurements";
+  });
+}
+
+// "Use my saved measurements" on the real designer's Measurements step --
+// same fill-every-field idea as applyEstimateBtn above (see
+// renderMeasurementFields), just sourced from the signed-in customer's
+// saved profile instead of a standard-size estimate.
+const useSavedMeasurementsBtn = document.getElementById("useSavedMeasurementsBtn");
+if (useSavedMeasurementsBtn) {
+  useSavedMeasurementsBtn.addEventListener("click", () => {
+    if (!currentProfile || !currentProfile.measurements) return;
+    applyMeasureExtras(currentProfile.measurements);
+    MEASUREMENTS.forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      const val = currentProfile.measurements[m.id];
+      if (el && val !== undefined && val !== null) el.value = val;
+    });
+    saveDraft();
+    if (measureGrid) {
+      smoothScrollWindowTo(window.scrollY + measureGrid.getBoundingClientRect().top - 20 - getNavClearance());
+    }
+  });
+}
+
+// Auth state is tracked entirely through Supabase's own listener, which
+// fires once immediately with whatever session already exists (e.g. still
+// signed in from an earlier visit, restored from localStorage) and again on
+// every change -- including the moment this tab picks up a session from a
+// clicked magic-link URL, so there's no separate "handle the redirect"
+// codepath to write (contrast with handlePayPalReturn() above, which needs
+// one because PayPal has no equivalent of its own JS client running here).
+// A confirmation link that has expired or was already used (some email apps
+// open links on their own to scan them) brings the customer back here with
+// only an error in the address bar -- read it before supabase-js clears it
+// and say what happened, instead of landing them on the home page with no
+// sign the sign-up didn't finish.
+(function () {
+  const hash = window.location.hash || "";
+  if (hash.indexOf("error_description=") === -1) return;
+  const params = new URLSearchParams(hash.slice(1));
+  const code = params.get("error_code") || "";
+  const message =
+    code === "otp_expired"
+      ? "That confirmation link has expired or was already used. Try logging in -- if that doesn't work, create your account again to get a fresh link."
+      : params.get("error_description") || "That link didn't work. Please try again.";
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+  if (accountIconBtn) accountIconBtn.click();
+  if (showLoginTabBtn) showLoginTabBtn.click();
+  showAccountStatus(accountStatusMsg, message);
+})();
+
+if (isSupabaseConfigured()) {
+  try {
+    getSupabase().auth.onAuthStateChange((event, session) => {
+      currentUser = session ? session.user : null;
+      refreshAccountData();
+      if (currentUser && pendingSignInAction) {
+        const action = pendingSignInAction;
+        closeAccountOverlay();
+        action();
+      }
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+// ==================== END CUSTOMER ACCOUNTS ====================
+
+const lightboxFrame = document.getElementById("lightboxFrame");
+const lightboxImg = document.getElementById("lightboxImg");
+const ZOOM_SCALE = 2.4;
+const zoomState = { scale: 1, tx: 0, ty: 0, dragging: false, moved: false, startX: 0, startY: 0, startTx: 0, startTy: 0 };
+
+function applyZoomTransform() {
+  lightboxImg.style.transform = "scale(" + zoomState.scale + ") translate(" + zoomState.tx + "px, " + zoomState.ty + "px)";
+}
+
+function clampPan() {
+  if (zoomState.scale <= 1) {
+    zoomState.tx = 0;
+    zoomState.ty = 0;
+    return;
+  }
+  const rect = lightboxFrame.getBoundingClientRect();
+  const s = zoomState.scale;
+  const maxTx = (rect.width * (s - 1)) / (2 * s);
+  const maxTy = (rect.height * (s - 1)) / (2 * s);
+  zoomState.tx = Math.min(maxTx, Math.max(-maxTx, zoomState.tx));
+  zoomState.ty = Math.min(maxTy, Math.max(-maxTy, zoomState.ty));
+}
+
+// Zoom in centered on the exact point the user clicked/tapped, rather than
+// always zooming into the middle of the image.
+function zoomInAt(clientX, clientY) {
+  const rect = lightboxFrame.getBoundingClientRect();
+  const px = clientX - rect.left;
+  const py = clientY - rect.top;
+  zoomState.scale = ZOOM_SCALE;
+  zoomState.tx = rect.width / 2 - px;
+  zoomState.ty = rect.height / 2 - py;
+  clampPan();
+  lightboxFrame.classList.add("zoomed");
+  applyZoomTransform();
+}
+
+function resetZoom() {
+  zoomState.scale = 1;
+  zoomState.tx = 0;
+  zoomState.ty = 0;
+  lightboxFrame.classList.remove("zoomed");
+  lightboxImg.style.transform = "";
+}
+
+// Fabric zoom, full quality: FABRIC_ZOOM_MAP (generated by pack_sprites.py)
+// maps each fabric's real supplier code to a high-resolution 520x520 tile
+// packed into one of a handful of shared sprite sheets under ./assets/. The
+// grid thumbnails stay exactly as they are (small, base64-inlined, fast) --
+// this only affects the single fabric image shown in the zoom lightbox.
+//
+// Progressive enhancement, on purpose: openLightbox always shows the fast
+// low-res thumbnail immediately (unchanged first paint), then -- only for
+// fabric, only if a map entry exists -- asynchronously loads the relevant
+// sprite, crops out just this fabric's tile onto an offscreen canvas at full
+// native resolution, and swaps the lightbox image over to that once ready.
+// If anything about that fails (sprite 404s, canvas is tainted because this
+// exact HTML was opened directly as a local file:// page instead of served
+// from a real origin -- e.g. the standalone ScottSuits_mobile_preview.html,
+// which inlines everything else but never inlines these sprites since they're
+// referenced from JS, not a literal "./assets/..." string bundle_local.py's
+// regex would catch), it's caught and silently ignored: the low-res thumbnail
+// that's already on screen just stays put. Nothing about the existing
+// pinch-zoom/pan code below (which operates on the live <img> element) or any
+// other category's zoom is touched by any of this.
+const fabricSpriteImgCache = {};
+let lightboxZoomToken = 0;
+let lightboxBlobUrl = null;
+
+function loadSpriteImage(spritePath) {
+  if (fabricSpriteImgCache[spritePath]) return fabricSpriteImgCache[spritePath];
+  const p = new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = reject;
+    im.src = spritePath;
+  });
+  fabricSpriteImgCache[spritePath] = p;
+  return p;
+}
+
+// Which categories get the "large" zoom lightbox (bigger frame, click-card-
+// to-preview, "Confirm This ___" button) instead of the plain small-preview
+// magnifier every other category still uses. Originally Fabric only; Lining
+// and Felt Color joined so all three swatch-photo categories behave the
+// same way, per Daniel's request.
+function isZoomCategory(key) {
+  return key === "fabric" || key === "lining" || key === "feltColor";
+}
+
+// Resolves the higher-quality image to swap in once the lightbox is open,
+// for the two zoom categories that DON'T need Fabric's sprite+canvas system:
+// - Felt Color: every option's own `img` already IS the best quality
+//   available (there's no separate, higher-res source to crop from -- see
+//   fabric-zoom-full-quality-status.md's notes on the felt supplier photos'
+//   native resolution), so there's nothing to swap to; returns null.
+// - Lining: LINING_ZOOM_MAP (catalog.js) points every lining at its own
+//   full-size square crop from the supplier catalog. A code with no entry
+//   falls back to its grid image, same as Felt.
+// Both paths are a plain <img src> swap, no canvas involved -- unlike
+// upgradeFabricZoom, this can't fail with the file:// canvas-tainting
+// SecurityError described above, since nothing here ever touches a canvas.
+function zoomUpgradeSrc(catKey, code) {
+  if (catKey === "lining" && typeof LINING_ZOOM_MAP !== "undefined" && LINING_ZOOM_MAP[code]) {
+    return LINING_ZOOM_MAP[code];
+  }
+  return null;
+}
+
+function upgradeFabricZoom(img, fabricCode, myToken) {
+  if (typeof FABRIC_ZOOM_MAP === "undefined") return;
+  const entry = FABRIC_ZOOM_MAP[fabricCode];
+  if (!entry) return;
+  const tile = entry.tile || (typeof FABRIC_ZOOM_TILE_SIZE === "number" ? FABRIC_ZOOM_TILE_SIZE : 1560);
+  loadSpriteImage(entry.sprite)
+    .then((spriteImg) => {
+      if (myToken !== lightboxZoomToken) return; // lightbox moved on already
+      const canvas = document.createElement("canvas");
+      canvas.width = tile;
+      canvas.height = tile;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(
+        spriteImg,
+        entry.col * tile,
+        entry.row * tile,
+        tile,
+        tile,
+        0,
+        0,
+        tile,
+        tile
+      );
+      canvas.toBlob((blob) => {
+        if (myToken !== lightboxZoomToken || !blob) return;
+        const url = URL.createObjectURL(blob);
+        if (lightboxBlobUrl) URL.revokeObjectURL(lightboxBlobUrl);
+        lightboxBlobUrl = url;
+        img.onload = () => applyLightboxSizing(img, true);
+        img.src = url;
+      }, "image/jpeg", 0.95);
+    })
+    .catch(() => {
+      /* progressive enhancement only -- leave the low-res thumbnail as-is */
+    });
+}
+
+// large: fabric/lining/felt-color swatches are the categories where the
+// customer actually needs to judge a pattern/weave/texture up close rather
+// than just confirm a color -- so their lightbox frame gets a bigger cap
+// (see .lightbox-frame-xl in style.css) than every other category's zoom,
+// which stays at the original size.
+//
+// XL_SCALE: the fraction of the viewport the "large" frame is allowed to
+// fill. Originally 0.92 (near-fullscreen) -- Daniel asked for that square
+// to come down to 1/3 of its size, so this is 0.92/3. Keep this in sync
+// with .lightbox-frame-xl's max-width/max-height in style.css (also 1/3 of
+// its old min(92vw,2160px)/92vh values), since that CSS is the frame's own
+// outer bound and this is what actually sizes the image inside it.
+// Desktop later doubled too (2026-10-06), so it now matches mobile: 2/3 of
+// the original near-fullscreen fraction.
+const XL_SCALE = (0.92 / 3) * 2;
+// XL_SCALE_MOBILE: on mobile Daniel asked for the same square doubled back
+// up from that 1/3 size -- so 2x XL_SCALE, i.e. 2/3 of the original near-
+// fullscreen fraction. 900px is the same mobile/desktop split every other
+// breakpoint in style.css uses (see @media(max-width:900px)); keep the
+// threshold and the CSS mirror of these numbers (in style.css's mobile
+// media query) in sync with this.
+const XL_SCALE_MOBILE = (0.92 / 3) * 2;
+const MOBILE_BREAKPOINT_PX = 900;
+//
+// Scale is capped at 1 (never upscale past the image's own native pixels).
+// This used to allow up to 3x here, which was fine back when the lightbox
+// only ever had a small stretched thumbnail to work with -- but now that
+// upgradeFabricZoom (above) swaps in the real 1560x1560 zoom-tile crop
+// (true 3x the original 520x520 -- see fabric-zoom-full-quality-status.md),
+// a further blow-up on a real desktop-sized viewport (whose XL_SCALE-of-
+// width/height cap can exceed even 1560px) stretches that same real image
+// well past its native resolution and it comes out soft/blurry -- exactly
+// the "190x190/3x-stretch" look this whole zoom-tile system was built to
+// get away from (see the project doc on the fabric-zoom rework). A phone's
+// narrower viewport was already keeping scale under 1 on its own, which is
+// why this only ever showed up as a desktop-only problem: capping at 1 here
+// makes desktop match that same "always real, never blown-up" pixel
+// fidelity instead of relying on the viewport happening to be small enough.
+function applyLightboxSizing(img, large) {
+  if (!large || !img.naturalWidth || !img.naturalHeight) return;
+  const scaleFactor = window.innerWidth <= MOBILE_BREAKPOINT_PX ? XL_SCALE_MOBILE : XL_SCALE;
+  const maxW = window.innerWidth * scaleFactor;
+  const maxH = window.innerHeight * scaleFactor;
+  const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
+  // Always set an explicit pixel width/height here -- never fall back to
+  // clearing these to "" and letting the plain CSS `width:100%;height:100%`
+  // rule take over. That CSS rule creates a circular-sizing situation (the
+  // frame has no explicit width of its own, so its auto size depends on its
+  // 100%-wide image, which itself depends on the frame) that browsers
+  // resolve with an internal fallback essentially DISCONNECTED from the
+  // image's real naturalWidth/naturalHeight -- empirically this pinned the
+  // displayed box at a near-constant ~765px on a 1600px-wide viewport no
+  // matter whether the zoom tile was 520, 780, or 1560px native, which is
+  // exactly why bumping source resolution alone was never making the box
+  // itself look any bigger. Setting explicit pixel dimensions here (instead
+  // of only doing it in the now-removed "scale > 1" branch, which almost
+  // never fires now that scale is capped at 1) ties the rendered box
+  // directly to the real native resolution and the real viewport-based cap.
+  img.style.width = Math.round(img.naturalWidth * scale) + "px";
+  img.style.height = Math.round(img.naturalHeight * scale) + "px";
+}
+
+// onConfirm: optional callback. When present, the lightbox shows a
+// "Confirm This ___" button (see .lightbox-confirm-btn in style.css)
+// instead of just letting the customer look and close -- clicking it runs
+// onConfirm() (the actual select-this-swatch logic) then closes the
+// lightbox. Passed only from renderSwatchCard's card click for a zoom
+// category (see isZoomCategory); the separate per-card magnifier button
+// (every other category) still opens the same lightbox with no onConfirm,
+// so it stays a pure preview, as before.
+//
+// catKey: which catalog category this is ("fabric", "lining", "feltColor",
+// or omitted/null for every non-zoom category, which never reaches the
+// upgrade branch below anyway since fabricCode is null for them). Picks
+// which upgrade path runs once the lightbox is open: Fabric's sprite+canvas
+// crop (upgradeFabricZoom) or a plain higher-res <img src> swap for Lining/
+// Felt Color (zoomUpgradeSrc) -- see those functions' comments above.
+function openLightbox(src, name, catLabel, large, fabricCode, onConfirm, catKey) {
+  const img = document.getElementById("lightboxImg");
+  document.getElementById("lightboxCaption").textContent = name;
+  const lbOpt = catKey === "fabric" && fabricCode ? (typeof JACKET_CATALOG !== "undefined" && JACKET_CATALOG.fabric.options.find((o) => o.name === fabricCode)) : null;
+  const lbSub = document.getElementById("lightboxSub");
+  lbSub.textContent = catLabel;
+  if (lbOpt && lbOpt.pattern) {
+    const pill = document.createElement("span");
+    pill.className = "lb-pattern";
+    pill.textContent = lbOpt.pattern;
+    lbSub.prepend(pill);
+  }
+  // Very short fabric description (catalog opt.description) under the subtitle.
+  let lbDesc = document.getElementById("lightboxDesc");
+  if (!lbDesc) {
+    lbDesc = document.createElement("div");
+    lbDesc.id = "lightboxDesc";
+    lbDesc.className = "lightbox-desc";
+    lbSub.after(lbDesc);
+  }
+  lbDesc.textContent = lbOpt && lbOpt.description ? lbOpt.description : "";
+  lbDesc.hidden = !lbDesc.textContent;
+  resetZoom();
+  lightboxZoomToken++;
+  const myToken = lightboxZoomToken;
+  if (lightboxBlobUrl) {
+    URL.revokeObjectURL(lightboxBlobUrl);
+    lightboxBlobUrl = null;
+  }
+  lightboxFrame.classList.toggle("lightbox-frame-xl", !!large);
+  // Every non-fabric category leaves these inline styles empty and keeps its
+  // original intrinsic-only sizing (native resolution, capped by the plain
+  // .lightbox-frame CSS rule) -- untouched by any of this.
+  img.style.width = "";
+  img.style.height = "";
+  const applySizing = () => applyLightboxSizing(img, large);
+  if (img.complete && img.src === src) {
+    applySizing();
+  } else {
+    img.onload = applySizing;
+  }
+  img.src = src;
+  const confirmBtn = document.getElementById("lightboxConfirmBtn");
+  confirmBtn.hidden = !onConfirm;
+  // "Confirm This Fabric" was hardcoded in the HTML back when Fabric was
+  // the only category that ever showed this button -- now that Lining and
+  // Felt Color use the same lightbox, the label needs to match whichever
+  // category is actually open (catLabel is the category's own display
+  // label, e.g. "Fabric", "Lining", "Felt Color").
+  if (onConfirm) confirmBtn.textContent = "Confirm This " + catLabel;
+  confirmBtn.onclick = onConfirm
+    ? () => {
+        onConfirm();
+        closeLightbox();
+      }
+    : null;
+  document.getElementById("lightbox").classList.add("open");
+  if (catKey === "fabric") lbView = lbDefaultView(fabricCode);
+  setLbView(catKey === "fabric");
+  updateLbNav();
+  if (large && fabricCode) {
+    if (catKey === "fabric") {
+      upgradeFabricZoom(img, fabricCode, myToken);
+    } else {
+      const upgraded = zoomUpgradeSrc(catKey, fabricCode);
+      if (upgraded && upgraded !== src) {
+        // If the high-res crop 404s (e.g. a lighter build that doesn't
+        // publish the full LINING_ZOOM_MAP asset set), silently keep the
+        // lightbox on the original lower-res image instead of leaving a
+        // broken <img> -- same "fail safe to what's already showing"
+        // behavior as upgradeFabricZoom's sprite-load catch above.
+        img.onerror = () => {
+          if (myToken !== lightboxZoomToken) return;
+          img.onerror = null;
+          img.src = src;
+          applyLightboxSizing(img, false);
+        };
+        img.onload = () => applyLightboxSizing(img, true);
+        img.src = upgraded;
+      }
+    }
+  }
+}
+// Subtle browsing inside the zoom view: after a fabric (or lining/felt) is
+// opened, the customer can step to the neighbouring ones in the same order
+// as the grid -- faint side arrows, a horizontal swipe, or the arrow keys.
+let lbSeq = null;
+let lbIdx = -1;
+function updateLbNav() {
+  const p = document.getElementById("lbPrev");
+  const n = document.getElementById("lbNext");
+  const on = !!lbSeq && lbSeq.length > 1;
+  p.hidden = !on;
+  n.hidden = !on;
+  if (on) {
+    p.disabled = lbIdx <= 0;
+    n.disabled = lbIdx >= lbSeq.length - 1;
+  }
+  renderLbStrip();
+}
+// A row of small swatches under the big view: the same options as the grid,
+// the open one ringed, tap any to switch to it without closing.
+let lbStripSeq = null;
+function renderLbStrip() {
+  const strip = document.getElementById("lbStrip");
+  const on = !!lbSeq && lbSeq.length > 1;
+  strip.hidden = !on;
+  if (!on) {
+    lbStripSeq = null;
+    strip.textContent = "";
+    return;
+  }
+  if (lbStripSeq !== lbSeq) {
+    lbStripSeq = lbSeq;
+    strip.textContent = "";
+    lbSeq.forEach((a, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "lb-chip";
+      b.setAttribute("role", "option");
+      b.setAttribute("aria-label", a[1]);
+      b.title = a[1];
+      b.innerHTML = '<img src="' + a[0] + '" alt="" loading="lazy" draggable="false">';
+      b.onclick = () => lbNavigate(i - lbIdx);
+      strip.appendChild(b);
+    });
+  }
+  Array.from(strip.children).forEach((c, i) => {
+    const cur = i === lbIdx;
+    c.classList.toggle("active", cur);
+    c.setAttribute("aria-selected", String(cur));
+  });
+  const cur = strip.children[lbIdx];
+  if (cur) strip.scrollTo({ left: cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
+}
+function lbNavigate(d) {
+  if (!lbSeq || !document.getElementById("lightbox").classList.contains("open")) return;
+  const k = lbIdx + d;
+  if (k < 0 || k >= lbSeq.length) return;
+  lbIdx = k;
+  const a = lbSeq[k];
+  openLightbox(a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
+}
+// Fabrics can show "Draped": the photo on a hanging piece of cloth (see
+// fabric-drape.js), or the flat close-up, one tap apart. Other categories,
+// and browsers without WebGL, only get the close-up.
+let fabricDrape; // undefined until first needed, null when unavailable
+let lbView = "drape";
+// Each fabric opens on its own best view (see FABRIC_CLOSEUP_FIRST in
+// catalog.js); the switch then changes it for that fabric only.
+function lbDefaultView(fabricCode) {
+  return typeof FABRIC_CLOSEUP_FIRST !== "undefined" && FABRIC_CLOSEUP_FIRST.has(fabricCode) ? "closeup" : "drape";
+}
+function setLbView(isFabric) {
+  const card = document.querySelector("#lightbox .lightbox-card");
+  const toggle = document.getElementById("lbViewToggle");
+  if (isFabric && fabricDrape === undefined) {
+    fabricDrape = window.FabricDrape ? FabricDrape.create(document.getElementById("fabricDrape")) : null;
+  }
+  const drape = isFabric && !!fabricDrape && lbView === "drape";
+  toggle.hidden = !isFabric || !fabricDrape;
+  card.classList.toggle("lb-drape-on", drape);
+  toggle.querySelectorAll("button").forEach((b) => {
+    const on = b.dataset.view === (drape ? "drape" : "closeup");
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  if (!fabricDrape) return;
+  if (drape) {
+    if (lightboxImg.complete && lightboxImg.naturalWidth) fabricDrape.setImage(lightboxImg);
+    fabricDrape.start();
+  } else {
+    fabricDrape.stop();
+  }
+}
+document.getElementById("lbViewToggle").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-view]");
+  if (!b) return;
+  lbView = b.dataset.view;
+  setLbView(true);
+});
+// The close-up photo arrives in steps (thumbnail, then the sharp crop), so
+// the cloth picks up each one as it loads.
+lightboxImg.addEventListener("load", () => {
+  if (fabricDrape && document.querySelector("#lightbox .lightbox-card").classList.contains("lb-drape-on")) fabricDrape.setImage(lightboxImg);
+});
+
+function closeLightbox() {
+  if (fabricDrape) fabricDrape.stop();
+  document.getElementById("lightbox").classList.remove("open");
+  lbSeq = null;
+  lbIdx = -1;
+  resetZoom();
+}
+document.getElementById("lightboxClose").addEventListener("click", closeLightbox);
+document.getElementById("lightbox").addEventListener("click", (e) => {
+  if (e.target.id === "lightbox") closeLightbox();
+});
+
+// Dragging to pan around while zoomed in, plus two-finger pinch to zoom,
+// all via Pointer Events (each touch reports its own pointer, so tracking
+// however many are currently down tells us whether this is a one-finger
+// drag or a two-finger pinch). Block the browser's native "drag the image
+// out" behavior, which otherwise hijacks the gesture before ours can run.
+lightboxImg.addEventListener("dragstart", (e) => e.preventDefault());
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const activeLightboxPointers = new Map(); // pointerId -> {x, y}
+let pinchPrevDist = 0;
+
+function pointsArray() {
+  return Array.from(activeLightboxPointers.values());
+}
+function distanceBetween(p1, p2) {
+  return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+}
+function midpointBetween(p1, p2) {
+  return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+}
+
+// Re-arm a plain one-finger drag from wherever that finger currently is --
+// used both for a fresh single touch and for the finger left over once a
+// pinch drops back down to one, so panning continues without a jump.
+function beginSingleDrag(point) {
+  zoomState.dragging = true;
+  zoomState.startX = point.x;
+  zoomState.startY = point.y;
+  zoomState.startTx = zoomState.tx;
+  zoomState.startTy = zoomState.ty;
+  lightboxImg.classList.add("no-transition");
+}
+
+lightboxFrame.addEventListener("pointerdown", (e) => {
+  try {
+    lightboxFrame.setPointerCapture(e.pointerId);
+  } catch (err) {
+    // Some environments (older WebViews, synthetic events) can't capture --
+    // the gesture still works via the tracked pointer map below, it just
+    // won't keep receiving events if a finger drifts outside the frame.
+  }
+  activeLightboxPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (activeLightboxPointers.size === 2) {
+    e.preventDefault();
+    zoomState.dragging = false;
+    const [p1, p2] = pointsArray();
+    pinchPrevDist = distanceBetween(p1, p2);
+    zoomState.moved = true; // a pinch is never a "tap to zoom" click afterward
+    lightboxImg.classList.add("no-transition");
+  } else if (activeLightboxPointers.size === 1) {
+    if (zoomState.scale <= 1) return;
+    e.preventDefault();
+    zoomState.moved = false;
+    beginSingleDrag({ x: e.clientX, y: e.clientY });
+  }
+});
+
+lightboxFrame.addEventListener("pointermove", (e) => {
+  if (!activeLightboxPointers.has(e.pointerId)) return;
+  activeLightboxPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (activeLightboxPointers.size === 2) {
+    e.preventDefault();
+    const [p1, p2] = pointsArray();
+    const dist = distanceBetween(p1, p2);
+    if (pinchPrevDist > 0 && dist > 0) {
+      const s0 = zoomState.scale;
+      const s1 = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s0 * (dist / pinchPrevDist)));
+      const rect = lightboxFrame.getBoundingClientRect();
+      const mid = midpointBetween(p1, p2);
+      const originX = rect.width / 2;
+      const originY = rect.height / 2;
+      const mx = mid.x - rect.left;
+      const my = mid.y - rect.top;
+      // Keep the point under the fingers visually fixed as the scale changes
+      // (see zoomInAt for the same "screen = origin + s*(local - origin + T)"
+      // relationship this is solved from).
+      zoomState.tx += (mx - originX) * (1 / s1 - 1 / s0);
+      zoomState.ty += (my - originY) * (1 / s1 - 1 / s0);
+      zoomState.scale = s1;
+      if (s1 > 1) lightboxFrame.classList.add("zoomed");
+      clampPan();
+      applyZoomTransform();
+    }
+    pinchPrevDist = dist;
+    return;
+  }
+
+  if (activeLightboxPointers.size === 1 && zoomState.dragging) {
+    const dx = e.clientX - zoomState.startX;
+    const dy = e.clientY - zoomState.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) zoomState.moved = true;
+    zoomState.tx = zoomState.startTx + dx / zoomState.scale;
+    zoomState.ty = zoomState.startTy + dy / zoomState.scale;
+    clampPan();
+    applyZoomTransform();
+  }
+});
+
+function endLightboxPointer(e) {
+  activeLightboxPointers.delete(e.pointerId);
+  zoomState.dragging = false;
+  lightboxImg.classList.remove("no-transition");
+
+  if (zoomState.scale <= 1.02) {
+    // Pinched back out past the original size -- settle fully so nothing
+    // is left slightly zoomed or off-center.
+    resetZoom();
+  } else if (activeLightboxPointers.size === 1 && zoomState.scale > 1) {
+    // One finger of a pinch lifted -- keep panning with whichever is left,
+    // starting from its current position so the image doesn't jump.
+    beginSingleDrag(pointsArray()[0]);
+  } else {
+    pinchPrevDist = 0;
+  }
+}
+lightboxFrame.addEventListener("pointerup", endLightboxPointer);
+lightboxFrame.addEventListener("pointercancel", endLightboxPointer);
+lightboxFrame.addEventListener("pointerleave", endLightboxPointer);
+
+// A plain click (no drag) toggles zoom: zoom in on that spot, or back out.
+lightboxFrame.addEventListener("click", (e) => {
+  if (zoomState.moved) {
+    zoomState.moved = false;
+    return;
+  }
+  if (zoomState.scale > 1) {
+    resetZoom();
+  } else {
+    zoomInAt(e.clientX, e.clientY);
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (zoomState.scale > 1) {
+    clampPan();
+    applyZoomTransform();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeLightbox();
+  else if (e.key === "ArrowLeft") lbNavigate(-1);
+  else if (e.key === "ArrowRight") lbNavigate(1);
+});
+document.getElementById("lbPrev").addEventListener("click", () => lbNavigate(-1));
+document.getElementById("lbNext").addEventListener("click", () => lbNavigate(1));
+// Horizontal swipe (only while not zoomed in) steps to the next/previous one.
+let lbSwipe = null;
+lightboxFrame.addEventListener("pointerdown", (e) => {
+  lbSwipe = activeLightboxPointers.size === 1 && zoomState.scale <= 1 ? { x: e.clientX, y: e.clientY } : null;
+});
+lightboxFrame.addEventListener("pointerup", (e) => {
+  const s = lbSwipe;
+  lbSwipe = null;
+  if (!s || zoomState.scale > 1.02) return;
+  const dx = e.clientX - s.x;
+  const dy = e.clientY - s.y;
+  if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    zoomState.moved = true; // swallow the click that follows the swipe
+    lbNavigate(dx < 0 ? 1 : -1);
+  }
+});
+
+// TEMP QA NAV BAR -- when true, every Fabric-category name shown anywhere in
+// either designer (swatch cards, "Same as Jacket" label, tab subtitle, order
+// summary panel) displays the fabric's true supplier code (opt.name, e.g.
+// "5835-0543") instead of the customer-facing displayName. Read by
+// friendlyName/renderSwatchCard/renderSameAsCard below via closures, so it's
+// declared here, before createDesigner, rather than inside it -- both
+// jacketDesigner and pantsDesigner need to see the same flag. Wired up (with
+// the checkbox and localStorage persistence) in the "TEMP QA NAV BAR" block
+// near the bottom of this file, alongside the rest of the QA nav bar. Remove
+// this flag along with the rest of that block when QA testing is done.
+let qaShowRawFabricNames = false;
+
+// Builds a tabs/options/summary designer bound to a catalog + a set of DOM ids.
+// Used for both the jacket step and the pants step so the logic isn't duplicated.
+// Overall "how far along is this order", shown as a small percentage next to
+// every step progress bar (jacket, pants, measurements, personal info) with a
+// short encouraging line under it. Each designer reports its answered / total
+// question counts here whenever it renders; measurements and personal info
+// count as one step each after the designer questions. Rounded down so it
+// never says 100% before the order is actually placed.
+const wizProgressCounts = {};
+function orderProgressPct(stage) {
+  const j = !hasJacketStep() ? { done: 0, total: 0 } : (wizProgressCounts.jacket || { done: 0, total: 0 });
+  const p = !hasPantsStep() ? { done: 0, total: 0 } : (wizProgressCounts.pants || { done: 0, total: 0 });
+  const designTotal = j.total + p.total;
+  const total = designTotal + 2;
+  const done = stage === "pers" ? designTotal + 1 : stage === "meas" ? designTotal : j.done + p.done;
+  return Math.max(0, Math.min(99, Math.floor((done / total) * 100)));
+}
+// Which designers are finished -- drives the celebration line once every
+// design question is answered.
+function designProgressState() {
+  const jacketOnly = isJacketOnlyType(currentSuitType);
+  const noPantsStep = !hasPantsStep();
+  const j = wizProgressCounts.jacket || { done: 0, total: 0 };
+  const p = wizProgressCounts.pants || { done: 0, total: 0 };
+  const pantsOnly = isPantsOnlyType(currentSuitType);
+  const jacketDone = pantsOnly || (j.total > 0 && j.done >= j.total);
+  const pantsComplete = p.total > 0 && p.done >= p.total;
+  return { jacketOnly, pantsOnly, noPantsStep, jacketDone, pantsDone: p.done, allDone: jacketDone && (noPantsStep || pantsComplete) };
+}
+function orderProgressCheer(pct, stage) {
+  if (stage === "pers") return "Last step. Your suit is nearly on its way!";
+  if (stage === "meas") return "Way to go! Just your measurements left.";
+  // A new line every few answers (roughly every 7%), so it keeps changing
+  // as the customer works through the questions.
+  if (pct <= 0) return "Let\u2019s get started!";
+  const d = designProgressState();
+  if (d.allDone) return "\uD83C\uDF89 Your " + (d.jacketOnly ? "jacket is" : d.pantsOnly ? "pants are" : "suit is") + " fully designed! It\u2019s going to look incredible.";
+  if (d.jacketDone && !d.noPantsStep && !d.pantsOnly) {
+    if (d.pantsDone === 0) return "Jacket done! Now let\u2019s design the pants.";
+  }
+  const lines = [
+    "Great start!",
+    "Nice choice. Keep it going.",
+    "You\u2019ve got a good eye.",
+    "Looking sharp so far.",
+    "Making great progress.",
+    "This suit is coming together.",
+    "Almost halfway there!",
+    "Over halfway there!",
+    "Way to go! Keep those choices coming.",
+    "Looking great. The finish line\u2019s in sight.",
+    "Just a few more details.",
+    "Way to go! Almost done.",
+    "So close! A couple more and you\u2019re there.",
+  ];
+  return lines[Math.min(Math.floor((pct - 1) / 7), lines.length - 1)];
+}
+function refreshOrderProgress() {
+  document.querySelectorAll(".wiz-pct[data-stage]").forEach((el) => {
+    const stage = el.getAttribute("data-stage");
+    const pct = orderProgressPct(stage);
+    el.textContent = pct + "%";
+    const row = el.closest(".wiz-head");
+    const cheer = row ? row.querySelector(".wiz-cheer") : null;
+    if (cheer) {
+      cheer.textContent = orderProgressCheer(pct, stage);
+      cheer.classList.toggle("celebrate", stage === "design" && designProgressState().allDone);
+    }
+  });
+}
+
+// ---- Monogram text and fonts ---------------------------------------------
+// The factory counts each capital letter as 2 of its 24 characters.
+function monogramTextUnits(text) {
+  return Array.from(String(text || "")).reduce((n, ch) => n + (ch !== ch.toLowerCase() ? 2 : 1), 0);
+}
+// "" when the factory can stitch this text, else a short reason.
+function monogramTextProblem(text) {
+  const t = String(text || "");
+  const bad = Array.from(new Set(Array.from(t).filter((ch) => MONOGRAM_TEXT_RULES.unsupported.indexOf(ch.toLowerCase()) !== -1)));
+  if (bad.length) return "The factory can't stitch " + bad.join(" ") + ". Please leave " + (bad.length > 1 ? "them" : "it") + " out.";
+  const units = monogramTextUnits(t);
+  if (units > MONOGRAM_TEXT_RULES.maxUnits) return "Too long: " + units + " of " + MONOGRAM_TEXT_RULES.maxUnits + " (capital letters count as 2).";
+  return "";
+}
+// Inline CSS that shows text in a Monogram Font option's look-alike web font
+// (!important to beat the site-wide Montserrat rule in style.css).
+function monogramFontStyle(opt) {
+  return "font-family:" + opt.css.replace(/'/g, "&#39;") + " !important;font-weight:" + (opt.weight || 400) + ";--mono-scale:" + (opt.size || 1) + ";";
+}
+// The typed monogram as HTML, with (/) shown as a line break.
+function monogramPreviewHtml(text) {
+  const t = String(text || "").trim() || "ABC";
+  return t.split("(/)").map((line) => line.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))).join("<br>");
+}
+// Loads the monogram look-alike fonts the first time they're needed.
+function ensureMonogramFonts() {
+  if (document.getElementById("monogramFontsCss")) return;
+  const link = document.createElement("link");
+  link.id = "monogramFontsCss";
+  link.rel = "stylesheet";
+  link.href = MONOGRAM_FONTS_CSS_URL;
+  document.head.appendChild(link);
+}
+
+function createDesigner(catalog, ids, sameAsResolvers, groups) {
+  // sameAsResolvers (optional): { categoryKey: () => "currently selected value elsewhere" }.
+  // For any category listed here, an extra "Same as ___" card is added so the
+  // customer can link that choice to a value picked in another designer (used
+  // for "pants fabric = same as jacket fabric"). The link stays live: if the
+  // source value changes later, this category's displayed/saved value follows
+  // it automatically, since we only ever store a marker, not a copy.
+  sameAsResolvers = sameAsResolvers || {};
+  // Kept so setSameAsEnabled() can switch the "Same as ___" cards off (pants
+  // ordered without a jacket have nothing to be the same as) and back on.
+  const allSameAsResolvers = sameAsResolvers;
+  // groups (optional): [{label, keys}] -- clusters this catalog's categories
+  // under labeled headings in the tab list (see JACKET_CATALOG_GROUPS /
+  // PANTS_CATALOG_GROUPS in catalog.js) instead of one long flat list. When
+  // omitted, every category is still offered, just without section headings.
+  // Customer-supplied photos (data URLs, already downsized), keyed by category
+  // -- currently just the lining. Kept in memory; main.js also mirrors them
+  // into sessionStorage separately from the draft (see saveDraft).
+  const customPhotos = {};
+  // Free-text answers (e.g. the monogram) for categories with a `textInput`.
+  const customTexts = {};
+  function textMissing(k) {
+    const ti = catalog[k] && catalog[k].textInput;
+    if (!ti || !order[k] || order[k] === ti.skipWhen) return false;
+    const t = String(customTexts[k] || "").trim();
+    return !t || (k === "monogram" && (!!monogramTextProblem(t) || fontMissing()));
+  }
+  // The Monogram Font is picked on the monogram step itself (its
+  // `inlineWith`), so that step isn't finished until a font is chosen.
+  function fontMissing() {
+    const f = catalog.monogramFont;
+    return !!(f && f.inlineWith === "monogram" && isApplicable("monogramFont") && !order.monogramFont);
+  }
+  function textShown(k) {
+    const ti = catalog[k] && catalog[k].textInput;
+    const t = String(customTexts[k] || "").trim();
+    return ti && order[k] && order[k] !== ti.skipWhen && t ? t : "";
+  }
+  function uploadOptionFor(key) {
+    return ((catalog[key] && catalog[key].options) || []).find((o) => o.uploadPhoto) || null;
+  }
+  function selectedIsUpload(key) {
+    const u = uploadOptionFor(key);
+    return !!u && order[key] === u.name;
+  }
+  // Opens a file chooser, downsizes the chosen image (max 1400px, JPEG) and
+  // hands it back via done(). Any problem just shows a short message.
+  function pickLiningPhoto(key, done) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (!/^image\//.test(file.type)) { alert("Please choose an image file (JPG or PNG)."); return; }
+      if (file.size > 25 * 1024 * 1024) { alert("That photo is too large \u2014 please choose one under 25 MB."); return; }
+      const reader = new FileReader();
+      reader.onerror = () => alert("Sorry, that photo couldn't be read. Please try another.");
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => alert("Sorry, that photo couldn't be opened. Please try a JPG or PNG.");
+        img.onload = () => {
+          const max = 1400;
+          const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+          const c = document.createElement("canvas");
+          c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const g = c.getContext("2d");
+          g.fillStyle = "#fff";
+          g.fillRect(0, 0, c.width, c.height);
+          g.drawImage(img, 0, 0, c.width, c.height);
+          customPhotos[key] = c.toDataURL("image/jpeg", 0.82);
+          done();
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+  function sameAsSentinel(key) { return "__same_as__" + key; }
+  function isSameAs(key) { return !!sameAsResolvers[key] && order[key] === sameAsSentinel(key); }
+  // The real, storable value for a category -- resolves the "same as" marker
+  // to whatever the linked source is currently set to. Used anywhere this
+  // selection leaves the designer (order summary text, the database row).
+  function resolvedValue(key) {
+    if (isSameAs(key)) return sameAsResolvers[key]() || order[key];
+    return order[key];
+  }
+  // Maps a stored option value (the original code, e.g. "C1750") back to its
+  // customer-facing display name (e.g. "Deep Cornflower Blue") for a given
+  // category, when that category defines one. Categories without a
+  // displayName (everything except the color-family thread categories) just
+  // fall back to their existing name, which was already customer-facing.
+  function friendlyName(key, name) {
+    // QA-only escape hatch: see qaShowRawFabricNames above -- Fabric only,
+    // every other category keeps showing its normal displayName.
+    if (key === "fabric" && qaShowRawFabricNames) return name;
+    const opts = (catalog[key] && catalog[key].options) || [];
+    const opt = opts.find((o) => o.name === name);
+    // A "match the fabric" choice stays just that -- the factory does the
+    // matching, so we never resolve it to a specific thread/button/lining.
+    if (opt && opt.pattern) return (opt.displayName || opt.name) + " (" + opt.pattern + ")";
+    return (opt && opt.displayName) || name;
+  }
+
+  // Resolves this same garment's currently selected Fabric option (handling
+  // "Same as Jacket" on pants fabric via resolvedValue). Returns null when
+  // there's no fabric category or nothing picked yet.
+  function resolveFabricOption() {
+    const fabricCat = catalog.fabric;
+    if (!fabricCat) return null;
+    const val = resolvedValue("fabric");
+    if (!val) return null;
+    return fabricCat.options.find((o) => o.name === val) || null;
+  }
+
+  function hexToRgb(hex) {
+    const h = (hex || "").replace("#", "");
+    return [
+      parseInt(h.substring(0, 2), 16),
+      parseInt(h.substring(2, 4), 16),
+      parseInt(h.substring(4, 6), 16),
+    ];
+  }
+  function rgbToHex(rgb) {
+    return (
+      "#" +
+      rgb
+        .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0"))
+        .join("")
+    );
+  }
+  // Blends hex toward towardHex by amt (0 = hex unchanged, 1 = towardHex).
+  function mixHex(hex, towardHex, amt) {
+    const a = hexToRgb(hex);
+    const b = hexToRgb(towardHex);
+    return rgbToHex(a.map((v, i) => v + (b[i] - v) * amt));
+  }
+  // The swatch for the "Match Fabric Color" / "Best Match to Fabric" /
+  // lining "Match Fabric" cards IN THE PICKER GRID ONLY: a soft gradient of
+  // the selected fabric's own color -- roughly the tone that will be used,
+  // not an exact color, so it never reveals the exact thread/button the
+  // nearest-color match (resolveBestMatchOption, used for the order
+  // summary/production text below) would pick. The light end only moves a
+  // little toward white so a dark fabric still reads as its own shade
+  // rather than a generic gray. Returns null if there's no hex to build from.
+  function fabricSwatchCss(hex) {
+    if (!hex) return null;
+    const light = mixHex(hex, "#ffffff", 0.18);
+    const dark = mixHex(hex, "#000000", 0.3);
+    return "linear-gradient(135deg, " + light + " 0%, " + hex + " 50%, " + dark + " 100%)";
+  }
+
+  // For a "Match Fabric Color" / "Best Match to Fabric" card (see
+  // matchesFabric in catalog.js), finds the actual color option in this
+  // category (a real thread color or button color, by its own hex) closest
+  // to the currently selected fabric's color -- so the customer sees exactly
+  // which color will be auto-selected, not just the fabric being matched.
+  // Returns null until a fabric is picked, or if nothing in the category has
+  // a hex to compare against.
+  function resolveBestMatchOption(cat) {
+    const fabricOpt = resolveFabricOption();
+    if (!fabricOpt || !fabricOpt.hex) return null;
+    const candidates = ((cat && cat.options) || []).filter((o) => o.hex && !o.matchesFabric);
+    if (!candidates.length) return null;
+    const target = hexToRgb(fabricOpt.hex);
+    let best = null;
+    let bestDist = Infinity;
+    candidates.forEach((o) => {
+      const rgb = hexToRgb(o.hex);
+      const dist =
+        (rgb[0] - target[0]) * (rgb[0] - target[0]) +
+        (rgb[1] - target[1]) * (rgb[1] - target[1]) +
+        (rgb[2] - target[2]) * (rgb[2] - target[2]);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = o;
+      }
+    });
+    return best;
+  }
+
+  // Like resolvedValue, but for on-screen display only -- adds a "(same as
+  // jacket)" note so it's clear this value is linked, not independently
+  // chosen, and shows the friendly color name rather than the raw code (the
+  // raw code is still what's actually stored and submitted -- see
+  // resolvedValue/buildRow/getSelections above, which are untouched).
+  function displayValue(key) {
+    if (isSameAs(key)) {
+      const resolved = sameAsResolvers[key]();
+      return resolved ? friendlyName(key, resolved) + " (same as jacket)" : "Same as Jacket";
+    }
+    if (!order[key]) return order[key];
+    const shownText = textShown(key);
+    return friendlyName(key, order[key]) + (shownText ? " \u2014 \u201c" + shownText + "\u201d" : "");
+  }
+
+  // A category can carry `requiresOtherThan: { key, value }` (see e.g.
+  // monogramThreadColor in catalog.js) so it's only offered/required when
+  // another category on this SAME garment is set to something other than
+  // that value -- used to hide "Monogram Thread Color" entirely unless a
+  // real monogram placement has been chosen.
+  //
+  // A category can also carry `requiresEquals: { key, value }` (see
+  // feltColor in catalog.js) for the opposite shape of dependency -- only
+  // offered/required when another category on this same garment is set to
+  // one SPECIFIC value, not merely "anything but a default". Used to hide
+  // "Felt Color" unless Felt Under Collar is specifically set to
+  // "Customer-Appointed Felt" (its other two options, "Match Felt
+  // Undercollar" and "Fabric Under the Collar", have no separate color to
+  // pick).
+  // Options a category offers right now. A category can carry
+  // `allowedBySelection: { otherKey: { "Value": ["option name", ...] } }`:
+  // while otherKey is set to "Value", only the listed options are offered
+  // (e.g. Shawl collar -> only the shawl lapel buttonhole or no buttonhole).
+  // A preset suit (see CLASSIC_SUIT_PRESET in catalog.js) limits which
+  // questions are asked and which options they offer, and fills in the rest.
+  // null = the normal, fully custom designer.
+  let preset = null;
+  function presetAllows(key, o) {
+    const list = preset && preset.allowed && preset.allowed[key];
+    return !list || list.indexOf(o.name) !== -1;
+  }
+  // Writes the preset's fixed answers (including any that depend on a pick,
+  // e.g. the Shawl lapel's own buttonhole) over the current selections.
+  function applyPresetFixed() {
+    if (!preset) return;
+    Object.keys(preset.fixed || {}).forEach((k) => { if (catalog[k]) order[k] = preset.fixed[k]; });
+    const bySel = preset.fixedBySelection || {};
+    Object.keys(bySel).forEach((dep) => {
+      const extra = bySel[dep][order[dep]];
+      if (extra) Object.keys(extra).forEach((k) => { if (catalog[k]) order[k] = extra[k]; });
+    });
+  }
+  // Questions shown in the wizard: every applicable one, or only the
+  // preset's own steps while a preset is loaded.
+  function isShown(key) {
+    // A step picked inside another step (Monogram Font, on the monogram
+    // step) has no tab or wizard step of its own.
+    if (catalog[key].inlineWith) return false;
+    if (fixedBySelectionValue(key)) return false;
+    return isApplicable(key) && (!preset || preset.steps.indexOf(key) !== -1);
+  }
+  function fixedBySelectionValue(key) {
+    const by = catalog[key].fixedBySelection;
+    if (!by) return null;
+    for (const dep of Object.keys(by)) {
+      if (by[dep][order[dep]]) return by[dep][order[dep]];
+    }
+    return null;
+  }
+  function allowedOptions(key) {
+    const cat = catalog[key];
+    const rules = cat.allowedBySelection;
+    // An option can carry `imgBySelection: { otherKey: { "Value": img } }` to
+    // show a different drawing while otherKey is set to "Value".
+    const withImg = (o) => {
+      let out = o;
+      if (o.imgBySelection) {
+        for (const dep of Object.keys(o.imgBySelection)) {
+          const alt = o.imgBySelection[dep][order[dep]];
+          if (alt) { out = Object.assign({}, out, { img: alt }); break; }
+        }
+      }
+      if (o.displayNameBySelection) {
+        for (const dep of Object.keys(o.displayNameBySelection)) {
+          const alt = o.displayNameBySelection[dep][order[dep]];
+          if (alt) { out = Object.assign({}, out, { displayName: alt }); break; }
+        }
+      }
+      return out;
+    };
+    // An option can carry `onlyWhen: { otherKey: ["Value", ...] }` to be
+    // offered only while otherKey is set to one of those values (e.g. the
+    // shawl/diamond lapel buttonhole is hidden under Notch or Peak).
+    // `hiddenWhen` is the reverse: hidden while otherKey is set to one of
+    // those values (e.g. Notch lapel on a double breasted front).
+    const shownNow = (o) =>
+      (!o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1)) &&
+      (!o.hiddenWhen || Object.keys(o.hiddenWhen).every((dep) => o.hiddenWhen[dep].indexOf(order[dep]) === -1));
+    if (!rules) return cat.options.filter(shownNow).filter((o) => presetAllows(key, o)).map(withImg);
+    const lists = Object.keys(rules).map((dep) => rules[dep][order[dep]]).filter(Boolean);
+    const allowed = cat.options
+      .filter(shownNow)
+      .filter((o) => presetAllows(key, o))
+      .filter((o) => lists.every((list) => list.indexOf(o.name) !== -1));
+    // The allowed list's own order wins (e.g. Shawl -> "No Lapel Buttonhole"
+    // shown first).
+    if (lists.length) allowed.sort((a, b) => lists[0].indexOf(a.name) - lists[0].indexOf(b.name));
+    return allowed.map(withImg);
+  }
+  // Drops a previously chosen value that the current choices no longer allow
+  // (e.g. a lapel buttonhole picked earlier, then the collar changed to Shawl),
+  // so the customer is asked again instead of keeping an invalid combination.
+  function reconcileSelections() {
+    applyPresetFixed();
+    // `fixedBySelection: { otherKey: { value: name } }`: that pick sets this
+    // step itself and the step is skipped (a Diamond Lapel is always 8 cm).
+    keys.forEach((k) => {
+      const v = fixedBySelectionValue(k);
+      if (v) order[k] = v;
+    });
+    keys.forEach((k) => {
+      const cat = catalog[k];
+      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen || o.hiddenWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) {
+        // An option with `replaceWith` moves to that option instead of
+        // asking again (Notch -> Peak once the front is double breasted).
+        const was = (cat.options || []).find((o) => o.name === order[k]);
+        const swap = was && was.replaceWith;
+        order[k] = swap && allowedOptions(k).some((o) => o.name === swap) ? swap : null;
+      }
+      if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
+      // The lining catalog was replaced outright (Oct 2026): a saved draft or
+      // cart pointing at a lining that no longer exists asks again.
+      if (k === "lining" && order[k] && !(cat.options || []).some((o) => o.name === order[k])) order[k] = null;
+      // "Upload Your Own Photo" with no photo behind it (e.g. a restored draft
+      // whose photo is gone) can't be ordered -- ask again.
+      if (order[k] && selectedIsUpload(k) && !customPhotos[k]) order[k] = null;
+    });
+  }
+
+  function isApplicable(key) {
+    const cat = catalog[key];
+    const req = cat.requiresOtherThan;
+    if (req) {
+      const v = order[req.key];
+      if (!(!!v && v !== req.value)) return false;
+    }
+    const reqEq = cat.requiresEquals;
+    if (reqEq && order[reqEq.key] !== reqEq.value) return false;
+    // `hiddenWhenEquals: { key, value }`: dropped while another category is
+    // set to that value (e.g. no Lining step on an unlined jacket).
+    const hidEq = cat.hiddenWhenEquals;
+    if (hidEq && order[hidEq.key] === hidEq.value) return false;
+    return true;
+  }
+
+  // Which family (e.g. "Blue") a given selected option name belongs to, for
+  // a colorFamilies category -- used to jump straight to the right shade
+  // grid when re-opening a tab that already has a selection, instead of
+  // always starting back at the family picker.
+  function familyForOptionName(cat, name) {
+    if (!cat.colorFamilies || !name) return null;
+    for (const fam of cat.colorFamilies) {
+      if (fam.options.some((o) => o.name === name)) return fam.name;
+    }
+    return null;
+  }
+  // Per-category "which family is currently expanded" browsing state for
+  // colorFamilies categories. null means "show the family picker"; this is
+  // purely transient UI state, never saved with the order.
+  const familyBrowse = {};
+  // For chooseOtherColor categories: false = show the Match / Choose Other
+  // Color pair, true = show the color families. Transient UI state only.
+  const otherColorBrowse = {};
+
+  // With groups given, the flat "keys" order (used for advancing tab-to-tab,
+  // completeness checks, everything) follows the grouped order rather than
+  // however the catalog object happens to enumerate -- that's what actually
+  // clusters related categories together in the flow, not just visually.
+  const keys = groups ? groups.reduce((acc, g) => acc.concat(g.keys), []) : Object.keys(catalog);
+  const order = {};
+  keys.forEach((k) => { order[k] = null; });
+  let activeTab = keys[0];
+
+  const tabsEl = document.getElementById(ids.tabs);
+  const optionsEl = document.getElementById(ids.options);
+  // Interactive jacket (jacket-studio.js): while one of its panels is open,
+  // this very options element is moved into that panel, so the jacket's
+  // panel shows the designer's own cards for a question -- same pickers,
+  // same selections. embedHost is that panel's scroll box (null = the
+  // options are in their normal place in the step-by-step designer).
+  // embedQuiet: picks made on the homepage jacket don't flip the page into
+  // "designing" mode (that would hide the homepage under the customer).
+  let embedHost = null;
+  let embedQuiet = false;
+  const optionsHomeMarker = document.createComment("options home");
+  optionsEl.parentNode.insertBefore(optionsHomeMarker, optionsEl.nextSibling);
+  // Called after any change to the selections (see renderSummary).
+  const changeListeners = [];
+  // Set by the interactive jacket: a Review sheet row opens that question
+  // on the jacket instead of in the step-by-step designer.
+  let reviewRowHandler = null;
+  const summaryRowsEl = document.getElementById(ids.summaryRows);
+  // The tab strip's own hint line (see index.html -- a plain <p
+  // class="tabs-hint"> right after the tabs div) isn't tracked by any id;
+  // it's always tabsEl's very next sibling, so this is the one stable way
+  // to reach it for either designer instance without adding new ids.
+  const tabsHintEl = tabsEl.nextElementSibling;
+
+  // Collapses (zero-height, mobile only -- see .tabs-collapsed in
+  // style.css) the category tab strip and its swipe hint once a customer
+  // has drilled all the way into a specific color family's actual shade
+  // grid, where switching categories isn't the point and every family can
+  // hold dozens of shades. renderOptions() resets this to expanded before
+  // dispatching to whichever category renderer is active, so only the two
+  // leaf-level shade-grid branches (in renderColorFamilyOptions and
+  // renderPatternTypeOptions) need to call this with true.
+  function setTabsCollapsedOnMobile(collapsed) {
+    tabsEl.classList.toggle("tabs-collapsed", collapsed);
+    if (tabsHintEl) tabsHintEl.classList.toggle("tabs-collapsed", collapsed);
+  }
+  // On mobile, .tabs is itself position:sticky (pinned right under the nav/
+  // process bars once you scroll past it -- see style.css) so that the
+  // category strip stays reachable no matter how deep into a long option
+  // grid you've scrolled. That's exactly what makes tabsEl.getBoundingClientRect()
+  // useless as a "how far down are we scrolled?" probe: once pinned, its top
+  // sits at the same small sticky offset whether you're 50px or 5000px into
+  // the grid below it. Using it to compute a "scroll back up" target (below)
+  // was computing a near-zero move (target basically equal to the current
+  // scroll position already), which skipped the real scroll-up and left the
+  // page still scrolled deep when the options grid was swapped out for a
+  // shorter one -- forcing the browser to clamp the scroll position into
+  // whatever now-shorter content that same scrollY fell inside of (often the
+  // "Your Suit" summary at the bottom of the grid), well past the next
+  // category tab it should have landed on. designerGridEl is .tabs's own
+  // parent (#designerGrid / #pantsGrid) -- a plain, non-sticky container
+  // whose rect actually reflects true scroll depth -- so it's used instead
+  // wherever the code needs to know or restore "the top of this step".
+  const designerGridEl = tabsEl.parentElement;
+
+  // ---- Step-by-step ("one question per screen") chrome ----------------
+  // The category tab strip and the long summary list are hidden by CSS (they
+  // stay in the DOM -- every existing helper still reads them). What the
+  // customer sees instead: a thin progress bar (one segment per question),
+  // "Step 3 of 14 / group name", the question's own heading + cards, and a
+  // Back / Next bar. "Review" opens a sheet with the full summary, total and
+  // the real Continue button.
+  const wizHead = document.createElement("div");
+  wizHead.className = "wiz-head";
+  designerGridEl.insertBefore(wizHead, optionsEl);
+  const wizBar = document.createElement("div");
+  wizBar.className = "wiz-bar";
+  designerGridEl.appendChild(wizBar);
+  const wizSummaryEl = designerGridEl.querySelector(".summary");
+  const wizPriceEl = wizSummaryEl ? wizSummaryEl.querySelector(".summary-total b") : null;
+  let wizSheetEl = null;
+
+  // The fabric-cloth graphic lives only inside the step's box: same left/width
+  // as the swatch column, from the bottom of the sticky step bar down to the
+  // top of the Back / price / Next bar (nothing behind or below that bar).
+  let fabricBgRaf = 0;
+  function syncFabricBg() {
+    const sec = designerGridEl.closest(".designer");
+    if (!sec || !sec.classList.contains("fabric-step")) return;
+    const box = designerGridEl.getBoundingClientRect();
+    const proc = document.querySelector(".process");
+    let top = proc ? Math.max(proc.getBoundingClientRect().bottom, 0) : 0;
+    // Start the graphic at the selections (first section heading / card grid),
+    // not behind the step header, title and tagline.
+    const selStart = optionsEl.querySelector(".opt-section-divider, .fabric-pattern-heading, .opt-grid");
+    if (selStart) top = Math.max(top, selStart.getBoundingClientRect().top);
+    const bottom = Math.min(wizBar.getBoundingClientRect().top, window.innerHeight);
+    sec.style.setProperty("--fbg-left", box.left + "px");
+    sec.style.setProperty("--fbg-width", box.width + "px");
+    sec.style.setProperty("--fbg-top", top + "px");
+    sec.style.setProperty("--fbg-height", Math.max(bottom - top, 0) + "px");
+  }
+  function syncFabricBgSoon() {
+    if (fabricBgRaf) return;
+    fabricBgRaf = requestAnimationFrame(() => { fabricBgRaf = 0; syncFabricBg(); });
+  }
+  window.addEventListener("scroll", syncFabricBgSoon, { passive: true });
+  window.addEventListener("resize", syncFabricBgSoon);
+  setInterval(syncFabricBg, 300); // catches the step first appearing / layout shifts
+
+  // "More options" hint: on steps with more cards than fit on screen, a small
+  // pill sits just above the Back / price / Next bar (and the cards fade into
+  // the bar) so customers know they can scroll for more -- only on steps with
+  // plenty more to see. It goes away as soon as the customer starts scrolling
+  // that page, and comes back only on the next page of cards. Only a class is
+  // toggled -- the bar's children are never rebuilt (see the iPhone Safari
+  // note in renderWizard).
+  const MORE_HINT_MIN_HIDDEN = 6;
+  let moreHintFirstCard = null; // first card of the page the hint belongs to
+  let moreHintStartY = 0;       // scroll position when that page appeared
+  let moreHintSince = 0;        // when that page appeared
+  let moreHintDismissed = false;
+  function syncMoreHint() {
+    const more = wizBar.querySelector(".wiz-more");
+    if (!more) return;
+    const cards = optionsEl.querySelectorAll(".opt-card");
+    if (cards[0] !== moreHintFirstCard) {
+      // A new page of cards: start fresh.
+      moreHintFirstCard = cards[0] || null;
+      moreHintStartY = window.scrollY;
+      moreHintSince = Date.now();
+      moreHintDismissed = false;
+    } else if (!moreHintDismissed) {
+      // The page's own scroll-to-top can still be settling just after it
+      // appears; don't count that as the customer scrolling.
+      if (Date.now() - moreHintSince < 700) moreHintStartY = window.scrollY;
+      else if (Math.abs(window.scrollY - moreHintStartY) > 24) moreHintDismissed = true;
+    }
+    // Only worth pointing out when a lot is hidden (Daniel: not for a row or
+    // two) -- at least MORE_HINT_MIN_HIDDEN cards still mostly below the bar.
+    const barTop = Math.min(wizBar.getBoundingClientRect().top, window.innerHeight);
+    let hidden = 0;
+    for (let i = cards.length - 1; i >= 0 && hidden < MORE_HINT_MIN_HIDDEN; i--) {
+      const r = cards[i].getBoundingClientRect();
+      if (r.height > 0 && r.top + r.height * 0.5 > barTop) hidden++;
+      else break;
+    }
+    const show = !moreHintDismissed && hidden >= MORE_HINT_MIN_HIDDEN;
+    if (wizBar.classList.contains("has-more") !== show) wizBar.classList.toggle("has-more", show);
+  }
+  let moreHintRaf = 0;
+  function syncMoreHintSoon() {
+    if (moreHintRaf) return;
+    moreHintRaf = requestAnimationFrame(() => { moreHintRaf = 0; syncMoreHint(); });
+  }
+  window.addEventListener("scroll", syncMoreHintSoon, { passive: true });
+  window.addEventListener("resize", syncMoreHintSoon);
+  setInterval(syncMoreHint, 300); // catches a new step's cards appearing
+
+  function wizList() { return keys.filter(isShown); }
+  function wizGroupLabel(key) {
+    if (!groups) return "";
+    const g = groups.find((x) => x.keys.indexOf(key) !== -1);
+    return g ? g.label : "";
+  }
+  // Index of the furthest step a customer may jump to from the progress
+  // bar or the Review sheet: the current step, or the first unanswered one
+  // if that's further (e.g. after going Back to change something).
+  function wizReachIndex(list, idx) {
+    if (currentIsAdmin) return list.length - 1;
+    const firstOpen = list.findIndex((k) => !order[k] || textMissing(k));
+    return firstOpen === -1 ? list.length - 1 : Math.max(idx, firstOpen);
+  }
+  function wizCanReach(key) {
+    const list = wizList();
+    const i = list.indexOf(key);
+    return i !== -1 && i <= wizReachIndex(list, Math.max(list.indexOf(activeTab), 0));
+  }
+  function wizEsc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;"); }
+
+  function wizGoBack() {
+    cancelAutoAdvance();
+    // Inside a color's shades (or any inner page of a color step), Back
+    // returns to that step's first page -- all the colors -- before it ever
+    // goes to the previous step.
+    const innerPage =
+      (familyBrowse[activeTab] != null) || otherColorBrowse[activeTab] === true ||
+      (patternBrowse[activeTab] != null) || (patternFamilyBrowse[activeTab] != null);
+    if (innerPage) {
+      familyBrowse[activeTab] = null;
+      otherColorBrowse[activeTab] = false;
+      patternBrowse[activeTab] = null;
+      patternFamilyBrowse[activeTab] = null;
+      scrollToTopThenSwap(() => { renderOptions(); renderWizard(); });
+      return;
+    }
+    const list = wizList();
+    const i = list.indexOf(activeTab);
+    if (i > 0) { switchTab(list[i - 1]); return; }
+    const backBtn = document.getElementById("backToJacketBtn");
+    if (ids.continueBtn === "continuePantsBtn" && backBtn) backBtn.click();
+  }
+  function wizGoNext() {
+    const list = wizList();
+    const i = list.indexOf(activeTab);
+    if (i < list.length - 1) switchTab(list[i + 1]);
+    else openReview();
+  }
+
+  function renderWizard() {
+    const list = wizList();
+    const idx = Math.max(list.indexOf(activeTab), 0);
+    const atFirst = idx === 0;
+    const atLast = idx === list.length - 1;
+    const isPantsDesigner = ids.continueBtn === "continuePantsBtn";
+    const group = wizGroupLabel(activeTab);
+    // The Fabric step gets a draped-cloth background (see "FABRIC STEP
+    // BACKGROUND" in style.css); every other step keeps the plain cream.
+    const wizSection = designerGridEl.closest(".designer");
+    // Which background graphic this step gets, if any: draped cloth for
+    // Fabric; the lapel sketch for every jacket lapel step.
+    const LAPEL_BG_KEYS = ["collar", "lapelwidth", "lapelbuttonhole"];
+    // Every pocket step, jacket (chest, lower, inside) and pants (front, watch, back).
+    const POCKET_BG_KEYS = ["pockettype", "lowerpocket", "insidepocket", "frontPocket", "watchPocket", "backPocket"];
+    const bgKey = !STEP_BACKGROUNDS_ENABLED ? ""
+      : activeTab === "fabric" ? "fabric"
+      : (!isPantsDesigner && LAPEL_BG_KEYS.indexOf(activeTab) !== -1) ? "lapel"
+      : POCKET_BG_KEYS.indexOf(activeTab) !== -1 ? "pocket"
+      : (!isPantsDesigner && activeTab === "feltundercollar") ? "felt"
+      : (!isPantsDesigner && activeTab === "frontbutton") ? "button" : "";
+    if (wizSection) {
+      wizSection.classList.toggle("fabric-step", !!bgKey);
+      if (bgKey) wizSection.setAttribute("data-bg", bgKey); else wizSection.removeAttribute("data-bg");
+    }
+    syncFabricBg();
+    wizProgressCounts[isPantsDesigner ? "pants" : "jacket"] = {
+      done: list.filter((k) => order[k]).length,
+      total: list.length,
+    };
+    // Customers can only jump back, or forward as far as the first step
+    // they haven't answered yet -- never skip ahead (Daniel, 2026-10-21).
+    // Only the signed-in shop admin can jump anywhere.
+    const reachIdx = wizReachIndex(list, idx);
+    wizHead.innerHTML =
+      '<div class="wiz-meta"><span class="wiz-step">Step ' + (idx + 1) + " of " + list.length + "</span>" +
+      (group ? '<span class="wiz-group">' + wizEsc(group) + "</span>" : "") +
+      '<button type="button" class="wiz-review-link">Review</button></div>' +
+      '<div class="wiz-progress">' +
+      list.map((k, i) =>
+        '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") + (i > reachIdx ? " locked" : "") +
+        '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '"></button>'
+      ).join("") +
+      '</div>' +
+      '<div class="wiz-status"><div class="wiz-cheer"></div><button type="button" class="wiz-pct" data-stage="design" title="Go to what\u2019s left"></button></div>';
+    wizHead.querySelectorAll(".wiz-seg").forEach((b) => {
+      b.onclick = () => { const k = b.getAttribute("data-k"); if (k !== activeTab && wizCanReach(k)) switchTab(k); };
+    });
+    wizHead.querySelector(".wiz-review-link").onclick = openReview;
+    refreshOrderProgress();
+
+    const showBack = !atFirst || (isPantsDesigner && hasJacketStep());
+    // Next only appears on a question that's already answered -- i.e. when
+    // the customer has gone back to a completed step and wants to move
+    // forward again. A new question has no Next: picking an option moves on
+    // by itself.
+    const showNext = !!order[activeTab] && !textMissing(activeTab);
+    // The bar's buttons are built once and only updated here. Replacing
+    // them on every question (innerHTML) left iPhone Safari showing the
+    // old, Next-less bar after a quick Back until something else forced a
+    // repaint.
+    if (!wizBar.firstChild) {
+      wizBar.innerHTML =
+        '<button type="button" class="wiz-back">&larr; Back</button>' +
+        '<div class="wiz-price"></div>' +
+        '<button type="button" class="wiz-next btn-primary"></button>' +
+        '<button type="button" class="wiz-more" tabindex="-1">More options <span aria-hidden="true">&darr;</span></button>';
+      wizBar.querySelector(".wiz-back").onclick = wizGoBack;
+      wizBar.querySelector(".wiz-more").onclick = () => {
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.6), behavior: "smooth" });
+      };
+      wizBar.querySelector(".wiz-next").onclick = wizGoNext;
+    }
+    const backBtn = wizBar.querySelector(".wiz-back");
+    const nextBtn = wizBar.querySelector(".wiz-next");
+    const priceEl = wizBar.querySelector(".wiz-price");
+    backBtn.disabled = !showBack;
+    const priceText = wizPriceEl ? wizPriceEl.textContent : "";
+    if (priceEl.textContent !== priceText) priceEl.textContent = priceText;
+    const nextLabel = atLast ? "Review" : "Next \u2192";
+    if (nextBtn.textContent !== nextLabel) nextBtn.textContent = nextLabel;
+    nextBtn.disabled = !showNext;
+    nextBtn.classList.toggle("wiz-next-off", !showNext);
+  }
+  if (wizPriceEl && window.MutationObserver) {
+    new MutationObserver(() => {
+      const el = wizBar.querySelector(".wiz-price");
+      if (el) el.textContent = wizPriceEl.textContent;
+    }).observe(wizPriceEl, { childList: true, characterData: true, subtree: true });
+  }
+
+  function closeReview() {
+    if (wizSheetEl) { wizSheetEl.remove(); wizSheetEl = null; }
+    document.body.classList.remove("wiz-lock");
+    document.removeEventListener("keydown", wizEscHandler);
+  }
+  function wizEscHandler(e) { if (e.key === "Escape") closeReview(); }
+  function openReview() {
+    closeReview();
+    const list = wizList();
+    const title = wizSummaryEl && wizSummaryEl.querySelector("h3") ? wizSummaryEl.querySelector("h3").textContent : "Your Suit";
+    const noteEl = wizSummaryEl ? wizSummaryEl.querySelector(".summary-note") : null;
+    const realBtn = document.getElementById(ids.continueBtn);
+    const missingFirst = list.find((k) => !order[k] || textMissing(k));
+    const reachIdx = wizReachIndex(list, Math.max(list.indexOf(activeTab), 0));
+    const sheet = document.createElement("div");
+    sheet.className = "wiz-sheet";
+    sheet.innerHTML =
+      '<div class="wiz-sheet-card" role="dialog" aria-modal="true" aria-label="' + wizEsc(title) + '">' +
+      '<div class="wiz-sheet-head"><h3>' + wizEsc(title) + '</h3><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
+      '<div class="wiz-rows">' +
+      list.map((k, i) => {
+        const v = displayValue(k);
+        const needText = !!v && textMissing(k);
+        return '<button type="button" class="wiz-row' + (i > reachIdx ? " locked" : "") + '" data-k="' + k + '"' + (i > reachIdx ? " disabled" : "") + '><span>' + wizEsc(catalog[k].label) +
+          '</span><span class="' + (v && !needText ? "" : "missing") + '">' + wizEsc(needText ? (k === "monogram" && String(customTexts.monogram || "").trim() && fontMissing() ? "Pick a font" : "Add your monogram") : v || "Choose") + "</span></button>";
+      }).join("") +
+      "</div>" +
+      '<div class="wiz-total"><span>Estimated total</span><b>' + (wizPriceEl ? wizEsc(wizPriceEl.textContent) : "") + "</b></div>" +
+      (noteEl ? '<p class="summary-note">' + wizEsc(noteEl.textContent) + "</p>" : "") +
+      '<button type="button" class="btn-primary wiz-continue">' +
+      (missingFirst ? "Finish the remaining choices" : wizEsc(realBtn ? realBtn.textContent : "Continue")) + "</button>" +
+      "</div>";
+    document.body.appendChild(sheet);
+    wizSheetEl = sheet;
+    document.body.classList.add("wiz-lock");
+    document.addEventListener("keydown", wizEscHandler);
+    sheet.addEventListener("click", (e) => { if (e.target === sheet) closeReview(); });
+    sheet.querySelector(".wiz-close").onclick = closeReview;
+    sheet.querySelectorAll(".wiz-row").forEach((b) => {
+      b.onclick = () => {
+        const k = b.getAttribute("data-k");
+        if (!wizCanReach(k)) return;
+        closeReview();
+        if (reviewRowHandler) { reviewRowHandler(k); return; }
+        if (k !== activeTab) switchTab(k);
+      };
+    });
+    sheet.querySelector(".wiz-continue").onclick = () => {
+      if (missingFirst) {
+        closeReview();
+        if (reviewRowHandler) reviewRowHandler(missingFirst); else switchTab(missingFirst);
+        return;
+      }
+      closeReview();
+      if (realBtn) realBtn.click();
+    };
+  }
+
+  // Picking an option can leave the customer scrolled well down into the
+  // option grid (Fabric alone has 400+ swatches) -- scroll back up to the
+  // tab row after a selection so they can immediately see their choice
+  // reflected and switch to the next category without manually scrolling
+  // up. This used to be mobile-only on the assumption that desktop always
+  // has the summary panel and full grid in view already -- but the desktop
+  // layout is a sidebar (.tabs sits beside the grid, not above it, and isn't
+  // sticky -- see style.css), so scrolling deep into a long grid on desktop
+  // leaves the tab row itself scrolled out of view too. So this now runs at
+  // every width, exactly like scrollToStepTop already does for step-to-step
+  // navigation.
+  function scrollTabsIntoViewOnMobile() {
+    if (embedHost) return; // the jacket's panel scrolls on its own
+    // Wait for the DOM re-render above to actually be laid out, then kill
+    // any residual native momentum scrolling outright (see
+    // killScrollMomentum above) before reading positions or animating --
+    // a stale/in-motion read here can make this scroll silently lose to
+    // the phone's own ongoing scroll.
+    requestAnimationFrame(() => {
+      killScrollMomentum();
+      const rect = designerGridEl.getBoundingClientRect();
+      const targetY = window.scrollY + rect.top - getNavClearance();
+      smoothScrollWindowTo(targetY);
+
+      // The tab row itself scrolls sideways (swipe to see more categories),
+      // so also make sure whichever tab is active is actually visible in
+      // that strip instead of stranded off to one edge.
+      const activeTabEl = tabsEl.querySelector(".tab.active");
+      if (activeTabEl) {
+        const tabRect = activeTabEl.getBoundingClientRect();
+        const containerRect = tabsEl.getBoundingClientRect();
+        const tabCenter = tabRect.left - containerRect.left + tabsEl.scrollLeft + tabRect.width / 2;
+        smoothScrollContainerToX(tabsEl, tabCenter - tabsEl.clientWidth / 2);
+      }
+    });
+  }
+
+  // Called once the customer has picked the LAST category for this step
+  // (see advanceToNextTab below) -- scrolls the Continue button into the
+  // vertical center of the screen so it's immediately visible without the
+  // customer having to scroll for it themselves, matching what this used to
+  // do before an earlier fix removed it (that fix was itself addressing a
+  // real problem: centering the button exactly under the same tap/thumb
+  // position just used to make the last selection meant an identical quick
+  // tap could immediately land on Continue too, silently completing the
+  // step). Restored on the customer's explicit request; the accidental-
+  // double-tap risk that motivated removing it is still real on mobile, so
+  // that's a known, accepted trade-off there, not an oversight.
+  //
+  // This used to bail out on desktop entirely, on the assumption that the
+  // sticky summary panel always kept the Continue button in view there.
+  // That assumption breaks the instant the LAST category is a short one
+  // (e.g. Monogram Placement, ~10 cards) reached while scrolled deep into
+  // an earlier, much taller one (e.g. Fabric or Thread Color): the options
+  // grid -- and the whole sticky container -- collapses to that short
+  // category's height, which un-stickies the summary panel and strands the
+  // customer well above the now-relocated Continue button with nothing to
+  // tell them it's there. Mouse clicks don't have the same "same spot,
+  // instant re-tap" double-tap risk a thumb does, so this now runs on
+  // desktop too.
+  function scrollContinueButtonIntoView() {
+    // Step-by-step mode: the summary + Continue button live in the Review
+    // sheet now, so finishing the last question opens it.
+    openReview();
+    return;
+    // eslint-disable-next-line no-unreachable
+    const btnEl = document.getElementById(ids.continueBtn);
+    if (!btnEl) return;
+    requestAnimationFrame(() => {
+      killScrollMomentum();
+      // #continueBtn lives inside .summary, which is position:static on
+      // mobile but position:sticky on desktop (see style.css). A sticky
+      // ancestor's getBoundingClientRect() is only a reliable scroll target
+      // while it's already pinned -- read it once, before the button has
+      // settled into its stuck position (e.g. right after a short final
+      // category collapsed a much taller sticky container down to size),
+      // and the very act of animating toward that reading changes whether
+      // the button is pinned or not partway through, leaving the button
+      // far from wherever the animation actually lands (verified: it can
+      // land 500-600px short). designerGridEl -- the tabs/options/summary
+      // row itself -- is never sticky, so its rect is stable regardless of
+      // scroll position, same reasoning as scrollToTopThenSwap above. On
+      // desktop this scrolls its bottom edge to the bottom of the viewport,
+      // which reveals whichever column is tallest right now -- in practice
+      // the summary column once every category is filled in, with Continue
+      // as its very last element -- without needing the sticky-dependent
+      // button rect at all.
+      if (window.innerWidth > MOBILE_BREAKPOINT) {
+        const gridRect = designerGridEl.getBoundingClientRect();
+        const targetY = window.scrollY + gridRect.bottom - window.innerHeight + 32;
+        smoothScrollWindowTo(targetY);
+        return;
+      }
+      // Mobile: .summary is plain static flow there, so the button's own
+      // rect is a perfectly stable target -- center it in the viewport as
+      // before.
+      const rect = btnEl.getBoundingClientRect();
+      const targetY =
+        window.scrollY + rect.top - (window.innerHeight / 2 - rect.height / 2);
+      smoothScrollWindowTo(targetY);
+    });
+  }
+
+  // Shared by switchTab (below) and every other action that swaps the
+  // options grid for different -- often shorter -- content: picking a
+  // color-family card (e.g. "Purple") to drill into its shades, picking a
+  // Fabric pattern-type card (Solid/Pinstripe/...), picking a color family
+  // within a pattern type, and every "All Colors"/"All Patterns" back
+  // button. All of these replace optionsEl's content the same way switchTab
+  // does, so all of them need to get the customer back near the top FIRST,
+  // for the same reason: swapping in shorter content while still scrolled
+  // deep (say, having just scrolled through a long family list to reach
+  // "Purple") forces an un-animated snap into whatever now-shorter content
+  // ends up at that same scroll position -- which can land well past the
+  // fresh grid this click was supposed to reveal (e.g. landing on the "Your
+  // Suit" summary instead of the 2 shades inside "Purple"). `doSwap` is
+  // whatever state change + renderOptions() call this action needs to make.
+  function scrollToTopThenSwap(rawSwap) {
+    // Inside the interactive jacket's panel: swap, then show the panel's top.
+    if (embedHost) {
+      rawSwap();
+      embedHost.scrollTop = 0;
+      return;
+    }
+    // Fade the old question out and the new one in, rather than cutting
+    // over instantly after each pick -- see fadeSwapContent.
+    const doSwap = () => fadeSwapContent(optionsEl, rawSwap);
+    // Used to bail out immediately on desktop (doSwap() with no scroll),
+    // on the assumption that the full grid was always already in view
+    // there. That assumption doesn't hold: .tabs is a sidebar on desktop,
+    // not sticky (see style.css), and long grids (Fabric, Thread Color,
+    // ...) scroll the whole page well past it. So this now runs at every
+    // width, exactly like scrollToStepTop already does for step-to-step
+    // navigation -- see scrollTabsIntoViewOnMobile's own comment above.
+    //
+    // Kill any residual native momentum scrolling (e.g. from the flick
+    // that just scrolled through a long family list) outright before even
+    // reading the current scroll position -- see killScrollMomentum above.
+    // Both problems it prevents matter here: reading window.scrollY /
+    // designerGridEl's rect while still in motion can compute a topY
+    // against a position that's about to keep changing on its own, and
+    // starting smoothScrollWindowTo while momentum is still live can lose
+    // that race entirely (the animation completes and swaps the content
+    // right on schedule while the screen visibly lands wherever the
+    // momentum drifted to instead).
+    killScrollMomentum();
+    // See designerGridEl's own comment above -- tabsEl is sticky on
+    // mobile, so its rect can't tell us how deep we're really scrolled.
+    // Use its non-sticky parent instead so a long grid (e.g. a 59-shade
+    // color family) actually gets scrolled back up before the content
+    // swaps out, rather than staying scrolled deep and getting clamped
+    // into whatever shorter content ends up at that same scroll position.
+    const rect = designerGridEl.getBoundingClientRect();
+    const topY = Math.max(window.scrollY + rect.top - getNavClearance(), 0);
+    if (window.scrollY > topY + 2) {
+      smoothScrollWindowTo(topY, doSwap);
+    } else {
+      doSwap();
+    }
+  }
+
+  // Switching which category tab is active re-renders the whole options
+  // grid, and different categories render at different heights (more or
+  // fewer swatches). Doing that render while scrolled deep into the
+  // previous grid can force the same un-animated scroll-position snap that
+  // step-to-step navigation had -- the browser has no choice but to yank
+  // the scroll position the instant the tall old content disappears.
+  // Scrolling up to the top of the tab row FIRST, and only swapping the
+  // grid once we're actually there, avoids that: there's nothing left above
+  // the fold for the swap to yank around.
+  function switchTab(key) {
+    if (catalog[key] && catalog[key].inlineWith) key = catalog[key].inlineWith;
+    // Any move (Back, Next, a progress segment, a Review row) wins over a
+    // pick's pending auto-advance -- otherwise tapping Back right after a
+    // pick went back and then got carried forward again a moment later.
+    cancelAutoAdvance();
+    scrollToTopThenSwap(() => {
+      activeTab = key;
+      renderTabs();
+      renderOptions();
+      scrollTabsIntoViewOnMobile();
+      if (window.__navChanged) window.__navChanged();
+    });
+  }
+
+  // After picking an option, move the customer straight on to the next
+  // category instead of leaving them to click or swipe over to it
+  // themselves -- a guided, one-choice-at-a-time flow. A short pause first
+  // lets them actually see their selection highlight before it moves on.
+  // The scroll helpers above are mobile-only internally (there's nothing to
+  // scroll on desktop -- every tab and the full grid are already on
+  // screen), so this same function works for both.
+  let autoAdvanceTimer = 0;
+  function cancelAutoAdvance() {
+    if (autoAdvanceTimer) { window.clearTimeout(autoAdvanceTimer); autoAdvanceTimer = 0; }
+  }
+  function advanceToNextTab() {
+    cancelAutoAdvance();
+    // On the interactive jacket the customer stays on the part they clicked
+    // and sees the jacket change; they pick the next part themselves.
+    if (embedHost) return;
+    // Skip over any category that isn't currently applicable (e.g. Monogram
+    // Thread Color when Monogram Placement is "No Monogram Need") -- it has
+    // no tab to land on right now.
+    let nextIdx = keys.indexOf(activeTab) + 1;
+    while (nextIdx < keys.length && !isShown(keys[nextIdx])) nextIdx++;
+    const nextKey = keys[nextIdx];
+    if (!nextKey) {
+      // That was the last category for this step -- auto-scroll the
+      // Continue button into the vertical center of the screen so it's
+      // immediately visible, restoring the original behavior at the
+      // customer's request (see scrollContinueButtonIntoView's own comment
+      // for the accidental-double-tap trade-off this reintroduces and why
+      // it's accepted).
+      autoAdvanceTimer = window.setTimeout(() => {
+        autoAdvanceTimer = 0;
+        scrollContinueButtonIntoView();
+      }, 320);
+      return;
+    }
+    autoAdvanceTimer = window.setTimeout(() => {
+      autoAdvanceTimer = 0;
+      switchTab(nextKey);
+    }, 320);
+  }
+
+  function renderTab(key) {
+    const cat = catalog[key];
+    const div = document.createElement("div");
+    div.className = "tab" + (key === activeTab ? " active" : "");
+    const tabSubtitle = displayValue(key) ? displayValue(key) : allowedOptions(key).length + " options";
+    div.innerHTML = cat.label + '<span class="count">' + tabSubtitle + "</span>";
+    div.onclick = () => switchTab(key);
+    tabsEl.appendChild(div);
+  }
+
+  function renderTabs() {
+    reconcileSelections();
+    // A category whose requiresOtherThan condition no longer holds (e.g. the
+    // customer switched Monogram Placement back to "No Monogram Need") loses
+    // its tab entirely -- clear any stale selection so it can't silently
+    // ride along into the saved order once it's no longer offered.
+    keys.forEach((key) => {
+      if (!isApplicable(key) && order[key] !== null) order[key] = null;
+    });
+    tabsEl.innerHTML = "";
+    if (groups) {
+      // A plain, non-clickable heading before each group's tabs -- clusters
+      // related categories (e.g. "Collar & Lapel") instead of leaving all of
+      // them in one undifferentiated list.
+      groups.forEach((group) => {
+        const visibleKeys = group.keys.filter(isShown);
+        if (!visibleKeys.length) return;
+        const label = document.createElement("div");
+        label.className = "tab-group-label";
+        label.textContent = group.label;
+        tabsEl.appendChild(label);
+        visibleKeys.forEach(renderTab);
+      });
+    } else {
+      keys.filter(isShown).forEach(renderTab);
+    }
+    renderWizard();
+  }
+
+  // Builds one selectable swatch card (used by both the flat grid below and
+  // the color-family shade grid) -- picking it stores opt.name on this
+  // category and advances to the next tab, same behavior either way.
+  function renderSwatchCard(cat, opt, container) {
+    // Customer-facing label: the friendly renamed color when this category
+    // has one (colorFamilies thread categories), otherwise just opt.name as
+    // before. The original code (opt.name) is still what gets stored in
+    // order[activeTab] below and is never shown here -- see resolvedValue/
+    // buildRow/getSelections, which use opt.name and are unaffected.
+    let shownName =
+      activeTab === "fabric" && qaShowRawFabricNames ? opt.name : opt.displayName || opt.name;
+    // A "matchesFabric" option (Match Fabric Color / Best Match to Fabric)
+    // no longer reveals the actual real color option that the nearest-color
+    // match would pick -- instead it shows a soft gradient of the
+    // selected fabric's own color, labeled with the FABRIC's name,
+    // so the customer knows roughly what tone to expect without being shown
+    // the exact thread/button that'll be auto-selected. (The real resolved
+    // match is still used for the order summary/production text -- see
+    // friendlyName -- since that's what the shop actually needs to make the
+    // suit.) Falls back to the plain icon/name until a fabric is chosen.
+    // This never touches opt itself (opt is a shared catalog object reused
+    // by both jacket and pants), only local render variables.
+    let imgSrc = opt.img;
+    let gradientCss = null;
+    if (opt.matchesFabric) {
+      const fabricOpt = resolveFabricOption();
+      if (fabricOpt && fabricOpt.hex) {
+        gradientCss = fabricSwatchCss(fabricOpt.hex);
+        shownName = opt.name + " (" + (fabricOpt.displayName || fabricOpt.name) + ")";
+      }
+    }
+    // Optional short label (e.g. "Popular", "Extra Tall") shown as a small
+    // gray banner across the top of the card -- a hint for a customer who
+    // doesn't know what to pick, not part of the stored/printed value.
+    // No badges (e.g. "Standard") on a step a preset narrows down.
+    const presetStep = !!(preset && preset.allowed && preset.allowed[activeTab]);
+    const badgeHtml = opt.badge && !presetStep ? '<div class="opt-badge">' + opt.badge + "</div>" : "";
+    // The magnifier/zoom button is redundant on a zoom category (Fabric,
+    // Lining, Felt Color): clicking the card itself now opens the same
+    // (large) zoom view first -- see the onclick branch below -- so the
+    // extra button would just be a second way to trigger an identical
+    // preview. Every other category still selects instantly on click, so
+    // the magnifier stays there as the only way to preview an option
+    // before choosing it. A gradient (matchesFabric) card has no real photo
+    // to enlarge, so it never gets a magnifier either.
+    const zoomBtnHtml = isZoomCategory(activeTab) || gradientCss || opt.uploadPhoto || cat.fontCards
+      ? ""
+      : '<button class="zoom-btn" title="Enlarge" aria-label="Enlarge image"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>';
+    // A font card (Monogram Font) shows the customer's own monogram, or
+    // "ABC" until they type one, in that font instead of a photo.
+    const swatchHtml = cat.fontCards
+      ? '<div class="opt-swatch font-swatch" style="' + monogramFontStyle(opt) + '">' + monogramPreviewHtml(customTexts.monogram) + "</div>"
+      : gradientCss
+      ? '<div class="opt-swatch match-fabric-swatch" style="background:' + gradientCss + ';" role="img" aria-label="' + shownName + '"></div>'
+      : '<img class="opt-swatch" src="' + imgSrc + '" alt="' + shownName + '">';
+    const card = document.createElement("div");
+    card.className = "opt-card" + (order[activeTab] === opt.name ? " selected" : "");
+    // "Upload Your Own Photo": the swatch is an upload icon, or the customer's
+    // own photo once they've added one.
+    let uploadSwatch = "";
+    if (opt.uploadPhoto) {
+      const photo = customPhotos[activeTab];
+      uploadSwatch = photo
+        ? '<div class="opt-swatch upload-swatch has-photo" style="background-image:url(' + photo + ');" role="img" aria-label="Your photo"></div>'
+        : '<div class="opt-swatch upload-swatch" role="img" aria-label="Upload a photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>';
+      shownName = customPhotos[activeTab] ? (selectedIsUpload(activeTab) ? "Your Photo (+$80) \u2014 tap to change" : "Your Photo (+$80)") : shownName;
+    }
+    card.innerHTML =
+      badgeHtml +
+      zoomBtnHtml +
+      (opt.uploadPhoto ? uploadSwatch : swatchHtml) + '<div class="opt-name">' + shownName + "</div>" +
+      // Optional emphasized one-line callout under the name (catalog option
+      // field `highlight`), for a detail that must not be missed.
+      (opt.highlight ? '<div class="opt-highlight">' + opt.highlight + "</div>" : "") +
+      (opt.pattern ? '<div class="opt-pattern">' + opt.pattern + "</div>" : "");
+    const zoomBtn = card.querySelector(".zoom-btn");
+    if (zoomBtn) {
+      zoomBtn.onclick = (e) => {
+        e.stopPropagation();
+        lbSeq = null;
+        openLightbox(imgSrc, shownName, cat.label, false, null);
+      };
+    }
+    const applySelection = () => {
+      order[activeTab] = opt.name;
+      if (!embedQuiet) markDesignStarted();
+      renderOptions();
+      renderTabs();
+      renderSummary();
+      saveDraft();
+      // A category with a typed answer (the monogram) stays put after a real
+      // pick so the customer can type it -- the box has just appeared.
+      const tiHere = cat.textInput;
+      if (tiHere && opt.name !== tiHere.skipWhen) {
+        const box = document.getElementById("catText");
+        if (box) {
+          box.scrollIntoView({ block: "center", behavior: "smooth" });
+          if (!String(box.value || "").trim()) box.focus({ preventScroll: true });
+        }
+        return;
+      }
+      advanceToNextTab();
+    };
+    // Fabric, Lining, and Felt Color are the categories where the pattern/
+    // weave/texture itself is the whole point of the choice, so picking a
+    // swatch opens the same large zoom view as the magnifier button first --
+    // with a "Confirm This ___" button in it (see openLightbox's onConfirm
+    // param) -- rather than applying the selection immediately off a small
+    // thumbnail. Every other category keeps the original instant-select-
+    // on-click behavior unchanged.
+    const tabAtRender = activeTab;
+    if (opt.uploadPhoto) {
+      card.onclick = () => {
+        // Photo already added and this card isn't the current pick: just pick it.
+        if (customPhotos[tabAtRender] && order[tabAtRender] !== opt.name) { applySelection(); return; }
+        pickLiningPhoto(tabAtRender, () => applySelection());
+      };
+    } else {
+      const lbArgs = [imgSrc, shownName, cat.label, true, opt.name, applySelection, activeTab];
+      if (isZoomCategory(activeTab) && !opt.matchesFabric) card._lb = lbArgs;
+      card.onclick = isZoomCategory(activeTab) && !opt.matchesFabric
+        ? () => {
+            const root = card.closest(".options") || card.parentElement;
+            const seq = Array.from(root.querySelectorAll(".opt-card")).filter((c) => c._lb).map((c) => c._lb);
+            lbSeq = seq.length > 1 ? seq : null;
+            lbIdx = seq.indexOf(lbArgs);
+            openLightbox.apply(null, lbArgs);
+          }
+        : applySelection;
+    }
+    container.appendChild(card);
+  }
+
+  // Renders the "Same as Jacket" link card (shared by the flat grid and the
+  // color-family picker's top level) into the given container.
+  function renderSameAsCard(cat, container) {
+    const resolver = sameAsResolvers[activeTab];
+    if (!resolver) return;
+    const sentinel = sameAsSentinel(activeTab);
+    const sourceName = resolver();
+    const sourceOpt = sourceName ? cat.options.find((o) => o.name === sourceName) : null;
+    const shownSourceName =
+      activeTab === "fabric" && qaShowRawFabricNames
+        ? sourceName
+        : sourceOpt
+        ? sourceOpt.displayName || sourceOpt.name
+        : sourceName;
+    const label = sourceName ? "Same as Jacket (" + shownSourceName + ")" : "Same as Jacket";
+    const card = document.createElement("div");
+    card.className = "opt-card same-as-card" + (order[activeTab] === sentinel ? " selected" : "");
+    card.innerHTML =
+      (sourceOpt && cat.flatColorTiles && sourceOpt.hex
+        ? '<div class="opt-swatch" style="background:' + sourceOpt.hex + ';"></div>' // plain color, never a thread photo
+        : sourceOpt
+        ? '<img class="opt-swatch" src="' + sourceOpt.img + '" alt="' + label + '">'
+        : '<div class="opt-swatch same-as-placeholder"></div>') +
+      '<div class="opt-name">' + label + "</div>";
+    card.onclick = () => {
+      order[activeTab] = sentinel;
+      if (!embedQuiet) markDesignStarted();
+      renderOptions();
+      renderTabs();
+      renderSummary();
+      saveDraft();
+      advanceToNextTab();
+    };
+    container.appendChild(card);
+  }
+
+  // Colors (Thread Color, Buttonhole Thread Color, and so on) render as a
+  // two-level picker instead of one flat grid: first choose a color family
+  // (e.g. "Blue"), then a specific shade within it -- the family's own
+  // shades are already ordered lightest to darkest (see catalog.js), so
+  // that second grid reads as a gradient. familyBrowse[activeTab] tracks
+  // which level is showing for this tab; it defaults to the family of an
+  // existing real selection so reopening the tab lands on the right shades.
+  function renderColorFamilyOptions(cat, gridId, descriptionHtml) {
+    if (!(activeTab in familyBrowse)) {
+      const currentName = !isSameAs(activeTab) ? order[activeTab] : null;
+      familyBrowse[activeTab] = familyForOptionName(cat, currentName);
+    }
+    const browsedFamily = familyBrowse[activeTab];
+
+    // "Match or choose other color" categories (e.g. Lapel Buttonhole
+    // Color): the first screen is just two cards -- match the fabric, or
+    // "Choose Other Color", which opens the full list of color families.
+    if (cat.chooseOtherColor) {
+      if (!(activeTab in otherColorBrowse)) {
+        const cur = !isSameAs(activeTab) ? order[activeTab] : null;
+        const isRealColor = !!cur && !(cat.specialOptions || []).some((o) => o.name === cur);
+        otherColorBrowse[activeTab] = isRealColor;
+      }
+      if (!otherColorBrowse[activeTab] && browsedFamily === null) {
+        optionsEl.innerHTML =
+          "<h3>" + cat.label + "</h3>" + descriptionHtml +
+          '<p class="sub">' + (cat.tagline || "Match your fabric, or choose a different color.") + '</p><div class="opt-grid color-family-grid" id="' +
+          gridId + '"></div>';
+        const grid = document.getElementById(gridId);
+        renderSameAsCard(cat, grid);
+        (cat.specialOptions || []).forEach((opt) => renderSwatchCard(cat, opt, grid));
+        const otherCard = document.createElement("div");
+        const hexes = cat.colorFamilies.map((f) => f.swatchHex);
+        const stops = hexes.map((h, i) => h + " " + Math.round((i / hexes.length) * 100) + "% " + Math.round(((i + 1) / hexes.length) * 100) + "%").join(", ");
+        const total = cat.colorFamilies.reduce((n, f) => n + f.options.length, 0);
+        otherCard.className = "opt-card color-family-card";
+        otherCard.innerHTML =
+          '<div class="opt-swatch family-swatch" style="background:conic-gradient(' + stops + ');"></div>' +
+          '<div class="opt-name">Choose Other Color</div>' +
+          '<div class="family-count">' + total + " colors</div>";
+        otherCard.onclick = () => {
+          scrollToTopThenSwap(() => {
+            otherColorBrowse[activeTab] = true;
+            renderOptions();
+          });
+        };
+        grid.appendChild(otherCard);
+        return;
+      }
+    }
+
+    if (browsedFamily === null) {
+      const backToChoice = cat.chooseOtherColor
+        ? '<button type="button" class="back-to-families-btn">&larr; Back</button>'
+        : "";
+      optionsEl.innerHTML =
+        "<h3>" + cat.label + "</h3>" + descriptionHtml + backToChoice +
+        '<p class="sub">' + (cat.tagline || "Choose a color family, then a shade within it.") + '</p><div class="opt-grid color-family-grid" id="' +
+        gridId + '"></div>';
+      const grid = document.getElementById(gridId);
+
+      if (cat.chooseOtherColor) {
+        optionsEl.querySelector(".back-to-families-btn").onclick = () => {
+          scrollToTopThenSwap(() => {
+            otherColorBrowse[activeTab] = false;
+            renderOptions();
+          });
+        };
+      }
+      if (!cat.chooseOtherColor) renderSameAsCard(cat, grid);
+      const sameAsResolver = sameAsResolvers[activeTab];
+      (cat.chooseOtherColor ? [] : cat.specialOptions || []).forEach((opt) => {
+        // Skip a special option (e.g. "Match Fabric Color") that's identical
+        // to the "Same as Jacket" card above -- e.g. don't show both when
+        // the jacket's own choice for this category was itself "Match
+        // Fabric Color" -- unless it's the customer's own direct pick
+        // already on file, so an existing selection never silently
+        // disappears. Mirrors the same dedup done for plain color options
+        // in the flat-grid renderer below.
+        if (sameAsResolver && opt.name === sameAsResolver() && order[activeTab] !== opt.name) return;
+        renderSwatchCard(cat, opt, grid);
+      });
+
+      cat.colorFamilies.forEach((fam) => {
+        const card = document.createElement("div");
+        card.className = "opt-card color-family-card";
+        card.innerHTML =
+          (fam.representativeImg
+            ? '<img class="opt-swatch family-swatch" src="' + fam.representativeImg + '" alt="' + fam.name + '">'
+            : '<div class="opt-swatch family-swatch" style="background:' + fam.swatchHex + ';"></div>') +
+          '<div class="opt-name">' + fam.name + "</div>" +
+          '<div class="family-count">' + fam.options.length + " " + (cat.familyCountNoun || "shade") + (fam.options.length === 1 ? "" : "s") + "</div>";
+        card.onclick = () => {
+          scrollToTopThenSwap(() => {
+            familyBrowse[activeTab] = fam.name;
+            renderOptions();
+          });
+        };
+        grid.appendChild(card);
+      });
+      return;
+    }
+
+    // Leaf level: an actual shade grid, which can run to 40-70+ cards for
+    // a big family (Navy, Charcoal) -- collapse the category tab strip so
+    // this content gets the full screen instead of sharing it.
+    setTabsCollapsedOnMobile(true);
+    const fam = cat.colorFamilies.find((f) => f.name === browsedFamily);
+    optionsEl.innerHTML =
+      "<h3>" + cat.label + "</h3>" + descriptionHtml +
+      '<button type="button" class="back-to-families-btn">&larr; ' + (cat.familyBackLabel || "All Colors") + "</button>" +
+      '<p class="sub">' + fam.name + " -- choose one.</p>" +
+      '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' + gridId + '"></div>';
+    // Back from a color's shades goes all the way to the step's first page,
+    // never just one level up.
+    optionsEl.querySelector(".back-to-families-btn").onclick = () => {
+      scrollToTopThenSwap(() => {
+        familyBrowse[activeTab] = null;
+        otherColorBrowse[activeTab] = false;
+        renderOptions();
+      });
+    };
+    const grid = document.getElementById(gridId);
+    let lastSection = null;
+    fam.options.forEach((opt) => {
+      // Optional color headings within a family (Button Color's types run
+      // Black, Navy, Gray... -- see BUTTON_TYPES in catalog.js).
+      const sec = fam.colorSections && fam.colorSections[opt.name];
+      if (sec && sec.name !== lastSection) {
+        const h = document.createElement("div");
+        h.className = "opt-section-divider color-section-divider";
+        h.innerHTML = '<span class="color-section-dot" style="background:' + sec.hex + ';"></span>' + sec.name;
+        grid.appendChild(h);
+        lastSection = sec.name;
+      }
+      renderSwatchCard(cat, opt, grid);
+    });
+  }
+
+  // Fabric-only three-level picker: pattern type (Solid / Pinstripe /
+  // Herringbone / Plaid) -> color family -> shade. Written as its
+  // own standalone renderer rather than extending renderColorFamilyOptions()
+  // so the plain two-level picker every other colorFamilies category
+  // (Thread Color, Button Color, ...) depends on is never touched.
+  //
+  // patternBrowse[activeTab] tracks which pattern type is expanded (null =
+  // show the pattern-type cards); patternFamilyBrowse[activeTab] tracks
+  // which color family within that pattern type is expanded (null = show
+  // the family cards). Both default from an existing selection so reopening
+  // a tab that already has a fabric picked lands straight on the right
+  // shade grid instead of back at the top.
+  function findPatternTypeAndFamily(cat, name) {
+    if (!cat.patternTypes || !name) return { type: null, family: null };
+    for (const pt of cat.patternTypes) {
+      for (const fam of pt.colorFamilies) {
+        if (fam.options.some((o) => o.name === name)) return { type: pt.name, family: fam.name };
+      }
+    }
+    return { type: null, family: null };
+  }
+  const patternBrowse = {};
+  const patternFamilyBrowse = {};
+
+  function renderPatternTypeOptions(cat, gridId, descriptionHtml) {
+    if (!(activeTab in patternBrowse)) {
+      const currentName = !isSameAs(activeTab) ? order[activeTab] : null;
+      const found = findPatternTypeAndFamily(cat, currentName);
+      patternBrowse[activeTab] = found.type;
+      patternFamilyBrowse[activeTab] = found.family;
+    }
+    const browsedType = patternBrowse[activeTab];
+
+    // Level 1: pattern-type cards (Solid, Pinstripe, Herringbone, ...).
+    if (browsedType === null) {
+      optionsEl.innerHTML =
+        "<h3>" + cat.label + "</h3>" + descriptionHtml +
+        '<p class="sub">' + (cat.tagline || "Choose a pattern type, then a color.") + '</p><div class="opt-grid color-family-grid" id="' +
+        gridId + '"></div>';
+      const grid = document.getElementById(gridId);
+
+      renderSameAsCard(cat, grid);
+      (cat.specialOptions || []).forEach((opt) => renderSwatchCard(cat, opt, grid));
+
+      cat.patternTypes.forEach((pt) => {
+        const totalShades = pt.colorFamilies.reduce((sum, f) => sum + f.options.length, 0);
+        // An actual photo of one representative fabric in this pattern type
+        // (see FABRIC_PATTERN_TYPES.representativeImg in catalog.js) -- so a
+        // customer can see what "Plaid" or "Herringbone" actually looks like
+        // before opening it, rather than a flat, meaningless color chip.
+        // Falls back to the old flat swatch if a type is ever added without
+        // one.
+        const card = document.createElement("div");
+        card.className = "opt-card color-family-card";
+        const swatchHtml = pt.representativeImg
+          ? '<img class="opt-swatch family-swatch" src="' + pt.representativeImg + '" alt="' + pt.name + '">'
+          : '<div class="opt-swatch family-swatch" style="background:' + pt.swatchHex + ';"></div>';
+        const optionNoun = cat.label.toLowerCase();
+        card.innerHTML =
+          swatchHtml +
+          '<div class="opt-name">' + pt.name + "</div>" +
+          '<div class="family-count">' + totalShades + " " + optionNoun + (totalShades === 1 ? "" : "s") + "</div>";
+        card.onclick = () => {
+          scrollToTopThenSwap(() => {
+            patternBrowse[activeTab] = pt.name;
+            patternFamilyBrowse[activeTab] = null;
+            renderOptions();
+          });
+        };
+        grid.appendChild(card);
+      });
+      return;
+    }
+
+    const pt = cat.patternTypes.find((p) => p.name === browsedType);
+    const browsedFamily = patternFamilyBrowse[activeTab];
+
+    // Level 2: color-family cards within the chosen pattern type.
+    if (browsedFamily === null) {
+      optionsEl.innerHTML =
+        "<h3>" + cat.label + "</h3>" + descriptionHtml +
+        '<button type="button" class="back-to-families-btn">&larr; All ' + cat.label + "s</button>" +
+        '<p class="sub">' + pt.name + " -- choose a color family, then a shade within it.</p>" +
+        '<div class="opt-grid color-family-grid" id="' + gridId + '"></div>';
+      optionsEl.querySelector(".back-to-families-btn").onclick = () => {
+        scrollToTopThenSwap(() => {
+          patternBrowse[activeTab] = null;
+          renderOptions();
+        });
+      };
+      const grid = document.getElementById(gridId);
+      pt.colorFamilies.forEach((fam) => {
+        const card = document.createElement("div");
+        card.className = "opt-card color-family-card";
+        // Same upgrade as the pattern-type cards above: an actual photo of a
+        // representative fabric in this color, for every patterned type
+        // (Pinstripe, Herringbone, Plaid) -- a flat color chip
+        // can't show pinstripe lines, herringbone chevrons, a plaid grid, or
+        // a textured weave, so it left the customer guessing what the
+        // pattern actually looks like in that color. Solid keeps the flat
+        // swatch (see fam.representativeImg in catalog.js, only populated
+        // for non-Solid pattern types): a plain color chip is already
+        // exactly what a solid fabric looks like, so a photo would add
+        // nothing.
+        const famSwatchHtml =
+          pt.name !== "Solid" && fam.representativeImg
+            ? '<img class="opt-swatch family-swatch" src="' + fam.representativeImg + '" alt="' + fam.name + '">'
+            : '<div class="opt-swatch family-swatch" style="background:' + fam.swatchHex + ';"></div>';
+        card.innerHTML =
+          famSwatchHtml +
+          '<div class="opt-name">' + fam.name + "</div>" +
+          '<div class="family-count">' + fam.options.length + " shade" + (fam.options.length === 1 ? "" : "s") + "</div>";
+        card.onclick = () => {
+          scrollToTopThenSwap(() => {
+            patternFamilyBrowse[activeTab] = fam.name;
+            renderOptions();
+          });
+        };
+        grid.appendChild(card);
+      });
+      return;
+    }
+
+    // Level 3: the actual shade grid (same swatch cards as everywhere else),
+    // which can run to 40-70+ cards for a big family (Navy, Charcoal) --
+    // collapse the category tab strip so this content gets the full screen.
+    setTabsCollapsedOnMobile(true);
+    const fam = pt.colorFamilies.find((f) => f.name === browsedFamily);
+    optionsEl.innerHTML =
+      "<h3>" + cat.label + "</h3>" + descriptionHtml +
+      '<button type="button" class="back-to-families-btn">&larr; ' +
+      (cat.backToColorFamilies ? pt.name + " Colors" : "All " + cat.label + "s") + "</button>" +
+      '<p class="sub">' + fam.name + " -- choose one.</p>" +
+      '<div class="opt-grid" id="' + gridId + '"></div>';
+    // Back from a color's shades goes all the way to the step's first page,
+    // unless the category sets `backToColorFamilies` (Lining): then it goes
+    // one level up, to the color boxes of the same pattern type.
+    optionsEl.querySelector(".back-to-families-btn").onclick = () => {
+      scrollToTopThenSwap(() => {
+        if (!cat.backToColorFamilies) patternBrowse[activeTab] = null;
+        patternFamilyBrowse[activeTab] = null;
+        renderOptions();
+      });
+    };
+    const grid = document.getElementById(gridId);
+    fam.options.forEach((opt) => renderSwatchCard(cat, opt, grid));
+  }
+
+  // Fabric browsing, color first: color cards (Black, Navy, ...) -> that
+  // color's fabrics grouped under Solid / Pinstripe / Herringbone / Plaid
+  // headings. Reads cat.colorFirst (see FABRIC_COLOR_FIRST in catalog.js).
+  // Lining keeps the pattern-first picker above; only Fabric opts in.
+  const colorFirstBrowse = {};
+  const typeBrowse = {};
+  function renderColorFirstOptions(cat, gridId, descriptionHtml) {
+    // Every fabric laid out as its own flat color tile, like a paint palette:
+    // the tile is the palette color the fabric is filed under (an
+    // approximation -- the real photo shows in the zoom), the fabric's name
+    // sits on it in spaced capitals. Whole grid ordered darkest to lightest. Tapping a tile opens the zoom with Confirm.
+    optionsEl.innerHTML =
+      "<h3>" + cat.label + "</h3>" + descriptionHtml +
+      '<p class="sub">' + (cat.tagline || "Choose a fabric.") + '</p><div class="opt-grid fabric-palette-grid" id="' + gridId + '"></div>';
+    const grid = document.getElementById(gridId);
+    renderSameAsCard(cat, grid);
+    (cat.specialOptions || []).forEach((opt) => renderSwatchCard(cat, opt, grid));
+    const lum = (h) => { const n = parseInt(String(h || "#808080").replace("#", ""), 16); return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); };
+    // Darkness: each fabric's OWN measured darkness (OKLab lightness of its
+    // sampled photo color, opt.hex) -- see the grouping/sort below.
+    const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const gam = (v) => { v = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; return Math.max(0, Math.min(255, Math.round(v * 255))); };
+    const toLab = (h) => {
+      const n = parseInt(String(h || "#808080").replace("#", ""), 16);
+      const r = lin((n >> 16) & 255), g = lin((n >> 8) & 255), b = lin(n & 255);
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+      const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+      const s2 = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+      return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s2, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s2, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s2];
+    };
+    const fromLab = (L, A, B) => {
+      const l = Math.pow(L + 0.3963377774 * A + 0.2158037573 * B, 3), m = Math.pow(L - 0.1055613458 * A - 0.0638541728 * B, 3), s2 = Math.pow(L - 0.0894841775 * A - 1.291485548 * B, 3);
+      const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s2, g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s2, b = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s2;
+      return "#" + [gam(r), gam(g), gam(b)].map((v) => v.toString(16).padStart(2, "0")).join("");
+    };
+    const tiles = [];
+    cat.colorFirst.forEach((g) => {
+      g.patterns.reduce((all, b) => all.concat(b.options), []).forEach((opt) => {
+        const lab = toLab(opt.hex || g.swatchHex);
+        tiles.push({ opt, group: g.name, L: lab[0], hue: Math.atan2(lab[2], lab[1]), chroma: Math.hypot(lab[1], lab[2]) });
+      });
+    });
+    // Grouping: fabrics are kept together by color family (blacks/charcoals,
+    // then each color -- blues, burgundies, browns... -- then the light
+    // greys and ivories), and sorted darkest -> lightest WITHIN each family.
+    // Families themselves run dark to light too: dark neutrals first, the
+    // colored families ordered by their average darkness, lights last.
+    const FAMILY = { "Jet Black": "dark", "Deep Charcoal": "dark", "Navy": "blue", "Aubergine": "purple", "Plum": "purple", "Mauve": "pink", "Dusty Rose": "pink", "Blush": "pink", "Burgundy": "red", "Wine": "red", "Chocolate Brown": "brown", "Forest Green": "green", "Teal": "green" };
+    tiles.forEach((t) => { t.fam = FAMILY[t.group] || "light"; });
+    const famL = {};
+    tiles.forEach((t) => { (famL[t.fam] = famL[t.fam] || []).push(t.L); });
+    const famRank = (f) => f === "dark" ? -1 : f === "light" ? 9 : famL[f].reduce((a, b) => a + b, 0) / famL[f].length;
+    // Fabrics are grouped by price first (cheapest tier on top, under a
+    // heading with that tier's price for the suit type being designed), then
+    // by color family and darkness within each price group. The New Fabrics
+    // (NEW_FABRICS in catalog.js) are mixed in with the rest (Daniel,
+    // 2026-10-26: no separate New Fabrics section).
+    // No prices shown (brand.js): one group, by color only.
+    tiles.forEach((t) => { t.tier = PRICES_HIDDEN ? 0 : fabricTierOf(t.opt.name); });
+    tiles.sort((x, y) => x.tier - y.tier || famRank(x.fam) - famRank(y.fam) || x.L - y.L || (x.opt.displayName || x.opt.name).localeCompare(y.opt.displayName || y.opt.name));
+    // Display: each tile shows the fabric's REAL color (hue + chroma from its
+    // photo), only lifted in lightness so dark fabrics are distinguishable.
+    // The lift is one monotonic curve over the real lightness, so the tile
+    // order stays exactly the real dark -> light order, and chroma is scaled
+    // with the lift so navy still reads navy, burgundy reads burgundy, etc.
+    const Ls = tiles.map((t) => t.L), Lmin = Math.min.apply(null, Ls), Lmax = Math.max.apply(null, Ls);
+    let lastTier = null;
+    const divider = (cls, text) => {
+      const h = document.createElement("h4");
+      h.className = cls;
+      h.textContent = text;
+      grid.appendChild(h);
+    };
+    const priceText = (tier) => (isJacketOnlyType(currentSuitType) ? "Jacket " : isPantsOnlyType(currentSuitType) ? "Pants " : "Suit ") + "$" + suitPriceForType(currentSuitType, tier);
+    tiles.forEach((t) => {
+      if (t.tier !== lastTier && !PRICES_HIDDEN) {
+        lastTier = t.tier;
+        divider("opt-section-divider", priceText(t.tier));
+      }
+      const u = Lmax > Lmin ? (t.L - Lmin) / (Lmax - Lmin) : 0;
+      const L = 0.17 + 0.79 * Math.pow(u, 0.75);
+      const C = Math.min(0.09, t.chroma * Math.pow(L / Math.max(t.L, 0.05), 0.7));
+      const tint = fromLab(L, C * Math.cos(t.hue), C * Math.sin(t.hue));
+      renderSwatchCard(cat, t.opt, grid);
+      const card = grid.lastElementChild;
+      if (!card) return;
+      card.classList.add("fabric-tile");
+      card.style.background = tint;
+      card.style.color = L > 0.62 ? "#1c1814" : "#ffffff";
+    });
+  }
+
+  // Flat color palette (used by every thread color step): every color is its
+  // own small tile in its real color with the name in spaced capitals,
+  // grouped by color under small headings -- same look as the Fabric step.
+  // Tapping a tile selects it. "Same as Jacket" / "Match Fabric Color" sit on
+  // top as slim banners.
+  function renderFlatColorTiles(cat, gridId, descriptionHtml) {
+    optionsEl.innerHTML =
+      "<h3>" + cat.label + "</h3>" + descriptionHtml +
+      '<p class="sub">' + (cat.tagline || "Choose a color.") + '</p><div class="opt-grid fabric-palette-grid" id="' + gridId + '"></div>';
+    const grid = document.getElementById(gridId);
+    renderSameAsCard(cat, grid);
+    const sameAsResolver = sameAsResolvers[activeTab];
+    (cat.specialOptions || []).forEach((opt) => {
+      if (sameAsResolver && opt.name === sameAsResolver() && order[activeTab] !== opt.name) return;
+      renderSwatchCard(cat, opt, grid);
+      if (grid.lastElementChild) grid.lastElementChild.classList.add("same-as-card");
+    });
+    const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const okL = (h) => {
+      const n = parseInt(String(h || "#808080").replace("#", ""), 16);
+      const r = lin((n >> 16) & 255), g = lin((n >> 8) & 255), b = lin(n & 255);
+      return 0.2104542553 * Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) + 0.793617785 * Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) - 0.0040720468 * Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    };
+    // Colors are grouped under a few plain headings (all the reds together,
+    // all the blues together...) built from the catalog's own color
+    // families, then sorted darkest -> lightest inside each group.
+    const DISPLAY_GROUPS = [
+      ["Black, Gray & White", ["Black", "Gray", "White & Ivory"]],
+      ["Red, Wine & Pink", ["Red & Wine", "Pink & Magenta"]],
+      ["Orange & Brown", ["Orange", "Brown & Tan"]],
+      ["Yellow & Gold", ["Yellow & Gold"]],
+      ["Green & Olive", ["Olive & Green-Yellow", "Green", "Teal"]],
+      ["Blue & Navy", ["Navy", "Blue"]],
+      ["Purple", ["Purple & Indigo"]],
+    ];
+    const groups = DISPLAY_GROUPS.map(([label, fams]) => ({ label, fams, colors: [] }));
+    cat.colorFamilies.forEach((f) => {
+      let g = groups.find((x) => x.fams.includes(f.name));
+      if (!g) { g = { label: f.name, fams: [f.name], colors: [] }; groups.push(g); } // safety net: an unmapped family still shows
+      g.colors = g.colors.concat(f.options);
+    });
+    const colors = [];
+    groups.filter((g) => g.colors.length).forEach((g) => {
+      g.colors.sort((a, b) => okL(a.hex) - okL(b.hex) || (a.displayName || a.name).localeCompare(b.displayName || b.name));
+      g.colors.forEach((opt, i) => colors.push({ opt, heading: i === 0 ? g.label : null }));
+    });
+    colors.forEach(({ opt, heading }) => {
+      if (heading) {
+        const h = document.createElement("h4");
+        h.className = "opt-section-divider";
+        h.textContent = heading;
+        grid.appendChild(h);
+      }
+      renderSwatchCard(cat, opt, grid);
+      const card = grid.lastElementChild;
+      if (!card) return;
+      card.classList.add("fabric-tile");
+      card.style.background = opt.hex;
+      card.style.color = okL(opt.hex) > 0.62 ? "#1c1814" : "#ffffff";
+    });
+  }
+
+  function renderOptions() {
+    const cat = catalog[activeTab];
+    const gridId = ids.tabs + "OptGrid";
+    // Default to the tab strip being expanded -- only the leaf-level shade
+    // grid (reached via a color family) collapses it, and it does so
+    // itself, below, after this runs.
+    setTabsCollapsedOnMobile(false);
+    // A category can carry an optional one-line "description" (see e.g.
+    // facing in catalog.js) explaining a term customers may not know on
+    // sight -- shown above the usual selection hint when present.
+    const descriptionHtml = cat.description ? '<p class="cat-description">' + cat.description + "</p>" : "";
+
+    // A step a preset narrows to a few options (e.g. its 4 fabrics) shows
+    // them as plain picture cards instead of the full color/pattern browser.
+    const presetLimited = !!(preset && preset.allowed && preset.allowed[activeTab]);
+
+    if (cat.colorFirst && !presetLimited) {
+      renderColorFirstOptions(cat, gridId, descriptionHtml);
+      return;
+    }
+
+    if (cat.flatColorTiles) {
+      renderFlatColorTiles(cat, gridId, descriptionHtml);
+      return;
+    }
+
+    if (cat.patternTypes && !presetLimited) {
+      renderPatternTypeOptions(cat, gridId, descriptionHtml);
+      return;
+    }
+
+    if (cat.colorFamilies) {
+      renderColorFamilyOptions(cat, gridId, descriptionHtml);
+      return;
+    }
+
+    // The Monogram Font step shows the monogram's own text box too, so the
+    // customer can retype it and watch every font card update.
+    const textKey = cat.fontCards ? "monogram" : activeTab;
+    const ti = catalog[textKey] && catalog[textKey].textInput;
+    // The box only appears once a real option (not "No Monogram") is picked.
+    const showTextBox = !!ti && !!order[textKey] && order[textKey] !== ti.skipWhen;
+    if (cat.fontCards || textKey === "monogram") ensureMonogramFonts();
+    // The font picked on the monogram step starts on the first font, so the
+    // customer only has to change it if they want another.
+    if (showTextBox && textKey === "monogram" && catalog.monogramFont && catalog.monogramFont.inlineWith && isApplicable("monogramFont") && !order.monogramFont) {
+      order.monogramFont = catalog.monogramFont.options[0].name;
+    }
+    const fontOpt = textKey === "monogram" && catalog.monogramFont && isApplicable("monogramFont")
+      ? catalog.monogramFont.options.find((o) => o.name === order.monogramFont) : null;
+    const textBoxHtml = showTextBox
+      ? '<div class="measure-field mono-text-card"><label for="catText">' + ti.label + (fontOpt ? ' <span class="mono-font-tag">in ' + (fontOpt.displayName || fontOpt.name) + "</span>" : "") + "</label>" +
+        '<div class="measure-input-wrap"><input type="text" id="catText" maxlength="' + (ti.maxLength || 40) + '" placeholder="' + ti.placeholder + '" autocomplete="off" autocapitalize="words" spellcheck="false"' + (fontOpt ? ' class="mono-in-font" style="' + monogramFontStyle(fontOpt) + '"' : "") + "></div>" +
+        (textKey === "monogram" ? '<div class="mono-text-status" id="catTextStatus"></div>' : "") +
+        (ti.hint ? '<div class="mono-text-hint">' + ti.hint + "</div>" : "") + "</div>"
+      : "";
+    optionsEl.innerHTML =
+      "<h3>" + cat.label + "</h3>" + descriptionHtml +
+      (cat.tagline === "" ? "" : '<p class="sub">' + (cat.tagline || "Choose one.") + "</p>") + textBoxHtml + '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' +
+      gridId + '"></div>';
+    if (showTextBox && textKey === "monogram" && !cat.fontCards) renderInlineFonts();
+    if (showTextBox) {
+      const textEl = document.getElementById("catText");
+      const statusEl = document.getElementById("catTextStatus");
+      const tabAtText = textKey;
+      textEl.value = customTexts[tabAtText] || "";
+      const showStatus = () => {
+        if (!statusEl) return;
+        const t = String(textEl.value || "").trim();
+        const problem = t ? monogramTextProblem(t) : "";
+        statusEl.className = "mono-text-status" + (problem ? " is-error" : "");
+        statusEl.textContent = problem || (t ? monogramTextUnits(t) + " of " + MONOGRAM_TEXT_RULES.maxUnits + " used" : "");
+      };
+      showStatus();
+      textEl.addEventListener("input", () => {
+        customTexts[tabAtText] = textEl.value;
+        showStatus();
+        // Font cards show the typed text live.
+        if (cat.fontCards || textKey === "monogram") {
+          const html = monogramPreviewHtml(textEl.value);
+          optionsEl.querySelectorAll(".font-swatch").forEach((el) => { el.innerHTML = html; });
+        }
+        renderSummary();
+        saveDraft();
+      });
+    }
+    const grid = document.getElementById(gridId);
+
+    const resolver = sameAsResolvers[activeTab];
+    renderSameAsCard(cat, grid);
+
+    let lastSection = null;
+    allowedOptions(activeTab).forEach((opt) => {
+      // Skip a regular option that's identical to the "Same as Jacket" card
+      // above (e.g. don't show "Navy Blue" twice when the jacket is already
+      // Navy Blue) -- unless it's the customer's own direct pick already on
+      // file, so an existing selection never silently disappears.
+      if (resolver && opt.name === resolver() && order[activeTab] !== opt.name) return;
+      // Optional small section divider (e.g. Single vs Double Breasted):
+      // an option can carry a `section` label; a heading is drawn whenever
+      // it changes from the previous option's.
+      if (opt.section && opt.section !== lastSection && !presetLimited) {
+        const h = document.createElement("h4");
+        h.className = "opt-section-divider";
+        h.textContent = opt.section;
+        grid.appendChild(h);
+        lastSection = opt.section;
+      }
+      renderSwatchCard(cat, opt, grid);
+    });
+  }
+
+  // The Monogram Font picker: a small row of font buttons inside the
+  // monogram box, each name shown in its own font. Picking one keeps the
+  // customer on this step and switches the typed text to that font.
+  function renderInlineFonts() {
+    const fcat = catalog.monogramFont;
+    if (!fcat || fcat.inlineWith !== "monogram" || !isApplicable("monogramFont")) return;
+    const box = optionsEl.querySelector(".mono-text-card");
+    if (!box) return;
+    const row = document.createElement("div");
+    row.className = "mono-font-row";
+    row.setAttribute("role", "radiogroup");
+    row.setAttribute("aria-label", fcat.label);
+    fcat.options.forEach((opt) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "mono-font-chip" + (order.monogramFont === opt.name ? " selected" : "");
+      chip.setAttribute("role", "radio");
+      chip.setAttribute("aria-checked", order.monogramFont === opt.name ? "true" : "false");
+      chip.setAttribute("style", monogramFontStyle(opt).replace(/&#39;/g, "'"));
+      chip.textContent = opt.displayName || opt.name;
+      chip.onclick = () => {
+        order.monogramFont = opt.name;
+        row.querySelectorAll(".mono-font-chip").forEach((c) => {
+          c.classList.toggle("selected", c === chip);
+          c.setAttribute("aria-checked", c === chip ? "true" : "false");
+        });
+        const input = document.getElementById("catText");
+        if (input) {
+          input.classList.add("mono-in-font");
+          input.setAttribute("style", monogramFontStyle(opt).replace(/&#39;/g, "'"));
+        }
+        const tag = box.querySelector(".mono-font-tag");
+        if (tag) tag.textContent = "in " + (opt.displayName || opt.name);
+        if (!embedQuiet) markDesignStarted();
+        renderTabs();
+        renderSummary();
+        saveDraft();
+      };
+      row.appendChild(chip);
+    });
+    const label = document.createElement("div");
+    label.className = "mono-font-label";
+    label.textContent = "Font";
+    const inputWrap = box.querySelector(".measure-input-wrap");
+    (inputWrap || box.lastChild).insertAdjacentElement("afterend", row);
+    row.insertAdjacentElement("beforebegin", label);
+    // Keep the picked font in view when it's past the edge of the row.
+    const picked = row.querySelector(".mono-font-chip.selected");
+    if (picked) row.scrollLeft = Math.max(0, picked.offsetLeft - row.offsetLeft - 8);
+  }
+
+  function renderSummary() {
+    if (typeof refreshDesignerPrice === "function") refreshDesignerPrice();
+    renderWizard();
+    summaryRowsEl.innerHTML = "";
+    keys.filter(isApplicable).forEach((key) => {
+      const row = document.createElement("div");
+      row.className = "summary-row";
+      row.innerHTML = "<span>" + catalog[key].label + "</span><span>" + (displayValue(key) || "—") + "</span>";
+      summaryRowsEl.appendChild(row);
+    });
+    changeListeners.forEach((fn) => { try { fn(); } catch (e) { /* a listener's problem never blocks the designer */ } });
+  }
+
+  renderTabs();
+  renderOptions();
+  renderSummary();
+
+  return {
+    isComplete: () => keys.filter(isApplicable).every((k) => order[k] && !textMissing(k)),
+    missingLabels: () => keys.filter(isApplicable).filter((k) => !order[k] || textMissing(k)).map((k) => catalog[k].label),
+    // Free-text answers by category key (e.g. { monogram: "ABC" }) -- only
+    // those that currently apply.
+    getTexts: () => {
+      const out = {};
+      keys.filter(isApplicable).forEach((k) => { const t = textShown(k); if (t) out[k] = t; });
+      return out;
+    },
+    setTexts: (saved) => { Object.keys(saved || {}).forEach((k) => { if (catalog[k] && catalog[k].textInput) customTexts[k] = String(saved[k]); }); },
+    buildRow: () => {
+      const row = {};
+      // An inapplicable category (e.g. Monogram Thread Color with no
+      // monogram chosen) is left out of the row entirely rather than
+      // written as null -- same effect on an insert, and it can't ever
+      // clobber a value stored earlier if the category briefly toggled.
+      keys.filter(isApplicable).forEach((key) => { row[catalog[key].column] = resolvedValue(key); });
+      return row;
+    },
+    // { label, value } for every choice that applies, in step order, with
+    // the same wording as the designer's Review sheet. Used by the
+    // "Review your selections" sheet under the finished suit picture.
+    reviewRows: () => {
+      reconcileSelections();
+      return keys.filter(isApplicable).map((k) => ({ label: catalog[k].label, value: displayValue(k) || "" }));
+    },
+    // Selected option display names, keyed by catalog key (e.g. "collar" -> "Notch Lapel").
+    // Used to fill in the order summary. Any "same as jacket" links are
+    // resolved to the real fabric name here, not left as an internal marker.
+    getSelections: () => {
+      reconcileSelections();
+      const result = {};
+      keys.filter(isApplicable).forEach((key) => { result[key] = resolvedValue(key); });
+      return result;
+    },
+    // Re-runs the three render functions with no selection changes -- used by
+    // the QA "Raw Fabric Codes" toggle so flipping it updates whatever's
+    // already on screen immediately, instead of only taking effect the next
+    // time the customer navigates to a tab.
+    refreshDisplay: () => {
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
+    // The customer's own lining photo (data URL) while it is the chosen
+    // lining, else null. Used when the suit is added to the cart.
+    getLiningPhoto: () => (selectedIsUpload("lining") ? customPhotos.lining || null : null),
+    // Restores a photo (from sessionStorage) BEFORE setSelections.
+    setLiningPhoto: (dataUrl) => { if (dataUrl) customPhotos.lining = dataUrl; },
+    // Re-applies a saved set of selections (used to restore a draft on reload).
+    setSelections: (saved) => {
+      keys.forEach((k) => {
+        if (saved[k]) order[k] = saved[k];
+      });
+      reconcileSelections();
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
+    // Jumps back to the first tab (Fabric) -- called every time this
+    // designer's page is navigated to, so it never opens on whatever tab
+    // happened to be open last.
+    // First question still unanswered (in step order), or null when done.
+    firstMissingKey: () => keys.filter(isApplicable).find((k) => !order[k] || textMissing(k)) || null,
+    // Loads a preset (CLASSIC_SUIT_PRESET.jacket / .pants) or, with null,
+    // goes back to the fully custom designer. Picks outside the preset's
+    // allowed options are cleared; its fixed answers are filled in.
+    setPreset: (p) => {
+      // Leaving a preset (for the custom designer or another preset) starts
+      // the design fresh -- otherwise its fixed answers would stay behind as
+      // if the customer had picked them.
+      const leaving = !!preset && preset !== (p || null);
+      preset = p || null;
+      if (leaving) keys.forEach((k) => { order[k] = null; });
+      if (preset && preset.steps.indexOf(activeTab) === -1) activeTab = preset.steps[0] || keys[0];
+      reconcileSelections();
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
+    // Off for pants ordered on their own: no "Same as Jacket" cards, and any
+    // "same as" answer already picked is cleared so it gets asked again.
+    setSameAsEnabled: (on) => {
+      if (on) sameAsResolvers = allSameAsResolvers;
+      else {
+        Object.keys(allSameAsResolvers).forEach((k) => { if (order[k] === sameAsSentinel(k)) order[k] = null; });
+        sameAsResolvers = {};
+      }
+      reconcileSelections();
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
+    // Whether the customer has answered any question they were actually
+    // asked (a preset's own filled-in answers don't count).
+    hasUserChoices: () => keys.filter(isShown).some((k) => order[k]),
+    // Same move as tapping a progress segment (scrolls up, then swaps).
+    showTab: (k) => { if (keys.indexOf(k) !== -1 && k !== activeTab) switchTab(k); },
+    resetToFirstTab: () => {
+      closeReview();
+      activeTab = keys.find(isShown) || keys[0];
+      renderTabs();
+      renderOptions();
+    },
+    // Used by the browser Back/Forward buttons (see "BROWSER HISTORY" below).
+    getActiveTab: () => activeTab,
+    setActiveTab: (k) => {
+      if (keys.indexOf(k) === -1) return;
+      closeReview();
+      activeTab = catalog[k].inlineWith || k;
+      renderTabs();
+      renderOptions();
+    },
+    // ---- Interactive jacket (jacket-studio.js) hooks ----
+    catalog: catalog,
+    keys: keys.slice(),
+    isShown: (k) => !!catalog[k] && isShown(k),
+    displayValue: (k) => (catalog[k] ? displayValue(k) : ""),
+    // Raw stored values (the same ones the order uses), without resolving
+    // or reconciling -- cheap enough to read on every jacket redraw.
+    rawSelections: () => Object.assign({}, order),
+    getTextsRaw: () => Object.assign({}, customTexts),
+    onChange: (fn) => { changeListeners.push(fn); },
+    openReview: () => openReview(),
+    setReviewRowHandler: (fn) => { reviewRowHandler = fn || null; },
+    // Moves this designer's own options element into hostEl (the jacket's
+    // panel) and shows question k there; unembedOptions() puts it back.
+    embedOptions: (hostEl, k, opts) => {
+      cancelAutoAdvance();
+      closeReview();
+      embedHost = hostEl;
+      embedQuiet = !!(opts && opts.quiet);
+      if (optionsEl.parentNode !== hostEl) hostEl.appendChild(optionsEl);
+      if (keys.indexOf(k) !== -1) activeTab = catalog[k].inlineWith || k;
+      renderTabs();
+      renderOptions();
+      hostEl.scrollTop = 0;
+    },
+    unembedOptions: () => {
+      if (!embedHost) return;
+      embedHost = null;
+      embedQuiet = false;
+      optionsHomeMarker.parentNode.insertBefore(optionsEl, optionsHomeMarker);
+      renderTabs();
+      renderOptions();
+    },
+    isEmbedded: () => !!embedHost,
+    // Wipes every selection back to blank and returns to the first tab --
+    // used by "Start Over", as opposed to setSelections (which only fills
+    // in whatever a saved draft actually had).
+    resetSelections: () => {
+      closeReview();
+      keys.forEach((k) => { order[k] = null; });
+      Object.keys(customPhotos).forEach((k) => { delete customPhotos[k]; });
+      Object.keys(customTexts).forEach((k) => { delete customTexts[k]; });
+      Object.keys(familyBrowse).forEach((k) => { delete familyBrowse[k]; });
+      Object.keys(otherColorBrowse).forEach((k) => { delete otherColorBrowse[k]; });
+      Object.keys(colorFirstBrowse).forEach((k) => { delete colorFirstBrowse[k]; });
+      Object.keys(typeBrowse).forEach((k) => { delete typeBrowse[k]; });
+      applyPresetFixed();
+      activeTab = keys.find(isShown) || keys[0];
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
+  };
+}
+
+const jacketDesigner = createDesigner(
+  JACKET_CATALOG,
+  {
+    tabs: "tabs",
+    options: "options",
+    summaryRows: "summaryRows",
+    continueBtn: "continueBtn",
+  },
+  null,
+  JACKET_CATALOG_GROUPS
+);
+
+const pantsDesigner = createDesigner(
+  PANTS_CATALOG,
+  {
+    tabs: "pantsTabs",
+    options: "pantsOptions",
+    summaryRows: "pantsSummaryRows",
+    continueBtn: "continuePantsBtn",
+  },
+  {
+    // Lets the customer pick "Same as Jacket" for pants fabric (and now the
+    // button nail sewing method, and the thread colors below) instead of
+    // choosing again -- stays linked even if they go back and change the
+    // jacket's choice afterward.
+    fabric: () => jacketDesigner.getSelections().fabric,
+    buttonNail: () => jacketDesigner.getSelections().buttonNail,
+    threadColor: () => jacketDesigner.getSelections().threadColor,
+    buttonholeThreadColor: () => jacketDesigner.getSelections().buttonholeThreadColor,
+    monogramThreadColor: () => jacketDesigner.getSelections().monogramThreadColor,
+  },
+  PANTS_CATALOG_GROUPS
+);
+
+// Labels for each measurement in the order summary.
+const MEASUREMENT_FORM_LABELS = {
+  height: "Height:",
+  weight: "Weight:",
+  shoulder: "Shoulder-finished-",
+  sleeve_length: "Sleeve length-finished-",
+  wrist: "Wrist-finished-",
+  chest: "Chest-finished-",
+  stomach: "Stomach-finished-",
+  front_jacket: "Front jacket-finished-",
+  back_jacket: "Back jacket-finished-",
+  bicep: "Bicep-finished-",
+  hips: "Hips-",
+  waist: "Waist-finished-",
+  leg_length: "Full pants length-finished-",
+  crotch: "Crotch-",
+  thigh: "Thigh-finished-",
+  knee: "Knee-finished-",
+  calf: "Calf-finished-",
+  cuff: "Cuff-finished-",
+};
+
+// Builds the plain-text order summary for the shop: saved on each order row
+// (client_form_text) and sent in the order email. Orders go to the factory
+// through "Send to factory" (the kute-factory edge function), so this is
+// only for reading. The customer's choices are listed step by step as the
+// designer offers them (JACKET_CATALOG_GROUPS / PANTS_CATALOG_GROUPS), so any
+// step added, renamed or removed shows up (or drops off) here on its own.
+// Style choices print the name the customer saw, with the stored value in
+// brackets when it differs; fabric, lining, button, felt and thread choices
+// print their codes as stored. Steps the site skipped are left off, and for
+// a Jacket Only item the PANTS section and pants measurements are too.
+// Steps whose values are supplier codes -- printed as stored, never renamed.
+const ORDER_SUMMARY_CODE_KEYS = ["fabric", "lining", "buttoncolor", "feltColor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "monogramThreadColor"];
+// One garment's step-by-step lines (see buildOrderSummaryText).
+function orderSummaryGarmentLines(catalog, groups, sel, part, extras) {
+  const lines = [];
+  groups.forEach((group) => {
+    const groupLines = [];
+    group.keys.forEach((key) => {
+      const cat = catalog[key];
+      const value = sel[key];
+      if (!cat || !value) return;
+      let text;
+      if (key === "lining" && liningUploadSurcharge(sel)) {
+        const photoUrl = extras && extras.liningPhotoUrl;
+        text = "CUSTOMER'S OWN PHOTO (+$" + LINING_UPLOAD_OPTION.surchargeUsd + ") -- " +
+          (photoUrl ? "photo: " + photoUrl : "photo NOT attached (upload failed) -- contact the customer for it");
+      } else if (key === "lining" && value === LINING_MATCH_OPTION.name) {
+        text = "Match fabric";
+      } else if (ORDER_SUMMARY_CODE_KEYS.indexOf(key) !== -1) {
+        text = value;
+      } else {
+        const opt = (cat.options || []).find((o) => o.name === value);
+        let siteName = opt && opt.displayName;
+        if (opt && opt.displayNameBySelection) {
+          Object.keys(opt.displayNameBySelection).forEach((dep) => {
+            const alt = opt.displayNameBySelection[dep][sel[dep]];
+            if (alt) siteName = alt;
+          });
+        }
+        text = siteName && siteName !== value ? siteName + " [" + value + "]" : value;
+      }
+      groupLines.push(cat.label + ": " + text);
+      const monogramText = extras && (part === "jacket" ? extras.jacketMonogramText : extras.pantsMonogramText);
+      if (key === "monogram" && monogramText) groupLines.push("Monogram text: " + monogramText);
+    });
+    if (!groupLines.length) return;
+    lines.push("- " + group.label + " -");
+    groupLines.forEach((l) => lines.push(l));
+  });
+  return lines;
+}
+function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, measurements, extras) {
+  const isJacketOnly = isJacketOnlyType(suitType);
+  const isPantsOnly = isPantsOnlyType(suitType);
+
+  const lines = [];
+  lines.push("ORDER SUMMARY");
+  lines.push("");
+  lines.push("Customer name: " + customerName);
+  lines.push("Order type: " + (suitType === "presetJacket" ? "Jacket Only, Preset Jacket" : isJacketOnly ? "Jacket Only" : isPantsOnly ? "Pants Only" : suitType === "preset" ? "Full Suit (Jacket + Pants), Preset Suit" : "Full Suit (Jacket + Pants)"));
+  lines.push("");
+  if (!isPantsOnly) {
+    lines.push("JACKET");
+    orderSummaryGarmentLines(JACKET_CATALOG, JACKET_CATALOG_GROUPS, jacketSel || {}, "jacket", extras).forEach((l) => lines.push(l));
+    lines.push("");
+  }
+  if (!isJacketOnly) {
+    lines.push("PANTS");
+    orderSummaryGarmentLines(PANTS_CATALOG, PANTS_CATALOG_GROUPS, pantsSel || {}, "pants", extras).forEach((l) => lines.push(l));
+    lines.push("");
+  }
+
+  lines.push("MEASUREMENTS");
+  const mode = measurements.measure_type === "body" ? "body" : "finished";
+  const measurementList = MEASUREMENTS.filter(
+    (m) => (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, suitType)
+  );
+  if (mode === "body") lines.push("Body measurements");
+  measurementList.forEach((m) => {
+    const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + (m.mode === "body" ? " (body):" : "-"));
+    const val = measurements[m.id];
+    let shown = val === undefined ? "" : val + " " + (m.unit || "cm");
+    if (m.id === "height" && val !== undefined) shown = Math.floor(val / 12) + " ft " + Math.round((val % 12) * 10) / 10 + " in (" + val + " in)";
+    lines.push(label + " " + shown);
+  });
+
+  return lines.join("\n");
+}
+
+// Rebuilds the measurement grid to match whichever fields the current suit
+// type actually needs (see activeMeasurements()) -- run once at load, and
+// again by applySuitType() whenever the suit type changes (picking a card on
+// suitTypeSection, or restoring a saved draft). Whatever was already typed
+// into a field that still exists after the rebuild is carried over rather
+// than wiped, so switching from Jacket Only back to Full Suit (say, when
+// designing a second item for the same order) keeps the jacket measurements
+// already entered -- only the newly-relevant pants fields start blank.
+function renderMeasurementFields() {
+  const previousValues = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && el.value !== "") previousValues[m.id] = el.value;
+  });
+
+  measureGrid.innerHTML = "";
+  let lastMeasurePart = null;
+  activeMeasurements().forEach((m) => {
+    // Pants on their own list the body seat under Pants.
+    const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
+    if (part !== lastMeasurePart && (part === "body" || currentSuitType === "full" || currentSuitType === "preset" || lastMeasurePart === "body")) {
+      const h = document.createElement("h4");
+      h.className = "measure-part-heading";
+      h.textContent = measurePartHeading(part);
+      measureGrid.appendChild(h);
+    }
+    lastMeasurePart = part;
+    const field = document.createElement("div");
+    field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
+    field.innerHTML =
+      '<label for="m_' + m.id + '">' + m.label + "</label>" + measureInputHtml("m_", m) +
+      (m.hint ? '<p class="measure-field-hint">' + m.hint + "</p>" : "");
+    bindBodyMeasure(field, "m_", m);
+    bindMeasureRange(field, "m_", m);
+    field.querySelectorAll("input, select").forEach((el) => {
+      el.addEventListener("input", saveDraft);
+      el.addEventListener("change", saveDraft);
+    });
+    measureGrid.appendChild(field);
+  });
+
+  Object.keys(previousValues).forEach((id) => {
+    const el = document.getElementById("m_" + id);
+    if (el) el.value = previousValues[id];
+  });
+  if (typeof renderMeasureChrome === "function") renderMeasureChrome();
+  if (typeof renderTailorChecklist === "function") renderTailorChecklist();
+}
+renderMeasurementFields();
+
+// Page chrome that matches the designer steps: a full progress bar (every
+// designer question done, plus this last step) and the running price in the
+// bottom bar. Called whenever the measurements step is shown.
+// Progress bar + running total on the Personal Info / Shipping page.
+function renderPersonalChrome() {
+  const bar = document.getElementById("persProgress");
+  if (bar) {
+    let n = hasJacketStep() ? document.querySelectorAll("#designer .wiz-seg").length : 0;
+    if (hasPantsStep()) n += document.querySelectorAll("#pantsSection .wiz-seg").length;
+    let html = "";
+    for (let i = 0; i < Math.max(n, 1) + 1; i++) html += '<span class="wiz-seg done"></span>';
+    bar.innerHTML = html + '<span class="wiz-seg current"></span>';
+  }
+  refreshOrderProgress();
+  const priceEl = document.getElementById("persPrice");
+  if (priceEl) priceEl.textContent = "$" + cartTotalUsd();
+}
+function renderMeasureChrome() {
+  const bar = document.getElementById("measProgress");
+  if (bar) {
+    let n = hasJacketStep() ? document.querySelectorAll("#designer .wiz-seg").length : 0;
+    if (hasPantsStep()) n += document.querySelectorAll("#pantsSection .wiz-seg").length;
+    let html = "";
+    for (let i = 0; i < Math.max(n, 1); i++) html += '<span class="wiz-seg done"></span>';
+    bar.innerHTML = html + '<span class="wiz-seg current"></span>';
+  }
+  refreshOrderProgress();
+  const priceEl = document.getElementById("measPrice");
+  const src = document.getElementById(!hasPantsStep() ? "totalPrice" : "pantsTotalPrice");
+  if (priceEl && src) priceEl.textContent = src.textContent;
+}
+
+// "Don't know your measurements?" size-based estimator -- see the big
+// comment above estimateMeasurementsCm() in catalog.js: this reads real
+// numbers from Lemon Tree's own graded size chart (interpolated/extrapolated
+// as needed), still just a starting estimate for the customer to review.
+const sizeEstimateToggleBtn = document.getElementById("sizeEstimateToggleBtn");
+const sizeEstimatePanel = document.getElementById("sizeEstimatePanel");
+const estJacketChestSelect = document.getElementById("estJacketChest");
+const estJacketLengthSelect = document.getElementById("estJacketLength");
+const estPantsWaistSelect = document.getElementById("estPantsWaist");
+const estPantsInseamSelect = document.getElementById("estPantsInseam");
+const estPantsLengthSelect = document.getElementById("estPantsLength");
+const estJacketFitSelect = document.getElementById("estJacketFit");
+const estPantsFitSelect = document.getElementById("estPantsFit");
+const applyEstimateBtn = document.getElementById("applyEstimateBtn");
+const sizeEstimatePantsFields = document.querySelectorAll(".size-estimate-pants-field");
+
+// A Jacket Only order has no Pants step at all, so the "Don't know your
+// measurements?" estimator shouldn't ask for a pants waist/inseam/length/fit
+// either -- called from applySuitType() below whenever the suit type
+// changes (picking a card on suitTypeSection, or restoring a saved draft).
+function updateSizeEstimatePantsFieldsForSuitType() {
+  const hide = isJacketOnlyType(currentSuitType);
+  sizeEstimatePantsFields.forEach((field) => {
+    field.hidden = hide;
+  });
+  // ...and pants on their own don't ask for jacket sizes.
+  document.querySelectorAll(".size-estimate-jacket-field").forEach((field) => {
+    field.hidden = !hasJacketStep();
+  });
+}
+
+function populateSizeSelect(selectEl, values, suffix) {
+  selectEl.innerHTML = "";
+  values.forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = String(v);
+    opt.textContent = v + (suffix || "");
+    selectEl.appendChild(opt);
+  });
+}
+if (estJacketChestSelect) populateSizeSelect(estJacketChestSelect, JACKET_CHEST_SIZE_OPTIONS, "\" chest");
+if (estPantsWaistSelect) populateSizeSelect(estPantsWaistSelect, PANTS_WAIST_SIZE_OPTIONS, "\" waist");
+if (estPantsInseamSelect) populateSizeSelect(estPantsInseamSelect, PANTS_INSEAM_OPTIONS, "\" inseam");
+// Default to common middle-of-the-road sizes so the panel isn't blank.
+if (estJacketChestSelect) estJacketChestSelect.value = "40";
+if (estPantsWaistSelect) estPantsWaistSelect.value = "34";
+if (estPantsInseamSelect) estPantsInseamSelect.value = "32";
+
+if (sizeEstimateToggleBtn && sizeEstimatePanel) {
+  sizeEstimateToggleBtn.addEventListener("click", () => {
+    sizeEstimatePanel.hidden = !sizeEstimatePanel.hidden;
+    sizeEstimateToggleBtn.classList.toggle("open", !sizeEstimatePanel.hidden);
+  });
+}
+
+if (applyEstimateBtn) {
+  applyEstimateBtn.addEventListener("click", () => {
+    const estimates = estimateMeasurementsCm(
+      parseFloat(estJacketChestSelect.value),
+      estJacketLengthSelect.value,
+      parseFloat(estPantsWaistSelect.value),
+      parseFloat(estPantsInseamSelect.value),
+      estPantsLengthSelect ? estPantsLengthSelect.value : "R",
+      estJacketFitSelect ? estJacketFitSelect.value : "regular",
+      estPantsFitSelect ? estPantsFitSelect.value : "regular"
+    );
+    MEASUREMENTS.forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el && estimates[m.id] !== undefined) el.value = estimates[m.id].toFixed(1);
+    });
+    saveDraft();
+
+    // Close the estimate panel and scroll down to the now-filled
+    // measurements table so the customer can see everything landed.
+    if (sizeEstimatePanel) sizeEstimatePanel.hidden = true;
+    if (sizeEstimateToggleBtn) sizeEstimateToggleBtn.classList.remove("open");
+    if (measureGrid) {
+      smoothScrollWindowTo(window.scrollY + measureGrid.getBoundingClientRect().top - 20 - getNavClearance());
+    }
+  });
+}
+
+document.getElementById("continueBtn").addEventListener("click", () => {
+  if (!jacketDesigner.isComplete()) {
+    alert("Select an option for: " + jacketDesigner.missingLabels().join(", "));
+    return;
+  }
+  // "Jacket Only" and the Classic Suit preset have no Pants step -- skip
+  // straight to Measurements.
+  if (!hasPantsStep()) {
+    finishDesign(jacketSection);
+    return;
+  }
+  // First time into Pants starts at its first question; coming back to
+  // Pants after already being there resumes on the question they left.
+  if (furthestStepIndex < ALL_STEPS.indexOf(pantsSection)) pantsDesigner.resetToFirstTab();
+  goToStep(jacketSection, pantsSection);
+});
+
+document.getElementById("backToJacketBtn").addEventListener("click", () => {
+  // Pants on their own have no jacket to go back to.
+  if (!hasJacketStep()) {
+    goToStep(pantsSection, suitTypeSection);
+    return;
+  }
+  // Unlike Continue (which always starts the next designer fresh at its
+  // first tab), Back returns to whichever category tab was last open --
+  // so reviewing an earlier step doesn't lose your place in it.
+  goToStep(pantsSection, jacketSection);
+});
+
+document.getElementById("continuePantsBtn").addEventListener("click", () => {
+  if (!pantsDesigner.isComplete()) {
+    alert("Select an option for: " + pantsDesigner.missingLabels().join(", "));
+    return;
+  }
+  finishDesign(pantsSection);
+});
+
+// The Preview page (see index.html) sits between designing and
+// measurements, but only once the suit-picture service is set up.
+let previewStepOn = false;
+// Pants on their own skip it: the suit picture is drawn around a jacket.
+function previewStepActive() {
+  return previewStepOn && hasJacketStep();
+}
+function stepAfterDesign() {
+  return previewStepActive() ? previewSection : measurementsSection;
+}
+
+// Fabric chips catch the light: the chip under the pointer tilts a little
+// toward it and a soft shine follows it, like turning cloth under a lamp.
+// On touch only the shine shows, where the finger presses. Styles in
+// glass.css (--tilt-x/--tilt-y/--shine-*).
+(function () {
+  const finePointer = window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let current = null;
+  const clear = (t) => {
+    if (!t) return;
+    ["--tilt-x", "--tilt-y", "--shine"].forEach((v) => t.style.removeProperty(v));
+  };
+  const light = (e) => {
+    const t = e.target.closest ? e.target.closest(".fabric-tile") : null;
+    if (t !== current) {
+      clear(current);
+      current = t;
+    }
+    if (!t) return;
+    const r = t.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    t.style.setProperty("--shine-x", Math.round(px * 100) + "%");
+    t.style.setProperty("--shine-y", Math.round(py * 100) + "%");
+    t.style.setProperty("--shine", "1");
+    if (finePointer && !still) {
+      t.style.setProperty("--tilt-x", ((0.5 - py) * 12).toFixed(1) + "deg");
+      t.style.setProperty("--tilt-y", ((px - 0.5) * 14).toFixed(1) + "deg");
+    }
+  };
+  document.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "mouse" || current) light(e);
+  }, { passive: true });
+  // A tap also sends a ripple across the chip from the finger, like
+  // touching cloth (glass.css .chip-ripple; Scott's Suits only).
+  const ripple = (e) => {
+    const t = e.target.closest ? e.target.closest(".fabric-tile") : null;
+    if (!t || still || document.documentElement.getAttribute("data-brand") !== "scott") return;
+    const r = t.getBoundingClientRect();
+    const dot = document.createElement("span");
+    dot.className = "chip-ripple";
+    dot.style.left = e.clientX - r.left + "px";
+    dot.style.top = e.clientY - r.top + "px";
+    t.appendChild(dot);
+    t.classList.remove("chip-pressed");
+    void t.offsetWidth;
+    t.classList.add("chip-pressed");
+    setTimeout(() => dot.remove(), 900);
+  };
+  document.addEventListener("pointerdown", (e) => {
+    light(e);
+    ripple(e);
+  }, { passive: true });
+  const end = (e) => {
+    if (e.pointerType === "mouse") return;
+    clear(current);
+    current = null;
+  };
+  document.addEventListener("pointerup", end, { passive: true });
+  document.addEventListener("pointercancel", end, { passive: true });
+  document.addEventListener("pointerleave", () => {
+    clear(current);
+    current = null;
+  });
+})();
+
+// Leaving the designer for the step after it, with a short "here's your
+// suit" moment on top (see showSuitReveal).
+function finishDesign(fromSection) {
+  goToStep(fromSection, stepAfterDesign());
+  showSuitReveal();
+}
+
+// "Your Smoky Onyx Double Breasted Suit": a glass card that rises over the
+// page when a design is finished, with the fabric photo, the jacket
+// drawing, the suit's name (fabric + single/double breasted) and a few of
+// its details. Shown once per design: finishing again without changes
+// doesn't show it again.
+let lastRevealedSpec = "";
+function showSuitReveal() {
+  const spec = currentDesignSpec();
+  if (!spec || spec === lastRevealedSpec || document.querySelector(".suit-reveal")) return;
+  const jacket = hasJacketStep();
+  const sel = jacket ? jacketDesigner.getSelections() : pantsDesigner.getSelections();
+  const cat = jacket ? JACKET_CATALOG : PANTS_CATALOG;
+  const fabric = (cat.fabric.options || []).find((o) => o.name === sel.fabric);
+  if (!fabric) return;
+  lastRevealedSpec = spec;
+
+  const fabricName = fabric.displayName || fabric.name;
+  let kind = "Pants";
+  let sketch = "./assets/suit-type-pants-only.png?v=20261022";
+  let details = [pantsDesigner.displayValue("frontPleat"), pantsDesigner.displayValue("frontPocket"), pantsDesigner.displayValue("bottomStyle")];
+  if (jacket) {
+    const front = JACKET_CATALOG.frontbutton.options.find((o) => o.name === sel.frontbutton) || {};
+    kind = (front.section ? front.section + " " : "") + (isJacketOnlyType(currentSuitType) ? "Jacket" : "Suit");
+    sketch = front.img || "./assets/suit-type-jacket-only.png?v=20261006d";
+    const buttons = String(front.displayName || "").split(", ").slice(1).join(", ");
+    const lining = jacketDesigner.displayValue("lining");
+    details = [jacketDesigner.displayValue("collar"), buttons, lining ? "Lining: " + lining : ""];
+  }
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text) n.textContent = text;
+    return n;
+  };
+  const wrap = el("div", "suit-reveal");
+  wrap.setAttribute("role", "dialog");
+  wrap.setAttribute("aria-modal", "true");
+  wrap.setAttribute("aria-labelledby", "suitRevealTitle");
+  const card = el("div", "suit-reveal-card");
+  const close = el("button", "suit-reveal-close", "×");
+  close.type = "button";
+  close.setAttribute("aria-label", "Close");
+
+  const art = el("div", "suit-reveal-art");
+  const swatch = el("div", "suit-reveal-swatch");
+  swatch.style.backgroundColor = fabric.hex || "";
+  if (fabric.img) swatch.style.backgroundImage = 'url("' + fabric.img + '")';
+  swatch.appendChild(el("span", "suit-reveal-shine"));
+  const drawing = el("div", "suit-reveal-sketch");
+  const img = el("img");
+  img.src = sketch;
+  img.alt = "";
+  drawing.appendChild(img);
+  art.append(swatch, drawing);
+
+  const title = el("h2", "suit-reveal-title");
+  title.id = "suitRevealTitle";
+  title.append(el("span", "", "Your " + fabricName), el("span", "", kind));
+  const list = el("ul", "suit-reveal-details");
+  details.filter(Boolean).forEach((d) => list.appendChild(el("li", "", d)));
+  const go = el("button", "btn-primary suit-reveal-go", (previewStepActive() ? "Preview your suit" : "Add your measurements") + " →");
+  go.type = "button";
+
+  card.append(close, art, el("div", "suit-reveal-eyebrow", "Designed by you"), title, list, go);
+  wrap.appendChild(card);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => wrap.classList.add("open"));
+  go.focus({ preventScroll: true });
+
+  const dismiss = () => {
+    document.removeEventListener("keydown", onKey);
+    wrap.classList.remove("open");
+    wrap.classList.add("closing");
+    setTimeout(() => wrap.remove(), 320);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") dismiss();
+  };
+  document.addEventListener("keydown", onKey);
+  go.addEventListener("click", dismiss);
+  close.addEventListener("click", dismiss);
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap) dismiss();
+  });
+}
+
+document.getElementById("backFromPreviewBtn").addEventListener("click", () => {
+  goToStep(previewSection, !hasPantsStep() ? jacketSection : pantsSection);
+});
+document.getElementById("continueFromPreviewBtn").addEventListener("click", () => {
+  goToStep(previewSection, measurementsSection);
+});
+
+document.getElementById("backToDesignerBtn").addEventListener("click", () => {
+  // Same as backToJacketBtn above -- Back resumes on the last tab you had
+  // open, it doesn't reset to Fabric. "Jacket Only" skipped Pants on the way
+  // in, so Back skips it too, straight to the jacket designer.
+  if (previewStepActive()) {
+    goToStep(measurementsSection, previewSection);
+    return;
+  }
+  if (!hasPantsStep()) {
+    goToStep(measurementsSection, jacketSection);
+    return;
+  }
+  goToStep(measurementsSection, pantsSection);
+});
+
+// Reads + validates the measurement fields without navigating anywhere;
+// shared by the "Continue" button here and the final submit on the next page.
+// Out-of-range values count as missing too (outOfRange says which), so no
+// step or order goes ahead with a size the factory can't make.
+function collectMeasurements() {
+  const values = {};
+  const missing = [];
+  const outOfRange = [];
+  activeMeasurements().forEach((m) => {
+    const raw = document.getElementById("m_" + m.id).value;
+    const val = parseFloat(raw);
+    if (raw === "" || isNaN(val) || val <= 0) {
+      missing.push(measurePartLabel(m));
+    } else if (!measureInRange(m, val)) {
+      missing.push(measurePartLabel(m));
+      outOfRange.push(measurePartLabel(m) + ": " + measureRangeText(m));
+    } else {
+      values[m.id] = val;
+    }
+  });
+  Object.assign(values, measureExtras());
+  return { values, missing, outOfRange };
+}
+
+document.getElementById("continueToPersonalInfoBtn").addEventListener("click", () => {
+  if (!commitCurrentSuitToCart()) return;
+  goToStep(measurementsSection, personalInfoSection);
+});
+
+const addAnotherSuitBtn = document.getElementById("addAnotherSuitBtn");
+if (addAnotherSuitBtn) {
+  addAnotherSuitBtn.addEventListener("click", () => {
+    if (!commitCurrentSuitToCart()) return;
+    jacketDesigner.resetSelections();
+    pantsDesigner.resetSelections();
+    // Measurements are cleared, not carried over -- suits added to the same
+    // order are just as often for someone else (a gift, a groomsman) as for
+    // the same person, so blank fields are the safer default. Anyone who IS
+    // ordering another suit for themselves can fill them back in instantly
+    // with the "Use the same measurements as Suit N" banner above the grid
+    // (see samePreviousMeasurementsBanner / updateSamePreviousMeasurementsBanner)
+    // instead of retyping everything.
+    measureStash = {};
+    MEASUREMENTS.forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el) el.value = "";
+    });
+    // Routed through suitTypeSection (rather than straight back to the
+    // jacket designer) so the next item in the same order can be a
+    // different suit type -- e.g. a full suit plus a spare jacket.
+    pendingCommitIndex = null;
+    editingCartIndex = null;
+    goToStep(measurementsSection, suitTypeSection);
+  });
+}
+
+document.getElementById("backToMeasurementsBtn").addEventListener("click", () => {
+  goToStep(personalInfoSection, measurementsSection);
+});
+
+// Formats the shipping details as a short block that goes above the order
+// summary in the email (kept separate from the summary text itself).
+function buildShippingBlock(customerName, addr) {
+  const lines = [];
+  lines.push("SHIP TO");
+  lines.push(customerName);
+  lines.push(addr.address1);
+  if (addr.address2) lines.push(addr.address2);
+  let cityStateZip = [addr.city, addr.state].filter(Boolean).join(", ");
+  if (addr.zip) cityStateZip += (cityStateZip ? " " : "") + addr.zip;
+  if (cityStateZip) lines.push(cityStateZip);
+  if (addr.country) lines.push(addr.country);
+  return lines.join("\n");
+}
+
+// Phone/email, kept separate from buildShippingBlock/buildOrderSummaryText on
+// purpose -- see the comment where this is called in the submit handler.
+// Only used to build the order notification email, never the order summary
+// text shown on the confirmation page or saved as client_form_text.
+function buildContactBlock(phone, email) {
+  const lines = [];
+  lines.push("CONTACT");
+  if (phone) lines.push("Phone: " + phone);
+  if (email) lines.push("Email: " + email);
+  return lines.join("\n");
+}
+
+// Address suggestions on the street address field (Geoapify), so customers
+// can pick their address instead of typing it all out -- selecting one also
+// fills in city/state/ZIP/country automatically. Plain fetch() + a dropdown
+// we draw ourselves, since Geoapify is a simple REST API with no script/SDK
+// to load. Only runs if a Geoapify API key has been configured in config.js
+// -- otherwise the field just stays a normal text input.
+function initAddressAutocomplete() {
+  const input = document.getElementById("shippingAddress1");
+  const list = document.getElementById("addressSuggestions");
+  if (!input || !list) return;
+  if (typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
+
+  let debounceTimer = null;
+  let activeController = null;
+  let suggestions = [];
+  let highlightedIndex = -1;
+
+  function closeList() {
+    list.innerHTML = "";
+    list.classList.remove("open");
+    suggestions = [];
+    highlightedIndex = -1;
+  }
+
+  function applySuggestion(r) {
+    const line1 =
+      r.address_line1 || [r.housenumber, r.street].filter(Boolean).join(" ") || input.value;
+    input.value = line1;
+    const cityEl = document.getElementById("shippingCity");
+    const stateEl = document.getElementById("shippingState");
+    const zipEl = document.getElementById("shippingZip");
+    const countryEl = document.getElementById("shippingCountry");
+    if (cityEl && r.city) cityEl.value = r.city;
+    if (stateEl && r.state) stateEl.value = r.state;
+    if (zipEl && r.postcode) zipEl.value = r.postcode;
+    if (countryEl && r.country) countryEl.value = r.country;
+    saveDraft();
+  }
+
+  function renderList(results) {
+    suggestions = results || [];
+    highlightedIndex = -1;
+    list.innerHTML = "";
+    if (!suggestions.length) {
+      list.classList.remove("open");
+      return;
+    }
+    suggestions.forEach((r) => {
+      const item = document.createElement("div");
+      item.className = "address-suggestion";
+      item.textContent = r.formatted || r.address_line1 || "";
+      // mousedown (not click) so this fires before the input's blur closes the list
+      item.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        applySuggestion(r);
+        closeList();
+      });
+      list.appendChild(item);
+    });
+    list.classList.add("open");
+  }
+
+  function setHighlighted(index) {
+    const items = list.querySelectorAll(".address-suggestion");
+    items.forEach((el) => el.classList.remove("highlighted"));
+    if (index >= 0 && index < items.length) {
+      items[index].classList.add("highlighted");
+      items[index].scrollIntoView({ block: "nearest" });
+    }
+    highlightedIndex = index;
+  }
+
+  input.addEventListener("input", () => {
+    const text = input.value.trim();
+    clearTimeout(debounceTimer);
+    if (text.length < 3) {
+      closeList();
+      return;
+    }
+    debounceTimer = setTimeout(() => {
+      if (activeController) activeController.abort();
+      activeController = new AbortController();
+      const url =
+        "https://api.geoapify.com/v1/geocode/autocomplete?text=" +
+        encodeURIComponent(text) +
+        "&format=json&limit=5&apiKey=" +
+        encodeURIComponent(GEOAPIFY_API_KEY);
+      fetch(url, { signal: activeController.signal })
+        .then((res) => res.json())
+        .then((data) => renderList(data && data.results))
+        .catch(() => {
+          // Network hiccup, request aborted, or bad key -- the field just
+          // keeps working as a normal text input either way.
+        });
+    }, 300);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted(Math.min(highlightedIndex + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted(Math.max(highlightedIndex - 1, 0));
+    } else if (e.key === "Enter" && highlightedIndex >= 0) {
+      e.preventDefault();
+      applySuggestion(suggestions[highlightedIndex]);
+      closeList();
+    } else if (e.key === "Escape") {
+      closeList();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    // Small delay so a suggestion's mousedown still registers first.
+    setTimeout(closeList, 150);
+  });
+}
+initAddressAutocomplete();
+
+// ---------------------------------------------------------------------------
+// Partner tailors (supabase/sql/22_partner_tailors.sql). Customers type their
+// address (with suggestions) or ZIP on the Measurements step and see the
+// closest tailors that measure for us; the admin keeps the list in My
+// Account > Partner Tailors. Places are turned into lat/lng with Geoapify (same key as the address autocomplete):
+// the customer's address when they search, a tailor's address when it's saved.
+const TAILOR_MAX_MILES = 15;
+const TAILOR_MAX_RESULTS = 5;
+
+async function geocodeUs(params) {
+  if (typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return null;
+  const qs = new URLSearchParams(Object.assign({ filter: "countrycode:us", format: "json", limit: "1", apiKey: GEOAPIFY_API_KEY }, params));
+  try {
+    const res = await fetch("https://api.geoapify.com/v1/geocode/search?" + qs.toString());
+    const data = await res.json();
+    const r = data && data.results && data.results[0];
+    return r && typeof r.lat === "number" && typeof r.lon === "number" ? { lat: r.lat, lng: r.lon } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function normalizeZip(text) {
+  const m = String(text || "").match(/\d{5}/);
+  return m ? m[0] : "";
+}
+
+function milesBetween(a, b) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 3958.8 * 2 * Math.asin(Math.sqrt(h));
+}
+
+function tailorAddressLine(t) {
+  const cityState = [t.city, [t.state, t.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  return [t.address, cityState].filter(Boolean).join(", ");
+}
+
+// Only http(s) links, so a typo can't turn into a javascript: link.
+function tailorWebsiteUrl(site) {
+  const s = String(site || "").trim();
+  if (!s) return "";
+  const url = /^https?:\/\//i.test(s) ? s : "https://" + s;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+// One tailor card. Everything goes in with textContent, never as HTML.
+function buildTailorCard(t, miles) {
+  const card = document.createElement("div");
+  card.className = "tailor-card";
+  const head = document.createElement("div");
+  head.className = "tailor-card-head";
+  const name = document.createElement("b");
+  name.textContent = t.name;
+  head.appendChild(name);
+  if (miles != null) {
+    const dist = document.createElement("span");
+    dist.className = "tailor-card-dist";
+    // Tenths of a mile under 10 miles (0.1 at least), whole miles above.
+    const shown = miles < 10 ? Math.max(0.1, Math.round(miles * 10) / 10).toFixed(1) : String(Math.round(miles));
+    dist.textContent = shown + (shown === "1.0" ? " mile" : " miles");
+    head.appendChild(dist);
+  }
+  card.appendChild(head);
+  const addLine = (cls, text, href) => {
+    if (!text) return;
+    const el = document.createElement(href ? "a" : "span");
+    el.className = cls;
+    el.textContent = text;
+    if (href) {
+      el.href = href;
+      if (/^https?:/i.test(href)) {
+        el.target = "_blank";
+        el.rel = "noopener";
+      }
+    }
+    card.appendChild(el);
+  };
+  const addr = tailorAddressLine(t);
+  const mapUrl = addr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t.name + ", " + addr) : "";
+  addLine("tailor-card-line", addr, mapUrl);
+  addLine("tailor-card-line", t.phone, t.phone ? "tel:" + t.phone.replace(/[^\d+]/g, "") : "");
+  addLine("tailor-card-line", t.hours);
+  const site = tailorWebsiteUrl(t.website);
+  addLine("tailor-card-line", site ? t.website.replace(/^https?:\/\//i, "").replace(/\/$/, "") : "", site);
+  addLine("tailor-card-note", t.note);
+  addLine("tailor-card-map", "Open in Maps", mapUrl);
+  return card;
+}
+
+// The list a customer takes to the tailor: always finished suit sizes (the
+// tailor measures for the suit, never the body list), for the current suit
+// type and only what the factory requires, so whatever the tailor writes
+// down can be typed straight into the "Finished suit sizes" boxes. Rebuilt
+// by renderMeasurementFields() whenever the suit type changes.
+function renderTailorChecklist() {
+  const box = document.getElementById("tailorChecklist");
+  if (!box) return;
+  box.innerHTML =
+    '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
+    '<ol class="tailor-checklist-steps">' +
+    '<li><strong>Tap "Copy list"</strong> and paste it into a note or text message on your phone.</li>' +
+    '<li><strong>Wear or bring a suit to the tailor</strong> (jacket and pants), so they can check the measurements against a real suit.</li>' +
+    '<li><strong>Show the list to the tailor.</strong> They measure you and fill in a number next to each item.</li>' +
+    '<li><strong>Come back here and type their numbers</strong> into the matching boxes below.</li>' +
+    '</ol>' +
+    '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
+  // Plain-text copy to paste into Notes or a message and type the numbers in.
+  const lines = [
+    SITE_BRAND.name + " suit measurements",
+    "",
+    "FOR THE TAILOR: these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so measure for a close, slim fit.",
+  ];
+  box.querySelector(".tailor-checklist-intro").textContent =
+    "Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
+  const list = box.querySelector(".tailor-checklist-list");
+  let lastPart = null;
+  // Height and weight are the customer's own to type in, not the tailor's.
+  MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && m.part !== "body" && measurementForType(m, currentSuitType)).forEach((m) => {
+    const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
+    if (part !== lastPart) {
+      lines.push("", measurePartHeading(part).toUpperCase());
+      const h = document.createElement("li");
+      h.className = "tailor-checklist-part";
+      h.textContent = measurePartHeading(part);
+      list.appendChild(h);
+      lastPart = part;
+    }
+    const li = document.createElement("li");
+    li.className = "tailor-checklist-item";
+    const name = document.createElement("span");
+    name.className = "tailor-checklist-name";
+    name.textContent = m.label;
+    if (m.hint) {
+      const hint = document.createElement("small");
+      hint.textContent = m.hint;
+      name.appendChild(hint);
+    }
+    lines.push(m.label +
+      (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") +
+      (m.id === "sleeve_length" || m.id === "body_sleeve" ? " (shoulder to wrist, NOT from the neck)" : "") +
+      (m.id === "leg_length" ? " (outseam: top of waistband to hem)" : "") + ": ");
+    li.append(name);
+    list.appendChild(li);
+  });
+  box.querySelector(".tailor-checklist-foot").textContent = "ALL MEASUREMENTS IN CENTIMETERS.";
+  lines.push("", "ALL MEASUREMENTS IN CENTIMETERS.");
+  const text = lines.join("\n");
+  const copyBtn = box.querySelector(".tailor-checklist-copy");
+  copyBtn.addEventListener("click", async () => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      // Older browsers: copy through a hidden text box instead.
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        ok = document.execCommand("copy");
+      } catch (e2) {
+        ok = false;
+      }
+      ta.remove();
+    }
+    copyBtn.textContent = ok ? "Copied" : "Couldn\u2019t copy";
+    setTimeout(() => (copyBtn.textContent = "Copy list"), 2000);
+  });
+}
+
+function initTailorFinder() {
+  const toggle = document.getElementById("tailorFinderToggleBtn");
+  const panel = document.getElementById("tailorFinderPanel");
+  const form = document.getElementById("tailorFinderForm");
+  const input = document.getElementById("tailorZipInput");
+  const sugList = document.getElementById("tailorAddressSuggestions");
+  const msg = document.getElementById("tailorFinderMsg");
+  const results = document.getElementById("tailorResults");
+  if (!toggle || !panel || !form || !input || !results) return;
+  // Set when the customer picks a suggested address, so the search can use
+  // its exact spot instead of looking the text up again.
+  let picked = null;
+
+  toggle.addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+    toggle.classList.toggle("open", !panel.hidden);
+    toggle.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) {
+      // A tailor takes suit sizes, so switch the boxes below to match.
+      if (measureMode !== "finished") {
+        setMeasureMode("finished");
+        saveDraft();
+      }
+      renderTailorChecklist();
+    }
+    if (!panel.hidden && !input.value) {
+      const val = (id) => ((document.getElementById(id) || {}).value || "").trim();
+      const shipZip = normalizeZip(val("shippingZip"));
+      const street = val("shippingAddress1");
+      if (shipZip) input.value = street ? [street, val("shippingCity"), (val("shippingState") + " " + shipZip).trim()].filter(Boolean).join(", ") : shipZip;
+    }
+  });
+
+  const say = (text) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+  };
+
+  async function search() {
+    results.innerHTML = "";
+    const where = input.value.trim().replace(/\s+/g, " ");
+    const zip = normalizeZip(where);
+    const zipOnly = /^\d{5}(-\d{4})?$/.test(where);
+    if (!picked && !zipOnly && where.length < 5) {
+      say("Please enter your address, or a 5-digit ZIP code.");
+      return;
+    }
+    const nearText = zipOnly ? zip : "you";
+    say("Looking for tailors near " + nearText + "…");
+    try {
+      const { data, error } = await getSupabase()
+        .from("partner_tailors")
+        .select("id,name,address,city,state,zip,phone,website,hours,note,lat,lng")
+        .eq("active", true);
+      if (error) throw error;
+      const tailors = data || [];
+      if (!tailors.length) {
+        say("No tailors near you yet. Coming soon!");
+        return;
+      }
+      const here = picked || (zipOnly ? await geocodeUs({ postcode: zip, type: "postcode" }) : await geocodeUs({ text: where }));
+      let list;
+      if (here) {
+        list = tailors
+          .filter((t) => typeof t.lat === "number" && typeof t.lng === "number")
+          .map((t) => ({ t, miles: milesBetween(here, { lat: t.lat, lng: t.lng }) }))
+          .filter((x) => x.miles <= TAILOR_MAX_MILES)
+          .sort((a, b) => a.miles - b.miles);
+      } else if (!zip) {
+        say("We couldn’t find that address. Please pick one from the list as you type, or try just your ZIP code.");
+        return;
+      } else {
+        // Map lookup unavailable: fall back to tailors in the same ZIP area.
+        list = tailors.filter((t) => normalizeZip(t.zip).slice(0, 3) === zip.slice(0, 3)).map((t) => ({ t, miles: null }));
+      }
+      list = list.slice(0, TAILOR_MAX_RESULTS);
+      if (!list.length) {
+        say("No tailors near you yet. Coming soon!");
+        return;
+      }
+      say(list.length === 1 ? "The closest partner tailor to " + nearText + ":" : list.length + " partner tailors near " + nearText + ", closest first:");
+      list.forEach((x) => results.appendChild(buildTailorCard(x.t, x.miles)));
+    } catch (err) {
+      console.error("Tailor search failed:", err);
+      say("Couldn’t look up tailors right now. Please try again in a moment.");
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    clearTimeout(sugTimer);
+    if (sugController) sugController.abort();
+    closeSuggestions();
+    search();
+  });
+
+  // Address suggestions as they type, from Geoapify (same as the shipping
+  // address field). Picking one searches right away.
+  let sugTimer = null;
+  let sugController = null;
+  let suggestions = [];
+  let highlighted = -1;
+  function closeSuggestions() {
+    if (!sugList) return;
+    sugList.innerHTML = "";
+    sugList.classList.remove("open");
+    suggestions = [];
+    highlighted = -1;
+  }
+  function pick(r) {
+    input.value = (r.formatted || r.address_line1 || input.value).replace(/, United States of America$/, "");
+    picked = typeof r.lat === "number" && typeof r.lon === "number" ? { lat: r.lat, lng: r.lon } : null;
+    closeSuggestions();
+    search();
+  }
+  // "Use my location": the phone's or browser's location instead of an
+  // address. The address shown in the box is filled in afterwards if
+  // Geoapify can name the spot; the search doesn't wait for it.
+  const locateBtn = document.getElementById("tailorLocateBtn");
+  if (locateBtn) {
+    if (!navigator.geolocation) locateBtn.hidden = true;
+    locateBtn.addEventListener("click", () => {
+      closeSuggestions();
+      say("Finding your location…");
+      locateBtn.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          locateBtn.disabled = false;
+          picked = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          input.value = "Your current location";
+          search();
+          if (typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
+          const qs = new URLSearchParams({ lat: String(picked.lat), lon: String(picked.lng), format: "json", apiKey: GEOAPIFY_API_KEY });
+          const spot = picked;
+          fetch("https://api.geoapify.com/v1/geocode/reverse?" + qs.toString())
+            .then((res) => res.json())
+            .then((data) => {
+              const r = data && data.results && data.results[0];
+              if (r && r.formatted && picked === spot) input.value = r.formatted.replace(/, United States of America$/, "");
+            })
+            .catch(() => {});
+        },
+        (err) => {
+          locateBtn.disabled = false;
+          say(err && err.code === 1
+            ? "Location is turned off for this site. Please allow it in your settings, or type your address or ZIP code."
+            : "We couldn’t find your location. Please type your address or ZIP code.");
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+      );
+    });
+  }
+  function setHighlighted(i) {
+    const items = sugList.querySelectorAll(".address-suggestion");
+    items.forEach((el) => el.classList.remove("highlighted"));
+    if (i >= 0 && i < items.length) items[i].classList.add("highlighted");
+    highlighted = i;
+  }
+  input.addEventListener("input", () => {
+    picked = null;
+    // A full 5-digit ZIP searches on its own (there's no search button).
+    if (/^\d{5}$/.test(input.value.trim())) {
+      clearTimeout(sugTimer);
+      closeSuggestions();
+      search();
+      return;
+    }
+    if (!sugList || typeof GEOAPIFY_API_KEY === "undefined" || !GEOAPIFY_API_KEY) return;
+    const text = input.value.trim();
+    clearTimeout(sugTimer);
+    // A bare ZIP is searched as typed; suggestions are for street addresses.
+    if (text.length < 3 || /^\d+$/.test(text)) {
+      closeSuggestions();
+      return;
+    }
+    sugTimer = setTimeout(() => {
+      if (sugController) sugController.abort();
+      sugController = new AbortController();
+      const url = "https://api.geoapify.com/v1/geocode/autocomplete?text=" + encodeURIComponent(text) +
+        "&filter=countrycode:us&format=json&limit=5&apiKey=" + encodeURIComponent(GEOAPIFY_API_KEY);
+      fetch(url, { signal: sugController.signal })
+        .then((res) => res.json())
+        .then((data) => {
+          suggestions = (data && data.results) || [];
+          highlighted = -1;
+          sugList.innerHTML = "";
+          if (!suggestions.length) {
+            sugList.classList.remove("open");
+            return;
+          }
+          suggestions.forEach((r) => {
+            const item = document.createElement("div");
+            item.className = "address-suggestion";
+            item.textContent = (r.formatted || r.address_line1 || "").replace(/, United States of America$/, "");
+            // mousedown (not click) so this fires before the input's blur closes the list
+            item.addEventListener("mousedown", (e) => {
+              e.preventDefault();
+              pick(r);
+            });
+            sugList.appendChild(item);
+          });
+          sugList.classList.add("open");
+        })
+        .catch(() => {});
+    }, 300);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted(Math.min(highlighted + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted(Math.max(highlighted - 1, 0));
+    } else if (e.key === "Enter" && highlighted >= 0) {
+      e.preventDefault();
+      pick(suggestions[highlighted]);
+    } else if (e.key === "Escape") {
+      closeSuggestions();
+    }
+  });
+  input.addEventListener("blur", () => setTimeout(closeSuggestions, 150));
+}
+initTailorFinder();
+
+// ---------------------------------------------------------------------------
+// Cart -- lets a customer design more than one suit in a single order. Each
+// entry is one suit's fully-resolved selections + measurements, captured via
+// commitCurrentSuitToCart() whenever they finish a suit (either by clicking
+// "Add to Cart & Design Another Suit" on the Measurements page, or by
+// clicking "Continue to Personal Info", which commits the suit they just
+// finished before moving on to checkout). A single-suit order still works
+// exactly as it always did -- it just means the cart ends up holding one
+// item by the time checkout happens, invisibly.
+// ---------------------------------------------------------------------------
+let cartItems = [];
+
+// Tracks the cartItems index that reflects whatever the jacket/pants/
+// measurements designer currently has loaded, or null if the current
+// designer state hasn't been committed to the cart yet. This is what lets
+// someone go back from Personal Info (or back further, to Measurements/
+// Pants/Jacket) to tweak a suit and click through again without ending up
+// with a duplicate entry -- commitCurrentSuitToCart() below updates this
+// same slot in place instead of pushing a new one. Removing a cart item
+// shifts it along with the items after it (see removeCartItem).
+let pendingCommitIndex = null;
+
+// The cart index of a suit reopened with its "Edit" link (see
+// editCartItem), or null. Always either null or equal to
+// pendingCommitIndex; it only adds the "Editing Suit N" notice on the
+// design pages and the highlight on that suit in the cart.
+let editingCartIndex = null;
+// That suit's "Generate My Suit" picture, kept so re-saving it without
+// changing anything that shows in the picture doesn't drop it.
+let editingCartPreview = null; // { spec, previewId }
+
+// Converts a resolved selections map (as returned by a designer's
+// getSelections(), or as stored in a cart item -- both already have any
+// "same as jacket" links resolved to a real value, never the internal
+// marker) into a plain {column: value} row using the catalog's own
+// key-to-column mapping. Pulled out on its own so row-building doesn't need
+// a *live* designer instance -- every suit but the last one in the cart no
+// longer matches the live jacketDesigner/pantsDesigner state, since
+// designing another suit resets them.
+function selectionsToRow(catalog, selections) {
+  const row = {};
+  Object.keys(catalog).forEach((key) => {
+    row[catalog[key].column] = selections[key];
+  });
+  return row;
+}
+
+// ---------------------------------------------------------------------------
+// Visual spec -- a plain-English description of one suit, saved on its order
+// row as `visual_spec`. When the shop marks the order "completed", an AI reads
+// THIS (not the raw production codes) to write the image-generation prompt for
+// a picture of the finished suit. So it uses customer-facing names (e.g.
+// "Smoky Onyx", not "26SU218.DBV3529"), adds pattern/family/hex color where
+// the catalog knows them, and deliberately contains NO personal data: no
+// name, contact details, address, or body measurements.
+// ---------------------------------------------------------------------------
+function visualSpecOptionDetail(cat, rawValue) {
+  if (!cat || rawValue === undefined || rawValue === null || rawValue === "") return null;
+  const opt = (cat.options || []).find((o) => o.name === rawValue);
+  // specName: the name the picture generator knows an option by, kept when
+  // the customer-facing name changes (see OPTION_LOOKS in generate-suit-image).
+  const shown = (opt && (opt.specName || opt.displayName || opt.name)) || rawValue;
+  if (opt && opt.matchesFabric) return { opt, text: shown, matchesFabric: true };
+  // Pattern type / color family, when the category is organized that way.
+  let pattern = "";
+  let family = "";
+  (cat.patternTypes || []).forEach((p) => {
+    (p.colorFamilies || []).forEach((f) => {
+      if ((f.options || []).some((o) => o.name === rawValue)) { pattern = p.name; family = f.name; }
+    });
+  });
+  if (!family) {
+    (cat.colorFamilies || []).forEach((f) => {
+      if ((f.options || []).some((o) => o.name === rawValue)) family = f.name;
+    });
+  }
+  const parts = [];
+  if (pattern) parts.push(pattern + " pattern");
+  if (family) parts.push(family + " " + (cat.familySpecLabel || "color family"));
+  if (opt && opt.hex) parts.push("approx. color " + opt.hex);
+  return { opt, text: shown + (parts.length ? " (" + parts.join(", ") + ")" : ""), matchesFabric: false };
+}
+
+// Options whose catalog line drawing is also sent to the picture generator,
+// because words alone don't pin down their shape (slanted or overlapping
+// cuff buttons, the waistband tab, double-breasted stances...).
+const VISUAL_SPEC_STYLE_DRAWINGS = ["collar", "frontbutton", "sleevecuffstyle", "cuffbuttons", "waistbandExtension", "waistbandStyle", "bottomStyle"];
+
+function buildVisualSpecText(item, opts) {
+  const isJacketOnly = isJacketOnlyType(item.type);
+  const isPantsOnly = isPantsOnlyType(item.type);
+  const lines = [];
+  // Swatch photos the picture generator is shown alongside the text, so the
+  // fabric, lining and buttons in the picture match the real ones. Site
+  // paths (./assets/...) or the customer's own uploaded lining photo.
+  const swatches = [];
+  const addSwatch = (label, src) => {
+    if (src && !swatches.some((s) => s.endsWith(" " + src))) swatches.push("Swatch " + label + ": " + src);
+  };
+  lines.push("Suit type: " + (isJacketOnly ? "Jacket only (no pants)" : isPantsOnly ? "Pants only (no jacket)" : "Full suit (jacket + pants)"));
+  const sections = isPantsOnly ? [] : [["JACKET", JACKET_CATALOG, item.jacket || {}]];
+  if (!isJacketOnly) sections.push(["PANTS", PANTS_CATALOG, item.pants || {}]);
+  sections.forEach(([title, catalog, sel]) => {
+    lines.push("");
+    lines.push(title);
+    const fabricDetail = visualSpecOptionDetail(catalog.fabric, sel.fabric);
+    const fabricHex = fabricDetail && fabricDetail.opt && fabricDetail.opt.hex ? fabricDetail.opt.hex : "";
+    Object.keys(catalog).forEach((key) => {
+      const cat = catalog[key];
+      const d = visualSpecOptionDetail(cat, sel[key]);
+      if (!d) return;
+      let text = d.text;
+      if (d.matchesFabric) {
+        // Stored value is the "match the fabric" marker; describe what that means visually.
+        text = "matched to the fabric color" + (fabricHex ? " (approx. color " + fabricHex + ")" : "");
+      }
+      // specLabel: the step's older name, which the picture generator matches on.
+      const specLabel = cat.specLabel || cat.label;
+      lines.push(specLabel + ": " + text);
+      // The customer's own monogram letters, so the picture can stitch them
+      // (in the Monogram Font and Thread Color lines that follow).
+      if (key === "monogram") {
+        const part = title === "PANTS" ? "pants" : "jacket";
+        const mono = String((item.texts && item.texts[part] && item.texts[part].monogram) || "").replace(/\s+/g, " ").trim().slice(0, 40);
+        if (mono && !/^No Monogram/i.test(sel[key])) lines.push("Monogram Text: " + mono);
+      }
+      if (!d.opt || d.matchesFabric || d.opt.uploadPhoto) return;
+      const part = title === "PANTS" ? "pants " : "";
+      if (key === "fabric") addSwatch(part + "fabric", d.opt.img);
+      else if (key === "lining") addSwatch("lining", (typeof LINING_ZOOM_MAP !== "undefined" && LINING_ZOOM_MAP[d.opt.name]) || d.opt.img);
+      else if (key === "buttoncolor") addSwatch("button", d.opt.img);
+      else if (VISUAL_SPEC_STYLE_DRAWINGS.includes(key)) addSwatch("style " + specLabel, d.opt.img);
+    });
+  });
+  if (opts && opts.liningPhotoUrl) addSwatch("lining (customer's own photo)", opts.liningPhotoUrl);
+  if (swatches.length) {
+    lines.push("");
+    lines.push("REFERENCE SWATCHES");
+    swatches.forEach((s) => lines.push(s));
+  }
+  return lines.join("\n");
+}
+
+function cartTotalUsd() {
+  if (!cartItems.length) {
+    let extra = 0;
+    try { extra = hasJacketStep() ? jacketSurchargeUsd(jacketDesigner.getSelections()) : 0; } catch (e) { extra = 0; }
+    return suitPriceForType(currentSuitType, currentFabricTier()) + extra;
+  }
+  return cartItems.reduce((sum, item) => sum + itemPriceUsd(item), 0);
+}
+
+// Keeps the Submit/Pay button and the order-total note on the Personal Info
+// page in sync with how many suits are actually in the cart. Called
+// whenever the cart changes, and once at page load. Falls back to treating
+// the order as "1 suit" when the cart is still empty (nothing committed
+// yet) so a first-time visitor sees the price of the suit being designed, with
+// nothing looking unfinished before they've reached this page.
+// "$369.99" for cents, "$350" for whole dollars.
+function usd(n) {
+  const r = Math.round(n * 100) / 100;
+  return "$" + (Number.isInteger(r) ? String(r) : r.toFixed(2));
+}
+
+function updateOrderSummaryUI() {
+  const suits = cartTotalUsd();
+  // Shipped Stripe orders add flat shipping here and sales tax at checkout.
+  const shipped = STRIPE_ENABLED && fulfillmentChoice() === "ship";
+  const shipping = shipped ? shippingUsd() : 0;
+  const protection = protectionTotalUsd();
+  const total = suits + protection + shipping;
+  refreshAlterationText();
+  if (adminEditState) {
+    submitBtn.textContent = "Save changes to order";
+    if (orderTotalNote) {
+      orderTotalNote.textContent = "You're editing an order already placed. Saving changes its suits, measurements and contact details; prices, payment and Alteration Protection stay as they were.";
+      orderTotalNote.hidden = false;
+    }
+    const persPriceEl = document.getElementById("persPrice");
+    if (persPriceEl) persPriceEl.textContent = "";
+    return;
+  }
+  if (PRICES_HIDDEN) {
+    // No prices and no payment on this brand: the order goes in as a request.
+    submitBtn.textContent = "Submit Order";
+    if (!orderTotalNote) return;
+    const n = cartItems.length || 1;
+    orderTotalNote.textContent = n + (n === 1 ? " suit" : " suits") + (protection ? " with Alteration Protection" : "") +
+      ". No payment is needed: submit your order and we'll be in touch to confirm the details.";
+    orderTotalNote.hidden = false;
+    return;
+  }
+  submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? (liveShippingRates() ? " + shipping + tax" : " + tax") : "") + " & Submit Order" : "Submit Order";
+  if (!orderTotalNote) return;
+  const qty = cartItems.length || 1;
+  let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (protection ? " + " + usd(protection) + " Alteration Protection" : "") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
+  if (shipped && liveShippingRates()) text += " plus shipping (the cheapest carrier rate to your address) and sales tax, both worked out at checkout.";
+  else if (shipped) text += " plus sales tax, worked out at checkout from your address.";
+  else if (STRIPE_ENABLED) text += ", in-store pickup in Clifton, NJ: no shipping, no tax.";
+  if (STRIPE_ENABLED) text += " You'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
+  else if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
+  orderTotalNote.textContent = text;
+  orderTotalNote.hidden = false;
+  const persPriceEl = document.getElementById("persPrice");
+  if (persPriceEl) persPriceEl.textContent = usd(total);
+}
+
+// Renders the cart icon's badge and its dropdown contents (see index.html)
+// -- the icon itself always shows (so the feature is discoverable even with
+// nothing in the cart yet); only the badge count and the dropdown's list
+// change with cartItems.
+// Fabric code -> its plain color family ("Navy", "Black", "Gray"...), read
+// from the catalog's color families with the " Pattern" suffix dropped.
+let fabricFamilyByCode = null;
+function fabricColorFamily(code) {
+  if (!fabricFamilyByCode) {
+    fabricFamilyByCode = {};
+    (JACKET_CATALOG.fabric.patternTypes || []).forEach((p) => {
+      (p.colorFamilies || []).forEach((f) => {
+        (f.options || []).forEach((o) => { fabricFamilyByCode[o.name] = f.name.replace(/\s*Pattern$/i, ""); });
+      });
+    });
+  }
+  return fabricFamilyByCode[code] || "";
+}
+
+// One-line name for a suit in the cart, built from its fabric's plain color
+// and lapel style, e.g. "Navy Peak Lapel Suit" (or "... Jacket" for jacket
+// only). Never shows the raw fabric code.
+function cartItemTitle(item) {
+  // Pants on their own: "Navy Pants".
+  if (isPantsOnlyType(item.type)) return [fabricColorFamily((item.pants || {}).fabric), "Pants"].filter(Boolean).join(" ");
+  const sel = item.jacket || {};
+  const shown = (cat, value) => {
+    if (!cat || !value) return "";
+    const opt = (cat.options || []).find((o) => o.name === value);
+    return (opt && opt.displayName) || value;
+  };
+  const color = fabricColorFamily(sel.fabric);
+  let lapel = shown(JACKET_CATALOG.collar, sel.collar);
+  if (lapel && !/lapel|collar/i.test(lapel)) lapel += " Lapel";
+  const noun = isJacketOnlyType(item.type) ? "Jacket" : "Suit";
+  return [color, lapel, noun].filter(Boolean).join(" ");
+}
+
+function renderCartBar() {
+  const cartBadge = document.getElementById("cartBadge");
+  const cartBarCount = document.getElementById("cartBarCount");
+  const cartBarTotal = document.getElementById("cartBarTotal");
+  const cartBarList = document.getElementById("cartBarList");
+  const cartCheckoutBtn = document.getElementById("cartCheckoutBtn");
+  if (!cartBadge || !cartBarCount || !cartBarTotal || !cartBarList) return;
+
+  if (cartItems.length) {
+    cartBadge.hidden = false;
+    cartBadge.textContent = String(cartItems.length);
+  } else {
+    cartBadge.hidden = true;
+  }
+
+  cartBarCount.textContent = cartItems.length + (cartItems.length === 1 ? " suit" : " suits");
+  cartBarTotal.textContent = "$" + cartItems.reduce((sum, item) => sum + itemPriceUsd(item), 0);
+  if (cartCheckoutBtn) cartCheckoutBtn.hidden = !cartItems.length;
+
+  cartBarList.innerHTML = "";
+  if (!cartItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "nav-cart-empty";
+    empty.textContent = "No suits added yet.";
+    cartBarList.appendChild(empty);
+    return;
+  }
+  cartItems.forEach((item, i) => {
+    // Previously this only labeled the Jacket Only case, leaving a plain
+    // "Suit 1 -- Charcoal Gray" for a full suit with no hint of what's
+    // actually in it -- now both cases say so, so the cart list reads the
+    // same way (suit type, then fabric) no matter which was ordered.
+    const typeTag = item.type === "presetJacket" ? "Preset Jacket" : isJacketOnlyType(item.type) ? "Jacket Only" : isPantsOnlyType(item.type) ? "Pants Only" : item.type === "preset" ? "Preset Suit" : "Full Suit";
+    const row = document.createElement("div");
+    row.className = "cart-item";
+    row.innerHTML =
+      '<div class="cart-item-info"><span class="cart-item-type"></span><span class="cart-item-label"></span>' +
+      '<button type="button" class="cart-item-edit">Edit</button></div>' +
+      '<span class="cart-item-price">$' + itemPriceUsd(item) + "</span>" +
+      '<button type="button" class="cart-item-remove" aria-label="Remove this suit">&times;</button>';
+    row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + typeTag;
+    row.querySelector(".cart-item-label").textContent = cartItemTitle(item);
+    if (i === editingCartIndex) row.classList.add("editing");
+    const editBtn = row.querySelector(".cart-item-edit");
+    editBtn.textContent = i === editingCartIndex ? "Editing now" : "Edit";
+    editBtn.setAttribute("aria-label", "Edit suit " + (i + 1));
+    editBtn.addEventListener("click", (e) => {
+      // Same reason as the remove button below.
+      e.stopPropagation();
+      editCartItem(i);
+    });
+    row.querySelector(".cart-item-remove").addEventListener("click", (e) => {
+      // Without this, the click event -- after removeCartItem's synchronous
+      // renderCartBar() rebuilds this list and detaches this very button --
+      // keeps bubbling up to the document-level "click outside the dropdown"
+      // listener (see initCartDropdown). By then e.target is a detached
+      // node, so dropdown.contains(e.target) reads false even though the
+      // click plainly started inside the dropdown, and that listener closes
+      // it right out from under removeCartItem's own open/closed decision
+      // below. Stopping it here is what lets that decision stick.
+      e.stopPropagation();
+      removeCartItem(i);
+    });
+    cartBarList.appendChild(row);
+  });
+}
+
+function removeCartItem(index) {
+  cartItems.splice(index, 1);
+  // Keep pointing at the same suit after the ones before it shift down. If
+  // the removed suit is the one in the designer, forget it, so continuing
+  // adds it back as a new suit instead of overwriting another one.
+  const shift = (i) => (i === null || i === index ? null : i > index ? i - 1 : i);
+  pendingCommitIndex = shift(pendingCommitIndex);
+  editingCartIndex = shift(editingCartIndex);
+  updateProcessBar();
+  renderCartBar();
+  updateOrderSummaryUI();
+  saveDraft();
+
+  // Removing the last suit leaves nothing to review -- close the dropdown
+  // automatically instead of leaving an empty "No suits added yet." popover
+  // open. With suits still left, leave it open so removing a second (or
+  // third) one doesn't mean reopening the cart each time.
+  if (!cartItems.length) {
+    const dropdown = document.getElementById("cartDropdown");
+    const cartToggleBtn = document.getElementById("cartIconBtn");
+    if (dropdown) dropdown.hidden = true;
+    if (cartToggleBtn) cartToggleBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+// Shows/hides the "Use the same measurements as Suit N" banner on the
+// Measurements step (see samePreviousMeasurementsBanner in index.html).
+// Each new suit's measurement fields start blank (addAnotherSuitBtn below
+// clears them rather than carrying anything over) since different suits in
+// one order are often for different people -- this banner is the one-click
+// shortcut for the common case where they're actually the same person.
+// Only meaningful once at least one suit has already been committed to the
+// cart; called from applySuitType() so it stays in sync whenever the suit
+// type (and therefore the measurement grid) is set up, both for a fresh
+// suit and when restoring a saved draft.
+const samePreviousMeasurementsBanner = document.getElementById("samePreviousMeasurementsBanner");
+const useSamePreviousMeasurementsBtn = document.getElementById("useSamePreviousMeasurementsBtn");
+const samePreviousMeasurementsSuitNum = document.getElementById("samePreviousMeasurementsSuitNum");
+
+function updateSamePreviousMeasurementsBanner() {
+  if (!samePreviousMeasurementsBanner) return;
+  // Not while a cart suit is open with "Edit": it already has its own.
+  samePreviousMeasurementsBanner.hidden = !cartItems.length || editingCartIndex !== null;
+  if (cartItems.length && samePreviousMeasurementsSuitNum) {
+    samePreviousMeasurementsSuitNum.textContent = String(cartItems.length);
+  }
+}
+
+if (useSamePreviousMeasurementsBtn) {
+  useSamePreviousMeasurementsBtn.addEventListener("click", () => {
+    const previous = cartItems[cartItems.length - 1];
+    if (!previous || !previous.measurements) return;
+    applyMeasureExtras(previous.measurements);
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el && previous.measurements[m.id] !== undefined) el.value = previous.measurements[m.id];
+    });
+    saveDraft();
+    if (measureGrid) {
+      smoothScrollWindowTo(window.scrollY + measureGrid.getBoundingClientRect().top - 20 - getNavClearance());
+    }
+  });
+}
+
+// Clears every measurement field currently showing back to blank -- the
+// undo button for whichever shortcut filled them in (the same-as-previous-
+// suit banner above, the saved-profile banner, or the standard-size
+// estimator), or just for someone who typed something in and wants a clean
+// slate. No confirmation prompt: nothing else is affected (the cart and any
+// saved profile measurements are untouched until this suit is actually
+// committed), and every fill shortcut is still one click away afterward.
+const resetMeasurementsBtn = document.getElementById("resetMeasurementsBtn");
+if (resetMeasurementsBtn) {
+  resetMeasurementsBtn.addEventListener("click", () => {
+    measureStash = {};
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el) el.value = "";
+    });
+    saveDraft();
+  });
+}
+
+// Opens/closes the cart dropdown from the nav icon -- a plain popover, not a
+// page. Same accessible-ish pattern as the other overlays on this page:
+// click the trigger to toggle, click anywhere outside to close, Escape to
+// close. Unlike those, this isn't a modal (the rest of the page stays
+// interactive), so it only needs a plain document-level click listener
+// rather than focus-trapping.
+(function initCartDropdown() {
+  const toggleBtn = document.getElementById("cartIconBtn");
+  const dropdown = document.getElementById("cartDropdown");
+  if (!toggleBtn || !dropdown) return;
+
+  function closeDropdown() {
+    dropdown.hidden = true;
+    toggleBtn.setAttribute("aria-expanded", "false");
+  }
+
+  // The dropdown is `position:fixed` with no static top/left in the CSS --
+  // on narrow screens .nav-right can wrap (flex-wrap), which leaves the
+  // cart icon (and its small .nav-cart wrapper) anywhere along a wrapped
+  // row rather than reliably at the right edge. So instead of anchoring the
+  // dropdown to its parent with CSS, we read the icon's actual on-screen
+  // position each time it opens and place the dropdown from there.
+  //
+  // On mobile the header also isn't flush -- the icon sits to the left of
+  // the Start Designing/Start Over button, not at the screen's own right
+  // edge -- so anchoring purely to the icon can leave the dropdown looking
+  // off-center rather than reading as "the cart, top right". On mobile we
+  // pin it to the actual right edge of the viewport instead; on desktop we
+  // keep it right-aligned under the icon. Either way it's clamped within
+  // the viewport (with a small margin) so it never runs off-screen.
+  function positionDropdown() {
+    const margin = 12;
+    const isMobile = window.innerWidth <= 900;
+    const iconRect = toggleBtn.getBoundingClientRect();
+    const dropdownRect = dropdown.getBoundingClientRect();
+    const width = dropdownRect.width || 300;
+
+    let left = isMobile ? window.innerWidth - width - margin : iconRect.right - width;
+    left = Math.min(left, window.innerWidth - width - margin);
+    left = Math.max(left, margin);
+
+    let top = iconRect.bottom + 12;
+    const height = dropdownRect.height || 0;
+    if (height && top + height > window.innerHeight - margin) {
+      top = Math.max(iconRect.top - height - 12, margin);
+    }
+
+    dropdown.style.left = left + "px";
+    dropdown.style.top = top + "px";
+  }
+
+  function openDropdown() {
+    dropdown.hidden = false;
+    toggleBtn.setAttribute("aria-expanded", "true");
+    positionDropdown();
+  }
+
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (dropdown.hidden) openDropdown();
+    else closeDropdown();
+  });
+  document.addEventListener("click", (e) => {
+    if (!dropdown.hidden && !dropdown.contains(e.target) && e.target !== toggleBtn) closeDropdown();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !dropdown.hidden) closeDropdown();
+  });
+  window.addEventListener("resize", () => {
+    if (!dropdown.hidden) positionDropdown();
+  });
+})();
+
+// "Checkout" in the cart dropdown -- goes straight to Personal Info/shipping
+// with whatever's already sitting in the cart, from anywhere on the page.
+// Deliberately NOT routed through goToStepById (which blocks jumping ahead
+// of the step you're on) -- everything in the cart already passed its own
+// validation when it was added (see commitCurrentSuitToCart), so there's
+// nothing left to skip past. Any suit still mid-design and not yet added to
+// the cart simply isn't part of the order, same as any other cart/checkout
+// flow -- its draft stays saved, so nothing is lost, just not submitted yet.
+function goToCheckout() {
+  const swap = () => {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    personalInfoSection.classList.add("active");
+    scrollToStepTop(personalInfoSection);
+    saveDraft();
+  };
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+
+const cartCheckoutBtn = document.getElementById("cartCheckoutBtn");
+if (cartCheckoutBtn) {
+  cartCheckoutBtn.addEventListener("click", () => {
+    if (!cartItems.length) return;
+    const dropdown = document.getElementById("cartDropdown");
+    const cartToggleBtn = document.getElementById("cartIconBtn");
+    if (dropdown) dropdown.hidden = true;
+    if (cartToggleBtn) cartToggleBtn.setAttribute("aria-expanded", "false");
+    markDesignStarted();
+    goToCheckout();
+  });
+}
+
+// "Edit" on a suit in the cart -- reopens it in the jacket designer with
+// every choice, typed monogram, lining photo and measurement filled back in.
+// pendingCommitIndex then points at it, so finishing Measurements again
+// (either button) replaces that same cart item instead of adding a copy.
+function closeCartDropdown() {
+  const dropdown = document.getElementById("cartDropdown");
+  const cartToggleBtn = document.getElementById("cartIconBtn");
+  if (dropdown) dropdown.hidden = true;
+  if (cartToggleBtn) cartToggleBtn.setAttribute("aria-expanded", "false");
+}
+
+// Whether opening another suit would throw away work in the designer that
+// isn't in the cart: a suit never added at all, or changes to a cart suit
+// that haven't been saved back to it yet.
+function designerHasUnsavedWork() {
+  if (pendingCommitIndex !== null && cartItems[pendingCommitIndex]) {
+    return buildVisualSpecText(cartItems[pendingCommitIndex]) !== currentDesignSpec();
+  }
+  return (hasJacketStep() && jacketDesigner.hasUserChoices()) || (hasPantsStep() && pantsDesigner.hasUserChoices());
+}
+
+function editCartItem(index) {
+  if (!cartItems[index]) return;
+  closeCartDropdown();
+  // Already the suit in the designer: just go back to it, keeping any
+  // changes made since it was last saved.
+  if (index === pendingCommitIndex) {
+    editingCartIndex = index;
+    renderCartBar();
+    showDesignerForEditing();
+    return;
+  }
+  if (designerHasUnsavedWork()) {
+    openEditSuitConfirm(index);
+    return;
+  }
+  loadCartItemIntoDesigner(index);
+}
+
+function loadCartItemIntoDesigner(index) {
+  const item = cartItems[index];
+  if (!item) return;
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  // Suit type first: it decides which measurement fields exist below.
+  applySuitType(item.type);
+  // Photo and texts before setSelections, same order as restoreDraft().
+  if (item.liningPhoto) jacketDesigner.setLiningPhoto(item.liningPhoto);
+  jacketDesigner.setTexts((item.texts && item.texts.jacket) || {});
+  pantsDesigner.setTexts((item.texts && item.texts.pants) || {});
+  jacketDesigner.setSelections(item.jacket || {});
+  if (!isJacketOnlyType(item.type) && item.pants) pantsDesigner.setSelections(item.pants);
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el) el.value = "";
+  });
+  applyMeasureExtras(item.measurements || { measure_type: "finished" });
+  activeMeasurements().forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && item.measurements && item.measurements[m.id] !== undefined) el.value = item.measurements[m.id];
+  });
+  designPreview = null;
+  pendingCommitIndex = index;
+  editingCartIndex = index;
+  editingCartPreview = item.previewId ? { spec: currentDesignSpec(), previewId: item.previewId } : null;
+  // Every page of this suit is already filled in, so the progress bar can
+  // jump straight to any of them, Measurements included.
+  furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(measurementsSection));
+  markDesignStarted();
+  renderCartBar();
+  showDesignerForEditing();
+}
+
+// The cart suit's existing picture, while the design still matches it.
+function editedSuitPreviewId() {
+  if (!editingCartPreview || editingCartIndex === null || editingCartIndex !== pendingCommitIndex) return null;
+  return editingCartPreview.spec === currentDesignSpec() ? editingCartPreview.previewId : null;
+}
+
+// Opens the jacket designer on its first tab, from whatever page is showing
+// (same "scroll up before hiding" swap as goToCheckout above).
+function showDesignerForEditing() {
+  // Pants on their own open on the pants designer.
+  const designer = hasJacketStep() ? jacketDesigner : pantsDesigner;
+  const section = hasJacketStep() ? jacketSection : pantsSection;
+  designer.resetToFirstTab();
+  const swap = () => {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    section.classList.add("active");
+    scrollToStepTop(section);
+    saveDraft();
+  };
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+
+// "Editing Suit N" strip under the progress bar, on the design pages only,
+// and the Measurements page's add button worded as saving changes.
+function updateEditingCartNotice() {
+  const editing = editingCartIndex !== null && !!cartItems[editingCartIndex];
+  const notice = document.getElementById("editingCartNotice");
+  if (notice) {
+    const active = document.querySelector(".step.active");
+    const onDesignPage = [jacketSection, pantsSection, previewSection, measurementsSection].includes(active);
+    notice.hidden = !(editing && onDesignPage);
+    const tag = document.getElementById("editingCartTag");
+    if (tag && editing) tag.textContent = "Editing Suit " + (editingCartIndex + 1);
+  }
+  updateSamePreviousMeasurementsBanner();
+  const addBtn = document.getElementById("addAnotherSuitBtn");
+  if (addBtn) addBtn.textContent = editing ? "+ Save Changes & Design Another Suit" : "+ Add to Cart & Design Another Suit";
+}
+
+// Asked before "Edit" replaces unsaved work in the designer -- an on-page
+// dialog, same as Start Over's (see the note on startOver() below).
+const openEditSuitConfirm = (function () {
+  const overlay = document.getElementById("editSuitConfirmOverlay");
+  if (!overlay) return (index, custom) => (custom ? custom.onConfirm() : loadCartItemIntoDesigner(index));
+  const cancelBtn = document.getElementById("editSuitCancelBtn");
+  const confirmBtn = document.getElementById("editSuitConfirmBtn");
+  const title = document.getElementById("editSuitConfirmTitle");
+  const text = document.getElementById("editSuitConfirmText");
+  let pendingIndex = null;
+  // Set when another flow (Reorder in My Account) borrows this dialog.
+  let pendingAction = null;
+  let lastFocused = null;
+  const confirmLabel = confirmBtn.textContent;
+  const cancelLabel = cancelBtn.textContent;
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+  function close() {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  }
+  cancelBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  confirmBtn.addEventListener("click", () => {
+    close();
+    if (pendingAction) pendingAction();
+    else if (pendingIndex !== null) loadCartItemIntoDesigner(pendingIndex);
+  });
+  // open(index) asks before editing cart suit `index`; open(null, { title,
+  // text, confirm, cancel, onConfirm }) asks something else.
+  return function open(index, custom) {
+    pendingIndex = index;
+    pendingAction = (custom && custom.onConfirm) || null;
+    lastFocused = document.activeElement;
+    confirmBtn.textContent = (custom && custom.confirm) || confirmLabel;
+    cancelBtn.textContent = (custom && custom.cancel) || cancelLabel;
+    if (custom) {
+      if (title) title.textContent = custom.title;
+      if (text) text.textContent = custom.text;
+      overlay.classList.add("open");
+      cancelBtn.focus();
+      document.addEventListener("keydown", onKeydown);
+      return;
+    }
+    if (title) title.textContent = "Edit Suit " + (index + 1) + "?";
+    if (text) {
+      text.textContent = pendingCommitIndex !== null && cartItems[pendingCommitIndex]
+        ? "Your latest changes to Suit " + (pendingCommitIndex + 1) + " aren't saved to your cart yet, so they'll be lost."
+        : "The suit you're designing now isn't in your cart yet, so its choices will be cleared.";
+    }
+    overlay.classList.add("open");
+    cancelBtn.focus();
+    document.addEventListener("keydown", onKeydown);
+  };
+})();
+
+// Validates the suit currently loaded in the jacket/pants/measurements
+// designer and saves it into the cart -- either as a brand new entry, or
+// (if this is a suit already in the cart -- see pendingCommitIndex)
+// updating that entry in place so going back to tweak something, or
+// reopening it with the cart's "Edit" link, never creates a duplicate. Used by
+// both "Add to Cart & Design Another Suit" and "Continue to Personal Info".
+function commitCurrentSuitToCart() {
+  const { values: measurementValues, missing: missingMeasurements, outOfRange } = collectMeasurements();
+  if (outOfRange.length) {
+    alert("These measurements are outside what can be made. Please check them. Allowed:\n\n" + outOfRange.join("\n"));
+    return false;
+  }
+  if (missingMeasurements.length) {
+    alert("Please enter a valid measurement for: " + missingMeasurements.join(", "));
+    return false;
+  }
+  const item = {
+    type: currentSuitType,
+    // Pants on their own carry no jacket choices.
+    jacket: hasJacketStep() ? jacketDesigner.getSelections() : {},
+    pants: isJacketOnlyType(currentSuitType) ? null : pantsDesigner.getSelections(),
+    measurements: measurementValues,
+    // The customer's own lining photo (data URL) when they chose that option.
+    liningPhoto: hasJacketStep() ? jacketDesigner.getLiningPhoto() : null,
+    // Typed answers such as the monogram: { jacket: { monogram }, pants: { monogram } }.
+    texts: { jacket: hasJacketStep() ? jacketDesigner.getTexts() : {}, pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getTexts() },
+    // A "Generate My Suit" picture of exactly this design, if one was drawn.
+    previewId: currentDesignPreviewId() || editedSuitPreviewId(),
+  };
+  if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
+    // A suit of an order the admin is editing stays tied to its order row.
+    const prev = cartItems[pendingCommitIndex];
+    if (prev && prev.adminRowId) {
+      item.adminRowId = prev.adminRowId;
+      item.adminSuitNumber = prev.adminSuitNumber;
+    }
+    cartItems[pendingCommitIndex] = item;
+  } else {
+    cartItems.push(item);
+    pendingCommitIndex = cartItems.length - 1;
+  }
+  renderCartBar();
+  updateOrderSummaryUI();
+  saveDraft();
+
+  // Fire-and-forget: a signed-in customer with the checkbox left checked
+  // (see saveMeasurementsToggleWrap in index.html) gets this order's
+  // measurements folded into their saved profile automatically, without
+  // making them wait on it here. Unchecked -- e.g. ordering as a gift for
+  // someone else -- and nothing about their own saved profile changes.
+  // Never while the admin edits a customer's order (it would overwrite the
+  // admin's own saved measurements).
+  if (currentUser && !adminEditState && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
+    saveProfileMeasurements(measurementValues);
+  }
+
+  return true;
+}
+
+// PayPal is optional -- see config.js. Leave PAYPAL_BUSINESS_EMAIL blank to
+// keep accepting orders exactly as before, with no payment step at all.
+const PAYPAL_ENABLED =
+  typeof PAYPAL_BUSINESS_EMAIL !== "undefined" &&
+  !!PAYPAL_BUSINESS_EMAIL &&
+  !PAYPAL_BUSINESS_EMAIL.includes("PASTE_YOUR");
+// Stripe checkout -- see STRIPE_CHECKOUT_ENABLED in config.js. Takes over
+// from PayPal when both are on.
+// A brand with no payment (S.W. Atelier, brand.js) never goes to Stripe.
+const STRIPE_ENABLED = typeof STRIPE_CHECKOUT_ENABLED !== "undefined" && STRIPE_CHECKOUT_ENABLED === true && SITE_BRAND.payments !== false;
+const PAYMENT_ENABLED = STRIPE_ENABLED || PAYPAL_ENABLED;
+
+// Builds a classic PayPal "Website Payments Standard" checkout link -- just
+// a plain URL, no API key or server needed, using only the shop's PayPal
+// email (business or personal, as long as it can receive money). Charges
+// for every suit currently in the cart at once ($350 x however many),
+// rather than one at a time. PayPal sends the customer back to this same
+// page afterward: to "return" with ?paypal_return=1 once they've paid, or
+// to "cancel_return" with ?paypal_cancelled=1 if they back out. Both are
+// handled in handlePayPalReturn() below.
+//
+// Caveat worth knowing: this simple, no-server version can't cryptographically
+// verify a payment actually happened (that needs PayPal's IPN/webhooks, which
+// need a server to receive them) -- it just trusts the redirect PayPal sends
+// back. Fine for a small shop for now, but not fraud-proof.
+function buildPayPalCheckoutUrl() {
+  const baseUrl = window.location.href.split("?")[0].split("#")[0];
+  const params = new URLSearchParams({
+    cmd: "_xclick",
+    business: PAYPAL_BUSINESS_EMAIL,
+    item_name: "Scott's Suits custom suit order (" + cartItems.length + (cartItems.length === 1 ? " suit)" : " suits)"),
+    amount: (cartTotalUsd() + protectionTotalUsd()).toFixed(2),
+    currency_code: "USD",
+    no_shipping: "1",
+    return: baseUrl + "?paypal_return=1",
+    cancel_return: baseUrl + "?paypal_cancelled=1",
+  });
+  return "https://www.paypal.com/cgi-bin/webscr?" + params.toString();
+}
+
+const submitBtn = document.getElementById("submitOrderBtn");
+const orderTotalNote = document.getElementById("orderTotalNote");
+updateOrderSummaryUI();
+renderCartBar();
+const customerNameInput = document.getElementById("customerName");
+const customerPhoneInput = document.getElementById("customerPhone");
+const customerEmailInput = document.getElementById("customerEmail");
+const shippingAddress1Input = document.getElementById("shippingAddress1");
+const shippingAddress2Input = document.getElementById("shippingAddress2");
+const shippingCityInput = document.getElementById("shippingCity");
+const shippingStateInput = document.getElementById("shippingState");
+const shippingZipInput = document.getElementById("shippingZip");
+const shippingCountryInput = document.getElementById("shippingCountry");
+[
+  customerNameInput,
+  customerEmailInput,
+  shippingAddress1Input,
+  shippingAddress2Input,
+  shippingCityInput,
+  shippingStateInput,
+  shippingZipInput,
+  shippingCountryInput,
+].forEach((el) => el.addEventListener("input", saveDraft));
+
+// Formats a US phone number as the customer types -- "(555) 123-4567" --
+// instead of leaving it as a plain run of digits. Not run through
+// customerPhoneInput.addEventListener("input", saveDraft) above because it
+// needs to reformat the field's value BEFORE saveDraft reads it, so the
+// draft always stores the nicely formatted version, not whatever was there
+// a keystroke ago.
+function formatUSPhoneNumber(raw) {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (!digits) return "";
+  if (digits.length < 4) return "(" + digits;
+  if (digits.length < 7) return "(" + digits.slice(0, 3) + ") " + digits.slice(3);
+  return "(" + digits.slice(0, 3) + ") " + digits.slice(3, 6) + "-" + digits.slice(6);
+}
+customerPhoneInput.addEventListener("input", () => {
+  customerPhoneInput.value = formatUSPhoneNumber(customerPhoneInput.value);
+  saveDraft();
+});
+
+// Reads and validates everything on the Personal Info page, the same checks
+// the old single submit handler always did. Returns null (after alerting
+// exactly what's wrong) if anything required is missing or invalid, or a
+// plain object with everything finalizeOrder() needs otherwise. Pulled out
+// on its own so it can run twice: once right before sending someone to
+// PayPal (so we never send them off to pay only to fail validation), and
+// again automatically when they're sent back here after paying.
+//
+// Doesn't touch measurements -- those are validated per-suit and captured
+// into the cart already (see commitCurrentSuitToCart), not collected fresh
+// here. This only checks that there's actually at least one suit to submit.
+function collectAndValidateOrderInput() {
+  if (!cartItems.length) {
+    alert("Your cart is empty -- please go back and finish designing at least one suit before submitting.");
+    return null;
+  }
+  // A reordered suit with a choice that isn't offered anymore.
+  const reviewAt = cartItems.findIndex((item) => item.needsReview);
+  if (reviewAt !== -1) {
+    alert(reorderReviewMessage(reviewAt, cartItems[reviewAt].needsReview));
+    loadCartItemIntoDesigner(reviewAt);
+    return null;
+  }
+
+  const customerName = customerNameInput.value.trim();
+  const customerPhone = customerPhoneInput.value.trim();
+  const customerEmail = customerEmailInput.value.trim();
+  const address1 = shippingAddress1Input.value.trim();
+  const address2 = shippingAddress2Input.value.trim();
+  const city = shippingCityInput.value.trim();
+  const state = shippingStateInput.value.trim();
+  const zip = shippingZipInput.value.trim();
+  const country = shippingCountryInput.value.trim();
+  const fulfillment = fulfillmentChoice();
+  const shipping = fulfillment === "ship";
+
+  const missingContact = [];
+  if (!customerName) missingContact.push("Full name");
+  if (!customerPhone) missingContact.push("Phone number");
+  if (!customerEmail) missingContact.push("Email");
+  if (shipping && !address1) missingContact.push("Street address");
+  if (shipping && !city) missingContact.push("City");
+  if (shipping && !state) missingContact.push("State/Province");
+  if (shipping && !zip) missingContact.push("ZIP/Postal code");
+  if (missingContact.length) {
+    alert("Please fill in: " + missingContact.join(", "));
+    return null;
+  }
+  if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    alert("Please enter a valid email address.");
+    return null;
+  }
+  const protectChoice = alterationChoice();
+  if (!protectChoice) {
+    const block = document.getElementById("alterationBlock");
+    if (block) {
+      block.classList.add("needs-choice");
+      block.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    alert("Please choose Yes or No for Alteration Protection.");
+    return null;
+  }
+  const alterationProtection = protectChoice === "yes";
+
+  // A pickup order keeps no address, so nothing is ever shipped to one by
+  // mistake.
+  return shipping
+    ? { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country, fulfillment, alterationProtection }
+    : { customerName, customerPhone, customerEmail, address1: "", address2: "", city: "", state: "", zip: "", country: "", fulfillment, alterationProtection };
+}
+
+// "ship" or "pickup" -- the Ship to me / Pick up in store choice at the top
+// of the Personal Info step.
+function fulfillmentChoice() {
+  const el = document.querySelector('input[name="fulfillment"]:checked');
+  return el && el.value === "pickup" ? "pickup" : "ship";
+}
+function setFulfillmentChoice(value) {
+  const el = document.querySelector('input[name="fulfillment"][value="' + (value === "pickup" ? "pickup" : "ship") + '"]');
+  if (el) el.checked = true;
+  applyFulfillmentChoice();
+}
+// Pickup hides the address fields and drops shipping from the total.
+function applyFulfillmentChoice() {
+  const pickup = fulfillmentChoice() === "pickup";
+  const fields = document.getElementById("shipAddressFields");
+  if (fields) fields.hidden = pickup;
+  const title = document.getElementById("persIntroTitle");
+  if (title) title.textContent = pickup ? "Your contact details" : "Where should we send it?";
+  const sub = document.getElementById("persIntroSub");
+  if (sub) {
+    sub.textContent = pickup
+      ? "We'll use these to let you know when your suit is ready to pick up."
+      : "Start typing your street address and pick it from the list \u2014 the fastest way to get your suit to the right door.";
+  }
+  updateOrderSummaryUI();
+  updateProcessBar();
+}
+// Live carrier rates (config.js): the price is only known at checkout.
+function liveShippingRates() {
+  return STRIPE_ENABLED && typeof SHIPPING_LIVE_RATES !== "undefined" && !!SHIPPING_LIVE_RATES;
+}
+// Flat shipping for "Ship to me" (config.js), charged only with Stripe on;
+// 0 when live rates are on (added at checkout instead).
+function shippingUsd() {
+  if (liveShippingRates()) return 0;
+  return STRIPE_ENABLED && typeof SHIPPING_FLAT_USD !== "undefined" ? Number(SHIPPING_FLAT_USD) || 0 : 0;
+}
+(function () {
+  const sub = document.getElementById("fulfillShipSub");
+  if (sub && STRIPE_ENABLED) sub.textContent = liveShippingRates()
+    ? "Cheapest carrier rate to your address + sales tax, added at checkout"
+    : (shippingUsd() ? usd(shippingUsd()) + " shipping" : "Free shipping") + " + sales tax, added at checkout";
+  document.querySelectorAll('input[name="fulfillment"]').forEach((el) =>
+    el.addEventListener("change", () => {
+      applyFulfillmentChoice();
+      saveDraft();
+    })
+  );
+})();
+
+// Alteration Protection: "yes", "no" or "" (not chosen yet -- the order
+// can't be placed until it is). $ALTERATION_PROTECTION_USD per suit/item,
+// three free alterations each. Picking No asks "Are you sure?" first.
+function alterationChoice() {
+  const el = document.querySelector('input[name="alterationProtection"]:checked');
+  return el ? el.value : "";
+}
+// The last choice actually made (No only counts once confirmed).
+var alterationLastChoice = "";
+function setAlterationChoice(value) {
+  alterationLastChoice = value || "";
+  document.querySelectorAll('input[name="alterationProtection"]').forEach((el) => (el.checked = el.value === value));
+  const block = document.getElementById("alterationBlock");
+  if (block && value) block.classList.remove("needs-choice");
+  updateOrderSummaryUI();
+}
+function protectionPriceUsd() {
+  return typeof ALTERATION_PROTECTION_USD !== "undefined" ? Number(ALTERATION_PROTECTION_USD) || 0 : 0;
+}
+function protectionTotalUsd() {
+  return alterationChoice() === "yes" ? protectionPriceUsd() * (cartItems.length || 1) : 0;
+}
+// "suit" when every item is a full suit, "item" otherwise.
+function protectionNoun() {
+  return cartItems.length && cartItems.some((it) => isJacketOnlyType(it.type) || isPantsOnlyType(it.type)) ? "item" : "suit";
+}
+function refreshAlterationText() {
+  const price = PRICES_HIDDEN ? "" : usd(protectionPriceUsd());
+  const qty = cartItems.length || 1;
+  const noun = protectionNoun();
+  const intro = document.getElementById("alterationIntro");
+  if (intro) {
+    intro.textContent = "Add Alteration Protection" + (price ? " for " + price + (qty > 1 ? " per " + noun : "") : "") +
+      " and get three free alterations" + (qty > 1 ? " on each " + noun : "") +
+      ", so if anything needs adjusting after your " + noun + (qty > 1 ? "s arrive" : " arrives") + ", we fix it at no cost.";
+  }
+  const yesSub = document.getElementById("alterationYesSub");
+  if (yesSub) yesSub.textContent = !price ? "Three free alterations" + (qty > 1 ? " each" : "") : qty > 1 ? price + " each (" + usd(protectionPriceUsd() * qty) + ") \u00b7 three free alterations each" : price + " \u00b7 three free alterations";
+  const yesTitle = document.querySelector('input[name="alterationProtection"][value="yes"] ~ .fulfill-title');
+  if (yesTitle) yesTitle.textContent = "Yes, protect my " + noun + (qty > 1 ? "s" : "");
+}
+(function () {
+  const overlay = document.getElementById("alterationConfirmOverlay");
+  const addBtn = document.getElementById("alterationAddBtn");
+  const declineBtn = document.getElementById("alterationDeclineBtn");
+  const text = document.getElementById("alterationConfirmText");
+  function onKeydown(e) {
+    if (e.key === "Escape") close(alterationLastChoice);
+  }
+  function close(choice) {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    setAlterationChoice(choice);
+    saveDraft();
+  }
+  document.querySelectorAll('input[name="alterationProtection"]').forEach((el) =>
+    el.addEventListener("change", () => {
+      if (el.value === "no" && overlay) {
+        // Stays unchosen until they confirm in the dialog.
+        el.checked = false;
+        setAlterationChoice(alterationLastChoice);
+        if (text) {
+          const noun = protectionNoun();
+          text.textContent = "Without Alteration Protection, any alterations are at your own cost, and " + (SITE_BRAND.id === "scott" ? "Scott Suits" : SITE_BRAND.name) + " takes no responsibility for a " +
+            noun + " that doesn't fit because of wrong or bad measurements. With it, you get three free alterations" +
+            (PRICES_HIDDEN ? "" : " for " + usd(protectionPriceUsd()) + ((cartItems.length || 1) > 1 ? " per " + noun : "")) + ".";
+        }
+        overlay.classList.add("open");
+        addBtn.focus();
+        document.addEventListener("keydown", onKeydown);
+        return;
+      }
+      setAlterationChoice(el.value);
+      saveDraft();
+    })
+  );
+  if (!overlay) return;
+  addBtn.addEventListener("click", () => close("yes"));
+  declineBtn.addEventListener("click", () => close("no"));
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close(alterationLastChoice);
+  });
+})();
+
+// Builds the order summary text for every suit in the cart and stitches them
+// together into one block. A single-suit order (the common case) skips the
+// "SUIT 1 OF 1" header -- nothing changes structurally for the customer who
+// only ever orders one suit. With more than one suit, each gets its own
+// clearly labeled section.
+// The monogram text typed for one garment of a cart item ("jacket"/"pants").
+function monoText(item, part) {
+  return (item && item.texts && item.texts[part] && item.texts[part].monogram) || "";
+}
+function buildAllSuitsOrderSummaryText(customerName) {
+  if (cartItems.length === 1) {
+    const item = cartItems[0];
+    return buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+  }
+  return cartItems
+    .map((item, i) => {
+      const text = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+      return "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + text;
+    })
+    .join("\n\n" + "=".repeat(40) + "\n\n");
+}
+
+// Uploads each suit's custom lining photo (if any) to Supabase Storage and
+// returns the public URLs by cart index (undefined when none/failed).
+async function uploadLiningPhotos(orderId) {
+  const urls = [];
+  window.__liningPhotoUrls = urls;
+  for (let i = 0; i < cartItems.length; i++) {
+    const item = cartItems[i];
+    if (!liningUploadSurcharge(item.jacket) || !item.liningPhoto) continue;
+    try {
+      const blob = await (await fetch(item.liningPhoto)).blob();
+      const path = orderId + "/suit-" + (i + 1) + ".jpg";
+      const client = getSupabase();
+      const { error } = await client.storage.from("lining-photos").upload(path, blob, { contentType: "image/jpeg", upsert: true });
+      if (error) throw error;
+      urls[i] = client.storage.from("lining-photos").getPublicUrl(path).data.publicUrl;
+    } catch (err) {
+      console.warn("Lining photo upload failed (order still saved):", err);
+    }
+  }
+  return urls;
+}
+
+// One suit's own columns on its order row: every option, the measurements,
+// the monogram text, the order text and the picture description. Shared by
+// finalizeOrder and the admin's "Save changes to order" (adminEditSave).
+function suitSpecRow(item, i, count, customerName, liningPhotoUrl) {
+  const row = Object.assign({}, selectionsToRow(JACKET_CATALOG, item.jacket), selectionsToRow(PANTS_CATALOG, item.pants || {}));
+  // Pants on their own: the order's fabric (a required column, and the
+  // one the factory order reads) is the pants fabric.
+  if (isPantsOnlyType(item.type)) row.fabric = row.pants_fabric;
+  row.suit_number = i + 1;
+  row.suit_type = isJacketOnlyType(item.type) ? "jacket_only" : isPantsOnlyType(item.type) ? "pants_only" : "full_suit";
+  Object.assign(row, item.measurements);
+  // The monogram text itself, for the factory order (kute-factory).
+  row.jacket_monogram_text = monoText(item, "jacket") || null;
+  row.pants_monogram_text = item.pants ? monoText(item, "pants") || null : null;
+
+  // Phone/email are deliberately kept OUT of the order summary text -- that
+  // text is meant to be the garment spec + shipping address only (it's
+  // what gets shown on the confirmation page and copied to send to
+  // production), not a place for contact details. They're added back in
+  // only for the notification email (finalizeOrder), in their own separate block,
+  // so the shop still has a fast way to reach the customer without it
+  // cluttering the spec sheet.
+  const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrl, jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+  row.client_form_text = count === 1 ? suitText : "SUIT " + (i + 1) + " OF " + count + "\n" + suitText;
+  // Plain-English, personal-data-free description of the suit -- read by
+  // the AI that writes the "finished suit" image prompt once the shop marks
+  // this order completed (see add_order_status_and_suit_image_migration.sql).
+  // No picture for pants on their own (the picture sheets are built
+  // around a jacket).
+  row.visual_spec = isPantsOnlyType(item.type) ? null : buildVisualSpecText(item, { liningPhotoUrl: liningPhotoUrl });
+  return row;
+}
+
+// Actually saves the order (Supabase) and emails the shop (Formspree), then
+// shows the confirmation screen. Assumes its input already passed
+// collectAndValidateOrderInput() -- called either directly (PayPal not
+// configured, or nothing to pay) or after a customer is sent back here
+// having paid. Inserts one Supabase row per suit in the cart, all sharing
+// the same order_id and contact/shipping details, so a multi-suit order
+// still produces one row per physical garment set for whoever's cutting
+// fabric, while order_id ties them back together as one order.
+// ---------------------------------------------------------------------------
+// "Generate My Suit" -- asks the generate-suit-image Supabase function
+// (supabase/functions/) to draw a picture sheet of the suit: front, back,
+// trousers and close-ups, in the fabric, lining, buttons and thread chosen.
+//  * Right after designing (top of the Measurements step, before the order
+//    form): draws the suit being designed. Kept on the cart item as
+//    previewId so the finished order gets the same picture, not a redraw.
+//  * On the confirmation page: shows each ordered suit's picture, or offers
+//    to draw it if they skipped it earlier.
+// Everything stays hidden until the function answers that it's set up, so
+// nothing shows on the live site before the Supabase side is configured.
+// ---------------------------------------------------------------------------
+let visualSpecSaved = false;
+let designPreview = null; // { spec, id, status: "pending" | "done" | "failed", url }
+let suitImagesReadyPromise = null;
+// Pause switch: true = "Generate My Suit" shows the loading screen but never
+// asks the server to draw (no pictures, no image costs). Set back to false
+// to turn picture drawing on again.
+const SUIT_IMAGES_PAUSED = false;
+const SUIT_IMAGE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/generate-suit-image" : "";
+
+// A signed-in customer's token rides along so the server can tell the shop
+// admin apart (admins have no picture limit); guests send none.
+async function suitImageAuthHeaders() {
+  if (!currentUser) return {};
+  try {
+    const { data } = await getSupabase().auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    return token ? { Authorization: "Bearer " + token } : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+async function callSuitImageFn(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
+  return fetch(SUIT_IMAGE_FN_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  }).then((res) => res.json().catch(() => ({})).then((data) => ({ ok: res.ok, status: res.status, data })));
+}
+
+function suitImagesReady() {
+  if (!SUIT_IMAGE_FN_URL) return Promise.resolve(false);
+  if (!suitImagesReadyPromise) {
+    suitImagesReadyPromise = callSuitImageFn({ ping: true })
+      .then((r) => !!(r.ok && r.data && r.data.ready))
+      .catch(() => false);
+  }
+  return suitImagesReadyPromise;
+}
+
+// Checks back every 5 seconds until the picture is done or failed.
+async function pollSuitImage(checkPayload, isStillWanted) {
+  const deadline = Date.now() + 4 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 5000));
+    if (isStillWanted && !isStillWanted()) return { status: "abandoned" };
+    const check = await callSuitImageFn(checkPayload);
+    const st = check.data && check.data.status;
+    if (st === "done" && check.data.image_url) return { status: "done", url: check.data.image_url };
+    if (st === "failed") return { status: "failed" };
+  }
+  return { status: "timeout" };
+}
+
+const SUIT_IMAGE_MESSAGES = {
+  failed: "Sorry, something went wrong drawing your suit.",
+  timeout: "This is taking longer than usual.",
+  limit: "You've drawn 3 suits today, the daily limit. Please try again tomorrow. You can still keep going and place your order.",
+  start: "Sorry, we couldn't start the picture right now.",
+  network: "Sorry, we couldn't reach the picture service.",
+};
+
+// Shown at the top of the account popup when a guest taps Generate My Suit.
+const SUIT_IMAGE_SIGN_IN = "Sign in or create a free account to see your suit drawn. You can still order without an account.";
+
+// Cycled in bold under the loading video while a picture is drawn. Lines
+// marked pants are skipped when only a jacket is being made.
+const SUIT_LOADING_STEPS = [
+  { text: "Cutting your fabric..." },
+  { text: "Matching the pattern at the seams..." },
+  { text: "Basting the canvas..." },
+  { text: "Stitching the lining..." },
+  { text: "Shaping the lapels..." },
+  { text: "Setting the shoulders..." },
+  { text: "Fitting the sleeves..." },
+  { text: "Hand-padding the collar..." },
+  { text: "Cutting the buttonholes..." },
+  { text: "Sewing on your buttons..." },
+  { text: "Adding the pockets..." },
+  { text: "Pressing the trousers...", pants: true },
+  { text: "Hemming the trouser legs...", pants: true },
+  { text: "Setting the waistband...", pants: true },
+  { text: "Steaming out every wrinkle..." },
+  { text: "Checking every stitch..." },
+  { text: "Giving the jacket a final press..." },
+  { text: "Adding the finishing touches..." },
+];
+// Pants Only orders get these lines instead, so nothing mentions a jacket.
+const PANTS_LOADING_STEPS = [
+  "Cutting your trouser fabric...",
+  "Matching the pattern at the side seams...",
+  "Setting the waistband...",
+  "Sewing in the fly...",
+  "Adding the pockets...",
+  "Attaching the belt loops...",
+  "Pressing the front creases...",
+  "Hemming the trouser legs...",
+  "Checking every stitch...",
+  "Giving the trousers a final press...",
+];
+// "jacket", "pants" or "full": which loading lines fit this suit type.
+function loadingKindForType(type) {
+  return isJacketOnlyType(type) ? "jacket" : isPantsOnlyType(type) ? "pants" : "full";
+}
+
+function buildSuitImageCard(labelText) {
+  const card = document.createElement("div");
+  card.className = "suit-preview-card";
+  if (labelText) {
+    const label = document.createElement("p");
+    label.className = "suit-preview-label";
+    label.textContent = labelText;
+    card.appendChild(label);
+  }
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn-primary suit-preview-btn";
+  btn.textContent = "Generate My Suit";
+  const status = document.createElement("p");
+  status.className = "suit-preview-status";
+  status.setAttribute("aria-live", "polite");
+  const media = document.createElement("div");
+  media.className = "suit-preview-media";
+  card.append(btn, status, media);
+  const ui = {
+    card,
+    btn,
+    working(kind) {
+      btn.hidden = true;
+      btn.disabled = true;
+      status.textContent = "";
+      media.innerHTML = "";
+      // Daniel's button-stitching clip, looped until the picture arrives.
+      const video = document.createElement("video");
+      video.className = "suit-preview-loading";
+      // A brand can have its own recolored copy (brand.js loadingVideo).
+      const clip = SITE_BRAND.loadingVideo || "./assets/suit-loading-thread";
+      [[clip + ".mp4", "video/mp4"], [clip + ".webm", "video/webm"]].forEach(([src, type]) => {
+        const source = document.createElement("source");
+        source.src = src;
+        source.type = type;
+        video.appendChild(source);
+      });
+      video.poster = clip + ".jpg";
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("aria-hidden", "true");
+      const caption = document.createElement("p");
+      caption.className = "suit-preview-loading-text";
+      caption.innerHTML = "<strong></strong><span>This usually takes about a minute.</span>";
+      const line = caption.querySelector("strong");
+      const steps = kind === "pants" ? PANTS_LOADING_STEPS : SUIT_LOADING_STEPS.filter((s) => !(kind === "jacket" && s.pants)).map((s) => s.text);
+      let step = 0;
+      line.textContent = steps[0];
+      const timer = setInterval(() => {
+        if (!caption.isConnected) return clearInterval(timer);
+        step = (step + 1) % steps.length;
+        line.textContent = steps[step];
+      }, 3500);
+      const notice = document.createElement("p");
+      notice.className = "suit-preview-wait-notice";
+      notice.setAttribute("role", "status");
+      notice.innerHTML = "<strong>Please don't refresh or click anywhere</strong> while your suit is being drawn.";
+      media.append(video, caption, notice);
+      video.play().catch(() => {});
+    },
+    showImage(url) {
+      status.textContent = "";
+      btn.hidden = true;
+      media.innerHTML = "";
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      const img = document.createElement("img");
+      img.className = "suit-preview-img";
+      img.alt = "Your finished suit";
+      img.src = url;
+      link.appendChild(img);
+      media.appendChild(link);
+    },
+    fail(msg, canRetry) {
+      media.innerHTML = "";
+      status.textContent = msg;
+      btn.hidden = !canRetry;
+      btn.disabled = false;
+      btn.textContent = "Try Again";
+    },
+  };
+  return ui;
+}
+
+// The monogram letters typed in the designer, shaped like a cart item's `texts`.
+function currentDesignTexts() {
+  return { jacket: jacketDesigner.getTexts(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getTexts() };
+}
+
+function currentDesignSpec() {
+  try {
+    return buildVisualSpecText({
+      type: currentSuitType,
+      jacket: jacketDesigner.getSelections(),
+      pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(),
+      texts: currentDesignTexts(),
+    });
+  } catch (e) {
+    return "";
+  }
+}
+
+// The preview picture can only use the customer's own lining photo once it
+// is online, so upload it (once per photo) to the same public bucket orders
+// use. Resolves to the public URL, or "" when there's no photo or the upload
+// fails (the picture is then drawn without it).
+const previewLiningUploads = new Map();
+function previewLiningPhotoUrl(photo) {
+  if (!photo) return Promise.resolve("");
+  if (!previewLiningUploads.has(photo)) {
+    const job = (async () => {
+      const blob = await (await fetch(photo)).blob();
+      const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+      const path = "previews/" + id + ".jpg";
+      const client = getSupabase();
+      const { error } = await client.storage.from("lining-photos").upload(path, blob, { contentType: "image/jpeg" });
+      if (error) throw error;
+      return client.storage.from("lining-photos").getPublicUrl(path).data.publicUrl;
+    })().catch((err) => {
+      console.warn("Preview lining photo upload failed:", err);
+      previewLiningUploads.delete(photo);
+      return "";
+    });
+    previewLiningUploads.set(photo, job);
+  }
+  return previewLiningUploads.get(photo);
+}
+
+// "Review selections" under the finished picture on the Preview page: a
+// small link that opens a compact list of every jacket choice (and pants
+// choice, unless only a jacket is being made) right below the picture. While
+// it's open the picture sticks under the top bar, so the customer can
+// scroll the list and check each choice against the drawing.
+function buildSelectionsReview(card) {
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const wrap = document.createElement("div");
+  wrap.className = "selections-review";
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "selections-review-toggle";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.textContent = "Review selections";
+  const list = document.createElement("div");
+  list.className = "selections-review-list";
+  list.hidden = true;
+  wrap.append(toggle, list);
+  toggle.addEventListener("click", () => {
+    const open = list.hidden;
+    if (open) {
+      const sections = [["Jacket", jacketDesigner.reviewRows()]];
+      if (!isJacketOnlyType(currentSuitType)) sections.push(["Pants", pantsDesigner.reviewRows()]);
+      list.innerHTML = sections.map(([title, rows]) =>
+        (sections.length > 1 ? '<h4 class="selections-review-part">' + title + "</h4>" : "") +
+        rows.filter((r) => r.value).map((r) => '<div class="selections-review-row"><span>' + esc(r.label) + "</span><span>" + esc(r.value) + "</span></div>").join("")
+      ).join("");
+      card.style.setProperty("--review-sticky-top", Math.max(0, getNavClearance() - 12) + "px");
+    }
+    list.hidden = !open;
+    card.classList.toggle("reviewing", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.textContent = open ? "Hide selections" : "Review selections";
+  });
+  return wrap;
+}
+
+// Top of the Measurements step: "See your suit before you order".
+async function updateDesignPreviewPanel() {
+  const box = document.getElementById("designPreview");
+  if (!box) return;
+  if (!(await suitImagesReady())) {
+    box.hidden = true;
+    return;
+  }
+  const spec = currentDesignSpec();
+  if (!/^Fabric: /m.test(spec)) {
+    box.hidden = true;
+    return;
+  }
+  box.innerHTML = "";
+  const head = document.createElement("div");
+  head.className = "suit-preview-head";
+  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep going to your measurements while it draws.</p>';
+  box.appendChild(head);
+  const ui = buildSuitImageCard("");
+  box.appendChild(ui.card);
+  box.hidden = false;
+  // The finished picture gets a small "Review selections" link under it.
+  const showImage = (url) => {
+    ui.showImage(url);
+    const media = ui.card.querySelector(".suit-preview-media");
+    const note = document.createElement("p");
+    note.className = "suit-preview-disclaimer";
+    note.textContent = "This picture is AI-generated and drawn as accurately as possible. Small details may differ, but your suit is made exactly to the selections you chose.";
+    media.append(note, buildSelectionsReview(ui.card));
+  };
+
+  const watch = (preview) => {
+    ui.working(loadingKindForType(currentSuitType));
+    pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
+      if (designPreview !== preview) return;
+      preview.status = r.status === "done" ? "done" : "failed";
+      if (r.status === "done") preview.url = r.url;
+      saveDraft();
+      if (box.contains(ui.card)) {
+        if (r.status === "done") showImage(r.url);
+        else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
+      }
+    });
+  };
+
+  const liningPhoto = jacketDesigner.getLiningPhoto();
+  if (designPreview && designPreview.spec === spec && designPreview.photo === liningPhoto) {
+    if (designPreview.status === "done") showImage(designPreview.url);
+    else if (designPreview.status === "pending") watch(designPreview);
+  }
+
+  ui.btn.addEventListener("click", () => requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing));
+  async function startDrawing() {
+    ui.working(loadingKindForType(currentSuitType));
+    // On a phone, bring the whole card (video and caption) into view.
+    if (window.innerWidth <= MOBILE_BREAKPOINT) {
+      smoothScrollWindowTo(window.scrollY + box.getBoundingClientRect().top - getNavClearance());
+    }
+    if (SUIT_IMAGES_PAUSED) return;
+    try {
+      // The customer's own lining photo goes in as a swatch, like the
+      // catalog linings (not part of `spec`, which only identifies the design).
+      const photoUrl = await previewLiningPhotoUrl(liningPhoto);
+      const sent = photoUrl
+        ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(), texts: currentDesignTexts() }, { liningPhotoUrl: photoUrl })
+        : spec;
+      const start = await callSuitImageFn({ preview: true, visual_spec: sent });
+      if (start.status === 401) return signInAgain();
+      if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
+      if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
+      designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null };
+      saveDraft();
+      watch(designPreview);
+    } catch (e) {
+      console.error(e);
+      ui.fail(SUIT_IMAGE_MESSAGES.network, true);
+    }
+  }
+  // The server said the sign-in is missing or expired: put the button back
+  // and ask them to sign in again.
+  function signInAgain() {
+    ui.fail("", true);
+    ui.btn.textContent = "Generate My Suit";
+    requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
+  }
+}
+
+// The finished preview for the suit being committed to the cart, if the
+// customer drew one and hasn't changed the design since.
+function currentDesignPreviewId() {
+  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() && designPreview.photo === jacketDesigner.getLiningPhoto() ? designPreview.id : null;
+}
+
+// The finished suit on the homepage's "order received" note.
+async function renderSuitPreview(suits) {
+  const box = document.getElementById("suitPreview");
+  if (!box || !suits.length) return;
+  box.hidden = true;
+  box.innerHTML = "";
+  if (!(await suitImagesReady())) return;
+  const head = document.createElement("div");
+  head.className = "suit-preview-head";
+  head.innerHTML = "<h3>Your finished suit</h3><p>A picture of your suit with the fabric, buttons, lining and thread you chose.</p>";
+  box.appendChild(head);
+  box.hidden = false;
+  for (const suit of suits) {
+    const ids = { order_id: suit.orderId, suit_number: suit.suitNumber };
+    const ui = buildSuitImageCard(suit.label);
+    box.appendChild(ui.card);
+    const startDrawing = async () => {
+      ui.working(suit.jacketOnly ? "jacket" : suit.pantsOnly ? "pants" : "full");
+      if (SUIT_IMAGES_PAUSED) return;
+      try {
+        const start = await callSuitImageFn(ids);
+        if (start.data && start.data.status === "done" && start.data.image_url) return ui.showImage(start.data.image_url);
+        if (start.status === 401) {
+          ui.fail("", true);
+          ui.btn.textContent = "Generate My Suit";
+          return requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
+        }
+        if (!start.ok && start.status !== 202) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
+        const r = await pollSuitImage(Object.assign({ check: true }, ids));
+        if (r.status === "done") ui.showImage(r.url);
+        else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
+      } catch (e) {
+        console.error(e);
+        ui.fail(SUIT_IMAGE_MESSAGES.network, true);
+      }
+    };
+    ui.btn.addEventListener("click", () => requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing));
+    // A picture drawn before ordering is copied onto the order, no redraw.
+    try {
+      if (suit.previewId) await callSuitImageFn(Object.assign({ attach: suit.previewId }, ids));
+      const check = await callSuitImageFn(Object.assign({ check: true }, ids));
+      if (check.data && check.data.status === "done" && check.data.image_url) ui.showImage(check.data.image_url);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+// The column name from a Supabase "unknown column" error, or null.
+// PostgREST says "Could not find the 'x' column of 'orders' in the schema
+// cache"; Postgres says "column orders.x does not exist" / "column \"x\" of
+// relation \"orders\" does not exist".
+function missingOrderColumn(error) {
+  const msg = (error && error.message) || "";
+  const m =
+    msg.match(/Could not find the '([^']+)' column/i) ||
+    msg.match(/column (?:orders\.)?"?([a-z0-9_]+)"? (?:of relation "?orders"? )?does not exist/i);
+  return m ? m[1] : null;
+}
+
+async function finalizeOrder(input, opts) {
+  const adminNoPayment = !!(opts && opts.adminNoPayment);
+  // Stripe on: save the order as "awaiting payment", then send the customer
+  // to Stripe. The email and "order received" note wait until Stripe sends
+  // them back paid (see handleStripeReturn). The QA bar's skip button and
+  // admin orders never go to Stripe.
+  const payWithStripe = STRIPE_ENABLED && !adminNoPayment && !(opts && opts.skipPayment);
+  const { customerName, customerPhone, customerEmail, address1, address2, city, state, zip, country } = input;
+
+  const orderId =
+    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "order_" + Date.now();
+
+  // Upload any customer lining photos first (Supabase Storage bucket
+  // "lining-photos", see add_lining_photo_bucket.sql). A failed upload never
+  // blocks the order -- the order text says the photo is missing instead.
+  const liningPhotoUrls = await uploadLiningPhotos(orderId);
+
+  const rows = cartItems.map((item, i) => {
+    const row = suitSpecRow(item, i, cartItems.length, customerName, liningPhotoUrls[i]);
+    row.customer_name = customerName;
+    row.customer_phone = customerPhone;
+    row.customer_email = customerEmail;
+    row.shipping_address_line1 = address1;
+    row.shipping_address_line2 = address2;
+    row.shipping_city = city;
+    row.shipping_state = state;
+    row.shipping_zip = zip;
+    row.shipping_country = country;
+    row.fulfillment = input.fulfillment === "pickup" ? "pickup" : "ship";
+    row.order_id = orderId;
+    // null for a guest checkout -- see add_customer_profiles_migration.sql.
+    // Lets a signed-in customer's past orders be looked back up later
+    // without changing anything about how a guest order is saved.
+    row.user_id = currentUser ? currentUser.id : null;
+    row.item_price_usd = itemPriceUsd(item);
+    row.alteration_protection = !!input.alterationProtection;
+    // Which storefront it came from (brand.js); admin shows it on every order.
+    row.brand = SITE_BRAND.id;
+    row.alteration_protection_usd = input.alterationProtection ? protectionPriceUsd() : 0;
+    if (adminNoPayment) row.admin_no_payment = true;
+    else if (payWithStripe) row.payment_status = "awaiting_payment";
+    return row;
+  });
+
+  const clientFormText = buildAllSuitsOrderSummaryText(customerName);
+  const shippingBlock =
+    input.fulfillment === "pickup"
+      ? "IN-STORE PICKUP (no shipping, no tax)\n" + customerName
+      : buildShippingBlock(customerName, { address1, address2, city, state, zip, country });
+  const fullMessage = shippingBlock + "\n\n" + clientFormText;
+  const contactBlock = buildContactBlock(customerPhone, customerEmail);
+  const protectionLine = input.alterationProtection && PRICES_HIDDEN
+    ? "ALTERATION PROTECTION: YES -- three free alterations" + (rows.length > 1 ? " each" : "")
+    : input.alterationProtection
+    ? "ALTERATION PROTECTION: YES -- " + usd(protectionPriceUsd() * rows.length) + (rows.length > 1 ? " (" + usd(protectionPriceUsd()) + " x " + rows.length + ")" : "") + ", three free alterations" + (rows.length > 1 ? " each" : "")
+    : "ALTERATION PROTECTION: NO -- customer declined (alterations at their cost, no responsibility for bad measurements)";
+  const emailMessage = (adminNoPayment ? "ADMIN ORDER -- PLACED WITHOUT PAYMENT\n\n" : "") +
+    (SITE_BRAND.id !== "scott" ? SITE_BRAND.name.toUpperCase() + " ORDER" + (SITE_BRAND.payments === false ? " -- REQUEST, NO PAYMENT" : "") + "\n\n" : "") + contactBlock + "\n\n" + protectionLine + "\n\n" + fullMessage;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Saving...";
+
+  try {
+    const client = getSupabase();
+    visualSpecSaved = true;
+    let toSave = rows;
+    let { error } = await client.from("orders").insert(toSave);
+    // A new designer option whose column hasn't been added to the database
+    // yet (see supabase/sql/) makes the whole insert fail. Never lose a real
+    // order over that: drop the unknown column and retry. Every choice is
+    // still in client_form_text, so nothing the shop needs is lost.
+    for (let tries = 0; error && tries < 20; tries++) {
+      const col = missingOrderColumn(error);
+      // Never quietly save an admin order as a normal one.
+      if (!col || !(col in toSave[0]) || col === "admin_no_payment") break;
+      console.warn("orders." + col + " column missing; saving order without it. Run the SQL in supabase/sql/.");
+      if (col === "visual_spec") visualSpecSaved = false;
+      toSave = toSave.map((r) => {
+        const copy = Object.assign({}, r);
+        delete copy[col];
+        return copy;
+      });
+      ({ error } = await client.from("orders").insert(toSave));
+    }
+    if (error) {
+      console.error("Failed to save order:", error);
+      alert("Something went wrong saving your order:\n\n" + error.message);
+      return false;
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+    return false;
+  } finally {
+    submitBtn.disabled = false;
+    updateOrderSummaryUI();
+  }
+
+  const subject =
+    (adminNoPayment ? "[ADMIN, NO PAYMENT] " : "") +
+    "New " + SITE_BRAND.name + " order \u2014 " +
+    customerName +
+    (cartItems.length > 1 ? " (" + cartItems.length + " suits)" : "");
+  const previewItems = visualSpecSaved
+    ? rows.map((r, i) => ({ orderId: r.order_id, suitNumber: r.suit_number, previewId: (cartItems[i] && cartItems[i].previewId) || null, jacketOnly: r.suit_type === "jacket_only", pantsOnly: r.suit_type === "pants_only", label: (rows.length > 1 ? "Suit " + (i + 1) + " \u2014 " : "") + (r.suit_type === "jacket_only" ? "Jacket Only" : "Full Suit") }))
+      // Pants on their own get no picture.
+      .filter((p, i) => rows[i].suit_type !== "pants_only")
+    : null;
+
+  if (payWithStripe) {
+    return startStripeCheckout(orderId, { subject, customerEmail, emailMessage, previewItems });
+  }
+
+  await sendOrderEmail(subject, customerEmail, emailMessage);
+  finishOrder(previewItems, PAYPAL_ENABLED && !adminNoPayment);
+  return true;
+}
+
+// Best-effort: email the order summary + shipping details. This
+// never blocks the order -- the order is already saved in Supabase
+// (including the full text, in client_form_text) even if the email fails
+// or isn't configured yet.
+async function sendOrderEmail(subject, customerEmail, message) {
+  if (typeof CLIENT_FORM_EMAIL_ENDPOINT === "undefined" || !CLIENT_FORM_EMAIL_ENDPOINT) return;
+  try {
+    await fetch(CLIENT_FORM_EMAIL_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        _subject: subject,
+        // "email" is a Formspree special field -- it sets the customer's
+        // address as the notification email's Reply-To, so replying to
+        // the order email goes straight to them.
+        email: customerEmail,
+        message,
+      }),
+    });
+  } catch (emailErr) {
+    console.error("Failed to email the order summary (order was still saved):", emailErr);
+  }
+}
+
+// The order is saved (and paid, when payment is on): show it in Past
+// Orders, show the finished suit's picture, and take the customer back to
+// the homepage with an "order received" note at the top.
+//
+// The full garment spec + shipping address (the order summary text) is
+// deliberately NOT shown to the customer -- it's on every order row in
+// Supabase (client_form_text) and in the notification email.
+function finishOrder(previewItems, paid) {
+  if (currentUser) loadOrderHistory();
+  // Built from the cart before returnHomeAfterOrder() clears it.
+  if (previewItems) renderSuitPreview(previewItems);
+  returnHomeAfterOrder(
+    (paid
+      ? "We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
+      : "We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.") +
+      (currentUser ? " You can see this order any time under Past Orders in My Account." : "")
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stripe checkout (STRIPE_CHECKOUT_ENABLED in config.js). The order is
+// already saved as "awaiting payment"; the stripe-checkout edge function
+// prices it from the saved order and returns Stripe's checkout page. What
+// the "order received" step needs afterwards is kept in this tab
+// (sessionStorage) for the trip to Stripe and back, next to the draft.
+// ---------------------------------------------------------------------------
+const STRIPE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/stripe-checkout" : "";
+const STRIPE_PENDING_KEY = "scottSuitsStripePending";
+
+async function callStripeFn(body) {
+  const res = await fetch(STRIPE_FN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Payment error " + res.status);
+  return data;
+}
+
+async function startStripeCheckout(orderId, pending) {
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Opening secure checkout...";
+  try {
+    saveDraft();
+    try {
+      sessionStorage.setItem(STRIPE_PENDING_KEY, JSON.stringify(Object.assign({ orderId }, pending)));
+    } catch (e) {
+      // Without it the order is still saved and paid; only the email and
+      // picture on return are skipped.
+    }
+    const { url } = await callStripeFn({ action: "create", order_id: orderId });
+    if (!url) throw new Error("no checkout page came back");
+    window.location.href = url;
+    return true;
+  } catch (err) {
+    console.error(err);
+    // Don't leave an unpaid copy behind; trying again saves a fresh one.
+    callStripeFn({ action: "cancel", order_id: orderId }).catch(() => {});
+    try {
+      sessionStorage.removeItem(STRIPE_PENDING_KEY);
+    } catch (e) {
+      // ignore
+    }
+    alert("We couldn't open the payment page, so your order wasn't placed. Please try again in a moment.\n\n" + (err.message || err));
+    submitBtn.disabled = false;
+    updateOrderSummaryUI();
+    return false;
+  }
+}
+
+// Runs once at page load, after restoreDraft(): Stripe sends the customer
+// back with ?stripe_return=1&session_id=... (paid) or ?stripe_cancelled=1.
+async function handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id");
+  const returned = params.get("stripe_return") === "1" && sessionId;
+  const cancelledOrder = params.get("stripe_cancelled") === "1" ? params.get("order") : null;
+  if (!returned && !cancelledOrder) return;
+  // Strip the query right away so a refresh never repeats this.
+  window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+
+  let pending = null;
+  try {
+    pending = JSON.parse(sessionStorage.getItem(STRIPE_PENDING_KEY) || "null");
+    sessionStorage.removeItem(STRIPE_PENDING_KEY);
+  } catch (e) {
+    pending = null;
+  }
+
+  if (cancelledOrder) {
+    try {
+      const r = await callStripeFn({ action: "cancel", order_id: cancelledOrder });
+      if (r.paid) return stripePaid(r, pending);
+    } catch (e) {
+      console.error(e);
+    }
+    alert("Payment was cancelled, so your order wasn't placed and you weren't charged. Everything you entered is still here, so you can try again whenever you're ready.");
+    return;
+  }
+
+  try {
+    const r = await callStripeFn({ action: "verify", session_id: sessionId });
+    if (r.paid) return stripePaid(r, pending);
+    alert("Stripe hasn't confirmed your payment yet. If you were charged, please contact us and we'll sort it out right away.");
+  } catch (e) {
+    console.error(e);
+    alert("We couldn't confirm your payment just now. If you were charged, please contact us and we'll sort it out right away.\n\n" + (e.message || e));
+  }
+}
+
+async function stripePaid(r, pending) {
+  if (pending && pending.orderId === r.order_id) {
+    const parts = [];
+    if (Number(r.shipping)) parts.push("shipping $" + Number(r.shipping).toFixed(2));
+    if (Number(r.tax)) parts.push("tax $" + Number(r.tax).toFixed(2));
+    const paidLine = "PAID $" + Number(r.amount || 0).toFixed(2) + " BY STRIPE" + (parts.length ? " (incl. " + parts.join(", ") + ")" : "") + "\n\n";
+    await sendOrderEmail("[PAID] " + pending.subject, pending.customerEmail, paidLine + pending.emailMessage);
+    finishOrder(pending.previewItems, true);
+  } else {
+    finishOrder(null, true);
+  }
+}
+
+// Once someone is sent back here from PayPal (paid or cancelled), this picks
+// up right where buildPayPalCheckoutUrl() left off -- see the comment there.
+// Runs once at page load, alongside restoreDraft().
+function handlePayPalReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const returned = params.get("paypal_return") === "1";
+  const cancelled = params.get("paypal_cancelled") === "1";
+  if (!returned && !cancelled) return;
+
+  // Strip the query param right away so refreshing or navigating back never
+  // re-triggers this.
+  window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+
+  if (cancelled) {
+    alert("Payment was cancelled -- your order wasn't submitted. Everything you entered is still here, so you can try again whenever you're ready.");
+    return;
+  }
+
+  // returned === true: the draft (restored just before this runs) should
+  // have every field filled in from right before the PayPal redirect, so
+  // this re-validates and finalizes automatically -- no extra click needed.
+  const input = collectAndValidateOrderInput();
+  if (!input) {
+    alert("It looks like you've paid, but we couldn't find your order details in this browser to finish submitting it. Please contact us with your PayPal receipt so we can complete your order manually.");
+    return;
+  }
+  finalizeOrder(input, { skipPayment: true });
+}
+
+submitBtn.addEventListener("click", async () => {
+  if (adminEditState) return saveAdminOrderEdit();
+  const input = collectAndValidateOrderInput();
+  if (!input) return;
+
+  if (!PAYPAL_ENABLED || STRIPE_ENABLED) {
+    await finalizeOrder(input);
+    return;
+  }
+
+  // Payment required before the order saves -- persist everything now so it
+  // survives the round trip to PayPal and back (see buildPayPalCheckoutUrl).
+  saveDraft();
+  window.location.href = buildPayPalCheckoutUrl();
+});
+
+
+// Admin only: saves the order exactly like Submit Order, never sending them
+// to PayPal, and marks it admin_no_payment.
+const adminNoPayBtn = document.getElementById("adminNoPayBtn");
+if (adminNoPayBtn) {
+  adminNoPayBtn.addEventListener("click", async () => {
+    if (!currentIsAdmin || adminEditState) return;
+    const input = collectAndValidateOrderInput();
+    if (!input) return;
+    adminNoPayBtn.disabled = true;
+    try {
+      await finalizeOrder(input, { adminNoPayment: true });
+    } finally {
+      adminNoPayBtn.disabled = false;
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Remembers where someone was in the order flow (including every selection,
+// measurement, and personal/shipping field) in this tab, so refreshing the
+// page picks up right where they left off instead of starting over. Kept in
+// sessionStorage, not localStorage: a brand-new tab or window opens the site
+// fresh instead of inheriting another tab's design. Cleared automatically
+// once an order is submitted.
+// ---------------------------------------------------------------------------
+const DRAFT_STORAGE_KEY = "scottSuitsDraftOrder";
+
+// Drafts used to live in localStorage (shared by every tab); drop any copy
+// left over from then so it can't linger in the browser.
+try {
+  localStorage.removeItem(DRAFT_STORAGE_KEY);
+  localStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+} catch (e) {
+  // ignore
+}
+
+function saveDraft() {
+  try {
+    const measurements = {};
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el && el.value !== "") measurements[m.id] = el.value;
+    });
+    Object.assign(measurements, measureExtras());
+    const activeStepEl = document.querySelector(".step.active");
+    const draft = {
+      step: activeStepEl ? activeStepEl.id : "designer",
+      furthestStep: ALL_STEPS[furthestStepIndex] ? ALL_STEPS[furthestStepIndex].id : "",
+      suitType: currentSuitType,
+      jacket: jacketDesigner.getSelections(),
+      pants: pantsDesigner.getSelections(),
+      jacketTexts: jacketDesigner.getTexts(),
+      pantsTexts: pantsDesigner.getTexts(),
+      measurements: measurements,
+      customerName: customerNameInput.value,
+      customerPhone: customerPhoneInput.value,
+      customerEmail: customerEmailInput.value,
+      shippingAddress1: shippingAddress1Input.value,
+      shippingAddress2: shippingAddress2Input.value,
+      shippingCity: shippingCityInput.value,
+      shippingState: shippingStateInput.value,
+      shippingZip: shippingZipInput.value,
+      shippingCountry: shippingCountryInput.value,
+      fulfillment: fulfillmentChoice(),
+      alterationProtection: alterationChoice(),
+      // Photos are big, so they are kept out of the draft itself (below).
+      cart: cartItems.map((it) => { const c = Object.assign({}, it); delete c.liningPhoto; return c; }),
+      pendingCommitIndex: pendingCommitIndex,
+      editingCartIndex: editingCartIndex,
+      // The suit picture already drawn (or still drawing) for this design,
+      // so a reload shows that same picture instead of offering a new one.
+      // The lining photo itself is saved with the photos below.
+      designPreview: designPreview && designPreview.status !== "failed"
+        ? { spec: designPreview.spec, hasPhoto: !!designPreview.photo, id: designPreview.id, status: designPreview.status, url: designPreview.url }
+        : null,
+    };
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch (e) {
+    // sessionStorage can be unavailable (private browsing, disabled storage, etc) -- not fatal.
+  }
+  // The customer's own lining photo(s) live under a separate key, so a photo
+  // too big for the browser's storage quota can never cost the rest of the
+  // draft. Failure just means the photo has to be re-added after a reload.
+  try {
+    const photos = { jacket: jacketDesigner.getLiningPhoto(), cart: cartItems.map((it) => it.liningPhoto || null) };
+    if (photos.jacket || photos.cart.some(Boolean)) sessionStorage.setItem(DRAFT_STORAGE_KEY + "_photos", JSON.stringify(photos));
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+  } catch (e) {
+    // not fatal
+  }
+  updateProcessBar();
+}
+
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+  } catch (e) {
+    // ignore
+  }
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function restoreDraft() {
+  let draft = null;
+  try {
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+    if (raw) draft = JSON.parse(raw);
+  } catch (e) {
+    draft = null;
+  }
+  if (!draft) return false;
+
+  if (Array.isArray(draft.cart)) cartItems = draft.cart;
+  let draftPhotos = null;
+  try {
+    const rawPhotos = sessionStorage.getItem(DRAFT_STORAGE_KEY + "_photos");
+    if (rawPhotos) draftPhotos = JSON.parse(rawPhotos);
+  } catch (e) {
+    draftPhotos = null;
+  }
+  if (draftPhotos && Array.isArray(draftPhotos.cart)) {
+    cartItems.forEach((it, i) => { if (draftPhotos.cart[i]) it.liningPhoto = draftPhotos.cart[i]; });
+  }
+  if (draftPhotos && draftPhotos.jacket) jacketDesigner.setLiningPhoto(draftPhotos.jacket);
+  if (draft.pendingCommitIndex !== undefined) pendingCommitIndex = draft.pendingCommitIndex;
+  if (draft.editingCartIndex !== undefined && draft.editingCartIndex === pendingCommitIndex) editingCartIndex = draft.editingCartIndex;
+  renderCartBar();
+  updateOrderSummaryUI();
+
+  // Applies the saved suit type BEFORE touching measurements below -- it's
+  // what decides which measurement fields even exist in the DOM (see
+  // applySuitType() -> renderMeasurementFields()). An older draft saved
+  // before this feature existed has no suitType at all, so it falls back to
+  // "full", matching exactly how every draft behaved before.
+  applySuitType(draft.suitType || "full");
+
+  if (draft.jacketTexts) jacketDesigner.setTexts(draft.jacketTexts);
+  if (draft.pantsTexts) pantsDesigner.setTexts(draft.pantsTexts);
+  if (draft.jacket) jacketDesigner.setSelections(draft.jacket);
+  if (draft.pants) pantsDesigner.setSelections(draft.pants);
+
+  const dp = draft.designPreview;
+  if (dp && dp.id && dp.spec) {
+    designPreview = {
+      spec: dp.spec,
+      // A lining photo too big to save can't come back, so the picture
+      // drawn with it no longer matches the design (it can be redrawn).
+      photo: dp.hasPhoto ? jacketDesigner.getLiningPhoto() || "missing" : null,
+      id: dp.id,
+      status: dp.status === "done" && dp.url ? "done" : "pending",
+      url: dp.url || null,
+    };
+  }
+
+  if (draft.measurements) {
+    applyMeasureExtras(draft.measurements);
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      if (el && draft.measurements[m.id] !== undefined) el.value = draft.measurements[m.id];
+    });
+  }
+
+  if (draft.customerName) customerNameInput.value = draft.customerName;
+  if (draft.customerPhone) customerPhoneInput.value = formatUSPhoneNumber(draft.customerPhone);
+  if (draft.customerEmail) customerEmailInput.value = draft.customerEmail;
+  if (draft.shippingAddress1) shippingAddress1Input.value = draft.shippingAddress1;
+  if (draft.shippingAddress2) shippingAddress2Input.value = draft.shippingAddress2;
+  if (draft.shippingCity) shippingCityInput.value = draft.shippingCity;
+  if (draft.shippingState) shippingStateInput.value = draft.shippingState;
+  if (draft.shippingZip) shippingZipInput.value = draft.shippingZip;
+  if (draft.shippingCountry) shippingCountryInput.value = draft.shippingCountry;
+  if (draft.fulfillment) setFulfillmentChoice(draft.fulfillment);
+  if (draft.alterationProtection) setAlterationChoice(draft.alterationProtection);
+
+  // Never resume straight onto the confirmation screen -- that only happens
+  // right after a real submission, which already clears the draft anyway.
+  const stepId = draft.step && draft.step !== "confirmationSection" ? draft.step : "designer";
+  const stepEl = document.getElementById(stepId);
+  if (stepEl) {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    stepEl.classList.add("active");
+  }
+  const furthestEl = draft.furthestStep ? document.getElementById(draft.furthestStep) : null;
+  furthestStepIndex = Math.max(ALL_STEPS.indexOf(furthestEl), ALL_STEPS.indexOf(stepEl), 0);
+  return true;
+}
+
+// Tracks whether the customer has actually begun designing -- clicked
+// "Start Designing", picked any option directly, or (on a repeat visit)
+// already has a saved draft with real progress. Before that, "Start
+// Designing" is the way into the flow and there's nothing yet to reset, so
+// "Start Over" would be meaningless. From the first real action onward,
+// "Start Over" is the only nav action that still makes sense, so the two
+// buttons are mutually exclusive rather than both showing at once. Start
+// Over itself flips this back to false (see startOver()) -- clearing every
+// selection puts the customer back at square one, so "Start Designing"
+// should reappear as the way back in, same as a brand-new visit.
+let hasStartedDesigning = false;
+
+function updateNavActionButtons() {
+  const startDesigningBtn = document.getElementById("startDesigningBtn");
+  const startOverBtn = document.getElementById("startOverBtn");
+  const heroStartDesigningBtn = document.getElementById("heroStartDesigningBtn");
+  if (startDesigningBtn) startDesigningBtn.hidden = hasStartedDesigning;
+  if (startOverBtn) startOverBtn.hidden = !hasStartedDesigning;
+  // The hero's own "Start Designing" button is the same mutually-exclusive
+  // swap as the nav's -- scrolled up to the hero from any real step (jacket,
+  // pants, measurements...) this button used to just sit there always, which
+  // read as an invitation to click it again mid-design. It has no "undo"
+  // counterpart of its own (Start Over already lives in the nav, reachable
+  // from anywhere), so it simply disappears once design has actually started
+  // rather than swapping to something else.
+  if (heroStartDesigningBtn) heroStartDesigningBtn.hidden = hasStartedDesigning;
+}
+
+function markDesignStarted() {
+  if (hasStartedDesigning) return;
+  hasStartedDesigning = true;
+  document.body.classList.add("designing");
+  updateNavActionButtons();
+  hideOrderDoneNotice();
+}
+
+// Undoes markDesignStarted() -- used by startOver() to put the nav back to
+// its brand-new-visit state (Start Designing showing, Start Over hidden)
+// since clearing every selection means there's nothing left to "start over"
+// from anymore.
+function resetDesignStarted() {
+  hasStartedDesigning = false;
+  document.body.classList.remove("designing");
+  updateNavActionButtons();
+}
+
+if (restoreDraft()) markDesignStarted();
+handlePayPalReturn();
+handleStripeReturn();
+updateAdminEditUI();
+updateNavActionButtons();
+updateProcessBar();
+
+// The hero "Start Designing" button always means "take me to the suit-type
+// choice", even if a saved draft currently has a later step showing
+// (otherwise scrollIntoView has nothing to do, since that section is hidden).
+function startDesigning() {
+  markDesignStarted();
+  const swap = () => {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    suitTypeSection.classList.add("active");
+    // scrollToStepTop (not a raw scroll to suitTypeSection's own top) so this
+    // lands on the heading/cards themselves via STEP_FOCUS_SELECTOR, the same
+    // as every other step transition -- see the comment on that entry above.
+    scrollToStepTop(suitTypeSection);
+    saveDraft();
+  };
+  // Same "scroll up before hiding" order as goToStep -- see its comment.
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+window.startDesigning = startDesigning;
+
+// Tapping the logo goes back to the homepage (hero + "Start Designing"),
+// from any step. Non-destructive: nothing is cleared, so Start Designing
+// picks the suit type again and carries on with the same selections and
+// cart; the saved draft is left as it was.
+function goHome() {
+  hideOrderDoneNotice();
+  resetDesignStarted();
+  ALL_STEPS.forEach((el) => el.classList.remove("active"));
+  suitTypeSection.classList.add("active");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+// Once an order is placed the suit is complete, so the designer closes out
+// entirely: every selection, measurement, personal field, the cart and the
+// saved draft are cleared (a reload can't bring the finished order back
+// into the designer), and the customer lands on the order confirmation page,
+// which also shows the finished suit's picture (see renderSuitPreview).
+// "Back to Home" from there is a brand-new visit.
+function returnHomeAfterOrder(message) {
+  clearDesignerAndForm();
+  cartItems = [];
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+  designPreview = null;
+  renderCartBar();
+  updateOrderSummaryUI();
+  clearDraft();
+  resetDesignStarted();
+  ALL_STEPS.forEach((el) => el.classList.remove("active"));
+  suitTypeSection.classList.add("active");
+  updateProcessBar();
+  const notice = document.getElementById("orderDoneNotice");
+  if (notice) {
+    document.getElementById("orderDoneText").textContent = message;
+    notice.hidden = false;
+    document.body.classList.add("order-done-view");
+  }
+  window.scrollTo({ top: 0 });
+}
+
+// Leaves the order confirmation page for the homepage.
+function hideOrderDoneNotice() {
+  const notice = document.getElementById("orderDoneNotice");
+  if (!notice || notice.hidden) return;
+  notice.hidden = true;
+  document.body.classList.remove("order-done-view");
+}
+const orderDoneClose = document.getElementById("orderDoneClose");
+if (orderDoneClose) {
+  orderDoneClose.addEventListener("click", () => {
+    hideOrderDoneNotice();
+    window.scrollTo({ top: 0 });
+  });
+}
+
+// Pre-launch "orders open next week" notice on the home page -- driven by
+// ORDERS_OPENING_SOON in config.js.
+const openingSoonNotice = document.getElementById("openingSoonNotice");
+if (openingSoonNotice) openingSoonNotice.hidden = !(typeof ORDERS_OPENING_SOON !== "undefined" && ORDERS_OPENING_SOON);
+
+const logoHomeLink = document.getElementById("logoHomeLink");
+if (logoHomeLink) {
+  logoHomeLink.addEventListener("click", goHome);
+  logoHomeLink.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goHome(); }
+  });
+}
+
+// Lets someone abandon everything and begin again from a blank jacket --
+// reachable from anywhere via the nav bar, not tied to whatever step is
+// currently showing. Destructive and unrecoverable (it also wipes the saved
+// draft, so a page refresh can't bring any of it back), so it's gated behind
+// a confirmation warning first.
+// Start Over asks for confirmation with our own on-page dialog rather than
+// the browser's native window.confirm(...). Some environments this page can
+// be viewed in -- notably an app's own embedded preview webview -- silently
+// suppress native JS dialogs (confirm() just returns false with no prompt
+// ever shown), which made this button look completely broken: nothing
+// happened, and "Start Over" itself never even changed back to
+// "Start Designing" because the code bailed out at the (invisible) "did they
+// cancel?" check. A dialog built from ordinary HTML/CSS always renders,
+// everywhere this page runs.
+function startOver() {
+  openStartOverConfirm();
+}
+
+// Wipes the suit currently in the designer back to a blank jacket, along
+// with its measurements and the personal/shipping fields. Shared by Start
+// Over and returnHomeAfterOrder(); the cart and saved draft are left to the
+// caller.
+function clearDesignerAndForm() {
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  // Back to the default suit type -- also rebuilds the measurement grid to
+  // its full (jacket + pants) field set before the clearing loop below, and
+  // resets the progress bar / prices / button wording along with it.
+  measureStash = {};
+  applySuitType("full");
+  setMeasureMode("finished");
+
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el) el.value = "";
+  });
+
+  customerNameInput.value = "";
+  customerPhoneInput.value = "";
+  customerEmailInput.value = "";
+  shippingAddress1Input.value = "";
+  shippingAddress2Input.value = "";
+  shippingCityInput.value = "";
+  shippingStateInput.value = "";
+  shippingZipInput.value = "";
+  shippingCountryInput.value = "United States";
+  setFulfillmentChoice("ship");
+  setAlterationChoice("");
+  // A signed-in customer's details go straight back in for the next order.
+  prefillContactDetails();
+  orderSubmitted = false;
+}
+
+function executeStartOver() {
+  clearDesignerAndForm();
+
+  // The cart itself is deliberately left alone -- Start Over clears the suit
+  // currently being designed (and the shipping/personal-info fields below),
+  // not suits already added to the order. pendingCommitIndex still gets
+  // forgotten, same as removing a cart item does, since the designer it
+  // pointed at is about to be wiped -- there's no live suit left for it to
+  // update in place.
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+  renderCartBar();
+  updateOrderSummaryUI();
+
+
+  // Whether to treat this as a true brand-new-visit reset (nothing at all
+  // left afterward -- see resetDesignStarted() and the draft handling below)
+  // or as clearing just the in-progress suit while an order still exists in
+  // the cart. Read once, before anything below has a chance to change it.
+  const cartIsEmpty = !cartItems.length;
+
+  if (cartIsEmpty) {
+    clearDraft();
+  } else {
+    // Suits already in the cart survive Start Over (see the cartItems
+    // comment above) -- persist that, or a page reload right after would
+    // find no draft at all and lose them, same as if they'd been cleared.
+    saveDraft();
+  }
+
+  const swap = () => {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    suitTypeSection.classList.add("active");
+    // resetDesignStarted() (and the hero "Start Designing" button it
+    // reveals) has to happen BEFORE scrollToStepTop, not after -- that
+    // button was hidden while the customer was mid-design, and un-hiding it
+    // adds real height above suitTypeSection. Doing that after scrollToStepTop
+    // had already computed/started its target left the scroll aimed at the
+    // OLD (shorter) layout, landing ~30px short of the heading once the
+    // button's height pushed everything below it back down. Same root cause
+    // as the updateProcessBar() reordering above scrollToStepTop's own
+    // measurements -- see that function's comment.
+    // Only reset all the way back to a brand-new-visit state when there's
+    // truly nothing left -- an empty cart. With suits still saved, the
+    // customer still has an order in progress, so "Start Over" stays put in
+    // the nav (their way back here if they want to clear the whole thing)
+    // instead of confusingly swapping back to "Start Designing".
+    if (cartIsEmpty) resetDesignStarted();
+    // Land on suitTypeSection itself (same as every other step transition,
+    // see goToStep/scrollToStepTop) rather than the very top of the page --
+    // scrolling to the raw page top left the customer staring at the hero
+    // again, with the now-taller centered suitTypeSection box (see
+    // style.css) sitting mostly out of view below it until they scrolled
+    // further themselves.
+    scrollToStepTop(suitTypeSection);
+    updateProcessBar();
+    // No draft left behind when the cart is empty too, on purpose: this is a
+    // full reset, and suitTypeSection is already "active" by default in the
+    // markup, so leaving no draft means a reload lands on the exact same
+    // fresh state -- including "Start Designing" back in the nav (already
+    // handled by resetDesignStarted() above) instead of a stale near-empty
+    // draft flipping it back to "Start Over". With suits still in the cart
+    // there's real state worth keeping, so save it instead.
+    if (cartIsEmpty) clearDraft();
+    else saveDraft();
+  };
+  // Same "scroll up before hiding" order as goToStep -- see its comment.
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+window.startOver = startOver;
+
+// The Start Over confirmation modal itself -- same accessible-modal pattern
+// as the "How It Works" overlay above (focus moves in on open and back to
+// whatever opened it on close, Escape closes it, clicking the dark backdrop
+// closes it too).
+(function () {
+  const overlay = document.getElementById("startOverConfirmOverlay");
+  if (!overlay) return;
+  const cancelBtn = document.getElementById("startOverCancelBtn");
+  const confirmBtn = document.getElementById("startOverConfirmBtn");
+  const confirmText = document.getElementById("startOverConfirmText");
+  const BASE_CONFIRM_TEXT = confirmText ? confirmText.textContent : "";
+  let lastFocused = null;
+
+  function onKeydown(e) {
+    if (e.key === "Escape") close();
+  }
+
+  function open() {
+    lastFocused = document.activeElement;
+    // Start Over only ever clears the suit currently being designed and the
+    // shipping/personal-info fields (see executeStartOver()) -- any suit
+    // already added to the cart is untouched. Reassure whoever has one or
+    // more sitting there already, right where they're about to confirm,
+    // rather than leaving them to worry it means the whole order.
+    if (confirmText) {
+      confirmText.textContent = cartItems.length
+        ? BASE_CONFIRM_TEXT + " The " + cartItems.length + (cartItems.length === 1 ? " suit" : " suits") + " already in your cart will stay saved."
+        : BASE_CONFIRM_TEXT;
+    }
+    overlay.classList.add("open");
+    cancelBtn.focus();
+    document.addEventListener("keydown", onKeydown);
+  }
+
+  function close() {
+    overlay.classList.remove("open");
+    document.removeEventListener("keydown", onKeydown);
+    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+  }
+
+  window.openStartOverConfirm = open;
+
+  cancelBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  confirmBtn.addEventListener("click", () => {
+    close();
+    executeStartOver();
+  });
+})();
+
+// The order the order flow actually happens in (used below to gate the
+// progress bar, and to know which designer -- if any -- lives on a page).
+const STEP_ORDER = ["designer", "pantsSection", "previewSection", "measurementsSection", "personalInfoSection"];
+const STEP_LABELS = {
+  designer: "Design your jacket",
+  pantsSection: "Customize your pants",
+  previewSection: "Preview your suit",
+  measurementsSection: "Enter your measurements",
+  personalInfoSection: "Personal Info and Shipping",
+};
+
+function isStepComplete(stepId) {
+  if (stepId === "designer") return !hasJacketStep() || jacketDesigner.isComplete();
+  if (stepId === "pantsSection") return !hasPantsStep() || pantsDesigner.isComplete();
+  if (stepId === "measurementsSection") return collectMeasurements().missing.length === 0;
+  return true;
+}
+
+// Dims each progress-bar step once it's actually done, so the eye is drawn to
+// whichever step still needs attention. The bar has 5 visual steps (Jacket,
+// Pants, Measure, Ship, Order) but only 4 underlying sections -- Ship and
+// Order both live on personalInfoSection -- so completion is tracked per
+// data-milestone rather than per data-step.
+function updateProcessBar() {
+  updateEditingCartNotice();
+  // The progress bar doesn't mean anything yet while suitTypeSection is
+  // showing -- no suit type has been picked, so there's no "Jacket" step to
+  // even be on. Hide the whole bar for that one screen; it reappears the
+  // moment a type is chosen and jacketSection becomes active.
+  const processBarEl = document.querySelector(".process");
+  if (processBarEl) processBarEl.hidden = Boolean(suitTypeSection && suitTypeSection.classList.contains("active"));
+
+  const activeStepEl = document.querySelector(".step.active");
+  const activeStepId = activeStepEl ? activeStepEl.id : "";
+  // Choosing a suit type begins a new suit, so nothing after it counts as
+  // reached any more; otherwise remember the furthest page reached.
+  const activeIdx = ALL_STEPS.indexOf(activeStepEl);
+  if (activeStepEl === suitTypeSection) furthestStepIndex = activeIdx;
+  else if (activeIdx > furthestStepIndex && activeStepEl !== confirmationSection) furthestStepIndex = activeIdx;
+  document.querySelectorAll(".process-step[data-milestone]").forEach((el) => {
+    const milestone = el.getAttribute("data-milestone");
+    // "Complete" shares personalInfoSection with "Order", but it stays plain
+    // until the order is actually placed -- only Order lights up on that page.
+    el.classList.toggle("current", !!activeStepId && milestone !== "ship" && el.getAttribute("data-step") === activeStepId);
+    let done = false;
+    if (milestone === "jacket") done = jacketDesigner.isComplete();
+    else if (milestone === "pants") done = pantsDesigner.isComplete();
+    else if (milestone === "measure") done = collectMeasurements().missing.length === 0;
+    // Only once the order is placed -- not when the address is filled in,
+    // since a signed-in customer's address is prefilled from the start.
+    else if (milestone === "ship") done = orderSubmitted;
+    else if (milestone === "order") done = orderSubmitted;
+    else if (milestone === "preview") done = !!(designPreview && designPreview.status === "done");
+    el.classList.toggle("completed", done);
+  });
+}
+
+// A "Jacket Only" order has no Pants step at all -- per how this was
+// scoped, "02 Pants" doesn't just gray out, it's removed from the bar
+// entirely and everything after it renumbers to fill the gap (Jacket 01,
+// Measure 02, Ship 03, Order 04). Re-run whenever the suit type changes
+// (see applySuitType()) so the bar always matches whichever suit is
+// currently loaded into the designer.
+function updateProcessBarForSuitType() {
+  // Toggled via inline style rather than the `hidden` attribute --
+  // .process-step sets its own `display:flex`, an author rule with the same
+  // specificity as the browser's built-in `[hidden]{display:none}` rule, so
+  // `hidden` alone isn't guaranteed to actually hide it. An inline style
+  // always wins regardless of specificity. Pants on their own drop the
+  // Jacket (and Preview) steps the same way.
+  const showStep = (milestone, show) => {
+    const stepEl = document.querySelector('.process-step[data-milestone="' + milestone + '"]');
+    if (!stepEl) return;
+    const dividerEl =
+      stepEl.nextElementSibling && stepEl.nextElementSibling.classList.contains("process-divider")
+        ? stepEl.nextElementSibling
+        : null;
+    stepEl.style.display = show ? "" : "none";
+    if (dividerEl) dividerEl.style.display = show ? "" : "none";
+  };
+  showStep("jacket", hasJacketStep());
+  showStep("pants", hasPantsStep());
+  showStep("preview", previewStepActive());
+
+  const visibleSteps = Array.from(document.querySelectorAll(".process-step")).filter((el) => el.style.display !== "none");
+  visibleSteps.forEach((el, i) => {
+    const numEl = el.querySelector(".step-num");
+    if (numEl) numEl.textContent = String(i + 1).padStart(2, "0");
+  });
+}
+
+// Keeps the price shown while actually designing in sync with the suit type
+// chosen on suitTypeSection -- the jacket designer's own summary total and
+// its intro blurb both mention a price as plain text (there's no per-option
+// pricing), so both need to be swapped by hand rather than computed from
+// selections.
+// Live price of the suit being designed: the price for its fabric tier plus
+// the $80 custom lining photo and the $200 full canvas when chosen. Called from every designer
+// summary refresh and whenever the suit type changes.
+function refreshDesignerPrice() {
+  let extra = 0;
+  try { extra = typeof jacketDesigner !== "undefined" && hasJacketStep() ? jacketSurchargeUsd(jacketDesigner.getSelections()) : 0; } catch (e) { extra = 0; }
+  const price = suitPriceForType(currentSuitType, currentFabricTier()) + extra;
+  ["totalPrice", "pantsTotalPrice"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = "$" + price;
+  });
+}
+function updatePriceTextForSuitType() {
+  const price = suitPriceForType(currentSuitType);
+  refreshDesignerPrice();
+  const introPriceEl = document.getElementById("jacketPriceText");
+  if (introPriceEl) introPriceEl.textContent = "$" + price;
+}
+
+// The jacket page's Continue button, and the measurements page's Back
+// button, both read differently depending on whether there's a Pants step
+// to go to or not.
+function updateContinueBackLabelsForSuitType() {
+  const continueBtnEl = document.getElementById("continueBtn");
+  if (continueBtnEl) continueBtnEl.textContent = !hasPantsStep() ? (previewStepOn ? "Continue to Preview" : "Continue to Measurements") : "Continue to Pants";
+  const continuePantsBtnEl = document.getElementById("continuePantsBtn");
+  if (continuePantsBtnEl) continuePantsBtnEl.textContent = previewStepActive() ? "Continue to Preview" : "Continue to Measurements";
+  const backToDesignerBtnEl = document.getElementById("backToDesignerBtn");
+  if (backToDesignerBtnEl) backToDesignerBtnEl.innerHTML = "&larr; Back";
+}
+
+// The single entry point for switching which suit type is loaded into the
+// designer -- called when a customer picks a card on suitTypeSection, and
+// again when restoring a saved draft. Re-renders the measurement fields (so
+// a "Jacket Only" order only shows/requires jacket measurements), and keeps
+// the progress bar, prices shown while designing, and the Continue/Back
+// button wording all in sync with the choice.
+function applySuitType(type) {
+  currentSuitType = ["jacketOnly", "preset", "presetJacket", "pantsOnly"].indexOf(type) !== -1 ? type : "full";
+  const isPreset = type === "preset" || type === "presetJacket";
+  jacketDesigner.setPreset(isPreset ? CLASSIC_SUIT_PRESET.jacket : null);
+  pantsDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.pants : null);
+  pantsDesigner.setSameAsEnabled(hasJacketStep());
+  setMeasureMode(measureMode); // rebuilds the fields for this suit type
+  updateSamePreviousMeasurementsBanner();
+  updateProcessBarForSuitType();
+  updatePriceTextForSuitType();
+  updateContinueBackLabelsForSuitType();
+  updateSizeEstimatePantsFieldsForSuitType();
+}
+
+// Wires up the two suit-type cards -- picking one commits the choice and
+// moves straight into the jacket designer, same "scroll up before hiding"
+// swap every other step transition uses (see goToStep()).
+function chooseSuitType(type) {
+  // (Leaving the Classic Suit preset clears its fixed answers -- see setPreset.)
+  applySuitType(type);
+  // Pants on their own start straight on the pants designer.
+  if (!hasJacketStep()) {
+    pantsDesigner.resetToFirstTab();
+    goToStep(suitTypeSection, pantsSection);
+    return;
+  }
+  jacketDesigner.resetToFirstTab();
+  goToStep(suitTypeSection, jacketSection);
+}
+const chooseFullSuitBtn = document.getElementById("chooseFullSuitBtn");
+const chooseJacketOnlyBtn = document.getElementById("chooseJacketOnlyBtn");
+const chooseClassicSuitBtn = document.getElementById("chooseClassicSuitBtn");
+if (chooseClassicSuitBtn) chooseClassicSuitBtn.addEventListener("click", () => chooseSuitType("preset"));
+const choosePresetJacketBtn = document.getElementById("choosePresetJacketBtn");
+if (choosePresetJacketBtn) choosePresetJacketBtn.addEventListener("click", () => chooseSuitType("presetJacket"));
+if (chooseFullSuitBtn) chooseFullSuitBtn.addEventListener("click", () => chooseSuitType("full"));
+if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => chooseSuitType("jacketOnly"));
+const choosePantsOnlyBtn = document.getElementById("choosePantsOnlyBtn");
+if (choosePantsOnlyBtn) choosePantsOnlyBtn.addEventListener("click", () => chooseSuitType("pantsOnly"));
+
+// Lets someone click any step in the progress bar at the top to jump straight
+// there and edit it -- not just move forward with Continue/Back buttons.
+// Jumping backward is always allowed. Jumping forward is allowed only to a
+// page already reached before (see furthestStepIndex), and only while every
+// page in between is still complete -- a page never reached yet is still
+// only reachable with Continue. (The QA nav bar bypasses this entirely, on
+// purpose, for internal testing.)
+function goToStepById(stepId) {
+  const stepEl = document.getElementById(stepId);
+  if (!stepEl) return;
+
+  const targetIndex = STEP_ORDER.indexOf(stepId);
+  const currentActiveStepEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const currentIndex = currentActiveStepEl ? STEP_ORDER.indexOf(currentActiveStepEl.id) : -1;
+  if (targetIndex > -1 && currentIndex > -1 && targetIndex > currentIndex) {
+    if (ALL_STEPS.indexOf(stepEl) > furthestStepIndex) {
+      alert('Please use "Continue" to move forward one step at a time.');
+      return;
+    }
+    const unfinished = STEP_ORDER.slice(0, targetIndex).find((id) => {
+      if (id === "pantsSection" && !hasPantsStep()) return false;
+      if (id === "designer" && !hasJacketStep()) return false;
+      return !isStepComplete(id);
+    });
+    if (unfinished) {
+      alert("Please finish this step first: " + STEP_LABELS[unfinished] + ".");
+      return;
+    }
+  }
+
+  const swap = () => {
+    // No resetToFirstTab here -- every page opens on the last tab you had
+    // open, the same as the Back buttons.
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    stepEl.classList.add("active");
+    if (stepEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+    if (stepEl === previewSection) setTimeout(updateDesignPreviewPanel, 0);
+    if (stepEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
+    scrollToStepTop(stepEl);
+    saveDraft();
+  };
+  // Same "scroll up before hiding" order as goToStep -- see its comment.
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+document.querySelectorAll(".process-step[data-step]").forEach((el) => {
+  el.addEventListener("click", () => goToStepById(el.getAttribute("data-step")));
+});
+
+// Tapping the completion percentage next to a progress bar jumps to the
+// earliest thing still left to do: the first unanswered jacket question,
+// then pants, then the next page / measurements, then the first empty
+// field on the current page.
+function goToFirstIncomplete() {
+  const active = ALL_STEPS.find((el) => el.classList.contains("active"));
+  if (!active) return;
+  const designers = hasJacketStep() ? [[jacketSection, jacketDesigner]] : [];
+  if (hasPantsStep()) designers.push([pantsSection, pantsDesigner]);
+  for (const [sec, des] of designers) {
+    const key = des.firstMissingKey();
+    if (!key) continue;
+    if (sec === active) { des.showTab(key); return; }
+    des.setActiveTab(key);
+    goToStep(active, sec);
+    return;
+  }
+  const focusFirstEmpty = (inputs) => {
+    const el = inputs.find((i) => i && !String(i.value || "").trim());
+    if (!el) return;
+    smoothScrollWindowTo(window.scrollY + el.getBoundingClientRect().top - getNavClearance() - 120, () => el.focus({ preventScroll: true }));
+  };
+  const measureInputs = () => activeMeasurements().map((m) => document.getElementById("m_" + m.id));
+  if (active === jacketSection || active === pantsSection) {
+    // Every design question is answered: on to the page after designing
+    // (Preview the first time through), or straight to Measurements once
+    // they've been there before.
+    const next = furthestStepIndex >= ALL_STEPS.indexOf(measurementsSection) ? measurementsSection : stepAfterDesign();
+    goToStep(active, next);
+    return;
+  }
+  if (active === measurementsSection) { focusFirstEmpty(measureInputs()); return; }
+  if (active === personalInfoSection) {
+    if (collectMeasurements().missing.length) { goToStep(active, measurementsSection); return; }
+    focusFirstEmpty(fulfillmentChoice() === "pickup" ? [customerNameInput, customerPhoneInput, customerEmailInput] : [customerNameInput, shippingAddress1Input, shippingCityInput, shippingStateInput, shippingZipInput]);
+  }
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest && e.target.closest(".wiz-pct")) goToFirstIncomplete();
+});
+
+// Turns on the Preview page (and its step in the bar) once the suit-picture
+// service is set up.
+(function initPreviewStep() {
+  const el = document.querySelector('.process-step[data-milestone="preview"]');
+  if (!el) return;
+  suitImagesReady().then((ready) => {
+    if (!ready) return;
+    previewStepOn = true;
+    updateContinueBackLabelsForSuitType();
+    updateProcessBarForSuitType();
+    updateProcessBar();
+  });
+})();
+
+// ============================================================
+// BROWSER HISTORY -- the browser's Back (and Forward) button steps through the
+// customer's own path: previous question in the designer, previous page
+// (measurements, order form...), and the homepage -- instead of leaving the
+// site. Every change of page or designer question adds one history entry;
+// Back re-shows the earlier state without clearing anything they picked.
+// ============================================================
+(function () {
+  let lastKey = null;
+  let applying = false;
+
+  function currentKey() {
+    const active = ALL_STEPS.find((el) => el.classList.contains("active"));
+    const stepId = active ? active.id : "suitTypeSection";
+    let tab = "";
+    if (stepId === "designer") tab = jacketDesigner.getActiveTab();
+    else if (stepId === "pantsSection") tab = pantsDesigner.getActiveTab();
+    return (document.body.classList.contains("designing") ? "d" : "h") + "|" + stepId + "|" + tab;
+  }
+
+  function sync() {
+    if (applying) return;
+    const k = currentKey();
+    if (k === lastKey) return;
+    lastKey = k;
+    try { window.history.pushState({ scottsuitsNav: k }, "", window.location.href); } catch (e) { /* history unavailable here */ }
+  }
+  let timer = null;
+  function schedule() {
+    if (applying) return;
+    clearTimeout(timer);
+    timer = setTimeout(sync, 80);
+  }
+  window.__navChanged = schedule;
+
+  function apply(k) {
+    const parts = String(k).split("|");
+    const mode = parts[0], stepId = parts[1], tab = parts[2];
+    const stepEl = document.getElementById(stepId);
+    if (!stepEl) return;
+    applying = true;
+    try {
+      closeLightbox();
+      document.querySelectorAll(".how-it-works-overlay.open").forEach((o) => o.classList.remove("open"));
+      if (mode === "h") resetDesignStarted(); else markDesignStarted();
+      ALL_STEPS.forEach((el) => el.classList.remove("active"));
+      stepEl.classList.add("active");
+      if (stepId === "designer" && tab) jacketDesigner.setActiveTab(tab);
+      if (stepId === "pantsSection" && tab) pantsDesigner.setActiveTab(tab);
+      if (stepEl === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+      if (stepEl === personalInfoSection && typeof renderPersonalChrome === "function") renderPersonalChrome();
+      if (typeof updateProcessBar === "function") updateProcessBar();
+      if (stepId === "suitTypeSection" && mode === "h") window.scrollTo(0, 0); else scrollToStepTop(stepEl);
+      lastKey = k;
+    } finally {
+      setTimeout(() => { applying = false; }, 200);
+    }
+  }
+
+  window.addEventListener("popstate", (e) => {
+    const k = e.state && e.state.scottsuitsNav;
+    if (k) apply(k);
+  });
+
+  // Watch for page changes made by any of the existing buttons.
+  if (window.MutationObserver) {
+    const mo = new MutationObserver(schedule);
+    ALL_STEPS.forEach((el) => mo.observe(el, { attributes: true, attributeFilter: ["class"] }));
+    mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  // Reload: the browser keeps this tab's history entry, so put the customer
+  // back on the exact page and question they were on (never the
+  // confirmation screen -- the draft is gone by then anyway).
+  let reloadKey = null;
+  try { reloadKey = window.history.state && window.history.state.scottsuitsNav; } catch (e) { /* ignore */ }
+  if (reloadKey && String(reloadKey).split("|")[1] !== "confirmationSection") apply(reloadKey);
+
+  // The page the customer landed on counts as the first entry.
+  lastKey = currentKey();
+  try { window.history.replaceState({ scottsuitsNav: lastKey }, "", window.location.href); } catch (e) { /* ignore */ }
+})();
+
+// ============================================================
+// TEMP QA NAV BAR -- internal testing only, not for customers.
+// Same swap/scroll as goToStepById above, but with the "finish the
+// earlier steps first" gate removed, so every page can be reached
+// directly to spot-check it. Remove this whole block (and the
+// matching HTML block in index.html and CSS block in style.css,
+// both marked "TEMP QA NAV BAR") when QA testing is done.
+// ============================================================
+function qaJumpToStep(stepId) {
+  const stepEl = document.getElementById(stepId);
+  if (!stepEl) return;
+
+  const swap = () => {
+    if (stepId === "designer") jacketDesigner.resetToFirstTab();
+    if (stepId === "pantsSection") pantsDesigner.resetToFirstTab();
+
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    stepEl.classList.add("active");
+    scrollToStepTop(stepEl);
+    saveDraft();
+    if (stepEl === previewSection) setTimeout(updateDesignPreviewPanel, 0);
+  };
+  // Same "scroll up before hiding" order as goToStep -- see its comment.
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
+}
+document.querySelectorAll(".qa-nav-btn[data-qa-step]").forEach((el) => {
+  el.addEventListener("click", () => qaJumpToStep(el.getAttribute("data-qa-step")));
+});
+
+// Lets testing place a real order without actually paying -- same
+// validation and same finalizeOrder() save (Supabase row + notification
+// email) as a normal submit, just without the PayPal redirect in between.
+// Order Form fields (name, phone, shipping, etc.) still need to be filled
+// in first, exactly as collectAndValidateOrderInput() already requires.
+//
+// The button's label/title reflect whether there's actually a payment step
+// to skip (PAYPAL_ENABLED, set above from PAYPAL_BUSINESS_EMAIL in
+// config.js). index.html's own markup ships with the "no payment
+// configured" wording as its default, since that's today's real state --
+// this only overwrites it to the "Skip Payment" wording once PayPal is
+// truly turned on, so QA is never told this button bypasses something that
+// isn't there.
+const qaSkipPaymentBtn = document.getElementById("qaSkipPaymentBtn");
+if (qaSkipPaymentBtn) {
+  if (PAYMENT_ENABLED) {
+    qaSkipPaymentBtn.textContent = "Skip Payment & Submit";
+    qaSkipPaymentBtn.title = "Validate + save the order like normal, but skip payment (it shows as Not paid in the admin's Orders list)";
+  } else {
+    qaSkipPaymentBtn.textContent = "Submit (No Payment Configured)";
+    qaSkipPaymentBtn.title = "No payment is configured (PAYPAL_BUSINESS_EMAIL is blank in config.js) -- this does exactly what the real Submit Order button already does.";
+  }
+  qaSkipPaymentBtn.addEventListener("click", async () => {
+    const input = collectAndValidateOrderInput();
+    if (!input) return;
+    await finalizeOrder(input, { skipPayment: true });
+  });
+}
+
+// Hide/show toggle -- lets QA tuck the bar away while eyeballing a page (it
+// covers the bottom of the screen), then bring it back with the small pill
+// left in its place. Remembered in localStorage purely as a convenience so
+// it stays out of the way across reloads during a testing session; never
+// depended on for anything real.
+// Shown for this browser after opening the site once with ?qa=1 (?qa=0 opts
+// back out), and always while the shop admin is signed in -- see
+// refreshAdminStatus(). Customers never see it.
+setQaNavAllowed = (function () {
+  const bar = document.getElementById("qaNavBar");
+  const hideBtn = document.getElementById("qaNavHideBtn");
+  const showBtn = document.getElementById("qaNavShowBtn");
+  if (!bar || !hideBtn || !showBtn) return null;
+
+  let optedIn = false;
+  try {
+    const qaParam = new URLSearchParams(location.search).get("qa");
+    if (qaParam === "1") localStorage.setItem("qaNavEnabled", "1");
+    if (qaParam === "0") localStorage.removeItem("qaNavEnabled");
+    optedIn = localStorage.getItem("qaNavEnabled") === "1";
+  } catch (e) {
+    // Ignore -- stays off.
+  }
+
+  function setHidden(hidden) {
+    bar.hidden = hidden;
+    showBtn.hidden = !hidden;
+    try {
+      localStorage.setItem("qaNavHidden", hidden ? "1" : "0");
+    } catch (e) {
+      // Ignore -- purely a convenience, fine if it can't persist.
+    }
+  }
+
+  hideBtn.addEventListener("click", () => setHidden(true));
+  showBtn.addEventListener("click", () => setHidden(false));
+
+  let showing = false;
+  function apply(admin) {
+    const allowed = optedIn || admin;
+    if (allowed === showing) return;
+    showing = allowed;
+    document.body.classList.toggle("qa-allowed", allowed);
+    if (!allowed) {
+      bar.hidden = true;
+      showBtn.hidden = true;
+      return;
+    }
+    // ?qa=1 browsers start tucked away (declutter) unless it was last left
+    // open; the admin gets it open unless they last tucked it away.
+    let stored = null;
+    try {
+      stored = localStorage.getItem("qaNavHidden");
+    } catch (e) {
+      // Ignore -- use the default.
+    }
+    setHidden(admin ? stored === "1" : stored !== "0");
+  }
+  apply(currentIsAdmin);
+  return apply;
+})();
+
+// "Raw Fabric Codes" toggle -- flips qaShowRawFabricNames (declared up near
+// createDesigner) and immediately re-renders both designers so any fabric
+// name already on screen (swatch cards, "Same as Jacket" label, tab
+// subtitle, summary panel) updates right away. Remembered in localStorage
+// like the hide/show toggle above, for the same reason -- convenience across
+// reloads during a testing session, nothing depends on it.
+(function () {
+  const toggle = document.getElementById("qaRawFabricNamesToggle");
+  if (!toggle) return;
+
+  function setRaw(raw) {
+    qaShowRawFabricNames = raw;
+    toggle.checked = raw;
+    jacketDesigner.refreshDisplay();
+    pantsDesigner.refreshDisplay();
+    try {
+      localStorage.setItem("qaShowRawFabricNames", raw ? "1" : "0");
+    } catch (e) {
+      // Ignore -- purely a convenience, fine if it can't persist.
+    }
+  }
+
+  toggle.addEventListener("change", () => setRaw(toggle.checked));
+
+  let startRaw = false;
+  try {
+    startRaw = localStorage.getItem("qaShowRawFabricNames") === "1";
+  } catch (e) {
+    // Ignore -- default to showing customer-facing names.
+  }
+  if (startRaw) setRaw(true);
+})();
+// ==================== END TEMP QA NAV BAR ====================
+
+// A reload that lands back on the Preview page (see restoreDraft) fills it
+// in too.
+if (previewSection.classList.contains("active")) setTimeout(updateDesignPreviewPanel, 0);

@@ -1,0 +1,204 @@
+/* Glass look (Daniel, 2026-10-28: "a glass feel like the new Apple
+   products"). Frosted see-through panels with a bright top edge, over a
+   soft warm glow behind the page, in the spirit of Apple's Liquid Glass.
+   Scott's Suits only (html[data-brand="scott"]), so S.W. Atelier keeps its
+   own look. Loaded after style.css and brand.css on every page, and only
+   restyles surfaces: no layout or sizes change here.
+   2026-10-30, Daniel: "make much less glassy". Panels, pop-ups and cards
+   are now nearly solid with only a light frost, so the page behind no
+   longer shows through the content; the look keeps just a hint of glass. */
+html[data-brand="scott"]{
+  --glass-fill:linear-gradient(150deg,rgba(255,255,255,0.92) 0%,rgba(255,255,255,0.82) 100%);
+  --glass-fill-strong:linear-gradient(150deg,rgba(255,255,255,0.97) 0%,rgba(255,255,255,0.93) 100%);
+  --glass-panel:linear-gradient(150deg,rgba(250,247,243,0.985) 0%,rgba(246,241,236,0.97) 100%);
+  --glass-edge:rgba(255,255,255,0.75);
+  --glass-blur:blur(12px) saturate(130%);
+  --glass-shine:inset 0 1px 0 rgba(255,255,255,0.95),inset 0 -1px 0 rgba(255,255,255,0.28);
+  --glass-drop:0 10px 30px rgba(70,52,32,0.10),0 1px 3px rgba(70,52,32,0.06);
+  --glass-drop-big:0 30px 80px rgba(40,28,16,0.28),0 2px 8px rgba(40,28,16,0.10);
+  --card-solid:#FFFCF8;
+  --card-edge:rgba(var(--brass-rgb),0.24);
+  --card-drop:0 2px 10px rgba(70,52,32,0.07);
+  --glass-dark:linear-gradient(180deg,rgba(64,55,46,0.92) 0%,rgba(28,24,20,0.94) 100%);
+}
+
+/* The glow behind the page: soft brass, blush and cool-gray light, fixed
+   so it stays put while the frosted panels slide over it. */
+html[data-brand="scott"] body::before{content:"";position:fixed;inset:-15vmax;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(42vmax 34vmax at 12% 8%,rgba(var(--brass-rgb),0.24),transparent 70%),
+    radial-gradient(40vmax 36vmax at 92% 22%,rgba(214,166,156,0.22),transparent 70%),
+    radial-gradient(46vmax 38vmax at 78% 96%,rgba(150,170,196,0.22),transparent 70%),
+    radial-gradient(38vmax 30vmax at 6% 88%,rgba(232,214,184,0.38),transparent 70%);}
+
+/* Sticky bars: top nav, the Jacket/Pants/Preview steps and the Back/Next
+   bar. Content shows through them, blurred, as it scrolls underneath. */
+html[data-brand="scott"] nav,
+html[data-brand="scott"] .process,
+html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.9);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);}
+html[data-brand="scott"] nav{border-bottom:1px solid rgba(255,255,255,0.6);box-shadow:0 1px 0 rgba(var(--ivory-rgb),0.06),0 8px 24px rgba(70,52,32,0.05);}
+html[data-brand="scott"] .process{border-top:none;border-bottom:1px solid rgba(255,255,255,0.6);}
+/* Back/Next bar: nearly solid, since option cards scroll under it. */
+html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.96);border-top:1px solid rgba(255,255,255,0.75);box-shadow:0 -10px 28px rgba(70,52,32,0.06);-webkit-backdrop-filter:blur(14px) saturate(130%);backdrop-filter:blur(14px) saturate(130%);}
+html[data-brand="scott"] footer{border-top:1px solid rgba(255,255,255,0.6);}
+
+/* Cards (Daniel, 2026-10-30: the home card still looked glassy): plain
+   solid ivory with a thin edge and a soft shadow, no frost or shine. */
+html[data-brand="scott"] #suitTypeSection .suit-type-card,
+html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card),
+html[data-brand="scott"] .welcome-intro,
+html[data-brand="scott"] .opening-soon-notice,
+html[data-brand="scott"] #designPreview.suit-preview.design-preview,
+html[data-brand="scott"] .size-estimate{background:var(--card-solid);border:1px solid var(--card-edge);box-shadow:var(--card-drop);}
+html[data-brand="scott"] .welcome-intro,
+html[data-brand="scott"] .opening-soon-notice{border-radius:14px;padding:16px 20px 17px;}
+html[data-brand="scott"] .size-estimate{border-radius:18px;overflow:hidden;}
+html[data-brand="scott"] #suitTypeSection .suit-type-card{border-radius:22px;}
+html[data-brand="scott"] #suitTypeSection .suit-type-card:hover{border-color:rgba(var(--brass-rgb),0.7);box-shadow:0 10px 26px rgba(70,52,32,0.12);}
+html[data-brand="scott"] #suitTypeSection .suit-type-icon{background:#FFFFFF;border-bottom:1px solid var(--card-edge);}
+html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card){border-radius:18px;}
+html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card):hover{border-color:rgba(var(--brass-rgb),0.7);}
+html[data-brand="scott"] .designer-grid .opt-card.selected:not(.fabric-tile):not(.same-as-card){background:linear-gradient(150deg,rgba(var(--brass-rgb),0.26) 0%,rgba(var(--brass-rgb),0.10) 100%),var(--card-solid);border:1.5px solid var(--brass);box-shadow:0 8px 20px rgba(var(--brass-rgb),0.22);}
+
+/* Fabric tiles keep their real color; they just get rounder corners and a
+   glassy shine across the top, like a polished chip. */
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile{border-radius:10px;border-color:rgba(255,255,255,0.22);box-shadow:inset 0 1px 0 rgba(255,255,255,0.28),inset 0 -14px 22px rgba(0,0,0,0.14),0 4px 12px rgba(40,28,16,0.12);}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.same-as-card{border-radius:10px;}
+
+/* Typing boxes on the measurements and checkout steps */
+html[data-brand="scott"] .measure-input-wrap{background:rgba(255,255,255,0.88);border-color:rgba(255,255,255,0.8);border-radius:12px;box-shadow:inset 0 1px 2px rgba(70,52,32,0.06),0 1px 0 rgba(255,255,255,0.7);}
+
+/* Pop-up panels: nearly solid, over a softly blurred, dimmed page. */
+html[data-brand="scott"] .how-it-works-overlay,
+html[data-brand="scott"] .confirm-overlay,
+html[data-brand="scott"] .wiz-sheet{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+html[data-brand="scott"] #howItWorksOverlay .how-it-works-panel,
+html[data-brand="scott"] #accountOverlay .account-panel,
+html[data-brand="scott"] .confirm-panel,
+html[data-brand="scott"] .wiz-sheet-card,
+html[data-brand="scott"] .nav-cart-dropdown,
+html[data-brand="scott"] #lightbox .lightbox-card{background:var(--glass-panel);border:1px solid var(--glass-edge);box-shadow:var(--glass-shine),var(--glass-drop-big);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+
+/* Buttons. Dark buttons become dark glass with a lit top edge; outlined
+   pills become light glass. */
+html[data-brand="scott"] .btn-primary{background:var(--glass-dark);color:#F6F1EA;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.22),inset 0 -1px 0 rgba(0,0,0,0.3),0 8px 22px rgba(34,30,25,0.24);}
+html[data-brand="scott"] .btn-primary:hover{background:linear-gradient(180deg,rgba(84,72,60,0.94) 0%,rgba(40,34,28,0.96) 100%);}
+html[data-brand="scott"] .nav-cta,
+html[data-brand="scott"] .nav-startover-btn,
+html[data-brand="scott"] .wiz-back,
+html[data-brand="scott"] .suit-type-go,
+html[data-brand="scott"] .designer-grid .back-to-families-btn,
+html[data-brand="scott"] .past-order-reorder-btn,
+html[data-brand="scott"] .studio-modes,
+html[data-brand="scott"] #accountOverlay .account-tabs{background:var(--glass-fill);border-color:var(--glass-edge);box-shadow:var(--glass-shine),0 4px 14px rgba(70,52,32,0.08);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);}
+html[data-brand="scott"] .nav-cta{border:1px solid rgba(var(--brass-rgb),0.55);}
+html[data-brand="scott"] .suit-type-go{border:1px solid rgba(var(--brass-rgb),0.6);}
+html[data-brand="scott"] .nav-cta:hover,
+html[data-brand="scott"] .nav-startover-btn:hover,
+html[data-brand="scott"] .wiz-back:hover{background:var(--glass-fill-strong);}
+/* Magnifying glass on cards and swatches: light, not dark (Daniel,
+   2026-10-30). White chip, thin gold edge, gray-brown glass icon. */
+html[data-brand="scott"] .zoom-btn{background:rgba(255,255,255,0.95);border:1px solid var(--card-edge);box-shadow:0 2px 8px rgba(70,52,32,0.14);}
+html[data-brand="scott"] .zoom-btn svg{stroke:#6E625A;}
+html[data-brand="scott"] .zoom-btn:hover{background:var(--brass);border-color:var(--brass);}
+html[data-brand="scott"] .zoom-btn:hover svg{stroke:#FFFFFF;}
+html[data-brand="scott"] .wiz-more{background:rgba(34,30,25,0.82);border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 6px 18px rgba(20,14,8,0.25);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+
+/* No blur support, or the visitor asked for less see-through (iPhone:
+   Accessibility > Reduce Transparency): solid panels instead. */
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  html[data-brand="scott"] nav,
+  html[data-brand="scott"] .process,
+  html[data-brand="scott"] .wiz-bar{background:rgba(var(--ink-rgb),0.94);}
+}
+@media (prefers-reduced-transparency:reduce){
+  html[data-brand="scott"] nav,
+  html[data-brand="scott"] .process,
+  html[data-brand="scott"] .wiz-bar{background:var(--ink);}
+  html[data-brand="scott"] #howItWorksOverlay .how-it-works-panel,
+  html[data-brand="scott"] #accountOverlay .account-panel,
+  html[data-brand="scott"] .confirm-panel,
+  html[data-brand="scott"] .wiz-sheet-card,
+  html[data-brand="scott"] .nav-cart-dropdown,
+  html[data-brand="scott"] #lightbox .lightbox-card{background:#F6F1EC;}
+}
+
+/* Fabric chips catch the light (pointer code in main.js): the chip leans
+   toward the pointer and a soft shine follows it. */
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile{transform:perspective(520px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease;}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,0%),rgba(255,255,255,0.42),rgba(255,255,255,0.10) 32%,rgba(255,255,255,0) 60%);opacity:var(--shine,0);transition:opacity .3s ease;}
+/* Tapping a chip: rings of light spread from the finger and the chip gives a
+   small wave, like touching cloth. */
+html[data-brand="scott"] .fabric-tile .chip-ripple{position:absolute;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,0.16),rgba(255,255,255,0) 70%);animation:chipRipple .9s ease-out forwards;}
+@keyframes chipRipple{from{transform:scale(.6);opacity:1;}to{transform:scale(1.6);opacity:0;}}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile.chip-pressed{animation:chipWave .7s ease;}
+@keyframes chipWave{0%{scale:1;}35%{scale:.988 1.004;}70%{scale:1.004 .997;}100%{scale:1;}}
+
+/* Faint tailoring line art (Daniel, 2026-10-30: "add these subtle
+   graphics"): a pattern-piece sketch with dashed seam lines, sweeping
+   thread lines, soft folds and a herringbone swell, drawn very light so
+   fabrics and text stay the focus, in the fabric zoom card. Art lives in
+   assets/deco-*.svg. (The copy behind every page was removed the same day
+   per Daniel.) */
+html[data-brand="scott"] #lightbox .lightbox-card{isolation:isolate;}
+html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;opacity:.6;
+  background:
+    url("./assets/deco-pattern-piece.svg") left -36px top 54px/clamp(150px,28%,330px) auto no-repeat,
+    url("./assets/deco-herringbone.svg") right -24px bottom -24px/clamp(260px,66%,600px) auto no-repeat,
+    url("./assets/deco-folds.svg") left bottom/clamp(180px,42%,440px) auto no-repeat;}
+@media (max-width:640px){
+  html[data-brand="scott"] #lightbox .lightbox-card::before{opacity:.5;}
+}
+
+/* Desktop fabric zoom (Daniel, 2026-10-30, sent a mock-up: "use these
+   graphics exactly ... desktop site, not mobile yet"). The zoom fills the
+   whole window over a photo of soft ivory cloth, window light and a
+   plant shadow (assets/fabric-zoom-bg.jpg, made from his mock-up; its
+   dashed pattern lines were taken out per Daniel; later the same day
+   "make the background much more white": the picture was lifted to a
+   soft near-white with most of the cream taken out). Phones keep the
+   card with the faint line art above. */
+@media (min-width:901px){
+  html[data-brand="scott"] #lightbox{padding:0;background:#f6f5f2;}
+  html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:18px 40px;
+    background:#f8f7f5 url("./assets/fabric-zoom-bg.jpg?v=20261030white") center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+  html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
+  html[data-brand="scott"] #lightbox .lightbox-close{top:26px;right:30px;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.45);border-color:rgba(255,255,255,0.8);margin-bottom:14px;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle button{padding:9px 26px;font-size:14.5px;}
+  /* Daniel, 2026-10-30: "make draped fabric bigger" on desktop. */
+  html[data-brand="scott"] #lightbox .fabric-drape{width:min(40vw,520px);max-height:calc(100vh - 350px);}
+  html[data-brand="scott"] #lightbox .lightbox-card:has(.lb-strip:not([hidden])) .fabric-drape{max-height:calc(100vh - 385px);}
+  html[data-brand="scott"] #lightbox .lightbox-frame,
+  html[data-brand="scott"] #lightbox .lightbox-frame.lightbox-frame-xl{max-height:calc(100vh - 430px);max-width:min(60vw,calc(100vh - 430px));}
+  html[data-brand="scott"] #lightbox .lightbox-caption{font-size:32px;}
+  html[data-brand="scott"] #lightbox .lb-nav{width:36px;height:36px;background:rgba(255,255,255,0.5);margin:0 14px;}
+  html[data-brand="scott"] #lightbox .lightbox-sub{font-size:15px;}
+  html[data-brand="scott"] #lightbox .lightbox-sub .lb-pattern{font-size:14.5px;}
+  html[data-brand="scott"] #lightbox .lightbox-desc{font-size:15.5px;max-width:560px;}
+  html[data-brand="scott"] #lightbox .lb-strip{width:min(640px,100%);gap:16px;justify-content:safe center;margin-top:16px;}
+  html[data-brand="scott"] #lightbox .lb-chip{width:68px;height:68px;border-radius:14px;}
+  html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;padding:16px 56px;font-size:16px;margin-top:18px;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
+}
+
+/* Phone fabric zoom (Daniel, 2026-10-30, picked "B"): the same full-screen
+   cloth picture, showing its right side (window light and plant shadow),
+   with the Draped/Close-up switch pinned at the top. */
+@media (max-width:900px){
+  html[data-brand="scott"] #lightbox{padding:0;background:#f6f5f2;}
+  html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:64px 18px 24px;
+    background:#f8f7f5 url("./assets/fabric-zoom-bg.jpg?v=20261030white") 88% center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+  /* Daniel, 2026-10-30: "blur graphics more around the fabrics card". Then:
+     "ground needs to be very clear and empty" behind the lettering. A
+     near-solid ivory oval covers the fabric, name, swatches and button, so
+     the window and plant shadow show only around the edges. */
+  html[data-brand="scott"] #lightbox .lightbox-card::before{display:block;content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:1;border-radius:0;
+    background:radial-gradient(ellipse 78% 58% at 50% 54%,rgba(252,251,249,0.97) 0%,rgba(252,251,249,0.94) 62%,rgba(252,251,249,0.6) 82%,rgba(252,251,249,0) 100%);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 54%,#000 70%,transparent 100%);mask-image:radial-gradient(ellipse 80% 60% at 50% 54%,#000 70%,transparent 100%);}
+  html[data-brand="scott"] #lightbox .lightbox-close{top:16px;right:16px;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.5);border-color:rgba(255,255,255,0.85);position:absolute;top:14px;left:50%;transform:translateX(-50%);margin:0;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle button{white-space:nowrap;}
+  html[data-brand="scott"] #lightbox .lb-nav{background:rgba(255,255,255,0.55);}
+  html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
+}
