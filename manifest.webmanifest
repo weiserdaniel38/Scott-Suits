@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Scott's Suits",
-  "short_name": "Scott's Suits",
+  "name": "Scott Suits",
+  "short_name": "Scott Suits",
   "description": "Design your custom made-to-measure suit.",
   "start_url": "/",
   "scope": "/",
