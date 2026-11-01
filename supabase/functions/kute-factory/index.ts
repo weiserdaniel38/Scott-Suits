@@ -31,6 +31,11 @@
 //   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
 //       saves a TEST draft of that suit with some choices changed, to see
 //       which combinations the factory refuses; the row is not changed
+//   { action: "fabric_stock_all" }  checks the factory's stock (metres) of
+//       every fabric on the site and saves it as fabric-stock.json in the
+//       public suit-images storage bucket, which the site reads to hide fabrics without enough cloth for a suit; run
+//       daily by pg_cron (supabase/sql/37_fabric_stock_daily.sql) with the
+//       same x-cron-token as factory_status_all (Daniel, 2026-11-01)
 //   { action: "sync" }   saves every code list (crafts for each garment
 //       category) into public.factory_codes and returns row counts. Can be
 //       run from the Supabase dashboard's function "Test" button (service
@@ -388,6 +393,53 @@ async function factoryStatusAll() {
   return { ok: true, checked: rows.length, updated, failed };
 }
 
+// Stock of every fabric on the live site, saved as suit-images/fabric-stock.json
+// ({ checked_at, minMetres, stock: { "<fabric value>": metres|null } }).
+// The site's fabric value is "<swatch>.<fabric code>"; the factory knows the
+// part after the dot. A failed lookup saves metres = null (the site then
+// keeps showing that fabric) and the error.
+async function fabricStockAll() {
+  const { jacket, pants } = await loadCatalog();
+  const names = new Set<string>();
+  for (const cat of [jacket, pants]) {
+    for (const o of ((cat as any).fabric?.options || []) as { name?: string }[]) {
+      if (o.name && o.name.includes(".")) names.add(o.name);
+    }
+  }
+  const list = [...names];
+  const rows: { code: string; metres: number | null; error: string | null; checked_at: string }[] = [];
+  let next = 0;
+  const worker = async () => {
+    while (next < list.length) {
+      const name = list[next++];
+      const code = name.slice(name.indexOf(".") + 1);
+      let metres: number | null = null, error: string | null = null;
+      try {
+        const r = (await kute("GET", "/order/stock/" + encodeURIComponent(code))) as { data?: any; httpStatus?: number };
+        const v = Number(r?.data?.data);
+        if (r?.data?.code === "0" && Number.isFinite(v)) metres = v;
+        else error = String(r?.data?.message || "no stock figure").slice(0, 200);
+      } catch (e) {
+        error = String((e as Error).message || e).slice(0, 200);
+      }
+      rows.push({ code: name, metres, error, checked_at: new Date().toISOString() });
+    }
+  };
+  await Promise.all(Array.from({ length: 6 }, worker));
+  rows.sort((a, b) => a.code.localeCompare(b.code));
+  const stock: Record<string, number | null> = {};
+  for (const r of rows) stock[r.code] = r.metres;
+  const errors: Record<string, string> = {};
+  for (const r of rows) if (r.error) errors[r.code] = r.error;
+  const body = JSON.stringify({ checked_at: new Date().toISOString(), minMetres: 4, stock, errors });
+  const { error } = await supabase.storage.from("suit-images").upload("fabric-stock.json",
+    new Blob([body], { type: "application/json" }),
+    { upsert: true, contentType: "application/json", cacheControl: "300" });
+  if (error) throw new Error("couldn't save fabric stock: " + error.message);
+  const low = rows.filter((r) => r.metres !== null && r.metres < 4).map((r) => r.code + " " + r.metres + "m");
+  return { ok: true, checked: rows.length, failed: rows.filter((r) => r.metres === null).length, low };
+}
+
 // The daily job's token: made inside the database by
 // 15_factory_status_daily.sql and never shown to anyone.
 async function cronAllowed(req: Request): Promise<boolean> {
@@ -449,7 +501,7 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "send a JSON body" }, 400);
   }
-  const byCron = input.action === "factory_status_all" && (await cronAllowed(req));
+  const byCron = (input.action === "factory_status_all" || input.action === "fabric_stock_all") && (await cronAllowed(req));
   const byLookup = !byCron && LOOKUP_ACTIONS.has(String(input.action)) && (await lookupAllowed(req));
   if (!byCron && !byLookup && !(await allowed(req))) {
     // Which kind of key was sent (never the key itself), to debug dashboard tests.
@@ -488,6 +540,8 @@ Deno.serve(async (req) => {
         return json(await factoryStatus(str(input.id)));
       case "factory_status_all":
         return json(await factoryStatusAll());
+      case "fabric_stock_all":
+        return json(await fabricStockAll());
       default:
         return json({ error: "unknown action" }, 400);
     }
