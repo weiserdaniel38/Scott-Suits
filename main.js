@@ -8223,7 +8223,7 @@ function buildSuitImageCard(labelText) {
       video.setAttribute("aria-hidden", "true");
       const caption = document.createElement("p");
       caption.className = "suit-preview-loading-text";
-      caption.innerHTML = "<strong></strong><span>This usually takes about a minute.</span>";
+      caption.innerHTML = '<strong></strong><span>This usually takes about a minute.</span><span class="suit-preview-timer">0:00</span>';
       const line = caption.querySelector("strong");
       const steps = kind === "pants" ? PANTS_LOADING_STEPS : SUIT_LOADING_STEPS.filter((s) => !(kind === "jacket" && s.pants)).map((s) => s.text);
       let step = 0;
@@ -8233,6 +8233,14 @@ function buildSuitImageCard(labelText) {
         step = (step + 1) % steps.length;
         line.textContent = steps[step];
       }, 3500);
+      // Time spent so far, counting up (same as admin Redraw picture).
+      const clock = caption.querySelector(".suit-preview-timer");
+      const started = Date.now();
+      const tick = setInterval(() => {
+        if (!clock.isConnected) return clearInterval(tick);
+        const sec = Math.floor((Date.now() - started) / 1000);
+        clock.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+      }, 1000);
       const notice = document.createElement("p");
       notice.className = "suit-preview-wait-notice";
       notice.setAttribute("role", "status");
