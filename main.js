@@ -5478,6 +5478,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const tiles = [];
     cat.colorFirst.forEach((g) => {
       g.patterns.reduce((all, b) => all.concat(b.options), []).forEach((opt) => {
+        // Not enough cloth at the factory (see loadFabricStock), unless it's
+        // already this customer's pick.
+        if (opt.outOfStock && order[activeTab] !== opt.name) return;
         const lab = toLab(opt.hex || g.swatchHex);
         tiles.push({ opt, group: g.name, L: lab[0], hue: Math.atan2(lab[2], lab[1]), chroma: Math.hypot(lab[1], lab[2]) });
       });
@@ -6045,6 +6048,33 @@ onAccountFabricsChanged = () => {
   pantsDesigner.refreshAccountFabrics();
 };
 if (accountFabricList) onAccountFabricsChanged();
+
+// Fabric stock: a daily job (kute-factory fabric_stock_all, supabase/sql/36)
+// saves the factory's metres of every site fabric as suit-images/fabric-stock.json.
+// Fabrics with less than a suit's worth are marked outOfStock and left out
+// of the fabric grid (Daniel, 2026-11-01). If the lookup fails, every
+// fabric stays visible.
+const FABRIC_MIN_STOCK_M = 4; // a suit takes about 3.5 m
+async function loadFabricStock() {
+  try {
+    if (typeof SUPABASE_URL === "undefined" || !SUPABASE_URL) return;
+    // Saved daily by the kute-factory "fabric_stock_all" job.
+    const res = await fetch(SUPABASE_URL + "/storage/v1/object/public/suit-images/fabric-stock.json?d=" + new Date().toISOString().slice(0, 13));
+    if (!res.ok) return;
+    const stock = (await res.json()).stock || {};
+    // Only trust a real number; a failed lookup (null) keeps the fabric visible.
+    const low = new Set(Object.keys(stock).filter((k) => typeof stock[k] === "number" && stock[k] < FABRIC_MIN_STOCK_M));
+    if (!low.size) return;
+    let changed = false;
+    [JACKET_CATALOG.fabric.options, PANTS_CATALOG.fabric.options].forEach((opts) => {
+      (opts || []).forEach((o) => { if (low.has(o.name) && !o.outOfStock) { o.outOfStock = true; changed = true; } });
+    });
+    if (changed) { jacketDesigner.refreshDisplay(); pantsDesigner.refreshDisplay(); }
+  } catch (e) {
+    // Not configured or offline: show every fabric.
+  }
+}
+loadFabricStock();
 
 // Labels for each measurement in the order summary.
 const MEASUREMENT_FORM_LABELS = {
