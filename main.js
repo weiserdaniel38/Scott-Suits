@@ -3858,7 +3858,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   let fabricBgRaf = 0;
   function syncFabricBg() {
     const sec = designerGridEl.closest(".designer");
-    if (!sec || !sec.classList.contains("fabric-step")) return;
+    // Hidden page (2026-11-01, speed): no layout reads while the designer
+    // isn't on screen -- this also runs on a timer.
+    if (!sec || !sec.classList.contains("fabric-step") || !sec.classList.contains("active")) return;
     const box = designerGridEl.getBoundingClientRect();
     const proc = document.querySelector(".process");
     let top = proc ? Math.max(proc.getBoundingClientRect().bottom, 0) : 0;
@@ -3895,6 +3897,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function syncMoreHint() {
     const more = wizBar.querySelector(".wiz-more");
     if (!more) return;
+    // Designer not on screen: skip (this runs on a timer; 2026-11-01 speed).
+    const secEl = designerGridEl.closest(".step");
+    if (secEl && !secEl.classList.contains("active")) return;
     const cards = optionsEl.querySelectorAll(".opt-card");
     if (cards[0] !== moreHintFirstCard) {
       // A new page of cards: start fresh.
@@ -4447,7 +4452,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       ? '<div class="opt-swatch font-swatch" style="' + monogramFontStyle(opt) + '">' + monogramPreviewHtml(customTexts.monogram) + "</div>"
       : gradientCss
       ? '<div class="opt-swatch match-fabric-swatch" style="background:' + gradientCss + ';" role="img" aria-label="' + shownName + '"></div>'
-      : '<img class="opt-swatch" src="' + imgSrc + '" alt="' + shownName + '">';
+      : '<img class="opt-swatch" src="' + imgSrc + '" alt="' + shownName + '" loading="lazy" decoding="async">';
     const card = document.createElement("div");
     card.className = "opt-card" + (order[activeTab] === opt.name ? " selected" : "");
     // "Upload Your Own Photo": the swatch is an upload icon, or the customer's
@@ -5720,6 +5725,7 @@ function stepAfterDesign() {
   const clear = (t) => {
     if (!t) return;
     ["--tilt-x", "--tilt-y", "--shine"].forEach((v) => t.style.removeProperty(v));
+    t.classList.remove("chip-lit");
   };
   const light = (e) => {
     const t = e.target.closest ? e.target.closest(".fabric-tile") : null;
@@ -5735,6 +5741,7 @@ function stepAfterDesign() {
     t.style.setProperty("--shine-y", Math.round(py * 100) + "%");
     t.style.setProperty("--shine", "1");
     if (finePointer && !still) {
+      if (!t.classList.contains("chip-lit")) t.classList.add("chip-lit");
       t.style.setProperty("--tilt-x", ((0.5 - py) * 12).toFixed(1) + "deg");
       t.style.setProperty("--tilt-y", ((px - 0.5) * 14).toFixed(1) + "deg");
     }
@@ -5800,12 +5807,12 @@ function showSuitReveal() {
 
   const fabricName = fabric.displayName || fabric.name;
   let kind = "Pants";
-  let sketch = "./assets/suit-type-pants-only.png?v=20261022";
+  let sketch = "./assets/suit-type-pants-only.png?v=20261101fast";
   let details = [pantsDesigner.displayValue("frontPleat"), pantsDesigner.displayValue("frontPocket"), pantsDesigner.displayValue("bottomStyle")];
   if (jacket) {
     const front = JACKET_CATALOG.frontbutton.options.find((o) => o.name === sel.frontbutton) || {};
     kind = (front.section ? front.section + " " : "") + (isJacketOnlyType(currentSuitType) ? "Jacket" : "Suit");
-    sketch = front.img || "./assets/suit-type-jacket-only.png?v=20261006d";
+    sketch = front.img || "./assets/suit-type-jacket-only.png?v=20261101fast";
     const buttons = String(front.displayName || "").split(", ").slice(1).join(", ");
     const lining = jacketDesigner.displayValue("lining");
     details = [jacketDesigner.displayValue("collar"), buttons, lining ? "Lining: " + lining : ""];
