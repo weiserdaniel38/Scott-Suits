@@ -53,10 +53,15 @@ begin
   return new;
 end;
 $$;
-drop trigger if exists orders_reset_promo on public.orders;
-create trigger orders_reset_promo
-  before insert on public.orders
-  for each row execute function public.orders_reset_promo();
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'orders_reset_promo' and tgrelid = 'public.orders'::regclass) then
+    create trigger orders_reset_promo
+      before insert on public.orders
+      for each row execute function public.orders_reset_promo();
+  end if;
+end;
+$$;
 
 -- Paid orders that used a code, one per order (an order has a row per suit).
 create or replace function public.promo_code_uses(p_code text)
