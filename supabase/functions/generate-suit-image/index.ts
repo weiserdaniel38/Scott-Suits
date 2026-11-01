@@ -25,7 +25,7 @@
 //     customer's token (Authorization: Bearer); guests get 401
 //     { status: "signin" }. Checking and attaching don't.
 //   * { ping: true }                       is this feature switched on?
-//   * x-test-token: <TEST_DRAW_TOKEN>  { test_draw: "<order row id>" }
+//   * x-test-token: <token>  { test_draw: "<order row id>" }  (see the handler)
 //                                          draw into suit-images/tests/ only
 //   * Optionally by the database when an order is marked completed
 //     (supabase/sql/2_suit_image_trigger.sql), or by hand to redraw:
@@ -1547,13 +1547,20 @@ Deno.serve(async (req) => {
     return attachPreview(id, oid, n);
   }
 
-  // Test drawings (needs the TEST_DRAW_TOKEN secret): draws an order row's
-  // saved design into suit-images/tests/ without touching the order, so a
-  // prompt change can be checked before asking for a redraw.
+  // Test drawings: draws an order row's saved design into suit-images/tests/
+  // without touching the order, so a prompt change can be checked before
+  // asking for a redraw. The token's SHA-256 must be in
+  // public.suit_image_test_tokens (supabase/sql/36), unexpired; that table
+  // has RLS on and no policies, so only SQL / the service role can add one.
   //   x-test-token: <token>   { test_draw: "<order row id>" }
-  const testToken = env("TEST_DRAW_TOKEN");
-  if (req.headers.get("x-test-token")) {
-    if (testToken.length < 24 || req.headers.get("x-test-token") !== testToken) return json({ error: "Unauthorized" }, 401);
+  const testToken = req.headers.get("x-test-token") || "";
+  if (testToken) {
+    if (testToken.length < 24) return json({ error: "Unauthorized" }, 401);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(testToken));
+    const hash = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+    const { data: ok } = await supabase.from("suit_image_test_tokens").select("token_hash")
+      .eq("token_hash", hash).gt("expires_at", new Date().toISOString()).maybeSingle();
+    if (!ok) return json({ error: "Unauthorized" }, 401);
     const id = String(body?.test_draw || "");
     if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
     const { data: row } = await supabase.from("orders").select("visual_spec").eq("id", id).maybeSingle();
