@@ -1238,6 +1238,138 @@ async function drawImage(prompt: string, images: { label: string; blob: Blob }[]
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
+// The image model sometimes draws one cuff button or buttonhole too many
+// (five chosen, six drawn, or a sixth slit above the top button), whatever the
+// prompt says: in about 30 test sheets of one suit only a third were right. So the sheet
+// is drawn IMAGE_CANDIDATES times at once (default 4) and a vision model
+// (CHECK_MODEL, default gpt-5.2: in those tests it never passed a wrong cuff;
+// gpt-5 and gpt-5.5 did) counts the buttons and slits on a crop of the cuff
+// close-up. The first sheet with the right count is kept (see drawChecked).
+const CUFF_QUESTION =
+  "This is a close-up of a jacket SLEEVE CUFF with a row of buttons and stitched buttonhole slits. Zoom in. " +
+  "First list every round button from the lowest to the highest, one entry per button. " +
+  "Then list every stitched buttonhole slit (any thread color, including a contrast color) from the lowest to the highest, one entry per slit, " +
+  "and for each slit say whether its end sits at or under a button (false if it is lower than the lowest button or higher than the highest button). " +
+  "Reply only as JSON: {\"button_list\": [\"...\"], \"slit_list\": [{\"where\": \"...\", \"at_a_button\": true}], \"buttons\": <number of buttons>, \"buttonholes\": <number of slits>, \"loose_buttonholes\": <number of slits not at a button>}";
+
+// The cuff close-up is the top-right panel of a suit sheet and the bottom-left
+// panel of a jacket-only sheet (layoutFor); cropping it lets the checker see
+// the buttons at full size.
+async function cuffCrop(jpeg: Uint8Array, jacketOnly: boolean): Promise<Uint8Array> {
+  try {
+    const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
+    const im = await Image.decode(jpeg);
+    if (jacketOnly) {
+      const y = Math.round(im.height * 0.55);
+      return await im.crop(0, y, Math.round(im.width * 0.36), im.height - y).encodeJPEG(92);
+    }
+    const x = Math.round(im.width * 0.66), h = Math.round(im.height * 0.58);
+    return await im.crop(x, 0, im.width - x, h).encodeJPEG(92);
+  } catch (e) {
+    console.warn("Cuff crop failed", e);
+    return jpeg;
+  }
+}
+
+async function countCuff(jpeg: Uint8Array, jacketOnly = false, question = CUFF_QUESTION): Promise<{ buttons: number; buttonholes: number; loose: number } | null> {
+  const key = env("OPENAI_API_KEY");
+  if (!key) return null;
+  try {
+    jpeg = await cuffCrop(jpeg, jacketOnly);
+    let bin = "";
+    for (let i = 0; i < jpeg.length; i += 0x8000) bin += String.fromCharCode(...jpeg.subarray(i, i + 0x8000));
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer " + key },
+      body: JSON.stringify({
+        model: env("CHECK_MODEL", "gpt-5.2"),
+        response_format: { type: "json_object" },
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: question },
+            { type: "image_url", image_url: { url: "data:image/jpeg;base64," + btoa(bin), detail: "high" } },
+          ],
+        }],
+      }),
+    });
+    if (!res.ok) {
+      console.warn("Cuff check failed", res.status, (await res.text()).slice(0, 300));
+      return null;
+    }
+    const out = JSON.parse((await res.json())?.choices?.[0]?.message?.content || "{}");
+    const slits = Array.isArray(out.slit_list) ? out.slit_list : null;
+    const buttons = Array.isArray(out.button_list) ? out.button_list.length : Number(out.buttons);
+    const buttonholes = slits ? slits.length : Number(out.buttonholes);
+    const loose = slits ? slits.filter((x: { at_a_button?: boolean }) => x?.at_a_button === false).length : Number(out.loose_buttonholes || 0);
+    return Number.isFinite(buttons) && Number.isFinite(buttonholes) ? { buttons, buttonholes, loose: Number.isFinite(loose) ? loose : 0 } : null;
+  } catch (e) {
+    console.warn("Cuff check failed", e);
+    return null;
+  }
+}
+
+// Each round draws IMAGE_CANDIDATES sheets at once and counts each cuff as it
+// arrives, keeping the first that is right. The free plan stops a function
+// after 150 seconds, so a round gives up after ROUND_BUDGET_MS; if none was
+// right and rounds are left (IMAGE_ROUNDS, default 2), the caller starts a
+// fresh round in a new function call (chainRound). good=false means the
+// returned sheet is only the best wrong one (or null if none was drawn).
+async function drawChecked(
+  prompt: string,
+  images: { label: string; blob: Blob }[],
+  spec: string,
+): Promise<{ jpeg: Uint8Array | null; good: boolean }> {
+  const n = cuffButtonCount(spec);
+  const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
+  const tries = n && !/button ?less/i.test(cuff) ? Math.max(1, Math.min(4, Number(env("IMAGE_CANDIDATES", "4")) || 1)) : 1;
+  if (tries === 1) return { jpeg: await drawImage(prompt, images), good: true };
+  const jacketOnly = /^Suit type: Jacket only/m.test(spec);
+  const results: { jpeg: Uint8Array; count: { buttons: number; buttonholes: number; loose: number } | null }[] = [];
+  const right = (c: { buttons: number; buttonholes: number; loose: number } | null) => !!c && c.buttons === n && c.buttonholes === n && !c.loose;
+  const winner = await new Promise<Uint8Array | null>((resolve) => {
+    let left = tries;
+    const timer = setTimeout(() => resolve(null), Number(env("ROUND_BUDGET_MS", "125000")));
+    for (let t = 0; t < tries; t++) {
+      drawImage(prompt, images)
+        .then(async (d) => {
+          const count = await countCuff(d, jacketOnly);
+          results.push({ jpeg: d, count });
+          if (right(count)) {
+            clearTimeout(timer);
+            resolve(d);
+          }
+        })
+        .catch((e) => console.warn("Candidate failed", e))
+        .finally(() => {
+          if (--left === 0) {
+            clearTimeout(timer);
+            resolve(null);
+          }
+        });
+    }
+  });
+  const counts = results.map((r) => r.count);
+  console.log("Cuff counts (want " + n + "):", JSON.stringify(counts));
+  if (winner) return { jpeg: winner, good: true };
+  const best = results.find((r) => r.count && r.count.buttons === n && r.count.buttonholes === n) ||
+    results.find((r) => r.count && r.count.buttons === n) || results[0];
+  return { jpeg: best ? best.jpeg : null, good: false };
+}
+
+const ROUNDS = () => Math.max(1, Math.min(3, Number(env("IMAGE_ROUNDS", "2")) || 1));
+
+// Starts the next drawing round in a fresh call of this function (its own
+// 150 seconds), authorised by the service key the runtime provides.
+async function chainRound(body: Record<string, unknown>) {
+  const res = await fetch(SUPABASE_URL + "/functions/v1/generate-suit-image", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-internal-key": env("SUPABASE_SERVICE_ROLE_KEY") },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error("Could not start the next drawing round: " + res.status);
+}
+
 // ---------------------------------------------------------------------------
 // Order rows
 // ---------------------------------------------------------------------------
@@ -1267,8 +1399,10 @@ async function claim(id: string, force: boolean) {
   return data && data.length ? data[0] : null;
 }
 
-// Draws one sheet and stores it; returns its public URL and the prompt used.
-async function drawSheet(raw: string, folder: string, name: string): Promise<{ url: string; prompt: string }> {
+// Draws one sheet and stores it; returns its public URL and the prompt used,
+// or null when no right sheet came out and another round should be tried
+// (lastRound false).
+async function drawSheet(raw: string, folder: string, name: string, lastRound = true): Promise<{ url: string; prompt: string } | null> {
   const { text: spec, swatches: allSwatches } = parseSpec(raw);
   // An unlined jacket shows no lining, so don't show the model a lining swatch.
   const unlined = /^Facing Style: No Lining/m.test(spec);
@@ -1349,7 +1483,9 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const buttonPhoto = loaded.some((r) => r.label === "button");
   const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")), buttonPhoto);
   const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec, buttonPhoto);
-  const jpeg = await drawImage(prompt, images);
+  const { jpeg, good } = await drawChecked(prompt, images, spec);
+  if (!good && !lastRound) return null;
+  if (!jpeg) throw new Error("No picture was drawn in time");
 
   const path = folder + "/" + name + "-" + Date.now() + ".jpg";
   const up = await supabase.storage.from(BUCKET).upload(path, jpeg, { contentType: "image/jpeg", upsert: true });
@@ -1358,11 +1494,17 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   return { url: data.publicUrl, prompt };
 }
 
-async function generate(row: { id: string; order_id: string | null; suit_type: string | null; visual_spec: string | null }) {
+async function generate(row: { id: string; order_id: string | null; suit_type: string | null; visual_spec: string | null }, round = 1) {
   try {
     const raw = (row.visual_spec || "").trim();
     if (!raw) throw new Error("This order has no visual_spec (placed before the image feature was set up)");
-    const { url, prompt } = await drawSheet(raw, row.order_id || row.id, row.id);
+    const r = await drawSheet(raw, row.order_id || row.id, row.id, round >= ROUNDS());
+    if (!r) {
+      await setRow(row.id, { image_status: "pending" });
+      await chainRound({ retry: "order", id: row.id, round: round + 1 });
+      return;
+    }
+    const { url, prompt } = r;
     await setRow(row.id, { image_status: "done", image_url: url, image_prompt: prompt, image_error: null });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -1371,7 +1513,7 @@ async function generate(row: { id: string; order_id: string | null; suit_type: s
   }
 }
 
-async function generatePreview(id: string, raw: string) {
+async function generatePreview(id: string, raw: string, round = 1) {
   const set = async (fields: Record<string, unknown>) => {
     const { error } = await supabase
       .from("suit_previews")
@@ -1380,7 +1522,13 @@ async function generatePreview(id: string, raw: string) {
     if (error) console.error("Failed to update preview", id, error);
   };
   try {
-    const { url, prompt } = await drawSheet(raw, "previews", id);
+    const r = await drawSheet(raw, "previews", id, round >= ROUNDS());
+    if (!r) {
+      await set({ status: "pending" });
+      await chainRound({ retry: "preview", id, round: round + 1 });
+      return;
+    }
+    const { url, prompt } = r;
     await set({ status: "done", image_url: url, image_prompt: prompt, image_error: null });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -1549,6 +1697,28 @@ Deno.serve(async (req) => {
     const n = Number(body?.suit_number);
     if (!UUID.test(id) || !UUID.test(oid) || !Number.isInteger(n) || n < 1 || n > 50) return json({ error: "Bad request" }, 400);
     return attachPreview(id, oid, n);
+  }
+
+  // The next drawing round (chainRound), from this function itself.
+  const internal = req.headers.get("x-internal-key") || "";
+  if (internal) {
+    if (internal !== env("SUPABASE_SERVICE_ROLE_KEY")) return json({ error: "Unauthorized" }, 401);
+    const id = String(body?.id || "");
+    const round = Math.max(2, Number(body?.round) || 2);
+    if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
+    let work: Promise<unknown> | null = null;
+    if (body?.retry === "order") {
+      const { data: row } = await supabase.from("orders").select("id, order_id, suit_type, visual_spec").eq("id", id).maybeSingle();
+      if (row) work = generate(row, round);
+    } else if (body?.retry === "preview") {
+      const { data: prev } = await supabase.from("suit_previews").select("visual_spec").eq("id", id).maybeSingle();
+      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round);
+    }
+    if (!work) return json({ error: "Not found" }, 404);
+    const p = runInBackground(work);
+    // @ts-ignore see runInBackground
+    if (typeof EdgeRuntime === "undefined") await p;
+    return json({ started: true }, 202);
   }
 
   // Shop / database-trigger path (needs the secret).
