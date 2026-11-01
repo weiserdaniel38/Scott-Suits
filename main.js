@@ -1642,7 +1642,44 @@ async function loadAdminPromoCodes() {
       promoAdminSay("");
       promoAdminForm.scrollIntoView({ block: "start", behavior: "smooth" });
     });
-    actions.append(toggle, edit);
+    // Delete asks first, right on the card (the site can't rely on confirm()).
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn-ghost promo-admin-delete";
+    del.textContent = "Delete";
+    const sure = document.createElement("span");
+    sure.className = "promo-admin-sure";
+    sure.hidden = true;
+    sure.textContent = "Delete " + p.code + "? ";
+    const yes = document.createElement("button");
+    yes.type = "button";
+    yes.className = "btn-ghost promo-admin-delete";
+    yes.textContent = "Yes, delete";
+    const no = document.createElement("button");
+    no.type = "button";
+    no.className = "btn-ghost";
+    no.textContent = "Keep";
+    sure.append(yes, " ", no);
+    del.addEventListener("click", () => {
+      del.hidden = true;
+      sure.hidden = false;
+    });
+    no.addEventListener("click", () => {
+      sure.hidden = true;
+      del.hidden = false;
+    });
+    yes.addEventListener("click", async () => {
+      yes.disabled = true;
+      const { error: e } = await getSupabase().rpc("admin_delete_promo_code", { p_id: p.id });
+      if (e) {
+        yes.disabled = false;
+        return promoAdminSay(e.message);
+      }
+      if (promoAdminEditingId === p.id) promoAdminResetForm();
+      promoAdminSay("Deleted " + p.code + ".", true);
+      loadAdminPromoCodes();
+    });
+    actions.append(toggle, edit, del, sure);
     card.appendChild(actions);
     promoAdminList.appendChild(card);
   });

@@ -2150,3 +2150,6 @@ body.order-done-view > .process{display:none !important;}
 .promo-admin-card-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .promo-admin-card-actions .btn-ghost{padding:6px 12px;font-size:13px;}
 @media (max-width:560px){.promo-admin-form{grid-template-columns:1fr;}}
+.promo-admin-delete{color:#a8402f;border-bottom-color:#a8402f;}
+.promo-admin-sure{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;}
+.promo-admin-sure[hidden],.promo-admin-delete[hidden]{display:none;}
