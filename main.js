@@ -1774,8 +1774,11 @@ function adminRedrawButton(o, s, suitBox) {
   btn.addEventListener("click", async () => {
     if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
     const ids = { order_id: o.order_id, suit_number: s.suit_number || 1 };
+    if (suitBox.dataset.redrawing) return;
+    suitBox.dataset.redrawing = "1";
     btn.disabled = true;
     btn.textContent = "Drawing…";
+    const loader = adminRedrawOverlay(suitBox, !!s.image_url);
     try {
       // Clear the old picture (supabase/sql/29), then ask for a new drawing.
       const reset = await getSupabase().rpc("admin_reset_picture", { p_order_id: ids.order_id, p_suit_number: ids.suit_number });
@@ -1797,14 +1800,75 @@ function adminRedrawButton(o, s, suitBox) {
         suitBox.querySelector(".admin-suit-pic-col").prepend(pic);
       }
       pic.src = r.url;
-      btn.textContent = "Redrawn ✓";
+      btn.textContent = "Redraw picture";
+      loader.done();
     } catch (e) {
       console.error(e);
       btn.textContent = "Redraw failed, try again";
+      loader.fail(e && e.message);
     }
+    delete suitBox.dataset.redrawing;
     btn.disabled = false;
   });
   return btn;
+}
+
+// Loading screen laid over one suit card while its picture is redrawn:
+// the stitching clip, "Redrawing picture...", and a running timer. It ends
+// with a short "New picture ready" / error message, then goes away.
+function adminRedrawOverlay(suitBox, had) {
+  const wrap = document.createElement("div");
+  wrap.className = "admin-redraw-overlay";
+  wrap.setAttribute("role", "status");
+  wrap.setAttribute("aria-live", "polite");
+  const video = document.createElement("video");
+  video.className = "admin-redraw-video";
+  const clip = SITE_BRAND.loadingVideo || "./assets/suit-loading-thread";
+  [[clip + ".mp4", "video/mp4"], [clip + ".webm", "video/webm"]].forEach(([src, type]) => {
+    const source = document.createElement("source");
+    source.src = src;
+    source.type = type;
+    video.appendChild(source);
+  });
+  video.poster = clip + ".jpg";
+  video.autoplay = true;
+  video.loop = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.setAttribute("aria-hidden", "true");
+  const title = document.createElement("strong");
+  title.textContent = had ? "Redrawing picture…" : "Drawing picture…";
+  const note = document.createElement("span");
+  note.textContent = "Usually about a minute. You can keep working on other orders.";
+  const timer = document.createElement("span");
+  timer.className = "admin-redraw-timer";
+  timer.textContent = "0:00";
+  wrap.append(video, title, note, timer);
+  suitBox.classList.add("admin-suit-busy");
+  suitBox.appendChild(wrap);
+  const started = Date.now();
+  const tick = setInterval(() => {
+    const sec = Math.floor((Date.now() - started) / 1000);
+    timer.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+  }, 1000);
+  const finish = (ok, text, ms) => {
+    clearInterval(tick);
+    video.pause();
+    video.remove();
+    wrap.classList.add(ok ? "is-done" : "is-failed");
+    title.textContent = text;
+    note.textContent = ok ? "" : "Nothing was changed on the order. Tap Redraw picture to try again.";
+    timer.remove();
+    setTimeout(() => {
+      wrap.remove();
+      suitBox.classList.remove("admin-suit-busy");
+    }, ms);
+  };
+  return {
+    done: () => finish(true, "New picture ready ✓", 1600),
+    fail: (msg) => finish(false, "Redraw failed" + (msg ? " (" + msg + ")" : ""), 4500),
+  };
 }
 
 // "Send to factory" on one suit card: opens that suit's factory tools

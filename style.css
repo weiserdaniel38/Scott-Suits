@@ -520,6 +520,15 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-order-info dt{color:var(--ivory-dim);}
 .admin-order-info dd{margin:0;word-break:break-word;}
 .admin-suit{display:flex;flex-direction:column;gap:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(var(--surface-rgb),.35);}
+.admin-suit{position:relative;}
+.admin-suit-busy{min-height:300px;}
+.admin-redraw-overlay{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px;border-radius:10px;background:rgba(var(--surface-rgb),.96);text-align:center;}
+.admin-redraw-video{width:150px;height:150px;border-radius:50%;object-fit:cover;background:#e8e2da;margin-bottom:8px;}
+.admin-redraw-overlay strong{font-size:18px;font-weight:700;color:var(--ivory);}
+.admin-redraw-overlay span{font-size:13px;color:var(--ivory-dim);max-width:300px;}
+.admin-redraw-timer{font-variant-numeric:tabular-nums;color:var(--brass)!important;font-weight:600;}
+.admin-redraw-overlay.is-done strong{color:var(--brass);}
+.admin-redraw-overlay.is-failed strong{color:#e06666;}
 .admin-suit-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:15px;}
 .admin-suit-head b{font-weight:600;}
 .admin-suit-head .admin-factory-state:empty{display:none;}
