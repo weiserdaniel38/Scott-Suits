@@ -25,8 +25,6 @@
 //     customer's token (Authorization: Bearer); guests get 401
 //     { status: "signin" }. Checking and attaching don't.
 //   * { ping: true }                       is this feature switched on?
-//   * x-test-token: <TEST_DRAW_TOKEN>  { test_draw: "<order row id>" }
-//                                          draw into suit-images/tests/ only
 //   * Optionally by the database when an order is marked completed
 //     (supabase/sql/2_suit_image_trigger.sql), or by hand to redraw:
 //       x-webhook-secret: <secret>   { id: "<order row id>", force: true }
@@ -1545,23 +1543,6 @@ Deno.serve(async (req) => {
     const n = Number(body?.suit_number);
     if (!UUID.test(id) || !UUID.test(oid) || !Number.isInteger(n) || n < 1 || n > 50) return json({ error: "Bad request" }, 400);
     return attachPreview(id, oid, n);
-  }
-
-  // Test drawings (needs the TEST_DRAW_TOKEN secret): draws an order row's
-  // saved design into suit-images/tests/ without touching the order, so a
-  // prompt change can be checked before asking for a redraw.
-  //   x-test-token: <token>   { test_draw: "<order row id>" }
-  const testToken = env("TEST_DRAW_TOKEN");
-  if (req.headers.get("x-test-token")) {
-    if (testToken.length < 24 || req.headers.get("x-test-token") !== testToken) return json({ error: "Unauthorized" }, 401);
-    const id = String(body?.test_draw || "");
-    if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
-    const { data: row } = await supabase.from("orders").select("visual_spec").eq("id", id).maybeSingle();
-    if (!row?.visual_spec) return json({ error: "Order not found" }, 404);
-    const p = runInBackground(drawSheet(String(row.visual_spec), "tests", id).catch((e) => console.error("Test draw failed", e)));
-    // @ts-ignore see runInBackground
-    if (typeof EdgeRuntime === "undefined") await p;
-    return json({ started: true }, 202);
   }
 
   // Shop / database-trigger path (needs the secret).
