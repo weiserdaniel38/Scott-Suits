@@ -4341,6 +4341,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function closeReview() {
     if (wizSheetEl) { wizSheetEl.remove(); wizSheetEl = null; }
     document.body.classList.remove("wiz-lock");
+    document.documentElement.classList.remove("wiz-lock");
     document.removeEventListener("keydown", wizEscHandler);
   }
   function wizEscHandler(e) { if (e.key === "Escape") closeReview(); }
@@ -4372,8 +4373,17 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       "</div>";
     document.body.appendChild(sheet);
     wizSheetEl = sheet;
+    // Freeze the page behind the sheet. The lock goes on <html> too: html
+    // has overflow-x:clip (style.css), so body's overflow:hidden alone no
+    // longer stops the page -- a swipe on the list scrolled the page instead.
     document.body.classList.add("wiz-lock");
+    document.documentElement.classList.add("wiz-lock");
     document.addEventListener("keydown", wizEscHandler);
+    // Phones: a swipe anywhere on the sheet except the list does nothing,
+    // so it can't move the page underneath (older iPhones ignore the lock).
+    sheet.addEventListener("touchmove", (e) => {
+      if (!e.target.closest || !e.target.closest(".wiz-rows")) e.preventDefault();
+    }, { passive: false });
     sheet.addEventListener("click", (e) => { if (e.target === sheet) closeReview(); });
     sheet.querySelector(".wiz-close").onclick = closeReview;
     sheet.querySelectorAll(".wiz-row").forEach((b) => {

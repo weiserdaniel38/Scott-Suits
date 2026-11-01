@@ -1056,7 +1056,7 @@ body.admin-skip .wiz-seg.locked{cursor:pointer;}
 .wiz-next:disabled{opacity:.35;cursor:default;}
 
 /* --- Review sheet --- */
-body.wiz-lock{overflow:hidden;}
+html.wiz-lock,body.wiz-lock{overflow:hidden;}
 .wiz-sheet{position:fixed;inset:0;z-index:150;background:rgba(20,17,13,0.5);display:flex;align-items:flex-end;justify-content:center;padding:0 0 var(--qa-nav-height,0px);}
 .wiz-sheet-card{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:var(--ink);border-radius:20px 20px 0 0;padding:22px 24px calc(24px + env(safe-area-inset-bottom,0px));}
 @media(min-width:901px){.wiz-sheet{align-items:center;padding-bottom:var(--qa-nav-height,0px);}.wiz-sheet-card{border-radius:20px;max-height:80vh;}}
@@ -1081,7 +1081,11 @@ body.wiz-lock{overflow:hidden;}
 .process-step.current .step-label{color:var(--ivory);font-weight:600;}
 .process-step.completed .step-label{color:var(--ivory);font-weight:800;}
 .wiz-sheet-card{display:flex;flex-direction:column;overflow:hidden;}
-.wiz-rows{overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;}
+.wiz-rows{overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;}
+/* Fit the sheet to the part of the screen you can see (phone browser bars
+   showing), so the Continue button and the bottom of the list stay on screen. */
+.wiz-sheet-card{max-height:88dvh;}
+@media(min-width:901px){.wiz-sheet-card{max-height:80dvh;}}
 .wiz-sheet-head,.wiz-total,.wiz-sheet .summary-note,.wiz-continue{flex-shrink:0;}
 
 /* Next only shows on a question that already has an answer; it keeps its
