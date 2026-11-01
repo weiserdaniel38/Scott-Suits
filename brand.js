@@ -370,3 +370,94 @@ if (SITE_BRAND.id !== "scott") {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", applySiteBrand);
   else applySiteBrand();
 }
+
+// Home Screen app (2026-11-01): register sw.js, which only shows
+// offline.html when a page can't load. See sw.js.
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("/sw.js").catch(function () {});
+  });
+}
+
+// Pull down to refresh, only in the Home Screen app (Daniel, 2026-11-01):
+// full-screen mode has no Safari reload button. Starts only when the page
+// is scrolled to the very top and the finger is not inside a pop-up, a
+// sticky bar or anything that scrolls or drags on its own (option lists,
+// fabric zoom, 3D views), so it never fights those. Refreshing keeps the
+// customer's design (the draft is saved in sessionStorage by main.js).
+(function () {
+  var standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  if (!standalone) return;
+  var THRESHOLD = 70;
+  var startY = null, pull = 0, ring = null, busy = false;
+
+  function blocked(el) {
+    if (document.documentElement.classList.contains("wiz-lock")) return true;
+    for (; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+      var tag = el.tagName;
+      if (tag === "CANVAS" || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "VIDEO") return true;
+      var cs = getComputedStyle(el);
+      if (cs.position === "fixed" || cs.position === "sticky") return true;
+      if (el.scrollTop > 0) return true;
+    }
+    return false;
+  }
+  function ensureRing() {
+    if (ring) return ring;
+    ring = document.createElement("div");
+    ring.setAttribute("aria-hidden", "true");
+    ring.style.cssText = "position:fixed;left:50%;top:0;z-index:2147483000;width:38px;height:38px;margin-left:-19px;" +
+      "border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);display:flex;align-items:center;" +
+      "justify-content:center;pointer-events:none;opacity:0;transform:translateY(-48px);";
+    ring.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B08D57" stroke-width="2.4" ' +
+      'stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>';
+    document.body.appendChild(ring);
+    return ring;
+  }
+  function show(d) {
+    var r = ensureRing();
+    var p = Math.min(d / THRESHOLD, 1);
+    r.style.transition = "none";
+    r.style.opacity = String(p);
+    r.style.transform = "translateY(" + (Math.min(d, THRESHOLD * 1.4) - 40) + "px) rotate(" + Math.round(d * 3) + "deg)";
+  }
+  function hide() {
+    if (!ring) return;
+    ring.style.transition = "transform .2s ease, opacity .2s ease";
+    ring.style.opacity = "0";
+    ring.style.transform = "translateY(-48px)";
+  }
+
+  document.addEventListener("touchstart", function (e) {
+    startY = null; pull = 0;
+    if (busy || e.touches.length !== 1 || window.scrollY > 0 || blocked(e.target)) return;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener("touchmove", function (e) {
+    if (startY === null) return;
+    var d = (e.touches[0].clientY - startY) * 0.55;
+    if (d <= 0 || window.scrollY > 0) { pull = 0; hide(); return; }
+    pull = d;
+    show(d);
+  }, { passive: true });
+  function end() {
+    if (startY === null) return;
+    startY = null;
+    if (pull >= THRESHOLD) {
+      busy = true;
+      ring.style.transition = "transform .2s ease";
+      ring.style.transform = "translateY(" + (THRESHOLD - 30) + "px)";
+      ring.firstChild.style.animation = "ss-ptr-spin .7s linear infinite";
+      setTimeout(function () { location.reload(); }, 150);
+    } else {
+      hide();
+    }
+    pull = 0;
+  }
+  document.addEventListener("touchend", end, { passive: true });
+  document.addEventListener("touchcancel", end, { passive: true });
+  var st = document.createElement("style");
+  st.textContent = "@keyframes ss-ptr-spin{to{transform:rotate(360deg)}}";
+  document.head.appendChild(st);
+})();
