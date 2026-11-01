@@ -297,7 +297,8 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   // Jacket and pants both use the "Pick Stitching" step label.
   "Pick Stitching": {
     None: "NO pick stitching: the edges and seams are plain, with no visible row of small stitches",
-    "Lapels & Edges": "pick stitching: a fine row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge, running all around the lapel and collar edges and down the jacket's front edges; subtle, visible up close",
+    "Collar, Lapels & Front": "pick stitching ONLY on the collar, lapels and front edges: a fine row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge, running all around the lapel and collar edges and down the jacket's front edges; the pockets and all seams are plain with NO pick stitching; subtle, visible up close",
+    "Lapels & Edges": "pick stitching: a fine row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge, running all around the lapel and collar edges, down the jacket's front edges and around the pockets; subtle, visible up close",
     "Lapels, Edges & Seams": "pick stitching: a fine row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge, running all around the lapel and collar edges and down the jacket's front edges, AND alongside the main seams (shoulder, sleeve and back seams) and around the pockets; subtle, visible up close",
     "Front Pockets": "pick stitching on the trousers: a fine row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge of each front pocket opening; subtle, visible up close",
   },
