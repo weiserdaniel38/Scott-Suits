@@ -34,7 +34,7 @@
 //   { action: "fabric_stock_all" }  checks the factory's stock (metres) of
 //       every fabric on the site and saves it as fabric-stock.json in the
 //       public suit-images storage bucket, which the site reads to hide fabrics without enough cloth for a suit; run
-//       daily by pg_cron (supabase/sql/36_fabric_stock_daily.sql) with the
+//       daily by pg_cron (supabase/sql/37_fabric_stock_daily.sql) with the
 //       same x-cron-token as factory_status_all (Daniel, 2026-11-01)
 //   { action: "sync" }   saves every code list (crafts for each garment
 //       category) into public.factory_codes and returns row counts. Can be

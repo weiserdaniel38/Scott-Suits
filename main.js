@@ -6049,7 +6049,7 @@ onAccountFabricsChanged = () => {
 };
 if (accountFabricList) onAccountFabricsChanged();
 
-// Fabric stock: a daily job (kute-factory fabric_stock_all, supabase/sql/36)
+// Fabric stock: a daily job (kute-factory fabric_stock_all, supabase/sql/37)
 // saves the factory's metres of every site fabric as suit-images/fabric-stock.json.
 // Fabrics with less than a suit's worth are marked outOfStock and left out
 // of the fabric grid (Daniel, 2026-11-01). If the lookup fails, every
