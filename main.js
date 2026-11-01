@@ -1643,20 +1643,6 @@ async function loadAdminPromoCodes() {
       promoAdminForm.scrollIntoView({ block: "start", behavior: "smooth" });
     });
     actions.append(toggle, edit);
-    if (!p.uses) {
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "btn-ghost";
-      del.textContent = "Delete";
-      del.addEventListener("click", async () => {
-        if (!confirm("Delete promo code " + p.code + "?")) return;
-        const { error: e } = await getSupabase().rpc("admin_delete_promo_code", { p_id: p.id });
-        if (e) alert(e.message);
-        if (promoAdminEditingId === p.id) promoAdminResetForm();
-        loadAdminPromoCodes();
-      });
-      actions.appendChild(del);
-    }
     card.appendChild(actions);
     promoAdminList.appendChild(card);
   });

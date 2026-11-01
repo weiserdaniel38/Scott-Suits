@@ -227,32 +227,6 @@ $$;
 revoke all on function public.admin_set_promo_active(bigint, boolean) from public, anon;
 grant execute on function public.admin_set_promo_active(bigint, boolean) to authenticated;
 
--- Only a code nobody has used can be removed (a used one can be turned off).
-create or replace function public.admin_delete_promo_code(p_id bigint)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_code text;
-begin
-  if not public.is_admin() then
-    raise exception 'Only the shop admin can change promo codes';
-  end if;
-  select code into v_code from public.promo_codes where id = p_id;
-  if v_code is null then
-    return;
-  end if;
-  if exists (select 1 from public.orders o where o.promo_code = upper(v_code) and coalesce(o.promo_discount_usd, 0) > 0) then
-    raise exception 'This code has been used on an order, so it can only be turned off.';
-  end if;
-  delete from public.promo_codes where id = p_id;
-end;
-$$;
-revoke all on function public.admin_delete_promo_code(bigint) from public, anon;
-grant execute on function public.admin_delete_promo_code(bigint) to authenticated;
-
 -- Code and discount per order, for the admin's All Orders list.
 create or replace function public.admin_order_promos(p_limit int default 1000)
 returns table (
