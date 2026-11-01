@@ -287,7 +287,8 @@
     return lum(fabricHex) < 60 ? mix(fabricHex, "#000000", 0.3) : mix(fabricHex, "#000000", 0.38);
   }
   // The front & sleeve buttonhole color goes on the front, the sleeves, or
-  // only the bottom sleeve buttonhole (buttonholeColorPlacement); the rest
+  // only the bottom sleeve buttonhole, or only the top front buttonhole
+  // (buttonholeColorPlacement); the rest
   // match the fabric.
   function buttonholeHexes(v, fabricHex) {
     const color = threadHex("frontButtonholeThreadColor", v, fabricHex);
@@ -295,8 +296,9 @@
     const place = v.buttonholeColorPlacement || v._raw.buttonholeColorPlacement || "Front & Sleeves";
     return {
       front: place === "Front & Sleeves" ? color : plain,
-      sleeve: place === "Bottom Sleeve Buttonhole" ? plain : color,
-      cuff1: color,
+      frontTop: place === "Front & Sleeves" || place === "Top Front Buttonhole" ? color : plain,
+      sleeve: place === "Bottom Sleeve Buttonhole" || place === "Top Front Buttonhole" ? plain : color,
+      cuff1: place === "Top Front Buttonhole" ? plain : color,
     };
   }
   function feltHex(v, fabricHex) {
@@ -687,11 +689,14 @@
     const look = buttonLook(v, fabricHex);
     const threadV = threadHex("threadColor", v, fabricHex);
     const holes = buttonholeHexes(v, fabricHex);
-    const holeHex = holes.front;
+    // The top front buttonhole can carry its own color (Top Front
+    // Buttonhole Only); the rest use holes.front.
+    let firstHole = true;
+    const holeHexNext = () => { const h = firstHole ? holes.frontTop : holes.front; firstHole = false; return h; };
     lay.buttons.forEach((b) => {
-      if (lay.db) { if (b.holed) hole(g, [b.x + 14, b.y + 1], [b.x + 31, b.y + 1], holeHex, 2.4); }
-      else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + 13, b.y], holeHex, 2.4);
-      else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHex, 2.4);
+      if (lay.db) { if (b.holed) hole(g, [b.x + 14, b.y + 1], [b.x + 31, b.y + 1], holeHexNext(), 2.4); }
+      else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + 13, b.y], holeHexNext(), 2.4);
+      else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHexNext(), 2.4);
       button(g, b.x, b.y, 11.5, look, { thread: threadV, nail: v.buttonNail });
     });
     const top = lay.buttons.find((b) => b.fast) || lay.buttons[0];
