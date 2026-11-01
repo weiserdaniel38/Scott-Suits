@@ -1326,12 +1326,18 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const swatchRank = (r: Ref) => (r.label === "fabric" ? 0 : r.label === "button" ? 1 : 2);
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
     .concat(hipRef, chestRef, pocketRef, swatches.filter((r) => !isDrawing(r)).sort((a, b) => swatchRank(a) - swatchRank(b)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
+  // The slant cuff illustration shows the whole closed cuff with the right
+  // count, so the "Sleeve Cuff Styles" catalog drawing (a different number of
+  // buttons, one corner folded open) is left out: with both, five buttons
+  // came out as six.
+  const slantImg = !ventImg && cuffRefSrc ? await loadRef({ label: "cuff reference", src: accentRef(cuffRefSrc) }) : null;
   const loadOne = async (r: Ref) =>
     ventImg && r.label === "style Buttons On Sleeve Cuff" ? null :
     (ventImg && r.label === "style Sleeve Cuff Styles" && ventImg) ||
-    (cuffRefSrc && r.label === "style Buttons On Sleeve Cuff" && (await loadRef({ label: "cuff reference", src: accentRef(cuffRefSrc) }))) ||
+    (slantImg && r.label === "style Buttons On Sleeve Cuff" && slantImg) ||
+    (slantImg && r.label === "style Sleeve Cuff Styles" ? null :
     (lapelRefSrc && r.label === "style Lapel Style" && (await loadRef({ label: "lapel reference", src: lapelRefSrc }))) ||
-    loadRef(r);
+    loadRef(r));
   const loaded = (await Promise.all(refs.map(loadOne))).filter(
     (x): x is { label: string; blob: Blob } => !!x,
   );
