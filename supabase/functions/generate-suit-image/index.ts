@@ -833,12 +833,13 @@ const STITCH: Record<string, { key: string; look: string; not: string; ref: stri
 // The chosen stitch, unless the chosen button has only two holes (then there
 // is no pattern to show and the button photo wins).
 function stitchChoice(spec: string): (typeof STITCH)[string] & { name: string; thread: string } | null {
-  const name = ((spec.match(/^Button Nail Method: (.+)$/m) || [])[1] || "").trim();
+  const section = /^Suit type: Pants only/m.test(spec) ? "PANTS" : "JACKET";
+  const name = sectionValue(spec, section, "Button Nail Method");
   const st = STITCH[name];
   if (!st) return null;
   const b = buttonChoice(spec);
   if (b && /\bTWO\b[^;]*holes/i.test(b.look)) return null;
-  const t = ((spec.match(/^Button Thread Color: (.+)$/m) || [])[1] || "").trim();
+  const t = sectionValue(spec, section, "Button Thread Color");
   const thread = !t || /^matched to the fabric/i.test(t)
     ? "thread in a tone matching the suit fabric, slightly lighter or darker than the button so the pattern is still clearly visible"
     : "thread in " + t.replace(/\s*\(.*$/, "");
@@ -847,9 +848,10 @@ function stitchChoice(spec: string): (typeof STITCH)[string] & { name: string; t
 function stitchText(spec: string): string {
   const st = stitchChoice(spec);
   if (!st) return "";
-  return "every four-hole button (front and sleeve cuffs) is sewn on with the \"" + st.name + "\" pattern: " + st.look + "; " + st.not +
-    ". Use " + st.thread + ". The same pattern on every button, clearly visible as raised thread on each button in the cuff close-up" +
-    " and on the front buttons";
+  const where = /^Suit type: Pants only/m.test(spec) ? "on the trousers" : "(front and sleeve cuffs)";
+  return "every four-hole button " + where + " is sewn on with the \"" + st.name + "\" pattern: " + st.look + "; " + st.not +
+    ". Use " + st.thread + ". The same pattern on every button, clearly visible as raised thread on each button" +
+    (/^Suit type: Pants only/m.test(spec) ? " wherever a trouser button shows" : " in the cuff close-up and on the front buttons");
 }
 
 function keyDetails(spec: string, ownLining = false, buttonPhoto = false): string {
