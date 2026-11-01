@@ -2131,7 +2131,7 @@ body.order-done-view > .process{display:none !important;}
 .promo-row .measure-input-wrap{flex:1;min-width:0;}
 .promo-row input{text-transform:uppercase;letter-spacing:0.5px;}
 .promo-row input::placeholder{text-transform:none;letter-spacing:0;}
-.promo-apply{border:1px solid var(--ivory);border-radius:16px;background:transparent;padding:0 20px;min-width:96px;}
+.promo-apply{border:1px solid var(--ivory);border-radius:12px;background:transparent;padding:0 20px;min-width:96px;}
 .promo-msg{margin:0;font-size:13px;line-height:1.45;color:#a8402f;}
 .promo-msg.promo-ok,.account-status-msg.promo-ok{color:#3f6b3a;}
 .promo-admin-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0 18px;}
