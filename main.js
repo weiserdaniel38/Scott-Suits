@@ -1766,40 +1766,78 @@ function adminFabricOption(value) {
 
 // "Redraw picture": draws the suit picture again from the order's saved
 // design (e.g. after a lining was changed on the order), then swaps it in.
+// The loading screen stays until the drawing is done, even if the admin
+// leaves the page meanwhile (Daniel, 2026-11-01): a check that fails while
+// the phone is in the background is just retried, and if the page reloads,
+// the suit card picks the drawing back up from a note in localStorage.
+const ADMIN_REDRAW_KEY = "scott-admin-redraw";
+const ADMIN_REDRAW_MAX_MS = 6 * 60 * 1000;
+function adminRedrawPending() {
+  try {
+    const all = JSON.parse(localStorage.getItem(ADMIN_REDRAW_KEY) || "{}") || {};
+    Object.keys(all).forEach((k) => { if (!(Date.now() - all[k] < ADMIN_REDRAW_MAX_MS)) delete all[k]; });
+    return all;
+  } catch (e) {
+    return {};
+  }
+}
+function adminRedrawMark(key, started) {
+  try {
+    const all = adminRedrawPending();
+    if (started) all[key] = started; else delete all[key];
+    localStorage.setItem(ADMIN_REDRAW_KEY, JSON.stringify(all));
+  } catch (e) { /* private mode: the screen still works while the page stays open */ }
+}
+
 function adminRedrawButton(o, s, suitBox) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "admin-suit-redraw";
   btn.textContent = s.image_url ? "Redraw picture" : "Draw picture";
-  btn.addEventListener("click", async () => {
-    if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
-    const ids = { order_id: o.order_id, suit_number: s.suit_number || 1 };
-    if (suitBox.dataset.redrawing) return;
+  const ids = { order_id: o.order_id, suit_number: s.suit_number || 1 };
+  const key = ids.order_id + ":" + ids.suit_number;
+
+  const showPicture = (url) => {
+    s.image_url = url;
+    let pic = suitBox.querySelector(".admin-suit-picture");
+    if (!pic) {
+      pic = document.createElement("img");
+      pic.className = "admin-suit-picture";
+      pic.alt = "Suit picture";
+      pic.addEventListener("click", () => {
+        document.getElementById("lightbox").classList.add("over-account");
+        openLightbox(s.image_url, o.customer_name || "Suit", "Suit picture", true);
+      });
+      const col = suitBox.querySelector(".admin-suit-pic-col");
+      if (col) col.prepend(pic);
+    }
+    pic.src = url;
+  };
+
+  // Checks every 5 seconds until the picture is done or failed. A check that
+  // can't get through (phone asleep, app in the background) is just retried.
+  const waitForPicture = async (started) => {
+    while (Date.now() - started < ADMIN_REDRAW_MAX_MS) {
+      await new Promise((r) => setTimeout(r, 5000));
+      let check;
+      try {
+        check = await callSuitImageFn(Object.assign({ check: true }, ids));
+      } catch (e) {
+        continue;
+      }
+      const st = check.data && check.data.status;
+      if (st === "done" && check.data.image_url) return check.data.image_url;
+      if (st === "failed") throw new Error("failed");
+    }
+    throw new Error("timeout");
+  };
+
+  const watch = async (started, loader) => {
     suitBox.dataset.redrawing = "1";
     btn.disabled = true;
     btn.textContent = "Drawing…";
-    const loader = adminRedrawOverlay(suitBox, !!s.image_url);
     try {
-      // Clear the old picture (supabase/sql/29), then ask for a new drawing.
-      const reset = await getSupabase().rpc("admin_reset_picture", { p_order_id: ids.order_id, p_suit_number: ids.suit_number });
-      if (reset.error || !reset.data) throw new Error((reset.error && reset.error.message) || "suit not found");
-      const start = await callSuitImageFn(ids);
-      if (!start.ok && start.status !== 202) throw new Error((start.data && start.data.error) || "start failed");
-      const r = await pollSuitImage(Object.assign({ check: true }, ids));
-      if (r.status !== "done") throw new Error(r.status);
-      s.image_url = r.url;
-      let pic = suitBox.querySelector(".admin-suit-picture");
-      if (!pic) {
-        pic = document.createElement("img");
-        pic.className = "admin-suit-picture";
-        pic.alt = "Suit picture";
-        pic.addEventListener("click", () => {
-          document.getElementById("lightbox").classList.add("over-account");
-          openLightbox(s.image_url, o.customer_name || "Suit", "Suit picture", true);
-        });
-        suitBox.querySelector(".admin-suit-pic-col").prepend(pic);
-      }
-      pic.src = r.url;
+      showPicture(await waitForPicture(started));
       btn.textContent = "Redraw picture";
       loader.done();
     } catch (e) {
@@ -1807,16 +1845,49 @@ function adminRedrawButton(o, s, suitBox) {
       btn.textContent = "Redraw failed, try again";
       loader.fail(e && e.message);
     }
+    adminRedrawMark(key, 0);
     delete suitBox.dataset.redrawing;
     btn.disabled = false;
+  };
+
+  btn.addEventListener("click", async () => {
+    if (suitBox.dataset.redrawing) return;
+    if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
+    const started = Date.now();
+    const loader = adminRedrawOverlay(suitBox, !!s.image_url, started);
+    suitBox.dataset.redrawing = "1";
+    btn.disabled = true;
+    btn.textContent = "Drawing…";
+    try {
+      // Clear the old picture (supabase/sql/29), then ask for a new drawing.
+      const reset = await getSupabase().rpc("admin_reset_picture", { p_order_id: ids.order_id, p_suit_number: ids.suit_number });
+      if (reset.error || !reset.data) throw new Error((reset.error && reset.error.message) || "suit not found");
+      adminRedrawMark(key, started);
+      const start = await callSuitImageFn(ids);
+      if (!start.ok && start.status !== 202) throw new Error((start.data && start.data.error) || "start failed");
+    } catch (e) {
+      console.error(e);
+      adminRedrawMark(key, 0);
+      btn.textContent = "Redraw failed, try again";
+      loader.fail(e && e.message);
+      delete suitBox.dataset.redrawing;
+      btn.disabled = false;
+      return;
+    }
+    watch(started, loader);
   });
+
+  // A drawing started before the page was reloaded: show its loading screen
+  // again and keep waiting for it.
+  const pending = adminRedrawPending()[key];
+  if (pending) watch(pending, adminRedrawOverlay(suitBox, !!s.image_url, pending));
   return btn;
 }
 
 // Loading screen laid over one suit card while its picture is redrawn:
 // the stitching clip, "Redrawing picture...", and a running timer. It ends
 // with a short "New picture ready" / error message, then goes away.
-function adminRedrawOverlay(suitBox, had) {
+function adminRedrawOverlay(suitBox, had, started = Date.now()) {
   const wrap = document.createElement("div");
   wrap.className = "admin-redraw-overlay";
   wrap.setAttribute("role", "status");
@@ -1840,18 +1911,19 @@ function adminRedrawOverlay(suitBox, had) {
   const title = document.createElement("strong");
   title.textContent = had ? "Redrawing picture…" : "Drawing picture…";
   const note = document.createElement("span");
-  note.textContent = "Usually about a minute. You can keep working on other orders.";
+  note.textContent = "Usually about a minute. You can keep working on other orders or leave the app; this stays until it\u2019s done.";
   const timer = document.createElement("span");
   timer.className = "admin-redraw-timer";
   timer.textContent = "0:00";
   wrap.append(video, title, note, timer);
   suitBox.classList.add("admin-suit-busy");
   suitBox.appendChild(wrap);
-  const started = Date.now();
-  const tick = setInterval(() => {
-    const sec = Math.floor((Date.now() - started) / 1000);
+  const showTime = () => {
+    const sec = Math.max(0, Math.floor((Date.now() - started) / 1000));
     timer.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
-  }, 1000);
+  };
+  showTime();
+  const tick = setInterval(showTime, 1000);
   const finish = (ok, text, ms) => {
     clearInterval(tick);
     video.pause();
