@@ -306,11 +306,14 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   // Where the "Front & Sleeve Buttonhole Color" thread goes (asked only when
   // it isn't matched to the fabric).
   // "Bottom Sleeve Buttonhole" was drawn as an extra open contrast buttonhole
-  // under the buttons, so it names the lowest button's own buttonhole.
+  // under the buttons (twice, the second time with a sixth button for it), so
+  // it names the lowest button's own buttonhole and cuffCountText() lists the
+  // buttonholes one by one with their thread colors. Worded without "extra"
+  // or "open": naming those made the model draw them.
   "Which Buttonholes Get the Color": {
     "Front & Sleeves": "the front buttonholes AND every sleeve cuff buttonhole are stitched in the front & sleeve buttonhole thread color",
     "Sleeves Only": "ONLY the sleeve cuff buttonholes are stitched in the front & sleeve buttonhole thread color; the front buttonholes are stitched in thread matching the fabric",
-    "Bottom Sleeve Buttonhole": "ONLY ONE buttonhole on each sleeve is stitched in the front & sleeve buttonhole thread color as a single contrast accent: the buttonhole of the LOWEST cuff button (the one running from the button nearest the cuff edge, and closed by that button like the others). It is one of the cuff buttonholes, NEVER an extra open buttonhole added below or beside the buttons; nothing is stitched below the lowest button. Every other cuff buttonhole and the front buttonholes are stitched in thread matching the fabric",
+    "Bottom Sleeve Buttonhole": "on each sleeve the cuff buttons and buttonholes are drawn exactly as for any cuff (one buttonhole per button, each running from under its own button); the ONLY difference is the thread color of ONE of those buttonholes: the buttonhole of the LOWEST button, the button nearest the cuff edge, is stitched in the front & sleeve buttonhole thread color, buttoned and tucked under that lowest button just like the buttonholes above it. Every other cuff buttonhole and the front buttonholes are stitched in thread matching the fabric",
     "Top Front Buttonhole": "ONLY ONE buttonhole, the TOP front closure buttonhole (the highest buttonhole on the jacket front, the one for the top fastening button), is stitched in the front & sleeve buttonhole thread color as a single contrast accent; every other front buttonhole and all sleeve cuff buttonholes are stitched in thread matching the fabric",
   },
 
@@ -470,7 +473,26 @@ function cuffCountText(spec: string): string {
   const holes = what === "buttons"
     ? ". Each button has exactly ONE buttonhole running from it, so there are also EXACTLY " + n + " buttonholes: the same number of buttons and buttonholes (" + n + " and " + n + "). Every button, including the lowest one, has its own buttonhole, and there is never a button without a buttonhole or a buttonhole without a button"
     : "";
-  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + holes + ". Never " + (n + 1) + ", never " + (n - 1) + "; count " + (holes ? "the buttons and the buttonholes" : "them") + " before finishing";
+  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + holes + (holes ? bottomAccentText(spec, n) : "") + ". Never " + (n + 1) + ", never " + (n - 1) + "; count " + (holes ? "the buttons and the buttonholes" : "them") + " before finishing";
+}
+
+// "Bottom Sleeve Buttonhole": the contrast buttonhole was drawn with a button
+// of its own (six buttons for five), so the buttonholes are listed one by one
+// with their thread colors, the lowest one in the contrast thread.
+function bottomAccentThread(spec: string): string {
+  if (!/^Which Buttonholes Get the Color: Bottom Sleeve Buttonhole$/m.test(spec)) return "";
+  const thread = ((spec.match(/^Front & Sleeve Buttonhole Color: (.+)$/m) || [])[1] || "").replace(/\s*\(.*$/, "");
+  return thread && !/match/i.test(thread) ? thread : "";
+}
+function bottomAccentText(spec: string, n: number): string {
+  const thread = bottomAccentThread(spec);
+  if (!thread) return "";
+  const hex = (spec.match(/^Front & Sleeve Buttonhole Color: .*?(#[0-9a-f]{6})/im) || [])[1];
+  const color = thread + (hex ? " (" + hex + ")" : "");
+  const upper = n === 2 ? "button 2's buttonhole is" : "the buttonholes of buttons 2 to " + n + " are";
+  return ". Thread colors, counting up from the cuff edge: button 1 (the lowest) has its buttonhole stitched in the contrast thread " + color + "; " + upper +
+    " stitched in thread matching the fabric. So there are " + n + " buttons and " + n + " buttonholes in total, of which exactly one (button 1's, under button 1) is " + thread +
+    ". The " + thread + " buttonhole belongs to button 1 and is not counted on top of the " + n;
 }
 
 // How slanted cuff buttonholes look in the catalog drawings. The image model
@@ -688,7 +710,7 @@ const BUTTON_LOOKS: Record<string, string> = {
   "Matte Mocha Brown": "solid matte mocha / plum-brown with a wide flat raised rim", // KSZ440
   "Dark Horn Brown": "very dark brown-black horn with a band of bright golden-brown streaks through the middle", // KNJ069
   "Streaked Mahogany Brown": "dark mahogany-brown horn with a glossy golden-brown streak running across the middle; TWO holes", // KNJ079
-  "Glossy Mahogany Brown": "glossy dark mahogany brown with a raised rim and dished center", // KG240
+  "Glossy Mahogany Brown": "glossy dark mahogany brown with a warm reddish tint (like polished mahogany wood, never grey-brown), a smooth raised rim, a dished center and four holes", // KG240
   "Swirled Chocolate Brown": "glossy dark chocolate brown and black with a bright amber-brown wood-grain swirl near the center", // KSZ421
   "Glossy Chestnut": "warm light chestnut / caramel brown with soft grain and a raised rim", // KB287
   "Polished Walnut": "glossy polished walnut brown mother-of-pearl with a lustrous sheen and a raised rim", // KB278
@@ -1066,7 +1088,10 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
         ? "how each buttonhole runs from its button diagonally UP and inward at this steep angle"
         : "the straight horizontal buttonholes";
       const count = cuffCountText(spec) ? " (" + cuffCountText(spec) + ")" : "";
-      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ${vent ? `sleeve cuff ("${style}", "${value}"): copy EXACTLY how the row of buttons climbs DIAGONALLY along the slanted vent (lowest button furthest in, each higher button further toward the back seam; never a straight vertical column), ` : `cuff buttons ("${value}"): copy EXACTLY `}${holes}, the number of buttons${count} and how they touch or overlap. The cuff is closed and buttoned. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.`);
+      const accent = bottomAccentThread(spec) && !/button ?less/i.test(value)
+        ? ` In this illustration the LOWEST button's buttonhole is GREEN only to mark which buttonhole gets the contrast thread: stitch that one buttonhole in ${bottomAccentThread(spec)} and all the others in thread matching the fabric, keeping exactly the illustration's number of buttons and buttonholes.`
+        : "";
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ${vent ? `sleeve cuff ("${style}", "${value}"): copy EXACTLY how the row of buttons climbs DIAGONALLY along the slanted vent (lowest button furthest in, each higher button further toward the back seam; never a straight vertical column), ` : `cuff buttons ("${value}"): copy EXACTLY `}${holes}, the number of buttons${count} and how they touch or overlap. The cuff is closed and buttoned. Use the suit's own fabric, button and thread colors, render it photorealistically, and show it in the sleeve-cuff close-up and on both sleeves.${accent}`);
     } else if (r.label.startsWith("style ")) {
       const name = r.label.slice(6);
       const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1272,7 +1297,11 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const straightRefSrc = !ventRefSrc && cuffKey && !cuffKey[2]
     ? "./assets/jacket-cuffref-straight-" + (cuffKey[3] === "Overlap" ? "overlap" : "flat") + cuffKey[1] + ".jpg"
     : "";
-  const cuffImgSrc = ventRefSrc || straightRefSrc;
+  // "Bottom Sleeve Buttonhole": the same illustration with the lowest
+  // buttonhole drawn green (scripts/cuffref_accent.py), so the model sees
+  // which buttonhole gets the contrast thread instead of adding one.
+  const accentRef = (src: string) => (src && bottomAccentThread(spec) ? src.replace(/\.jpg$/, "-accent.jpg") : src);
+  const cuffImgSrc = accentRef(ventRefSrc || straightRefSrc);
   const ventImg = cuffImgSrc ? await loadRef({ label: "cuff reference", src: cuffImgSrc }) : null;
   // Diamond lapel: the catalog drawing alone kept coming out as a notch or
   // peak lapel, so show a bolder filled-in illustration instead (falls back
@@ -1300,7 +1329,7 @@ async function drawSheet(raw: string, folder: string, name: string): Promise<{ u
   const loadOne = async (r: Ref) =>
     ventImg && r.label === "style Buttons On Sleeve Cuff" ? null :
     (ventImg && r.label === "style Sleeve Cuff Styles" && ventImg) ||
-    (cuffRefSrc && r.label === "style Buttons On Sleeve Cuff" && (await loadRef({ label: "cuff reference", src: cuffRefSrc }))) ||
+    (cuffRefSrc && r.label === "style Buttons On Sleeve Cuff" && (await loadRef({ label: "cuff reference", src: accentRef(cuffRefSrc) }))) ||
     (lapelRefSrc && r.label === "style Lapel Style" && (await loadRef({ label: "lapel reference", src: lapelRefSrc }))) ||
     loadRef(r);
   const loaded = (await Promise.all(refs.map(loadOne))).filter(
