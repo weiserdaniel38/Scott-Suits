@@ -2181,3 +2181,9 @@ body.order-done-view > .process{display:none !important;}
   .designer-grid .fabric-palette-grid .mono-on-backdrop .mono-sample{font-size:calc(20px * var(--mono-scale,1));}
   .designer-grid .fabric-palette-grid .mono-on-backdrop .opt-name{font-size:8.5px;}
 }
+/* Admin: client fabric lists */
+.cf-admin-picker{max-height:280px;overflow-y:auto;border:1px solid var(--line);padding:6px 10px;display:flex;flex-direction:column;}
+.cf-admin-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:14px;cursor:pointer;color:var(--ivory);}
+.cf-admin-row input{width:18px;height:18px;flex:none;}
+.cf-admin-chip{width:28px;height:28px;flex:none;background-size:cover;background-position:center;border:1px solid var(--line);}
+.opt-grid .own-fabrics-heading{grid-column:1 / -1;}

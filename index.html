@@ -121,7 +121,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261101previewtimer">
+<link rel="stylesheet" href="./style.css?v=20261101ownfabrics">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261101homeapp"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -909,6 +909,24 @@
         <div id="promoAdminList" class="promo-admin-list brand-keep"></div>
       </details>
 
+      <details class="account-collapse" id="adminClientFabricsSection" hidden>
+        <summary><h3>Client Fabric Lists</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <p class="account-section-note">Only you see this (shop admin). Give a customer account its own fabrics: while they are signed in, the Fabric step shows only these, under the heading you choose. Everyone else sees the normal list.</p>
+        <form class="promo-admin-form" id="cfAdminForm" autocomplete="off">
+          <div class="measure-field"><label for="cfAdminEmail">Customer's account email</label><div class="measure-input-wrap"><input type="email" id="cfAdminEmail" placeholder="customer@email.com" autocapitalize="off" spellcheck="false"></div></div>
+          <div class="measure-field"><label for="cfAdminLabel">Heading they see</label><div class="measure-input-wrap"><input type="text" id="cfAdminLabel" maxlength="40" placeholder="Picked for you"></div></div>
+          <div class="measure-field pers-full"><label for="cfAdminSearch">Fabrics (<span id="cfAdminCount">0</span> picked)</label><div class="measure-input-wrap"><input type="search" id="cfAdminSearch" placeholder="Search fabrics, e.g. cobalt"></div></div>
+          <div class="cf-admin-picker pers-full" id="cfAdminPicker"></div>
+          <div class="measure-field pers-full"><label for="cfAdminNote">Note for you (optional)</label><div class="measure-input-wrap"><input type="text" id="cfAdminNote" maxlength="200" placeholder="e.g. His first fabric ran out"></div></div>
+          <div class="promo-admin-actions pers-full">
+            <button type="submit" class="btn-primary" id="cfAdminSaveBtn">Save list</button>
+            <button type="button" class="btn-ghost" id="cfAdminCancelBtn" hidden>Cancel edit</button>
+          </div>
+          <p class="account-status-msg pers-full" id="cfAdminMsg" hidden></p>
+        </form>
+        <div id="cfAdminList" class="promo-admin-list brand-keep"></div>
+      </details>
+
       <!-- Collapsed by default, like the sections above. -->
       <details class="account-collapse" id="pastOrdersSection">
         <summary><h3>Past Orders</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
@@ -1018,10 +1036,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261022protect"></script>
-<script src="./catalog.js?v=20261101redrawload"></script>
+<script src="./catalog.js?v=20261101ownfabrics"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261101cuffcheck"></script>
+<script src="./main.js?v=20261101ownfabrics"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261101redrawload"></script> -->
 
