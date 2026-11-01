@@ -451,7 +451,7 @@ Top row, about two thirds of the sheet's height, three equal panels side by side
 Bottom row, three equal close-up panels side by side: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture; (6) a close-up of the lower front of the buttoned jacket showing both hip pockets${hipNote}.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side, each garment at its natural, real-life proportions (never squeezed narrow or stretched tall): (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view${ventNote}. In both full suit views the trousers are ${TROUSER_LENGTH}; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, with the trouser hem visible below.`;
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, cropped at mid-thigh with the full-length trouser legs running on out of the bottom of the frame (this panel shows only the waist and upper legs of the same long trousers).`;
 }
 
 // How many buttons each sleeve cuff has (0 if unknown). The image model kept
@@ -473,7 +473,7 @@ function cuffCountText(spec: string): string {
   const holes = what === "buttons"
     ? ". Each button has exactly ONE buttonhole running from it, so there are also EXACTLY " + n + " buttonholes: the same number of buttons and buttonholes (" + n + " and " + n + "). Every button, including the lowest one, has its own buttonhole, and there is never a button without a buttonhole or a buttonhole without a button"
     : "";
-  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + holes + (holes ? bottomAccentText(spec, n) : "") + ". Never " + (n + 1) + ", never " + (n - 1) + "; count " + (holes ? "the buttons and the buttonholes" : "them") + " before finishing";
+  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + holes + (holes ? bottomAccentText(spec, n) : "") + ". Count them before finishing: 1, 2, 3" + (n > 3 ? ", " + Array.from({ length: n - 3 }, (_, i) => i + 4).join(", ") : "") + " and STOP: " + (holes ? "button " : "buttonhole ") + n + " is the TOP one" + (holes ? ", and the row of " + n + " buttons covers only the lower part of the sleeve close-up with plain fabric above it" : "");
 }
 
 // "Bottom Sleeve Buttonhole": the contrast buttonhole was drawn with a button
@@ -909,7 +909,7 @@ function fixedRules(spec: string, buttonPhoto = false): string {
     const wstyle = (spec.match(/^Waistband Style: (.+)$/m) || [])[1] || "";
     const buckle = /buckle/i.test(wstyle);
     rules.push(
-      "- Trouser length, in both full suit views: " + TROUSER_LENGTH + ".",
+      "- Trouser length, in both full suit views: " + TROUSER_LENGTH + ". The trousers are full-length suit trousers in every panel (never shorts), and no shoes or feet appear anywhere on the sheet.",
     );
     rules.push(
       "- The trousers are shown fully CLOSED in every panel: fly zipped and hidden under its fly shield, waistband fastened. Never show an open fly, a visible zipper, or the inside of the waistband.",
