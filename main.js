@@ -5541,9 +5541,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // Tapping a tile selects it. "Same as Jacket" / "Match Fabric Color" sit on
   // top as slim banners.
   // What a monogram is stitched onto, so its thread colors can be shown on
-  // it (a client asked to see their lining while matching the thread,
-  // 2026-11-01): the lining for a jacket inside-pocket monogram, the felt
-  // (or fabric) under the collar, the suit fabric for pants.
+  // it: the suit fabric (Daniel, 2026-11-01: "should be on the fabric", not
+  // the lining), or the felt under the collar when a custom felt is picked.
   // Returns { img, name, what } or null when nothing is picked yet.
   function monogramBackdrop() {
     const place = order.monogram;
@@ -5554,16 +5553,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       return o && o.img && !o.matchesFabric && !o.uploadPhoto ? { img: o.img, name: o.displayName || o.name, what } : null;
     };
     const fabric = () => fromOpt("fabric", "fabric");
-    if (!catalog.lining) return fabric();
-    if (/Collar/.test(place)) {
-      if (order.feltundercollar === "Customer-Appointed Felt" && catalog.feltColor) return fromOpt("feltColor", "felt") || fabric();
-      return fabric();
-    }
-    if (selectedIsUpload("lining") && customPhotos.lining) return { img: customPhotos.lining, name: "Your Photo", what: "lining" };
-    const lin = resolvedValue("lining");
-    const linOpt = lin && catalog.lining.options.find((x) => x.name === lin);
-    if (linOpt && linOpt.matchesFabric) return fabric();
-    return fromOpt("lining", "lining");
+    if (/Collar/.test(place) && order.feltundercollar === "Customer-Appointed Felt" && catalog.feltColor) return fromOpt("feltColor", "felt") || fabric();
+    return fabric();
   }
 
   function renderFlatColorTiles(cat, gridId, descriptionHtml) {
