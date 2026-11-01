@@ -324,7 +324,11 @@ JACKET_CATALOG.pickStitch = {
     { name: "No Pick Stitching", displayName: "None", factoryCode: "0570", img: "./assets/jacket-pickstitch-none.jpg?v=2", badge: "Standard" },
     // The factory refuses these with some pockets (test drafts, 2026-10-25),
     // so they're hidden after those pockets are picked.
-    { name: "Pick Stitch Edges", displayName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=2",
+    // Factory "0.6cm pick stitch on collar and front (including lapel)", 05L3,
+    // from Daniel's factory screenshot 2026-11-01 (not in the API code list).
+    // Collar, lapels and front edges only, no pockets.
+    { name: "Pick Stitch Collar Lapels Front", displayName: "Collar, Lapels & Front", factoryCode: "05L3", img: "./assets/jacket-pickstitch-lapels.jpg" },
+    { name: "Pick Stitch Edges", displayName: "Lapels, Edges & Pockets", specName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=2",
       hiddenWhen: {
         pockettype: ["No Pocket"],
         lowerpocket: ["Double Besom Pocket", "Double Besom Pocket + Double Besom Ticket Pocket", "Double Besom Slant Pocket", "Patch Pocket", "Patch Pocket + Double Besom Ticket Pocket", "No Front Pocket"],
