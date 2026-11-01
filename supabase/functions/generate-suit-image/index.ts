@@ -305,10 +305,12 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
 
   // Where the "Front & Sleeve Buttonhole Color" thread goes (asked only when
   // it isn't matched to the fabric).
+  // "Bottom Sleeve Buttonhole" was drawn as an extra open contrast buttonhole
+  // under the buttons, so it names the lowest button's own buttonhole.
   "Which Buttonholes Get the Color": {
     "Front & Sleeves": "the front buttonholes AND every sleeve cuff buttonhole are stitched in the front & sleeve buttonhole thread color",
     "Sleeves Only": "ONLY the sleeve cuff buttonholes are stitched in the front & sleeve buttonhole thread color; the front buttonholes are stitched in thread matching the fabric",
-    "Bottom Sleeve Buttonhole": "ONLY ONE buttonhole on each sleeve, the bottom one nearest the cuff edge, is stitched in the front & sleeve buttonhole thread color as a single contrast accent; every other cuff buttonhole and the front buttonholes are stitched in thread matching the fabric",
+    "Bottom Sleeve Buttonhole": "ONLY ONE buttonhole on each sleeve is stitched in the front & sleeve buttonhole thread color as a single contrast accent: the buttonhole of the LOWEST cuff button (the one running from the button nearest the cuff edge, and closed by that button like the others). It is one of the cuff buttonholes, NEVER an extra open buttonhole added below or beside the buttons; nothing is stitched below the lowest button. Every other cuff buttonhole and the front buttonholes are stitched in thread matching the fabric",
     "Top Front Buttonhole": "ONLY ONE buttonhole, the TOP front closure buttonhole (the highest buttonhole on the jacket front, the one for the top fastening button), is stitched in the front & sleeve buttonhole thread color as a single contrast accent; every other front buttonhole and all sleeve cuff buttonholes are stitched in thread matching the fabric",
   },
 
