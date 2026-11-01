@@ -992,7 +992,7 @@ function fixedRules(spec: string, buttonPhoto = false): string {
   }
   const holePlace = (spec.match(/^Which Buttonholes Get the Color: (.+)$/m) || [])[1] || "";
   if (holePlace && holePlace !== "Front & Sleeves" && OPTION_LOOKS["Which Buttonholes Get the Color"][holePlace]) {
-    rules.push("- MOST IMPORTANT, contrast buttonhole thread on both sleeves and in the cuff close-up: " + OPTION_LOOKS["Which Buttonholes Get the Color"][holePlace] + ".");
+    rules.push("- MOST IMPORTANT, contrast buttonhole thread " + (holePlace === "Top Front Buttonhole" ? "on the jacket front, the sleeves and every close-up" : "on both sleeves and in the cuff close-up") + ": " + OPTION_LOOKS["Which Buttonholes Get the Color"][holePlace] + ".");
   }
   rules.push("- Jacket length, in every view: " + JACKET_LENGTH + ".");
   const db = front.match(/double breasted (\d)x(\d)/i);
