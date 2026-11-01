@@ -328,12 +328,12 @@ JACKET_CATALOG.pickStitch = {
     // from Daniel's factory screenshot 2026-11-01 (not in the API code list).
     // Collar, lapels and front edges only, no pockets.
     { name: "Pick Stitch Collar Lapels Front", displayName: "Collar, Lapels & Front", factoryCode: "05L3", img: "./assets/jacket-pickstitch-lapels.jpg" },
-    { name: "Pick Stitch Edges", displayName: "Lapels, Edges & Pockets", specName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=3",
+    { name: "Pick Stitch Edges", displayName: "Lapels, Edges & Pockets", specName: "Lapels & Edges", factoryCode: "0576", img: "./assets/jacket-pickstitch-edges.jpg?v=4",
       hiddenWhen: {
         pockettype: ["No Pocket"],
         lowerpocket: ["Double Besom Pocket", "Double Besom Pocket + Double Besom Ticket Pocket", "Double Besom Slant Pocket", "Patch Pocket", "Patch Pocket + Double Besom Ticket Pocket", "No Front Pocket"],
       } },
-    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=3", hiddenWhen: { pockettype: ["No Pocket"] } },
+    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=4", hiddenWhen: { pockettype: ["No Pocket"] } },
   ],
 };
 
