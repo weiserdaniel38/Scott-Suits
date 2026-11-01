@@ -796,6 +796,11 @@ async function refreshAdminStatus() {
     promoSection.hidden = !admin;
     if (admin) loadAdminPromoCodes();
   }
+  const cfSection = document.getElementById("adminClientFabricsSection");
+  if (cfSection) {
+    cfSection.hidden = !admin;
+    if (admin) loadAdminClientFabrics();
+  }
   if (adminNotificationsSection) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
@@ -1532,6 +1537,189 @@ async function loadAdminOrders() {
     console.error(err);
     adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
   }
+}
+
+// ---- Admin: client fabric lists (supabase/sql/36_client_fabric_lists.sql) ----
+const cfAdminForm = document.getElementById("cfAdminForm");
+const cfAdminList = document.getElementById("cfAdminList");
+let cfAdminPicked = [];
+let cfAdminEditing = null; // email being edited, or null for a new list
+function cfFabricName(name) {
+  const o = JACKET_CATALOG.fabric.options.find((x) => x.name === name);
+  return o ? o.displayName || o.name : name + " (no longer on the site)";
+}
+function cfAdminSay(text, ok) {
+  const el = document.getElementById("cfAdminMsg");
+  if (!el) return;
+  el.hidden = !text;
+  el.textContent = text || "";
+  el.classList.toggle("promo-ok", !!ok);
+}
+// Every site fabric as a tickable row, picked ones first; the search box
+// narrows it by name.
+function renderCfAdminPicker() {
+  const box = document.getElementById("cfAdminPicker");
+  if (!box) return;
+  const q = (document.getElementById("cfAdminSearch").value || "").trim().toLowerCase();
+  const all = JACKET_CATALOG.fabric.options.slice().sort((a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name));
+  const picked = all.filter((o) => cfAdminPicked.indexOf(o.name) !== -1);
+  const rest = all.filter((o) => cfAdminPicked.indexOf(o.name) === -1 && (!q || (o.displayName || o.name).toLowerCase().indexOf(q) !== -1));
+  box.innerHTML = "";
+  picked.concat(q ? rest : []).forEach((o) => {
+    const row = document.createElement("label");
+    row.className = "cf-admin-row";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = cfAdminPicked.indexOf(o.name) !== -1;
+    cb.addEventListener("change", () => {
+      if (cb.checked) { if (cfAdminPicked.indexOf(o.name) === -1) cfAdminPicked.push(o.name); }
+      else cfAdminPicked = cfAdminPicked.filter((n) => n !== o.name);
+      document.getElementById("cfAdminCount").textContent = cfAdminPicked.length;
+    });
+    const chip = document.createElement("span");
+    chip.className = "cf-admin-chip";
+    chip.style.backgroundImage = "url('" + o.img + "')";
+    const name = document.createElement("span");
+    name.textContent = o.displayName || o.name;
+    row.append(cb, chip, name);
+    box.appendChild(row);
+  });
+  if (!q && !picked.length) box.innerHTML = '<p class="account-section-note">Search above to find fabrics to add.</p>';
+  else if (q && !rest.length && !picked.length) box.innerHTML = '<p class="account-section-note">No fabric matches that.</p>';
+  document.getElementById("cfAdminCount").textContent = cfAdminPicked.length;
+}
+function cfAdminResetForm() {
+  if (!cfAdminForm) return;
+  cfAdminForm.reset();
+  cfAdminPicked = [];
+  cfAdminEditing = null;
+  document.getElementById("cfAdminEmail").disabled = false;
+  document.getElementById("cfAdminCancelBtn").hidden = true;
+  renderCfAdminPicker();
+}
+async function loadAdminClientFabrics() {
+  if (!cfAdminList) return;
+  renderCfAdminPicker();
+  cfAdminList.innerHTML = '<p class="account-section-note">Loading...</p>';
+  const { data, error } = await getSupabase().rpc("admin_list_client_fabrics");
+  if (error) {
+    console.error(error);
+    cfAdminList.innerHTML = '<p class="account-section-note">Couldn’t load client fabric lists right now.</p>';
+    return;
+  }
+  cfAdminList.innerHTML = "";
+  if (!data || !data.length) {
+    cfAdminList.innerHTML = '<p class="account-section-note">No client fabric lists yet.</p>';
+    return;
+  }
+  data.forEach((l) => {
+    const card = document.createElement("div");
+    card.className = "promo-admin-card" + (l.active ? "" : " promo-off");
+    const head = document.createElement("div");
+    head.className = "promo-admin-head";
+    const who = document.createElement("strong");
+    who.className = "promo-admin-code";
+    who.textContent = l.email;
+    const state = document.createElement("span");
+    state.className = "promo-admin-state";
+    state.textContent = !l.active ? "Off" : l.has_account ? "On" : "No account yet";
+    head.append(who, state);
+    const rules = document.createElement("p");
+    rules.className = "promo-admin-rules";
+    rules.textContent = "“" + (l.label || "Picked for you") + "”: " + (l.fabrics || []).map(cfFabricName).join(", ");
+    card.append(head, rules);
+    if (l.note) {
+      const note = document.createElement("p");
+      note.className = "promo-admin-note";
+      note.textContent = l.note;
+      card.appendChild(note);
+    }
+    const actions = document.createElement("div");
+    actions.className = "promo-admin-card-actions";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "btn-ghost";
+    toggle.textContent = l.active ? "Turn off" : "Turn on";
+    toggle.addEventListener("click", async () => {
+      toggle.disabled = true;
+      const { error: e } = await getSupabase().rpc("admin_save_client_fabrics", { p_email: l.email, p_fabrics: l.fabrics, p_label: l.label, p_note: l.note, p_active: !l.active });
+      if (e) cfAdminSay(e.message);
+      loadAdminClientFabrics();
+    });
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "btn-ghost";
+    edit.textContent = "Edit";
+    edit.addEventListener("click", () => {
+      cfAdminEditing = l;
+      const em = document.getElementById("cfAdminEmail");
+      em.value = l.email;
+      em.disabled = true;
+      document.getElementById("cfAdminLabel").value = l.label || "";
+      document.getElementById("cfAdminNote").value = l.note || "";
+      document.getElementById("cfAdminSearch").value = "";
+      cfAdminPicked = (l.fabrics || []).slice();
+      document.getElementById("cfAdminCancelBtn").hidden = false;
+      renderCfAdminPicker();
+      cfAdminSay("");
+      cfAdminForm.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "btn-ghost promo-admin-delete";
+    del.textContent = "Delete";
+    const sure = document.createElement("span");
+    sure.className = "promo-admin-sure";
+    sure.hidden = true;
+    sure.textContent = "Delete this list? ";
+    const yes = document.createElement("button");
+    yes.type = "button";
+    yes.className = "btn-ghost promo-admin-delete";
+    yes.textContent = "Yes, delete";
+    const no = document.createElement("button");
+    no.type = "button";
+    no.className = "btn-ghost";
+    no.textContent = "Keep";
+    sure.append(yes, " ", no);
+    del.addEventListener("click", () => { del.hidden = true; sure.hidden = false; });
+    no.addEventListener("click", () => { sure.hidden = true; del.hidden = false; });
+    yes.addEventListener("click", async () => {
+      yes.disabled = true;
+      const { error: e } = await getSupabase().rpc("admin_delete_client_fabrics", { p_email: l.email });
+      if (e) { yes.disabled = false; return cfAdminSay(e.message); }
+      if (cfAdminEditing && cfAdminEditing.email === l.email) cfAdminResetForm();
+      cfAdminSay("Deleted the list for " + l.email + ". They see all fabrics again.", true);
+      loadAdminClientFabrics();
+    });
+    actions.append(toggle, edit, del, sure);
+    card.appendChild(actions);
+    cfAdminList.appendChild(card);
+  });
+}
+if (cfAdminForm) {
+  document.getElementById("cfAdminSearch").addEventListener("input", renderCfAdminPicker);
+  cfAdminForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = (document.getElementById("cfAdminEmail").value || "").trim();
+    if (!email) return cfAdminSay("Type the customer's account email.");
+    if (!cfAdminPicked.length) return cfAdminSay("Tick at least one fabric.");
+    const btn = document.getElementById("cfAdminSaveBtn");
+    btn.disabled = true;
+    cfAdminSay("Saving...", true);
+    const { error } = await getSupabase().rpc("admin_save_client_fabrics", {
+      p_email: email,
+      p_fabrics: cfAdminPicked,
+      p_label: (document.getElementById("cfAdminLabel").value || "").trim() || null,
+      p_note: (document.getElementById("cfAdminNote").value || "").trim(),
+      p_active: cfAdminEditing ? !!cfAdminEditing.active : true,
+    });
+    btn.disabled = false;
+    if (error) return cfAdminSay(error.message);
+    cfAdminResetForm();
+    cfAdminSay("Saved. That customer now sees only these fabrics when signed in.", true);
+    loadAdminClientFabrics();
+  });
+  document.getElementById("cfAdminCancelBtn").addEventListener("click", () => { cfAdminResetForm(); cfAdminSay(""); });
 }
 
 // ---- Admin: promo codes (supabase/sql/34_promo_codes.sql) ----
@@ -2643,6 +2831,47 @@ function refreshAccountData() {
   refreshAdminStatus();
   prefillContactDetails();
   if (window.recheckPromoCode) window.recheckPromoCode();
+  loadAccountFabricList();
+}
+
+// A customer account can have its own short fabric list (admin: My Account >
+// Client Fabric Lists, supabase/sql/36_client_fabric_lists.sql). While that
+// customer is signed in, the Fabric step offers only those fabrics, under
+// their own heading. Everyone else (and anyone signed out) sees the normal
+// list. { label, fabrics: [catalog fabric names] } or null.
+let accountFabricList = null;
+async function builtinAccountFabricList(email) {
+  try {
+    if (!email || !window.crypto || !crypto.subtle || typeof CLIENT_FABRIC_LISTS_BUILTIN === "undefined") return null;
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(email).trim().toLowerCase()));
+    const hex = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const l = CLIENT_FABRIC_LISTS_BUILTIN[hex];
+    return l ? { label: l.label || "Picked for you", fabrics: l.fabrics.slice() } : null;
+  } catch (e) {
+    return null;
+  }
+}
+let onAccountFabricsChanged = null; // set once the designers exist
+async function loadAccountFabricList() {
+  const user = currentUser;
+  let list = null;
+  if (user) {
+    try {
+      const { data, error } = await getSupabase().rpc("my_fabric_list");
+      const row = !error && Array.isArray(data) ? data[0] : null;
+      if (row && Array.isArray(row.fabrics) && row.fabrics.length) list = { label: row.label || "Picked for you", fabrics: row.fabrics.slice() };
+      // Until the database table is in place, the built-in lists in
+      // catalog.js (keyed by a hash of the account email, so no email is in
+      // the page) are used instead.
+      if (error) list = await builtinAccountFabricList(user.email);
+    } catch (e) {
+      list = null;
+    }
+  }
+  if (user !== currentUser) return;
+  const before = JSON.stringify(accountFabricList);
+  accountFabricList = list;
+  if (before !== JSON.stringify(list) && onAccountFabricsChanged) onAccountFabricsChanged();
 }
 
 // A signed-in customer who has ordered before gets the Personal Info page
@@ -3968,8 +4197,20 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // null = the normal, fully custom designer.
   let preset = null;
   function presetAllows(key, o) {
+    // A customer's own fabric list (see loadAccountFabricList) wins over
+    // everything else on the Fabric step, presets included.
+    const own = accountFabricsFor(key);
+    if (own) return own.indexOf(o.name) !== -1;
     const list = preset && preset.allowed && preset.allowed[key];
     return !list || list.indexOf(o.name) !== -1;
+  }
+  // The signed-in customer's own fabric names for this step, or null. Only
+  // used when at least one of them is still in the catalog, so a stale list
+  // never leaves the step empty.
+  function accountFabricsFor(key) {
+    if (key !== "fabric" || !accountFabricList || !catalog[key]) return null;
+    const names = accountFabricList.fabrics;
+    return catalog[key].options.some((o) => names.indexOf(o.name) !== -1) ? names : null;
   }
   // Writes the preset's fixed answers (including any that depend on a pick,
   // e.g. the Shawl lapel's own buttonhole) over the current selections.
@@ -4052,7 +4293,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     });
     keys.forEach((k) => {
       const cat = catalog[k];
-      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen || o.hiddenWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) {
+      if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen || o.hiddenWhen) || (preset && preset.allowed && preset.allowed[k]) || (accountFabricsFor(k) && order[k] !== sameAsSentinel(k))) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) {
         // An option with `replaceWith` moves to that option instead of
         // asking again (Notch -> Peak once the front is double breasted).
         // It can list several; the first one still allowed wins.
@@ -4778,7 +5019,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // gray banner across the top of the card -- a hint for a customer who
     // doesn't know what to pick, not part of the stored/printed value.
     // No badges (e.g. "Standard") on a step a preset narrows down.
-    const presetStep = !!(preset && preset.allowed && preset.allowed[activeTab]);
+    const presetStep = !!(preset && preset.allowed && preset.allowed[activeTab]) || !!accountFabricsFor(activeTab);
     const badgeHtml = opt.badge && !presetStep ? '<div class="opt-badge">' + opt.badge + "</div>" : "";
     // The magnifier/zoom button is redundant on a zoom category (Fabric,
     // Lining, Felt Color): clicking the card itself now opens the same
@@ -5414,7 +5655,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
 
     // A step a preset narrows to a few options (e.g. its 4 fabrics) shows
     // them as plain picture cards instead of the full color/pattern browser.
-    const presetLimited = !!(preset && preset.allowed && preset.allowed[activeTab]);
+    const ownFabrics = !!accountFabricsFor(activeTab);
+    const presetLimited = !!(preset && preset.allowed && preset.allowed[activeTab]) || ownFabrics;
 
     if (cat.colorFirst && !presetLimited) {
       renderColorFirstOptions(cat, gridId, descriptionHtml);
@@ -5492,6 +5734,13 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     renderSameAsCard(cat, grid);
 
     let lastSection = null;
+    // A customer's own fabric list sits under its own heading.
+    if (ownFabrics) {
+      const h = document.createElement("h4");
+      h.className = "opt-section-divider own-fabrics-heading";
+      h.textContent = accountFabricList.label || "Picked for you";
+      grid.appendChild(h);
+    }
     allowedOptions(activeTab).forEach((opt) => {
       // Skip a regular option that's identical to the "Same as Jacket" card
       // above (e.g. don't show "Navy Blue" twice when the jacket is already
@@ -5663,6 +5912,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     },
     // Off for pants ordered on their own: no "Same as Jacket" cards, and any
     // "same as" answer already picked is cleared so it gets asked again.
+    // The signed-in customer's own fabric list changed (signed in / out):
+    // re-check the picked fabric and redraw.
+    refreshAccountFabrics: () => {
+      reconcileSelections();
+      renderTabs();
+      renderOptions();
+      renderSummary();
+    },
     setSameAsEnabled: (on) => {
       if (on) sameAsResolvers = allSameAsResolvers;
       else {
@@ -5782,6 +6039,12 @@ const pantsDesigner = createDesigner(
   },
   PANTS_CATALOG_GROUPS
 );
+
+onAccountFabricsChanged = () => {
+  jacketDesigner.refreshAccountFabrics();
+  pantsDesigner.refreshAccountFabrics();
+};
+if (accountFabricList) onAccountFabricsChanged();
 
 // Labels for each measurement in the order summary.
 const MEASUREMENT_FORM_LABELS = {

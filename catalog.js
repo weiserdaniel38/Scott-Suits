@@ -3227,3 +3227,19 @@ const CLASSIC_SUIT_PRESET = {
     },
   },
 };
+
+// ---------------------------------------------------------------------
+// Per-customer fabric lists built into the site, used only until the
+// client_fabric_lists table (supabase/sql/36_client_fabric_lists.sql) is in
+// the database; after that, My Account > Client Fabric Lists is the place.
+// Key: SHA-256 of the account email in lower case (no email in the page).
+// fabrics: catalog fabric names; customers only ever see display names.
+// ---------------------------------------------------------------------
+const CLIENT_FABRIC_LISTS_BUILTIN = {
+  // Dovid (2026-11-01): Rich Slate Blue ran out at the factory; in-stock
+  // navy/blue picks in the same price range.
+  "53fa8fb615115e806ff9ea265d734142f9b7bec7a4acc9994d670977118e02f1": {
+    label: "Picked for you",
+    fabrics: ["26SU213.DEE1018", "26SU087.DBV402A", "26SU088.DBV403A", "26SU085.DBV400A", "26SU086.DBV401A", "26SU190.DPP0193"],
+  },
+};
