@@ -113,7 +113,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261029stripfit">
+<link rel="stylesheet" href="./style.css?v=20261101promo">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261026fabricphotos"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -696,6 +696,17 @@
       </label>
     </div>
   </div>
+  <!-- Promo code (supabase/sql/34_promo_codes.sql). Only on a storefront
+       that takes payment; the stripe-checkout function checks the code and
+       works out the discount itself. See initPromoCode() in main.js. -->
+  <div class="promo-block" id="promoBlock" hidden>
+    <label for="promoCodeInput">Promo code</label>
+    <div class="promo-row">
+      <div class="measure-input-wrap"><input type="text" id="promoCodeInput" placeholder="Enter code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30"></div>
+      <button type="button" class="btn-ghost promo-apply" id="promoApplyBtn">Apply</button>
+    </div>
+    <p class="promo-msg" id="promoMsg" hidden></p>
+  </div>
   <p class="pers-total" id="orderTotalNote" hidden></p>
   <div class="admin-order" id="adminOrderWrap" hidden>
     <p><strong>Admin</strong> You're signed in as the shop admin.</p>
@@ -867,6 +878,29 @@
         <div id="adminNotificationsList" class="brand-keep"></div>
       </details>
 
+      <!-- Shop admin only: make and manage promo codes
+           (supabase/sql/34_promo_codes.sql). -->
+      <details class="account-collapse" id="adminPromoSection" hidden>
+        <summary><h3>Promo Codes</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <p class="account-section-note">Only you see this (shop admin). Customers type the code on the order page. Percent off is taken first, then dollars off, from the suits and Alteration Protection (never shipping or tax).</p>
+        <form class="promo-admin-form" id="promoAdminForm" autocomplete="off">
+          <div class="measure-field"><label for="promoAdminCode">Code</label><div class="measure-input-wrap"><input type="text" id="promoAdminCode" placeholder="e.g. JOHN50" maxlength="30" autocapitalize="characters" spellcheck="false"></div></div>
+          <div class="measure-field"><label for="promoAdminAmount">Dollars off ($)</label><div class="measure-input-wrap"><input type="number" id="promoAdminAmount" min="0" step="1" inputmode="decimal" placeholder="0"></div></div>
+          <div class="measure-field"><label for="promoAdminPercent">Percent off (%)</label><div class="measure-input-wrap"><input type="number" id="promoAdminPercent" min="0" max="100" step="1" inputmode="decimal" placeholder="0"></div></div>
+          <div class="measure-field pers-full"><label for="promoAdminEmails">Only for these accounts (emails, blank = anyone)</label><div class="measure-input-wrap"><textarea id="promoAdminEmails" rows="2" placeholder="customer@email.com"></textarea></div></div>
+          <div class="measure-field"><label for="promoAdminMax">Max uses in total (blank = no limit)</label><div class="measure-input-wrap"><input type="number" id="promoAdminMax" min="1" step="1" inputmode="numeric" placeholder="No limit"></div></div>
+          <div class="measure-field"><label for="promoAdminExpires">Last day it works (optional)</label><div class="measure-input-wrap"><input type="date" id="promoAdminExpires"></div></div>
+          <div class="measure-field pers-full"><label for="promoAdminNote">Note for you (optional)</label><div class="measure-input-wrap"><input type="text" id="promoAdminNote" maxlength="200" placeholder="e.g. Birthday discount for John"></div></div>
+          <label class="save-measurements-toggle pers-full"><input type="checkbox" id="promoAdminOnce" checked> <span>Each customer can use it only once</span></label>
+          <div class="promo-admin-actions pers-full">
+            <button type="submit" class="btn-primary" id="promoAdminSaveBtn">Add code</button>
+            <button type="button" class="btn-ghost" id="promoAdminCancelBtn" hidden>Cancel edit</button>
+          </div>
+          <p class="account-status-msg pers-full" id="promoAdminMsg" hidden></p>
+        </form>
+        <div id="promoAdminList" class="promo-admin-list brand-keep"></div>
+      </details>
+
       <!-- Collapsed by default, like the sections above. -->
       <details class="account-collapse" id="pastOrdersSection">
         <summary><h3>Past Orders</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
@@ -979,7 +1013,7 @@
 <script src="./catalog.js?v=20261030pinkpurple"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261101fast"></script>
+<script src="./main.js?v=20261101promo"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261027holecolor"></script> -->
 

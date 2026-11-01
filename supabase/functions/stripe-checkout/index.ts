@@ -9,6 +9,11 @@
 //   { action: "verify", session_id } -> { paid, order_id, amount }
 //       Called when Stripe sends the customer back. Asks Stripe whether the
 //       payment really went through and, if so, marks the order paid.
+//   { action: "promo_check", code }  -> { ok, code, amount_off_usd, percent_off }
+//       or { ok: false, error }. Lets the order page show a promo code's
+//       discount before paying. Send the customer's Authorization: Bearer
+//       token when they're signed in (codes kept to certain accounts need it).
+//       The real discount is worked out again in "create" from the saved order.
 //   { action: "cancel", order_id }   -> { cancelled } or { paid }
 //       Called when the customer backs out of Stripe's page. Closes the
 //       Stripe session and removes the unpaid order, so trying again doesn't
@@ -28,6 +33,11 @@
 // the shipping address (Stripe Tax must be set up in the Stripe dashboard
 // first: origin address + where you're registered to collect). What was
 // charged is saved on the order.
+//
+// Promo codes (supabase/sql/34_promo_codes.sql): the order names a code;
+// "create" checks it again (account, uses, end date) and takes the discount
+// off the suits + Alteration Protection with a one-time Stripe coupon, never
+// off shipping or tax. At least $1 of the goods is always left to pay.
 //
 // Admin orders (admin_no_payment) never come through here.
 //
@@ -139,6 +149,8 @@ type OrderRow = {
   shipping_state: string | null;
   shipping_zip: string | null;
   shipping_country: string | null;
+  user_id: string | null;
+  promo_code: string | null;
 };
 
 async function loadOrder(orderId: string): Promise<OrderRow[]> {
@@ -146,7 +158,7 @@ async function loadOrder(orderId: string): Promise<OrderRow[]> {
     .from("orders")
     .select(
       "order_id, suit_number, suit_type, item_price_usd, alteration_protection, customer_email, payment_status, admin_no_payment, stripe_session_id, created_at, " +
-        "fulfillment, customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country",
+        "fulfillment, customer_name, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country, user_id, promo_code",
     )
     .eq("order_id", orderId)
     .order("suit_number", { ascending: true });
@@ -185,6 +197,98 @@ export function lineItems(rows: OrderRow[]) {
     };
   }
   return items;
+}
+
+// What the order's goods cost before any discount: suits + protection.
+export function goodsCents(rows: OrderRow[]): number {
+  const suits = rows.reduce((sum, r) => sum + Math.round(Number(r.item_price_usd) * 100), 0);
+  const protectedCount = rows.filter((r) => r.alteration_protection).length;
+  return suits + (PROTECTION_CENTS > 0 ? protectedCount * PROTECTION_CENTS : 0);
+}
+
+type Promo = {
+  code: string;
+  amount_off_usd: number | string;
+  percent_off: number | string;
+  allowed_user_ids: string[] | null;
+  max_uses: number | null;
+  once_per_customer: boolean;
+  expires_on: string | null;
+  active: boolean;
+};
+
+// Percent off first, then dollars off, leaving at least $1 to pay.
+export function promoDiscountCents(goods: number, p: { amount_off_usd: number | string; percent_off: number | string }): number {
+  const pct = Math.min(100, Math.max(0, Number(p.percent_off) || 0));
+  const amount = Math.max(0, Math.round((Number(p.amount_off_usd) || 0) * 100));
+  const off = Math.round((goods * pct) / 100) + amount;
+  return Math.max(0, Math.min(off, goods - 100));
+}
+
+export function normalizeCode(raw: unknown): string {
+  return String(raw || "").trim().toUpperCase();
+}
+
+// Today in New Jersey, as YYYY-MM-DD: a code ending on a date works all
+// that day in the shop's time.
+function todayNY(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+// The promo code if this customer may use it now, or an error to show them.
+async function checkPromo(rawCode: unknown, userId: string | null, email: string, excludeOrder = ""): Promise<{ promo?: Promo; error?: string }> {
+  const code = normalizeCode(rawCode);
+  if (!/^[A-Z0-9_-]{3,30}$/.test(code)) return { error: "That promo code isn't valid." };
+  const { data, error } = await supabase
+    .from("promo_codes")
+    .select("code, amount_off_usd, percent_off, allowed_user_ids, max_uses, once_per_customer, expires_on, active")
+    .eq("code", code)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  const p = (data && data[0]) as Promo | undefined;
+  if (!p || !p.active) return { error: "That promo code isn't valid." };
+  if (p.expires_on && todayNY() > p.expires_on) return { error: "That promo code has expired." };
+  const allowed = p.allowed_user_ids || [];
+  if (allowed.length) {
+    if (!userId) return { error: "Please sign in to your account to use this promo code." };
+    if (!allowed.includes(userId)) return { error: "That promo code isn't valid for your account." };
+  }
+  // Paid orders that used it (one per order; an order has a row per suit).
+  const used = async (filter: (q: any) => any) => {
+    let q = supabase.from("orders").select("order_id").eq("promo_code", code).eq("payment_status", "paid").gt("promo_discount_usd", 0);
+    q = filter(q);
+    if (excludeOrder) q = q.neq("order_id", excludeOrder);
+    const { data: rows, error: e } = await q.limit(5000);
+    if (e) throw new Error(e.message);
+    return new Set((rows || []).map((r: { order_id: string }) => r.order_id)).size;
+  };
+  if (p.max_uses && (await used((q) => q)) >= p.max_uses) return { error: "That promo code has already been used." };
+  if (p.once_per_customer) {
+    const mine = userId
+      ? await used((q) => q.eq("user_id", userId))
+      : email
+      ? await used((q) => q.ilike("customer_email", email.replace(/[\\%_]/g, (c) => "\\" + c)))
+      : 0;
+    if (mine > 0) return { error: "You've already used this promo code." };
+  }
+  return { promo: { ...p, code } };
+}
+
+async function promoCheck(body: Record<string, unknown>, authHeader: string | null) {
+  let userId: string | null = null;
+  let email = "";
+  const token = (authHeader || "").replace(/^Bearer\s+/i, "").trim();
+  if (token && token.split(".").length === 3) {
+    const { data } = await supabase.auth.getUser(token);
+    if (data && data.user) {
+      userId = data.user.id;
+      email = (data.user.email || "").toLowerCase();
+    }
+  }
+  if (!userId) email = String(body.email || "").trim().toLowerCase();
+  const { promo, error } = await checkPromo(body.code, userId, email);
+  if (!promo) return json({ ok: false, error });
+  return json({ ok: true, code: promo.code, amount_off_usd: Number(promo.amount_off_usd) || 0, percent_off: Number(promo.percent_off) || 0 });
 }
 
 // The order form's free-text country as a 2-letter code Stripe understands,
@@ -317,6 +421,33 @@ async function createCheckout(orderId: string, origin: string | null) {
       },
     };
   }
+  // Promo code: checked again here from the saved order, never trusted
+  // from the page.
+  let discountCents = 0;
+  const promoCode = normalizeCode(rows[0].promo_code);
+  if (promoCode) {
+    const { promo, error } = await checkPromo(promoCode, rows[0].user_id, email.toLowerCase(), orderId);
+    if (!promo) return json({ error: "Promo code " + promoCode + ": " + error }, 400);
+    discountCents = promoDiscountCents(goodsCents(rows), promo);
+    if (discountCents > 0) {
+      const coupon = await stripe("POST", "coupons", {
+        amount_off: discountCents,
+        currency: "usd",
+        duration: "once",
+        max_redemptions: 1,
+        name: ("Promo code " + promoCode).slice(0, 40),
+        metadata: { order_id: orderId, promo_code: promoCode },
+      });
+      params.discounts = { 0: { coupon: coupon.id } };
+    }
+  }
+  const { error: promoErr } = await supabase
+    .from("orders")
+    .update({ promo_discount_usd: discountCents ? discountCents / 100 : null })
+    .eq("order_id", orderId)
+    .eq("payment_status", "awaiting_payment");
+  if (promoErr) return json({ error: promoErr.message }, 500);
+
   let session: Record<string, any> | null = null;
   const customer = !pickup && AUTOMATIC_TAX ? await taxCustomer(rows[0], email).catch((e) => (console.error(e), null)) : null;
   if (customer) {
@@ -351,6 +482,7 @@ async function markPaidFromSession(s: Record<string, any>) {
   const amount = Number(s.amount_total || 0) / 100;
   const shipping = Number((s.total_details && s.total_details.amount_shipping) || 0) / 100;
   const tax = Number((s.total_details && s.total_details.amount_tax) || 0) / 100;
+  const discount = Number((s.total_details && s.total_details.amount_discount) || 0) / 100;
   const { error } = await supabase
     .from("orders")
     .update({ payment_status: "paid", amount_paid_usd: amount, shipping_usd: shipping, tax_usd: tax, paid_at: new Date().toISOString() })
@@ -360,7 +492,7 @@ async function markPaidFromSession(s: Record<string, any>) {
   if (error) throw new Error(error.message);
   // Already-paid (webhook got there first) still counts as paid.
   const { data } = await supabase.from("orders").select("payment_status").eq("order_id", orderId).eq("stripe_session_id", s.id).limit(1);
-  return { paid: !!(data && data[0] && data[0].payment_status === "paid"), order_id: orderId, amount, shipping, tax };
+  return { paid: !!(data && data[0] && data[0].payment_status === "paid"), order_id: orderId, amount, shipping, tax, discount };
 }
 
 async function verifySession(sessionId: string) {
@@ -433,6 +565,7 @@ Deno.serve(async (req) => {
       if (!orderId) return json({ error: "order_id required" }, 400);
       return await createCheckout(orderId, req.headers.get("origin"));
     }
+    if (action === "promo_check") return await promoCheck(body, req.headers.get("authorization"));
     if (action === "verify") return await verifySession(String(body.session_id || ""));
     if (action === "cancel") {
       const orderId = String(body.order_id || "");

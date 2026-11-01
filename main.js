@@ -791,6 +791,11 @@ async function refreshAdminStatus() {
     shipWrap.hidden = !admin;
     if (admin) loadAdminOrders();
   }
+  const promoSection = document.getElementById("adminPromoSection");
+  if (promoSection) {
+    promoSection.hidden = !admin;
+    if (admin) loadAdminPromoCodes();
+  }
   if (adminNotificationsSection) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
@@ -1481,7 +1486,7 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
@@ -1491,6 +1496,7 @@ async function loadAdminOrders() {
       client.rpc("admin_order_fabrics"),
       client.rpc("admin_order_pictures"),
       client.rpc("admin_order_factory"),
+      client.rpc("admin_order_promos"),
     ]);
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
@@ -1507,6 +1513,7 @@ async function loadAdminOrders() {
     if (!extras.error && extras.data) extras.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    if (!promos.error && promos.data) promos.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     // Each suit's fabric(s), suit picture and factory order, shown on its
     // suit card in the order row (supabase/sql/27, 28 and 30).
     const pics = {};
@@ -1527,6 +1534,172 @@ async function loadAdminOrders() {
   }
 }
 
+// ---- Admin: promo codes (supabase/sql/34_promo_codes.sql) ----
+const promoAdminForm = document.getElementById("promoAdminForm");
+const promoAdminList = document.getElementById("promoAdminList");
+let promoAdminEditingId = null;
+let promoAdminEditingActive = true;
+
+function promoAdminSay(text, ok) {
+  const el = document.getElementById("promoAdminMsg");
+  if (!el) return;
+  el.textContent = text || "";
+  el.hidden = !text;
+  el.classList.toggle("promo-ok", !!ok);
+}
+
+function promoAdminResetForm() {
+  if (!promoAdminForm) return;
+  promoAdminForm.reset();
+  document.getElementById("promoAdminOnce").checked = true;
+  promoAdminEditingId = null;
+  promoAdminEditingActive = true;
+  document.getElementById("promoAdminSaveBtn").textContent = "Add code";
+  document.getElementById("promoAdminCancelBtn").hidden = true;
+}
+
+function promoAdminRuleText(p) {
+  const bits = [promoOfferText(p)];
+  const emails = p.allowed_emails || [];
+  bits.push(emails.length ? "only for " + emails.join(", ") : "any customer");
+  if (p.once_per_customer) bits.push("once per customer");
+  bits.push("used " + (p.uses || 0) + (p.max_uses ? " of " + p.max_uses : "") + (p.uses === 1 ? " time" : " times"));
+  if (p.expires_on) {
+    const d = new Date(p.expires_on + "T12:00:00");
+    bits.push("works through " + d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }));
+  }
+  return bits.join(" · ");
+}
+
+async function loadAdminPromoCodes() {
+  if (!promoAdminList) return;
+  promoAdminList.innerHTML = '<p class="account-section-note">Loading...</p>';
+  const { data, error } = await getSupabase().rpc("admin_list_promo_codes");
+  if (error) {
+    console.error(error);
+    promoAdminList.innerHTML = '<p class="account-section-note">Couldn’t load promo codes right now.</p>';
+    return;
+  }
+  promoAdminList.innerHTML = "";
+  if (!data || !data.length) {
+    promoAdminList.innerHTML = '<p class="account-section-note">No promo codes yet.</p>';
+    return;
+  }
+  const today = new Date().toLocaleDateString("en-CA");
+  data.forEach((p) => {
+    const ended = p.expires_on && p.expires_on < today;
+    const usedUp = p.max_uses && p.uses >= p.max_uses;
+    const card = document.createElement("div");
+    card.className = "promo-admin-card" + (p.active && !ended && !usedUp ? "" : " promo-off");
+    const head = document.createElement("div");
+    head.className = "promo-admin-head";
+    const code = document.createElement("strong");
+    code.className = "promo-admin-code";
+    code.textContent = p.code;
+    const state = document.createElement("span");
+    state.className = "promo-admin-state";
+    state.textContent = !p.active ? "Off" : ended ? "Ended" : usedUp ? "Used up" : "On";
+    head.append(code, state);
+    const rules = document.createElement("p");
+    rules.className = "promo-admin-rules";
+    rules.textContent = promoAdminRuleText(p);
+    card.append(head, rules);
+    if (p.note) {
+      const note = document.createElement("p");
+      note.className = "promo-admin-note";
+      note.textContent = p.note;
+      card.appendChild(note);
+    }
+    const actions = document.createElement("div");
+    actions.className = "promo-admin-card-actions";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "btn-ghost";
+    toggle.textContent = p.active ? "Turn off" : "Turn on";
+    toggle.addEventListener("click", async () => {
+      toggle.disabled = true;
+      const { error: e } = await getSupabase().rpc("admin_set_promo_active", { p_id: p.id, p_active: !p.active });
+      if (e) alert(e.message);
+      loadAdminPromoCodes();
+    });
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "btn-ghost";
+    edit.textContent = "Edit";
+    edit.addEventListener("click", () => {
+      promoAdminEditingId = p.id;
+      promoAdminEditingActive = !!p.active;
+      document.getElementById("promoAdminCode").value = p.code;
+      document.getElementById("promoAdminAmount").value = Number(p.amount_off_usd) || "";
+      document.getElementById("promoAdminPercent").value = Number(p.percent_off) || "";
+      document.getElementById("promoAdminEmails").value = (p.allowed_emails || []).join(", ");
+      document.getElementById("promoAdminMax").value = p.max_uses || "";
+      document.getElementById("promoAdminExpires").value = p.expires_on || "";
+      document.getElementById("promoAdminNote").value = p.note || "";
+      document.getElementById("promoAdminOnce").checked = !!p.once_per_customer;
+      document.getElementById("promoAdminSaveBtn").textContent = "Save changes";
+      document.getElementById("promoAdminCancelBtn").hidden = false;
+      promoAdminSay("");
+      promoAdminForm.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    actions.append(toggle, edit);
+    if (!p.uses) {
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-ghost";
+      del.textContent = "Delete";
+      del.addEventListener("click", async () => {
+        if (!confirm("Delete promo code " + p.code + "?")) return;
+        const { error: e } = await getSupabase().rpc("admin_delete_promo_code", { p_id: p.id });
+        if (e) alert(e.message);
+        if (promoAdminEditingId === p.id) promoAdminResetForm();
+        loadAdminPromoCodes();
+      });
+      actions.appendChild(del);
+    }
+    card.appendChild(actions);
+    promoAdminList.appendChild(card);
+  });
+}
+
+if (promoAdminForm) {
+  promoAdminForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const val = (id) => (document.getElementById(id).value || "").trim();
+    const num = (id) => (val(id) === "" ? null : Number(val(id)));
+    const amount = num("promoAdminAmount") || 0;
+    const percent = num("promoAdminPercent") || 0;
+    if (!val("promoAdminCode")) return promoAdminSay("Please type a code.");
+    if (!amount && !percent) return promoAdminSay("Set dollars off, percent off, or both.");
+    const saveBtn = document.getElementById("promoAdminSaveBtn");
+    saveBtn.disabled = true;
+    promoAdminSay("Saving...", true);
+    const max = num("promoAdminMax");
+    const { error } = await getSupabase().rpc("admin_save_promo_code", {
+      p_id: promoAdminEditingId,
+      p_code: val("promoAdminCode"),
+      p_amount_off_usd: amount,
+      p_percent_off: percent,
+      p_emails: val("promoAdminEmails"),
+      p_max_uses: max ? Math.round(max) : null,
+      p_once_per_customer: document.getElementById("promoAdminOnce").checked,
+      p_expires_on: val("promoAdminExpires") || null,
+      p_active: promoAdminEditingActive,
+      p_note: val("promoAdminNote"),
+    });
+    saveBtn.disabled = false;
+    if (error) return promoAdminSay(error.message);
+    const wasEdit = promoAdminEditingId !== null;
+    promoAdminResetForm();
+    promoAdminSay(wasEdit ? "Saved." : "Code added. Customers can use it now.", true);
+    loadAdminPromoCodes();
+  });
+  document.getElementById("promoAdminCancelBtn").addEventListener("click", () => {
+    promoAdminResetForm();
+    promoAdminSay("");
+  });
+}
+
 // Only "Paid" means Stripe confirmed the money. Orders from before Stripe,
 // or saved with the QA bar's skip button, say "Not paid".
 function adminPaymentLabel(o) {
@@ -1539,7 +1712,8 @@ function adminPaymentLabel(o) {
     const extra = [];
     if (Number(o.shipping_usd)) extra.push("shipping $" + Number(o.shipping_usd).toFixed(2));
     if (Number(o.tax_usd)) extra.push("tax $" + Number(o.tax_usd).toFixed(2));
-    return pickup + "Paid $" + Number(o.amount_paid_usd || 0).toFixed(2) + (extra.length ? " (incl. " + extra.join(", ") + ")" : "");
+    const promo = Number(o.promo_discount_usd) ? " \u00b7 Promo code " + o.promo_code + ": \u2212$" + Number(o.promo_discount_usd).toFixed(2) : "";
+    return pickup + "Paid $" + Number(o.amount_paid_usd || 0).toFixed(2) + (extra.length ? " (incl. " + extra.join(", ") + ")" : "") + promo;
   }
   if (o.payment_status === "awaiting_payment") return pickup + "Awaiting payment";
   return pickup + "Not paid";
@@ -2309,6 +2483,7 @@ function refreshAccountData() {
   loadOrderHistory();
   refreshAdminStatus();
   prefillContactDetails();
+  if (window.recheckPromoCode) window.recheckPromoCode();
 }
 
 // A signed-in customer who has ordered before gets the Personal Info page
@@ -6683,7 +6858,9 @@ function updateOrderSummaryUI() {
   const shipped = STRIPE_ENABLED && fulfillmentChoice() === "ship";
   const shipping = shipped ? shippingUsd() : 0;
   const protection = protectionTotalUsd();
-  const total = suits + protection + shipping;
+  // Promo code: taken off the suits + protection, never shipping or tax.
+  const discount = PROMO_ENABLED && !adminEditState ? promoDiscountUsd(suits + protection) : 0;
+  const total = suits + protection - discount + shipping;
   refreshAlterationText();
   if (adminEditState) {
     submitBtn.textContent = "Save changes to order";
@@ -6708,7 +6885,7 @@ function updateOrderSummaryUI() {
   submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? (liveShippingRates() ? " + shipping + tax" : " + tax") : "") + " & Submit Order" : "Submit Order";
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
-  let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (protection ? " + " + usd(protection) + " Alteration Protection" : "") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
+  let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (protection ? " + " + usd(protection) + " Alteration Protection" : "") + (discount ? ", " + usd(discount) + " off with promo code " + appliedPromo.code : "") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
   if (shipped && liveShippingRates()) text += " plus shipping (the cheapest carrier rate to your address) and sales tax, both worked out at checkout.";
   else if (shipped) text += " plus sales tax, worked out at checkout from your address.";
   else if (STRIPE_ENABLED) text += ", in-store pickup in Clifton, NJ: no shipping, no tax.";
@@ -7267,6 +7444,114 @@ const PAYPAL_ENABLED =
 const STRIPE_ENABLED = typeof STRIPE_CHECKOUT_ENABLED !== "undefined" && STRIPE_CHECKOUT_ENABLED === true && SITE_BRAND.payments !== false;
 const PAYMENT_ENABLED = STRIPE_ENABLED || PAYPAL_ENABLED;
 
+// ---------------------------------------------------------------------------
+// Promo codes (supabase/sql/34_promo_codes.sql). The customer types a code
+// on the order page; the stripe-checkout function says whether it works for
+// them and how much it takes off, and the discount shows in the total. The
+// code is saved on the order and the function works the discount out again
+// itself before Stripe charges, so the page can't change the price. Only on
+// a storefront that takes card payment with prices shown.
+// ---------------------------------------------------------------------------
+const PROMO_ENABLED = STRIPE_ENABLED && !PRICES_HIDDEN;
+// { code, amount_off_usd, percent_off } once a code is applied, else null.
+// (var: updateOrderSummaryUI can run before this line.)
+var appliedPromo = null;
+
+// Same sum as the function: percent first, then dollars, leaving $1 to pay.
+function promoDiscountUsd(goodsUsd) {
+  if (!appliedPromo || !(goodsUsd > 0)) return 0;
+  const goods = Math.round(goodsUsd * 100);
+  const pct = Math.min(100, Math.max(0, Number(appliedPromo.percent_off) || 0));
+  const off = Math.round((goods * pct) / 100) + Math.max(0, Math.round((Number(appliedPromo.amount_off_usd) || 0) * 100));
+  return Math.max(0, Math.min(off, goods - 100)) / 100;
+}
+
+// "$50 off", "10% off", "10% + $50 off".
+function promoOfferText(p) {
+  const pct = Number(p.percent_off) || 0;
+  const amt = Number(p.amount_off_usd) || 0;
+  if (pct && amt) return pct + "% + " + usd(amt) + " off";
+  return pct ? pct + "% off" : usd(amt) + " off";
+}
+
+function initPromoCode() {
+  const block = document.getElementById("promoBlock");
+  const input = document.getElementById("promoCodeInput");
+  const btn = document.getElementById("promoApplyBtn");
+  const msg = document.getElementById("promoMsg");
+  if (!block || !input || !btn || !msg) return;
+  block.hidden = !PROMO_ENABLED;
+  if (!PROMO_ENABLED) return;
+  const say = (text, ok) => {
+    msg.textContent = text;
+    msg.hidden = !text;
+    msg.classList.toggle("promo-ok", !!ok);
+  };
+  const showApplied = () => {
+    input.value = appliedPromo.code;
+    input.readOnly = true;
+    btn.textContent = "Remove";
+    say("Promo code " + appliedPromo.code + " applied: " + promoOfferText(appliedPromo) + ".", true);
+  };
+  const clear = () => {
+    appliedPromo = null;
+    input.readOnly = false;
+    btn.textContent = "Apply";
+    updateOrderSummaryUI();
+  };
+  async function apply(code, quiet) {
+    btn.disabled = true;
+    if (!quiet) say("Checking...", false);
+    try {
+      const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+      const email = ((document.getElementById("customerEmail") || {}).value || "").trim();
+      const res = await fetch(STRIPE_FN_URL, { method: "POST", headers, body: JSON.stringify({ action: "promo_check", code, email }) });
+      const r = await res.json().catch(() => ({}));
+      if (r && r.ok) {
+        appliedPromo = { code: r.code, amount_off_usd: r.amount_off_usd, percent_off: r.percent_off };
+        showApplied();
+      } else {
+        clear();
+        say((r && r.error) || "We couldn\u2019t check that code right now. Please try again.", false);
+      }
+    } catch (e) {
+      console.error(e);
+      clear();
+      say("We couldn\u2019t check that code right now. Please try again.", false);
+    } finally {
+      btn.disabled = false;
+      updateOrderSummaryUI();
+    }
+  }
+  btn.addEventListener("click", () => {
+    if (appliedPromo) {
+      input.value = "";
+      clear();
+      say("", false);
+      return;
+    }
+    const code = input.value.trim().toUpperCase();
+    if (!code) return say("Please type your promo code.", false);
+    apply(code);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!appliedPromo) btn.click();
+    }
+  });
+  // Signing in or out can change whether a code works (codes kept to one
+  // account); check it again quietly.
+  window.recheckPromoCode = () => {
+    if (appliedPromo) apply(appliedPromo.code, true);
+  };
+  window.resetPromoCode = () => {
+    input.value = "";
+    clear();
+    say("", false);
+  };
+}
+
 // Builds a classic PayPal "Website Payments Standard" checkout link -- just
 // a plain URL, no API key or server needed, using only the shop's PayPal
 // email (business or personal, as long as it can receive money). Charges
@@ -7297,6 +7582,7 @@ function buildPayPalCheckoutUrl() {
 
 const submitBtn = document.getElementById("submitOrderBtn");
 const orderTotalNote = document.getElementById("orderTotalNote");
+initPromoCode();
 updateOrderSummaryUI();
 renderCartBar();
 const customerNameInput = document.getElementById("customerName");
@@ -8110,6 +8396,8 @@ async function finalizeOrder(input, opts) {
     row.alteration_protection_usd = input.alterationProtection ? protectionPriceUsd() : 0;
     if (adminNoPayment) row.admin_no_payment = true;
     else if (payWithStripe) row.payment_status = "awaiting_payment";
+    // The code only; the stripe-checkout function works out the discount.
+    if (payWithStripe && appliedPromo) row.promo_code = appliedPromo.code;
     return row;
   });
 
@@ -8179,7 +8467,7 @@ async function finalizeOrder(input, opts) {
     : null;
 
   if (payWithStripe) {
-    return startStripeCheckout(orderId, { subject, customerEmail, emailMessage, previewItems });
+    return startStripeCheckout(orderId, { subject, customerEmail, emailMessage, previewItems, promoCode: rows[0].promo_code || "" });
   }
 
   await sendOrderEmail(subject, customerEmail, emailMessage);
@@ -8218,11 +8506,13 @@ async function sendOrderEmail(subject, customerEmail, message) {
 // The full garment spec + shipping address (the order summary text) is
 // deliberately NOT shown to the customer -- it's on every order row in
 // Supabase (client_form_text) and in the notification email.
-function finishOrder(previewItems, paid) {
+function finishOrder(previewItems, paid, discountUsd) {
   if (currentUser) loadOrderHistory();
   // Built from the cart before returnHomeAfterOrder() clears it.
   if (previewItems) renderSuitPreview(previewItems);
+  if (window.resetPromoCode) window.resetPromoCode();
   returnHomeAfterOrder(
+    (discountUsd > 0 ? "Your promo code saved you $" + discountUsd.toFixed(2) + ". " : "") +
     (paid
       ? "We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
       : "We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.") +
@@ -8327,11 +8617,12 @@ async function stripePaid(r, pending) {
     const parts = [];
     if (Number(r.shipping)) parts.push("shipping $" + Number(r.shipping).toFixed(2));
     if (Number(r.tax)) parts.push("tax $" + Number(r.tax).toFixed(2));
-    const paidLine = "PAID $" + Number(r.amount || 0).toFixed(2) + " BY STRIPE" + (parts.length ? " (incl. " + parts.join(", ") + ")" : "") + "\n\n";
+    const promo = Number(r.discount) ? "PROMO CODE " + (pending.promoCode || "") + ": -$" + Number(r.discount).toFixed(2) + "\n" : "";
+    const paidLine = "PAID $" + Number(r.amount || 0).toFixed(2) + " BY STRIPE" + (parts.length ? " (incl. " + parts.join(", ") + ")" : "") + "\n" + promo + "\n";
     await sendOrderEmail("[PAID] " + pending.subject, pending.customerEmail, paidLine + pending.emailMessage);
-    finishOrder(pending.previewItems, true);
+    finishOrder(pending.previewItems, true, Number(r.discount));
   } else {
-    finishOrder(null, true);
+    finishOrder(null, true, Number(r.discount));
   }
 }
 
