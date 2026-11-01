@@ -451,6 +451,8 @@ Right side, two square close-up panels stacked: (4) a close-up of the closed jac
 
 // How many buttons each sleeve cuff has (0 if unknown). The image model kept
 // adding one (five chosen, six drawn), so the count is stated everywhere.
+// It also drew six buttons beside five buttonholes, so the buttonhole count
+// is tied to the button count (one buttonhole per button).
 function cuffButtonCount(spec: string): number {
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const m = cuff.match(/\d/);
@@ -463,7 +465,10 @@ function cuffCountText(spec: string): string {
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const what = /button ?less/i.test(cuff) ? "stitched buttonholes (no buttons)" : "buttons";
   const count = Array.from({ length: n }, (_, i) => i + 1).join(", ");
-  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + ". Never " + (n + 1) + ", never " + (n - 1) + "; count them before finishing";
+  const holes = what === "buttons"
+    ? ". Each button has exactly ONE buttonhole running from it, so there are also EXACTLY " + n + " buttonholes: the same number of buttons and buttonholes (" + n + " and " + n + "). Every button, including the lowest one, has its own buttonhole, and there is never a button without a buttonhole or a buttonhole without a button"
+    : "";
+  return "EXACTLY " + n + " (" + NUMBER_WORDS[n].toUpperCase() + ") cuff " + what + " on EACH sleeve, counted from the bottom: " + count + holes + ". Never " + (n + 1) + ", never " + (n - 1) + "; count " + (holes ? "the buttons and the buttonholes" : "them") + " before finishing";
 }
 
 // How slanted cuff buttonholes look in the catalog drawings. The image model
