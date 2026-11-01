@@ -2153,3 +2153,16 @@ body.order-done-view > .process{display:none !important;}
 .promo-admin-delete{color:#a8402f;border-bottom-color:#a8402f;}
 .promo-admin-sure{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;}
 .promo-admin-sure[hidden],.promo-admin-delete[hidden]{display:none;}
+
+/* Monogram thread colors shown on the customer's own lining / fabric
+   (a client asked to see the lining while matching the thread, 2026-11-01) */
+.mono-backdrop-note{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:12.5px;color:var(--ink-soft,#5a5249);}
+.mono-backdrop-chip{flex:0 0 auto;width:28px;height:28px;border-radius:4px;background-size:cover;background-position:center;border:1px solid rgba(0,0,0,0.15);}
+.designer-grid .fabric-palette-grid .opt-card.fabric-tile.mono-on-backdrop{flex-direction:column;justify-content:space-between;padding:0;background-size:cover;background-position:center;height:72px;}
+.designer-grid .fabric-palette-grid .mono-on-backdrop .mono-sample{flex:1 1 auto;display:flex;align-items:center;justify-content:center;width:100%;font-size:calc(17px * var(--mono-scale,1));line-height:1;font-weight:600;white-space:nowrap;overflow:hidden;letter-spacing:0;padding:0 2px;box-sizing:border-box;}
+.designer-grid .fabric-palette-grid .mono-on-backdrop .opt-name{width:100%;background:rgba(250,247,240,0.92);color:#1c1814;padding:2px 1px;font-size:7px;}
+@media(min-width:700px){
+  .designer-grid .fabric-palette-grid .opt-card.fabric-tile.mono-on-backdrop{height:84px;}
+  .designer-grid .fabric-palette-grid .mono-on-backdrop .mono-sample{font-size:calc(20px * var(--mono-scale,1));}
+  .designer-grid .fabric-palette-grid .mono-on-backdrop .opt-name{font-size:8.5px;}
+}

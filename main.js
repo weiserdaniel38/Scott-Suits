@@ -3919,9 +3919,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       if ((cat.allowedBySelection || (cat.options || []).some((o) => o.onlyWhen || o.hiddenWhen) || (preset && preset.allowed && preset.allowed[k])) && order[k] && !allowedOptions(k).some((o) => o.name === order[k])) {
         // An option with `replaceWith` moves to that option instead of
         // asking again (Notch -> Peak once the front is double breasted).
+        // It can list several; the first one still allowed wins.
         const was = (cat.options || []).find((o) => o.name === order[k]);
-        const swap = was && was.replaceWith;
-        order[k] = swap && allowedOptions(k).some((o) => o.name === swap) ? swap : null;
+        const swaps = [].concat((was && was.replaceWith) || []);
+        order[k] = swaps.find((sw) => allowedOptions(k).some((o) => o.name === sw)) || null;
       }
       if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
       // The lining catalog was replaced outright (Oct 2026): a saved draft or
@@ -5149,10 +5150,41 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // grouped by color under small headings -- same look as the Fabric step.
   // Tapping a tile selects it. "Same as Jacket" / "Match Fabric Color" sit on
   // top as slim banners.
+  // What a monogram is stitched onto, so its thread colors can be shown on
+  // it (a client asked to see their lining while matching the thread,
+  // 2026-11-01): the lining for a jacket inside-pocket monogram, the felt
+  // (or fabric) under the collar, the suit fabric for pants.
+  // Returns { img, name, what } or null when nothing is picked yet.
+  function monogramBackdrop() {
+    const place = order.monogram;
+    if (!place || place === "No Monogram Need") return null;
+    const fromOpt = (key, what) => {
+      const val = resolvedValue(key);
+      const o = val && catalog[key] && catalog[key].options.find((x) => x.name === val);
+      return o && o.img && !o.matchesFabric && !o.uploadPhoto ? { img: o.img, name: o.displayName || o.name, what } : null;
+    };
+    const fabric = () => fromOpt("fabric", "fabric");
+    if (!catalog.lining) return fabric();
+    if (/Collar/.test(place)) {
+      if (order.feltundercollar === "Customer-Appointed Felt" && catalog.feltColor) return fromOpt("feltColor", "felt") || fabric();
+      return fabric();
+    }
+    if (selectedIsUpload("lining") && customPhotos.lining) return { img: customPhotos.lining, name: "Your Photo", what: "lining" };
+    const lin = resolvedValue("lining");
+    const linOpt = lin && catalog.lining.options.find((x) => x.name === lin);
+    if (linOpt && linOpt.matchesFabric) return fabric();
+    return fromOpt("lining", "lining");
+  }
+
   function renderFlatColorTiles(cat, gridId, descriptionHtml) {
+    const backdrop = activeTab === "monogramThreadColor" ? monogramBackdrop() : null;
+    if (backdrop) ensureMonogramFonts();
+    const backdropNote = backdrop
+      ? '<p class="mono-backdrop-note"><span class="mono-backdrop-chip" style="background-image:url(\'' + backdrop.img + '\');"></span>Shown on your ' + backdrop.what + " (" + wizEsc(backdrop.name) + ") so you can match it.</p>"
+      : "";
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      '<p class="sub">' + (cat.tagline || "Choose a color.") + '</p><div class="opt-grid fabric-palette-grid" id="' + gridId + '"></div>';
+      '<p class="sub">' + (cat.tagline || "Choose a color.") + "</p>" + backdropNote + '<div class="opt-grid fabric-palette-grid' + (backdrop ? " mono-backdrop-grid" : "") + '" id="' + gridId + '"></div>';
     const grid = document.getElementById(gridId);
     renderSameAsCard(cat, grid);
     const sameAsResolver = sameAsResolvers[activeTab];
@@ -5201,6 +5233,22 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       const card = grid.lastElementChild;
       if (!card) return;
       card.classList.add("fabric-tile");
+      if (backdrop) {
+        // The thread color shown as the customer's own monogram, stitched
+        // on their lining/fabric photo; the color name sits in a band below.
+        card.classList.add("mono-on-backdrop");
+        card.style.backgroundImage = "url('" + backdrop.img + "')";
+        const fcat = catalog.monogramFont;
+        const fontOpt = fcat && fcat.options.find((o) => o.name === order.monogramFont);
+        const raw = String(customTexts.monogram || "").replace(/\(\/\)/g, " ").trim();
+        const sample = document.createElement("div");
+        sample.className = "mono-sample";
+        if (fontOpt) sample.setAttribute("style", monogramFontStyle(fontOpt).replace(/&#39;/g, "'"));
+        sample.style.setProperty("color", opt.hex, "important");
+        sample.textContent = raw ? (raw.length > 6 ? raw.slice(0, 6) : raw) : "ABC";
+        card.insertBefore(sample, card.querySelector(".opt-name"));
+        return;
+      }
       card.style.background = opt.hex;
       card.style.color = okL(opt.hex) > 0.62 ? "#1c1814" : "#ffffff";
     });

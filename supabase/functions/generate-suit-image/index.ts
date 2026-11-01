@@ -308,6 +308,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Front & Sleeves": "the front buttonholes AND every sleeve cuff buttonhole are stitched in the front & sleeve buttonhole thread color",
     "Sleeves Only": "ONLY the sleeve cuff buttonholes are stitched in the front & sleeve buttonhole thread color; the front buttonholes are stitched in thread matching the fabric",
     "Bottom Sleeve Buttonhole": "ONLY ONE buttonhole on each sleeve, the bottom one nearest the cuff edge, is stitched in the front & sleeve buttonhole thread color as a single contrast accent; every other cuff buttonhole and the front buttonholes are stitched in thread matching the fabric",
+    "Top Front Buttonhole": "ONLY ONE buttonhole, the TOP front closure buttonhole (the highest buttonhole on the jacket front, the one for the top fastening button), is stitched in the front & sleeve buttonhole thread color as a single contrast accent; every other front buttonhole and all sleeve cuff buttonholes are stitched in thread matching the fabric",
   },
 
   // -------------------------------------------------------------- PANTS

@@ -57,25 +57,30 @@ const JACKET_CATALOG = {
     // 2026-10-27, and listed the allowed sizes). Peak: 8.0, 8.9, 9.7, 10.8
     // (also 6.4, 7.6, 8.3, 8.7, 11.1, 11.4, 11.5, 12.7, 14.0). Semi-Notch:
     // 8.3, 10.0 (also 6.0, 7.0, 7.4). So those lapels get their own nearest
-    // sizes under the same four names; a width they can't have is hidden
-    // and moves to the nearest one (replaceWith) or is asked again.
+    // sizes under the same names; a width they can't have is hidden and
+    // moves to the first allowed one in replaceWith, or is asked again.
+    // Semi-Notch has no Extra Wide (10 cm is its widest). Its Standard was
+    // missing until 2026-11-01 (a client saw only Thin and Wide), so it is
+    // now Thin 7.4 / Standard 8.3 / Wide 10.
     options: [
       { name: "9 cm", displayName: "Standard", factoryCode: "00N5", img: "./assets/jacket-lapelwidth-new-9.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: "8.9 cm" },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: ["8.9 cm", "8.3 cm"] },
       { name: "8.9 cm", displayName: "Standard", factoryCode: "00N4", img: "./assets/jacket-lapelwidth-new-9.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] } },
+        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["9 cm", "8.3 cm"] },
+      { name: "8.3 cm", displayName: "Standard", factoryCode: "00N2", img: "./assets/jacket-lapelwidth-new-9.jpg",
+        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["9 cm", "8.9 cm"] },
       { name: "8 cm", displayName: "Thin", factoryCode: "00X6", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        hiddenWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: "8.3 cm" },
-      { name: "8.3 cm", displayName: "Thin", factoryCode: "00N2", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        onlyWhen: { collar: ["Semi-Notch Lapel"] } },
+        hiddenWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["7.4 cm"] },
+      { name: "7.4 cm", displayName: "Thin", factoryCode: "00X3", img: "./assets/jacket-lapelwidth-new-8.jpg",
+        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["8 cm"] },
       { name: "10 cm", displayName: "Wide", factoryCode: "00N0", img: "./assets/jacket-lapelwidth-new-10.jpg",
-        hiddenWhen: { collar: ["Peak Lapel"] }, replaceWith: "9.7 cm" },
+        hiddenWhen: { collar: ["Peak Lapel"] }, replaceWith: ["9.7 cm"] },
       { name: "9.7 cm", displayName: "Wide", factoryCode: "00Y3", img: "./assets/jacket-lapelwidth-new-10.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] } },
+        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["10 cm"] },
       { name: "11 cm", displayName: "Extra Wide", factoryCode: "00S2", img: "./assets/jacket-lapelwidth-new-11.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: "10.8 cm" },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: ["10.8 cm", "10 cm"] },
       { name: "10.8 cm", displayName: "Extra Wide", factoryCode: "00S1", img: "./assets/jacket-lapelwidth-new-11.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] } },
+        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["11 cm", "10 cm"] },
     ],
   },
   lapelbuttonhole: {
@@ -2664,7 +2669,7 @@ JACKET_CATALOG.frontButtonholeThreadColor = {
 // once a color other than Match Fabric is picked above. The factory takes
 // each placement as its own thread code (see kute-factory order.ts); the
 // "bottom" sleeve buttonhole is the one nearest the cuff edge (factory 1st
-// sleeve buttonhole). Orders from before this step have no value and mean
+// sleeve buttonhole); the top front buttonhole is factory "front first". Orders from before this step have no value and mean
 // Front & Sleeves.
 JACKET_CATALOG.buttonholeColorPlacement = {
   label: "Which Buttonholes Get the Color",
@@ -2674,6 +2679,9 @@ JACKET_CATALOG.buttonholeColorPlacement = {
     { name: "Front & Sleeves", specName: "Front & Sleeves", displayName: "Front & All Sleeve Buttonholes", img: "./assets/jacket-contrastholes-front-and-sleeves.jpg" },
     { name: "Sleeves Only", specName: "Sleeves Only", displayName: "Sleeve Buttonholes Only", img: "./assets/jacket-contrastholes-sleeves-only.jpg" },
     { name: "Bottom Sleeve Buttonhole", specName: "Bottom Sleeve Buttonhole", displayName: "Bottom Sleeve Buttonhole Only", img: "./assets/jacket-contrastholes-cuff-edge-only.jpg" },
+    // Only the top front (closure) buttonhole, factory "Front first
+    // buttonhole thread" (Daniel sent the factory screen, 2026-11-01).
+    { name: "Top Front Buttonhole", specName: "Top Front Buttonhole", displayName: "Top Front Buttonhole Only", img: "./assets/jacket-contrastholes-top-front-only.jpg" },
   ],
 };
 // Felt under collar: the hidden structural layer sewn beneath the outer

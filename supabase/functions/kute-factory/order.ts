@@ -315,7 +315,9 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     // Buttonhole thread: lapel, and front + sleeve. The front/sleeve color
     // can go on the front and all sleeve buttonholes (no placement saved =
     // orders from before that step), the sleeves only, or only the bottom
-    // sleeve buttonhole (nearest the cuff edge = factory 1st, 0921).
+    // sleeve buttonhole (nearest the cuff edge = factory 1st, 0921), or only
+    // the top front buttonhole (factory "Front first buttonhole thread",
+    // 06M0, from Daniel's factory screenshot 2026-11-01).
     const lapelHole = s(row.jacket_buttonhole_thread_color);
     const frontHole = s(row.jacket_front_buttonhole_thread_color);
     const holePlace = s(row.jacket_buttonhole_color_placement) || "Front & Sleeves";
@@ -328,6 +330,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       if (!frontMatched) {
         if (holePlace === "Sleeves Only") jc.push("06C2:" + frontHole);
         else if (holePlace === "Bottom Sleeve Buttonhole") jc.push("0921:" + frontHole);
+        else if (holePlace === "Top Front Buttonhole") jc.push("06M0:" + frontHole);
         else {
           if (holePlace !== "Front & Sleeves") warnings.push("Jacket: unknown buttonhole color placement \"" + holePlace + "\"; sent as front & sleeves.");
           jc.push("06M2:" + frontHole, "06C2:" + frontHole);
