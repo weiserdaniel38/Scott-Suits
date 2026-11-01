@@ -227,7 +227,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   "Button Nail Method": {
     "X Shape Sewing": "four-hole buttons sewn on with the thread crossing in an X",
     "Parallel Sewing": "four-hole buttons sewn on with two parallel thread bars (=)",
-    "Square Sewing": "four-hole buttons sewn on with the thread forming a small square joining the four holes",
+    "Square Sewing": "four-hole buttons sewn on with the thread forming a small hollow square outline: four short thread bars joining each hole to its neighbours around the edge, with no thread crossing the middle",
   },
   "Facing Style": {
     "Round Shape Facing": "fully lined jacket: inside, the fabric facing beside the front edge curves in a rounded shape at the hem, and the rest of the inside is the chosen lining",
@@ -434,6 +434,8 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const backWaist = (OPTION_LOOKS["Back Waist Shape"] || {})[(spec.match(/^Back Waist Shape: (.+)$/m) || [])[1] || ""];
   const backNote = [backWaist, backPocket].filter(Boolean).map((t) => "; " + t).join("");
   const cuffCount = cuffCountText(spec) ? " (" + cuffCountText(spec) + ")" : "";
+  const st = stitchChoice(spec);
+  const stitchNote = st ? ", with each button's thread sewn in a " + (st.key === "x" ? "X" : st.key) + " pattern (" + st.look + ")" : "";
   const slant = (/slant/i.test(cuff) ? " (the buttonholes are SLANTED: " + SLANT_HOLES + ")" : "") +
     (/slant/i.test(cuffStyle) ? " (" + SLANT_VENT + ")" : "");
   const vents = (OPTION_LOOKS["Back Vents"] || {})[(spec.match(/^Back Vents: (.+)$/m) || [])[1] || ""];
@@ -448,10 +450,10 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   return jacketOnly
     ? `Layout: one landscape presentation sheet on a clean white background with six panels in two rows, like a tailor's lookbook.
 Top row, about two thirds of the sheet's height, three equal panels side by side, each about one third of the sheet wide and each showing the WHOLE jacket from shoulders to hem at its natural, real-life proportions (a normal jacket is about three quarters as wide as it is tall, sleeves included): never squeezed narrow, stretched tall or cropped. (1) the jacket front view on an invisible ghost mannequin, buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the jacket back view${ventNote}; (3) the jacket front view with one front edge folded open to show the inside of the jacket and the inside pocket${openNote}.
-Bottom row, three equal close-up panels side by side: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture; (6) a close-up of the lower front of the buttoned jacket showing both hip pockets${hipNote}.`
+Bottom row, three equal close-up panels side by side: (4) a close-up of the closed sleeve cuff, outer fabric only, showing the cuff buttons${stitchNote} and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the lapel and chest showing the lapel shape${diamond}, the lapel buttonhole, chest pocket${chestNote} and fabric texture; (6) a close-up of the lower front of the buttoned jacket showing both hip pockets${hipNote}.`
     : `Layout: one landscape presentation sheet on a clean white background with five panels, like a tailor's lookbook.
 Left side, three tall panels side by side, each garment at its natural, real-life proportions (never squeezed narrow or stretched tall): (1) the full suit front view (jacket and trousers) on an invisible ghost mannequin, jacket buttoned${diamond}${chestNote}, with the inside of the jacket visible inside the neck opening; (2) the full suit back view${ventNote}. In both full suit views the trousers are ${TROUSER_LENGTH}; (3) a close-up of the BACK of the trousers, cropped from just above the waistband down to just below the seat, showing the back waistband and the centre back seam where it meets the waistband, the belt loops and the back pockets${backNote}.
-Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, cropped at mid-thigh with the full-length trouser legs running on out of the bottom of the frame (this panel shows only the waist and upper legs of the same long trousers).`;
+Right side, two square close-up panels stacked: (4) a close-up of the closed jacket sleeve cuff, outer fabric only, showing the cuff buttons${stitchNote} and buttonhole stitching${cuffCount}${slant}; (5) a close-up of the front of the trouser waistband, fully closed and fastened, showing how the waistband closes (its exact style is given in the rules below), the belt loops and front pocket, cropped at mid-thigh with the full-length trouser legs running on out of the bottom of the frame (this panel shows only the waist and upper legs of the same long trousers).`;
 }
 
 // How many buttons each sleeve cuff has (0 if unknown). The image model kept
@@ -803,6 +805,53 @@ function buttonText(spec: string, photo: boolean): string {
     ". All buttons are identical copies of it (only the size differs: front buttons larger, cuff buttons smaller); never generic plain plastic buttons, never metal, gold, brass or crested buttons, and never a different color on the front than on the cuffs. Keep its own number and shape of holes even where a sewing note says four-hole buttons";
 }
 
+// Button stitching (catalog "Button Stitching", spec "Button Nail Method"):
+// how the thread runs between a button's four holes. The image model drew an
+// X whatever was chosen (Daniel's Square Stitch preview, 2026-11-01), so the
+// pattern is spelled out with what it is NOT, its catalog drawing is sent,
+// and the cuff checker looks at it too.
+const STITCH: Record<string, { key: string; look: string; not: string; ref: string }> = {
+  "X Shape Sewing": {
+    key: "x",
+    look: "the thread crosses diagonally from corner hole to corner hole, forming an X in the middle of the button",
+    not: "not a square outline and not two parallel bars",
+    ref: "./assets/buttonnail-new-x.jpg",
+  },
+  "Parallel Sewing": {
+    key: "parallel",
+    look: "two separate straight thread bars side by side (like an equals sign =), each joining one pair of holes, with nothing crossing between them",
+    not: "no X, no cross and no square outline",
+    ref: "./assets/buttonnail-new-parallel.jpg",
+  },
+  "Square Sewing": {
+    key: "square",
+    look: "a small hollow SQUARE outline: four short straight thread bars along the four sides, top, bottom, left and right, each joining one hole to the next hole around the edge, so the thread frames the four holes like a box with plain button showing in its centre",
+    not: "NEVER an X or a cross: no thread runs diagonally or through the middle of the button, and not just two parallel bars",
+    ref: "./assets/buttonnail-square-sewing.jpg",
+  },
+};
+// The chosen stitch, unless the chosen button has only two holes (then there
+// is no pattern to show and the button photo wins).
+function stitchChoice(spec: string): (typeof STITCH)[string] & { name: string; thread: string } | null {
+  const name = ((spec.match(/^Button Nail Method: (.+)$/m) || [])[1] || "").trim();
+  const st = STITCH[name];
+  if (!st) return null;
+  const b = buttonChoice(spec);
+  if (b && /\bTWO\b[^;]*holes/i.test(b.look)) return null;
+  const t = ((spec.match(/^Button Thread Color: (.+)$/m) || [])[1] || "").trim();
+  const thread = !t || /^matched to the fabric/i.test(t)
+    ? "thread in a tone matching the suit fabric, slightly lighter or darker than the button so the pattern is still clearly visible"
+    : "thread in " + t.replace(/\s*\(.*$/, "");
+  return { ...st, name, thread };
+}
+function stitchText(spec: string): string {
+  const st = stitchChoice(spec);
+  if (!st) return "";
+  return "every four-hole button (front and sleeve cuffs) is sewn on with the \"" + st.name + "\" pattern: " + st.look + "; " + st.not +
+    ". Use " + st.thread + ". The same pattern on every button, clearly visible as raised thread on each button in the cuff close-up" +
+    " and on the front buttons";
+}
+
 function keyDetails(spec: string, ownLining = false, buttonPhoto = false): string {
   const out: string[] = [];
   // First: the image model kept drawing level hip pockets when this came later.
@@ -839,6 +888,7 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
   }
   out.push(...monogramRules(spec));
   if (buttonText(spec, buttonPhoto)) out.push("- BUTTONS: " + buttonText(spec, buttonPhoto) + ".");
+  if (stitchText(spec)) out.push("- BUTTON STITCHING: " + stitchText(spec) + ".");
   if (ownLining) {
     out.push("- LINING: the customer's own lining fabric from their uploaded photo (see the reference images), with its exact colors and pattern; NOT matched to the suit fabric.");
   } else if (liningMatchesFabric(spec)) {
@@ -1056,6 +1106,7 @@ function fixedRules(spec: string, buttonPhoto = false): string {
     "- The sleeve cuffs are CLOSED" + (/button ?less/i.test(cuff) ? "" : " and fully buttoned") + ", lying flat: no unbuttoned cuff and no flap folded open. A small sliver of lining may peek out at the bottom corner of the cuff vent, but no larger area of lining shows on the sleeve" +
       (/opening|working/i.test(cuffStyle) ? " (\"Opening Sleeve Cuff\" only means the buttonholes are real and functional, not that the cuff is shown open)." : "."),
   );
+  if (stitchText(spec)) rules.push("- MOST IMPORTANT, button stitching: " + stitchText(spec) + ".");
   if (/overlap/i.test(cuff)) {
     rules.push("- The cuff buttons OVERLAP: each button sits so close that its edge overlaps the next one (\"kissing\" buttons), with no gap between them.");
   }
@@ -1078,6 +1129,9 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       lines.push(`Image ${n++} is a black-and-white catalog line drawing, a close-up of the lower front of the jacket showing the customer's chosen HIP POCKETS ("${lower}"): copy EXACTLY the pockets' type${/Ticket/.test(lower) ? ", the ticket pocket (above the wearer's right hip pocket, the left one in the picture, and on that side only)" : ""} and their angle: ${slanted ? SLANT_HIP + ", at least as steep as in this drawing" : "exactly as drawn, not slanted"}. Copy only the pockets. Render them photorealistically in the suit fabric, never as a drawing.`);
     } else if (r.label === "pocket reference") {
       lines.push(`Image ${n++} is a grey 3D render of the customer's chosen single welt (flat welt) hip pockets (top: the lower front of the jacket; bottom: a close-up of one pocket): copy EXACTLY their look, especially how THIN the welt strip is and where it sits: ${WELT_NOT_FLAP}, with no besom piping. Copy only the pockets, not the render's color, buttons or lapels. Render them photorealistically in the suit fabric.`);
+    } else if (r.label === "stitch reference") {
+      const st = stitchChoice(spec);
+      lines.push(`Image ${n++} is a black-and-white catalog line drawing of ONE button seen face-on, showing the customer's chosen BUTTON STITCHING ("${st ? st.name : ""}"): the thick black lines are the thread between the four holes${st ? ": " + st.look : ""}. Sew every button on the suit with exactly this thread pattern, in the real button's own color and material and the given thread color; never draw a line-art button.`);
     } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
@@ -1138,7 +1192,7 @@ const PROMPT_WRITER_SYSTEM = `You write prompts for an image-generation model th
 You receive the sheet layout, notes on the reference images the image model will see, and a plain-English description of one suit. Many options are followed by "-- looks like: ..." describing exactly how that option appears; that description is authoritative, so carry it into the prompt in your own words rather than relying on the option's name. Write ONE image prompt (plain text, no preamble, under 5,000 characters) for a photorealistic studio product-photo sheet:
 - Keep the given layout and reference-image notes, restated clearly.
 - Describe the fabric color, pattern and texture precisely; use the approximate hex colors as guidance but describe colors in words. The jacket and trousers are cut from the fabric given for each.
-- Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
+- Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, the button stitching pattern (how the thread runs between the four holes: X, square or parallel bars) and button thread color, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: every button (front, cuffs, trousers) is the one chosen button: name its material and look in words (e.g. iridescent mother-of-pearl shell, streaked horn, grained corozo) and tell the image model to copy the button photo exactly; never let it fall back to generic plain buttons. "Matched to the fabric" means plain buttons in a tone matching the cloth.
 - Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
@@ -1250,7 +1304,8 @@ const CUFF_QUESTION =
   "First list every round button from the lowest to the highest, one entry per button. " +
   "Then list every stitched buttonhole slit (any thread color, including a contrast color) from the lowest to the highest, one entry per slit, " +
   "and for each slit say whether its end sits at or under a button (false if it is lower than the lowest button or higher than the highest button). " +
-  "Reply only as JSON: {\"button_list\": [\"...\"], \"slit_list\": [{\"where\": \"...\", \"at_a_button\": true}], \"buttons\": <number of buttons>, \"buttonholes\": <number of slits>, \"loose_buttonholes\": <number of slits not at a button>}";
+  "Finally look at the thread sewn through the holes of the buttons and say which pattern most buttons show: \"x\" (thread crossing diagonally through the middle), \"square\" (four thread bars around the edge forming a hollow box, nothing crossing the middle), \"parallel\" (two separate bars side by side, like =), or \"other\" (no thread visible, two holes, or anything else). " +
+  "Reply only as JSON: {\"button_list\": [\"...\"], \"slit_list\": [{\"where\": \"...\", \"at_a_button\": true}], \"buttons\": <number of buttons>, \"buttonholes\": <number of slits>, \"loose_buttonholes\": <number of slits not at a button>, \"stitch\": \"x|square|parallel|other\"}";
 
 // The cuff close-up is the top-right panel of a suit sheet and the bottom-left
 // panel of a jacket-only sheet (layoutFor); cropping it lets the checker see
@@ -1271,7 +1326,8 @@ async function cuffCrop(jpeg: Uint8Array, jacketOnly: boolean): Promise<Uint8Arr
   }
 }
 
-async function countCuff(jpeg: Uint8Array, jacketOnly = false, question = CUFF_QUESTION): Promise<{ buttons: number; buttonholes: number; loose: number } | null> {
+type Count = { buttons: number; buttonholes: number; loose: number; stitch: string };
+async function countCuff(jpeg: Uint8Array, jacketOnly = false, question = CUFF_QUESTION): Promise<Count | null> {
   const key = env("OPENAI_API_KEY");
   if (!key) return null;
   try {
@@ -1302,7 +1358,8 @@ async function countCuff(jpeg: Uint8Array, jacketOnly = false, question = CUFF_Q
     const buttons = Array.isArray(out.button_list) ? out.button_list.length : Number(out.buttons);
     const buttonholes = slits ? slits.length : Number(out.buttonholes);
     const loose = slits ? slits.filter((x: { at_a_button?: boolean }) => x?.at_a_button === false).length : Number(out.loose_buttonholes || 0);
-    return Number.isFinite(buttons) && Number.isFinite(buttonholes) ? { buttons, buttonholes, loose: Number.isFinite(loose) ? loose : 0 } : null;
+    const stitch = String(out.stitch || "").toLowerCase().trim();
+    return Number.isFinite(buttons) && Number.isFinite(buttonholes) ? { buttons, buttonholes, loose: Number.isFinite(loose) ? loose : 0, stitch } : null;
   } catch (e) {
     console.warn("Cuff check failed", e);
     return null;
@@ -1325,8 +1382,11 @@ async function drawChecked(
   const tries = n && !/button ?less/i.test(cuff) ? Math.max(1, Math.min(4, Number(env("IMAGE_CANDIDATES", "4")) || 1)) : 1;
   if (tries === 1) return { jpeg: await drawImage(prompt, images), good: true };
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
-  const results: { jpeg: Uint8Array; count: { buttons: number; buttonholes: number; loose: number } | null }[] = [];
-  const right = (c: { buttons: number; buttonholes: number; loose: number } | null) => !!c && c.buttons === n && c.buttonholes === n && !c.loose;
+  const results: { jpeg: Uint8Array; count: Count | null }[] = [];
+  // The chosen button stitching must show too (when the checker could tell).
+  const wantStitch = stitchChoice(spec)?.key || "";
+  const stitchOk = (c: Count | null) => !wantStitch || !!c && c.stitch === wantStitch;
+  const right = (c: Count | null) => !!c && c.buttons === n && c.buttonholes === n && !c.loose && stitchOk(c);
   const winner = await new Promise<Uint8Array | null>((resolve) => {
     let left = tries;
     const timer = setTimeout(() => resolve(null), Number(env("ROUND_BUDGET_MS", "125000")));
@@ -1350,9 +1410,10 @@ async function drawChecked(
     }
   });
   const counts = results.map((r) => r.count);
-  console.log("Cuff counts (want " + n + "):", JSON.stringify(counts));
+  console.log("Cuff counts (want " + n + (wantStitch ? ", " + wantStitch + " stitch" : "") + "):", JSON.stringify(counts));
   if (winner) return { jpeg: winner, good: true };
-  const best = results.find((r) => r.count && r.count.buttons === n && r.count.buttonholes === n) ||
+  const best = results.find((r) => r.count && r.count.buttons === n && r.count.buttonholes === n && stitchOk(r.count)) ||
+    results.find((r) => r.count && r.count.buttons === n && r.count.buttonholes === n) ||
     results.find((r) => r.count && r.count.buttons === n) || results[0];
   return { jpeg: best ? best.jpeg : null, good: false };
 }
@@ -1455,11 +1516,13 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   const hipRef: Ref[] = hipRefSrc ? [{ label: "hip pocket reference", src: hipRefSrc }] : [];
   const chestRefSrc = CHEST_REF[(spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || ""];
   const chestRef: Ref[] = chestRefSrc ? [{ label: "chest pocket reference", src: chestRefSrc }] : [];
+  const stitch = stitchChoice(spec);
+  const stitchRef: Ref[] = stitch ? [{ label: "stitch reference", src: stitch.ref }] : [];
   // Photos: the fabric first, then the button (it was drawn as a made-up
   // button when it came after the lining), then the rest.
   const swatchRank = (r: Ref) => (r.label === "fabric" ? 0 : r.label === "button" ? 1 : 2);
   const refs = drawings.filter((r) => rank(r) < FIRST.length)
-    .concat(hipRef, chestRef, pocketRef, swatches.filter((r) => !isDrawing(r)).sort((a, b) => swatchRank(a) - swatchRank(b)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
+    .concat(hipRef, chestRef, pocketRef, stitchRef, swatches.filter((r) => !isDrawing(r)).sort((a, b) => swatchRank(a) - swatchRank(b)).slice(0, 5), drawings.filter((r) => rank(r) >= FIRST.length));
   // The slant cuff illustration shows the whole closed cuff with the right
   // count, so the "Sleeve Cuff Styles" catalog drawing (a different number of
   // buttons, one corner folded open) is left out: with both, five buttons
@@ -1681,6 +1744,21 @@ Deno.serve(async (req) => {
   }
 
   if (body?.ping) return json({ ok: true, ready: !!env("OPENAI_API_KEY") });
+
+  // TEMPORARY test hook (button stitching tests, expires 2026-11-03).
+  if (body?.stitch_test && Date.now() < Date.parse("2026-11-03T00:00:00Z")) {
+    const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(body.stitch_test))));
+    const hex = Array.from(d).map((x) => x.toString(16).padStart(2, "0")).join("");
+    if (hex !== "40f6e4d984ac8e2898c49b3df3ce380385e3ec3ca8f0662135e68958762851dd") return json({ error: "Unauthorized" }, 401);
+    const id = String(body?.id || "");
+    if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
+    const { data: prev } = await supabase.from("suit_previews").select("visual_spec").eq("id", id).maybeSingle();
+    if (!prev?.visual_spec) return json({ error: "Not found" }, 404);
+    const p = runInBackground(generatePreview(id, String(prev.visual_spec)));
+    // @ts-ignore see runInBackground
+    if (typeof EdgeRuntime === "undefined") await p;
+    return json({ started: true }, 202);
+  }
 
   // Before the order: previews of the suit being designed.
   if (body?.preview) {
