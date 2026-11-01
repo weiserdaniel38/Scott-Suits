@@ -14,6 +14,7 @@ publishes the result to the site-<brand> branch for that domain's hosting.
 
 import argparse
 import html
+import json
 import os
 import re
 import shutil
@@ -26,6 +27,8 @@ BRANDS = {
         "title": "S.W. Atelier: Custom Suits & Formalwear",
         "description": "Design your custom suit online at S.W. Atelier: choose the fabric, lapels, pockets and buttons, send your measurements, and we build it for you.",
         "icon": "./assets/sw/icon-v3-192.png",
+        "icon_512": "./assets/sw/icon-v3-512.png",
+        "app_color": "#0E131B",
         "favicon": "./assets/sw/favicon-v3.ico",
         "apple_icon": "./assets/sw/apple-touch-icon-v3.png",
         "share_image": "assets/sw/share-image-v3.jpg",
@@ -45,6 +48,7 @@ PAGE_TITLES = {
     "contact.html": "Contact",
     "fabrics.html": "Fabrics",
     "privacy.html": "Privacy Policy",
+    "offline.html": "Offline",
 }
 
 # Head tags that name Scott's Suits or its prices; replaced as a set.
@@ -57,6 +61,9 @@ DROP = [
     r'<link rel="canonical"[^>]*>\s*',
     r'<link rel="icon"[^>]*>\s*',
     r'<link rel="apple-touch-icon"[^>]*>\s*',
+    r'<link rel="manifest"[^>]*>\s*',
+    r'<meta name="apple-mobile-web-app-title"[^>]*>\s*',
+    r'<meta name="theme-color"[^>]*>\s*',
     r'<script type="application/ld\+json">.*?</script>\s*',
     r'<script data-goatcounter[^>]*></script>\s*',
 ]
@@ -72,6 +79,8 @@ def brand_head(b, page, domain):
         '<link rel="icon" href="%s" sizes="any">' % b["favicon"],
         '<link rel="icon" type="image/png" href="%s" sizes="192x192">' % b["icon"],
         '<link rel="apple-touch-icon" href="%s">' % b["apple_icon"],
+        '<link rel="manifest" href="./manifest.webmanifest">',
+        '<meta name="apple-mobile-web-app-title" content="%s">' % e(b["name"]),
         '<meta property="og:site_name" content="%s">' % e(b["name"]),
         '<meta property="og:title" content="%s">' % e(title),
         '<meta property="og:description" content="%s">' % e(b["description"]),
@@ -141,6 +150,16 @@ def build(brand_id, out, domain=None):
             rewrite_page(p, brand_id, b, domain)
     for icon, src in (("favicon.ico", b["favicon"]), ("apple-touch-icon.png", b["apple_icon"])):
         shutil.copy2(os.path.join(ROOT, src), os.path.join(out, icon))
+    # Home Screen app name/icons for this brand (see manifest.webmanifest).
+    with open(os.path.join(ROOT, "manifest.webmanifest"), encoding="utf-8") as f:
+        man = json.load(f)
+    man.update(name=b["name"], short_name=b["name"], background_color=b["app_color"], theme_color=b["app_color"])
+    man["icons"] = [
+        {"src": b["icon"].lstrip("."), "sizes": "192x192", "type": "image/png"},
+        {"src": b["icon_512"].lstrip("."), "sizes": "512x512", "type": "image/png"},
+    ]
+    with open(os.path.join(out, "manifest.webmanifest"), "w", encoding="utf-8") as f:
+        json.dump(man, f, indent=2)
     if os.path.exists(os.path.join(out, "sitemap.xml")):
         os.remove(os.path.join(out, "sitemap.xml"))
     with open(os.path.join(out, "robots.txt"), "w") as f:
