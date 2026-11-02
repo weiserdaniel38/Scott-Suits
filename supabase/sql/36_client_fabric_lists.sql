@@ -113,9 +113,5 @@ $$;
 revoke all on function public.admin_delete_client_fabrics(text) from public, anon;
 grant execute on function public.admin_delete_client_fabrics(text) to authenticated;
 
--- Dovid (2026-11-01): in-stock replacements for Rich Slate Blue.
-insert into public.client_fabric_lists (email, label, fabrics, note)
-values ('dovidjay17@gmail.com', 'Picked for you',
-        array['26SU213.DEE1018', '26SU087.DBV402A', '26SU088.DBV403A', '26SU085.DBV400A', '26SU086.DBV401A', '26SU190.DPP0193'],
-        'Rich Slate Blue out of stock at the factory; in-stock navy/blue picks in the same price range.')
-on conflict (email) do nothing;
+-- No starting lists: Dovid's (2026-11-01) was dropped on 2026-11-02 when he
+-- chose to wait for Rich Slate Blue to come back in stock.
