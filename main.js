@@ -5982,6 +5982,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     catalog: catalog,
     keys: keys.slice(),
     isShown: (k) => !!catalog[k] && isShown(k),
+    // The options a step offers right now (same filtering as its cards).
+    // Used by Build From a Photo (photo-suit.js) for its quick edits.
+    allowedFor: (k) => (catalog[k] ? allowedOptions(k) : []),
     displayValue: (k) => (catalog[k] ? displayValue(k) : ""),
     // Raw stored values (the same ones the order uses), without resolving
     // or reconciling -- cheap enough to read on every jacket redraw.
