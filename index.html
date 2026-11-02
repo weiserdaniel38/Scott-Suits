@@ -35,7 +35,7 @@
   "image": "https://scottssuits.com/assets/share-image-square-safe.jpg",
   "description": "Affordable custom men's suits made to measure from $350, designed online and delivered to your door. No showroom visit or fitting needed.",
   "email": "hello@scottssuits.com",
-  "priceRange": "$150 - $400",
+  "priceRange": "$150 - $470",
   "currenciesAccepted": "USD",
   "paymentAccepted": "Credit card, Apple Pay, Google Pay, Klarna",
   "sameAs": [
@@ -121,7 +121,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261102photo">
+<link rel="stylesheet" href="./style.css?v=20261102photo2">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261102notimer"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -367,7 +367,7 @@
       <span class="suit-type-body">
         <span class="suit-type-name">Jacket Only</span>
       <span class="suit-type-desc">No Pants</span>
-      <span class="suit-type-price">From $265</span>
+      <span class="suit-type-price">From $275</span>
         <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
       </span>
     </button>
@@ -418,6 +418,7 @@
       <h3>Your Suit</h3>
       <div id="summaryRows"></div>
       <div class="summary-total"><span>Estimated Total</span><b id="totalPrice">$350</b></div>
+      <p class="my-cost-line" id="myCostLine" hidden></p>
       <p class="summary-note">Estimated total — your final invoice is confirmed with you directly before production begins.</p>
       <button class="btn-primary" id="continueBtn">Continue to Pants</button>
     </div>
@@ -438,6 +439,7 @@
       <h3>Your Pants</h3>
       <div id="pantsSummaryRows"></div>
       <div class="summary-total"><span>Estimated Total</span><b id="pantsTotalPrice">$350</b></div>
+      <p class="my-cost-line" id="pantsMyCostLine" hidden></p>
       <p class="summary-note">Estimated total for the whole suit — your final invoice is confirmed with you directly before production begins.</p>
       <div class="measure-actions">
         <button class="btn-ghost" id="backToJacketBtn">&larr; Back to Jacket</button>
@@ -790,7 +792,7 @@
       <p class="how-it-works-intro">Six simple steps, all online. No showroom visit and no fittings needed.</p>
     </div>
     <ol class="how-it-works-list">
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-jacket.png?v=20261006h" alt="Jacket"></span><div class="hiw-step-body"><span class="hiw-num">Step 1</span><h3>Choose what you're building</h3><p>A full suit from $350, a jacket only from $265, or pants only from $150. Prefer a classic look with fewer choices? Start from a ready-made preset suit or jacket.</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-jacket.png?v=20261006h" alt="Jacket"></span><div class="hiw-step-body"><span class="hiw-num">Step 1</span><h3>Choose what you're building</h3><p>A full suit from $350, a jacket only from $275, or pants only from $150. Prefer a classic look with fewer choices? Start from a ready-made preset suit or jacket.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-pants.png?v=20261006h" alt="Pants"></span><div class="hiw-step-body"><span class="hiw-num">Step 2</span><h3>Design every detail</h3><p>Pick your fabric, which sets the price, then choose the lapel, pockets, buttons, lining and more. Add a monogram, or upload your own photo for the lining (+$80). For the pants, match your jacket fabric or go with a contrast. Every style option is included except full canvas (+$200).</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 3</span><h3>See your suit before you buy</h3><p>Get a free picture of your finished suit with all your choices, so you know exactly what you're ordering. Sign in to create one.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 4</span><h3>Add your measurements</h3><p>Enter the sizes of a suit that fits you well, or measure your body and pick a fit and our tailors do the rest. You can also estimate from your usual size in seconds. We check every number is in a sensible range, and if you have an account your measurements are saved for next time.</p></div></li>
@@ -1035,6 +1037,14 @@
     <input type="checkbox" id="qaRawFabricNamesToggle">
     Raw Fabric Codes
   </label>
+  <!-- Admin only: shows what each suit really costs the shop (factory
+       making charge + fabric + card fee) and what it leaves as profit, on
+       the fabric step and under the Estimated Total. The numbers come from
+       an admin-only database row, never from the public site files. -->
+  <label class="qa-nav-checkbox" for="qaMyCostToggle" id="qaMyCostLabel" title="Show what each suit costs you and what you make" style="display:none">
+    <input type="checkbox" id="qaMyCostToggle">
+    My Cost
+  </label>
   <button type="button" class="qa-nav-hide-btn" id="qaNavHideBtn" title="Hide QA nav">Hide ✕</button>
 </div>
 <!-- Small pill that reappears in the corner once the bar above is hidden,
@@ -1044,10 +1054,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261022protect"></script>
-<script src="./catalog.js?v=20261102nodovidlist"></script>
+<script src="./catalog.js?v=20261102price150"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261102photo"></script>
+<script src="./main.js?v=20261102photo2"></script>
 <script src="./photo-suit.js?v=20261102photo"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261101redrawload"></script> -->
