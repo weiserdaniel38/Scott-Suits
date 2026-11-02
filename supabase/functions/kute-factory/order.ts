@@ -76,8 +76,8 @@ const CUFF_BUTTON_CODES: Record<string, string> = {
 
 // Monogram spots on the site -> the factory's embroidery position.
 const JACKET_EMB_POSITIONS: Record<string, string> = {
-  "On Left Inside Pocket": "937",
-  "On Right Inside Pocket": "939",
+  "On Left Inside Pocket": "936", // on the fabric (Daniel 2026-11-02; was 937 lining)
+  "On Right Inside Pocket": "938", // on the fabric (was 939 lining)
   "On Right Inside Pocket, Monogram On Satin": "549,0873", // name label, 2cm above left inner pocket
   "Monogram On Middle Under Collar": "550",
 };
