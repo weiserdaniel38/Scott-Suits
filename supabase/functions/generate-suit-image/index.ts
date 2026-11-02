@@ -246,8 +246,8 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
   },
   "Monogram Placement": {
     "No Monogram": NO_MONOGRAM,
-    "Left Inside Pocket": MONO + " on the lining just above the wearer's left inside pocket (only visible when the jacket is open)",
-    "Right Inside Pocket": MONO + " on the lining just above the wearer's right inside pocket (only visible when the jacket is open)",
+    "Left Inside Pocket": MONO + " on the suit fabric (the inside front facing, NOT the lining) just above the wearer's left inside pocket (only visible when the jacket is open)",
+    "Right Inside Pocket": MONO + " on the suit fabric (the inside front facing, NOT the lining) just above the wearer's right inside pocket (only visible when the jacket is open)",
     "Inside Pocket Satin Tape": MONO + " on a small name label above the wearer's left inside pocket (only visible when the jacket is open)",
     "Middle Under Collar": MONO + " centred on the underside of the collar (not visible from the outside)",
     "Left Lapel Placement": MONO + " on the wearer's left lapel, angled along it below the buttonhole",
@@ -917,8 +917,8 @@ function sectionValue(spec: string, section: string, label: string): string {
 // Where each monogram placement shows on the sheet (see layoutFor); the
 // others (under the collar, inside the waistband) are hidden in every panel.
 const MONO_PANELS: Record<string, { jacketOnly?: string; suit?: string }> = {
-  "Left Inside Pocket": { jacketOnly: "panel 3 (fold open the wearer's LEFT front): on the lining just above the left inside pocket" },
-  "Right Inside Pocket": { jacketOnly: "panel 3 (fold open the wearer's RIGHT front): on the lining just above the right inside pocket" },
+  "Left Inside Pocket": { jacketOnly: "panel 3 (fold open the wearer's LEFT front): on the suit fabric (inside front facing, not the lining) just above the left inside pocket" },
+  "Right Inside Pocket": { jacketOnly: "panel 3 (fold open the wearer's RIGHT front): on the suit fabric (inside front facing, not the lining) just above the right inside pocket" },
   "Inside Pocket Satin Tape": { jacketOnly: "panel 3 (fold open the wearer's LEFT front): on a small satin name label sewn just above the left inside pocket" },
   "Left Back Pocket": { suit: "panel 3 (the trouser back close-up): just above the wearer's left back pocket" },
 };
