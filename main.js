@@ -2084,9 +2084,9 @@ function adminRedrawButton(o, s, suitBox) {
 
   btn.addEventListener("click", async () => {
     if (suitBox.dataset.redrawing) return;
-    if (!confirm("Draw this suit's picture again from the saved order? It takes about a minute.")) return;
+    if (!confirm("Draw this suit's picture again from the saved order? It takes a few minutes.")) return;
     const started = Date.now();
-    const loader = adminRedrawOverlay(suitBox, !!s.image_url, started);
+    const loader = adminRedrawOverlay(suitBox, !!s.image_url);
     suitBox.dataset.redrawing = "1";
     btn.disabled = true;
     btn.textContent = "Drawing…";
@@ -2112,14 +2112,14 @@ function adminRedrawButton(o, s, suitBox) {
   // A drawing started before the page was reloaded: show its loading screen
   // again and keep waiting for it.
   const pending = adminRedrawPending()[key];
-  if (pending) watch(pending, adminRedrawOverlay(suitBox, !!s.image_url, pending));
+  if (pending) watch(pending, adminRedrawOverlay(suitBox, !!s.image_url));
   return btn;
 }
 
 // Loading screen laid over one suit card while its picture is redrawn:
-// the stitching clip, "Redrawing picture...", and a running timer. It ends
+// the stitching clip and "Redrawing picture...". It ends
 // with a short "New picture ready" / error message, then goes away.
-function adminRedrawOverlay(suitBox, had, started = Date.now()) {
+function adminRedrawOverlay(suitBox, had) {
   const wrap = document.createElement("div");
   wrap.className = "admin-redraw-overlay";
   wrap.setAttribute("role", "status");
@@ -2143,27 +2143,16 @@ function adminRedrawOverlay(suitBox, had, started = Date.now()) {
   const title = document.createElement("strong");
   title.textContent = had ? "Redrawing picture…" : "Drawing picture…";
   const note = document.createElement("span");
-  note.textContent = "Usually about a minute. You can keep working on other orders or leave the app; this stays until it\u2019s done.";
-  const timer = document.createElement("span");
-  timer.className = "admin-redraw-timer";
-  timer.textContent = "0:00";
-  wrap.append(video, title, note, timer);
+  note.textContent = "This takes a few minutes. You can keep working on other orders or leave the app; this stays until it\u2019s done.";
+  wrap.append(video, title, note);
   suitBox.classList.add("admin-suit-busy");
   suitBox.appendChild(wrap);
-  const showTime = () => {
-    const sec = Math.max(0, Math.floor((Date.now() - started) / 1000));
-    timer.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
-  };
-  showTime();
-  const tick = setInterval(showTime, 1000);
   const finish = (ok, text, ms) => {
-    clearInterval(tick);
     video.pause();
     video.remove();
     wrap.classList.add(ok ? "is-done" : "is-failed");
     title.textContent = text;
     note.textContent = ok ? "" : "Nothing was changed on the order. Tap Redraw picture to try again.";
-    timer.remove();
     setTimeout(() => {
       wrap.remove();
       suitBox.classList.remove("admin-suit-busy");
@@ -8624,7 +8613,7 @@ function buildSuitImageCard(labelText) {
       video.setAttribute("aria-hidden", "true");
       const caption = document.createElement("p");
       caption.className = "suit-preview-loading-text";
-      caption.innerHTML = '<strong></strong><span>This usually takes about a minute.</span><span class="suit-preview-timer">0:00</span>';
+      caption.innerHTML = '<strong></strong><span>This takes a few minutes.</span>';
       const line = caption.querySelector("strong");
       const steps = kind === "pants" ? PANTS_LOADING_STEPS : SUIT_LOADING_STEPS.filter((s) => !(kind === "jacket" && s.pants)).map((s) => s.text);
       let step = 0;
@@ -8634,14 +8623,6 @@ function buildSuitImageCard(labelText) {
         step = (step + 1) % steps.length;
         line.textContent = steps[step];
       }, 3500);
-      // Time spent so far, counting up (same as admin Redraw picture).
-      const clock = caption.querySelector(".suit-preview-timer");
-      const started = Date.now();
-      const tick = setInterval(() => {
-        if (!clock.isConnected) return clearInterval(tick);
-        const sec = Math.floor((Date.now() - started) / 1000);
-        clock.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
-      }, 1000);
       const notice = document.createElement("p");
       notice.className = "suit-preview-wait-notice";
       notice.setAttribute("role", "status");
@@ -8772,7 +8753,7 @@ async function updateDesignPreviewPanel() {
   box.innerHTML = "";
   const head = document.createElement("div");
   head.className = "suit-preview-head";
-  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep going to your measurements while it draws.</p>';
+  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes a few minutes, and you can keep going to your measurements while it draws.</p>';
   box.appendChild(head);
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);

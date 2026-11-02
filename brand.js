@@ -164,7 +164,7 @@ var SITE_BRAND_COPY = {
     // Suit picture preview
     "Free preview": "Complimentary preview",
     "See your suit before you order": "See your suit before it is made",
-    "We draw your suit with the fabric, buttons, lining and thread you chose. It takes about a minute, and you can keep going to your measurements while it draws.": "We render your suit with the cloth, buttons, lining and thread you have chosen. It takes about a minute, and you may continue to your measurements in the meantime.",
+    "We draw your suit with the fabric, buttons, lining and thread you chose. It takes a few minutes, and you can keep going to your measurements while it draws.": "We render your suit with the cloth, buttons, lining and thread you have chosen. It takes a few minutes, and you may continue to your measurements in the meantime.",
     "Generate My Suit": "Preview My Suit",
     "Sign in or create a free account to see your suit drawn. You can still order without an account.": "Sign in or create an account to see your suit rendered. You may still order without an account.",
     "This picture is AI-generated and drawn as accurately as possible. Small details may differ, but your suit is made exactly to the selections you chose.": "This image is AI-generated and drawn as faithfully as possible. Small details may differ; your suit is crafted exactly to the selections you made.",
