@@ -8500,12 +8500,12 @@ function suitImagesReady() {
   return suitImagesReadyPromise;
 }
 
-// Checks back every 5 seconds until the picture is done or failed.
+// Checks back every 3 seconds until the picture is done or failed.
 async function pollSuitImage(checkPayload, isStillWanted) {
   // Up to two drawing rounds of about two minutes each (generate-suit-image).
   const deadline = Date.now() + 6 * 60 * 1000;
   while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 5000));
+    await new Promise((r) => setTimeout(r, 3000));
     if (isStillWanted && !isStillWanted()) return { status: "abandoned" };
     const check = await callSuitImageFn(checkPayload);
     const st = check.data && check.data.status;
