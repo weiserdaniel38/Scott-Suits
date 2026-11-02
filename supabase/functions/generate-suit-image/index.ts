@@ -44,7 +44,10 @@
 //   IMAGE_MODEL        optional, default gpt-image-2
 //   IMAGE_QUALITY      optional, low | medium | high | auto (default high: small
 //                      details like slanted cuff buttonholes need it)
-//   IMAGE_SIZE         optional, default 1536x1024 (landscape sheet)
+//   IMAGE_SIZE         optional, default 2048x1360 (landscape sheet; falls back
+//                      to 1536x1024 if the image API refuses the size)
+//   IMAGE_COMPRESSION  optional, JPEG quality 0-100, default 95 (the API's own
+//                      default left the close-ups blurry)
 //   USE_LAYOUT_REFERENCE optional, set to "true" to also show the model the
 //                      gray outline sheet (off by default: the panels are
 //                      described in words only)
@@ -53,7 +56,8 @@
 //                      account can draw in 24 hours (0 = no limit)
 //   PREVIEW_PER_VISITOR_PER_DAY optional; unset means no per-visitor limit
 //   PREVIEW_PER_DAY    optional; unset means no daily limit (all visitors)
-//   ANTHROPIC_MODEL    optional, default claude-opus-5-5
+//   ANTHROPIC_MODEL    optional, default claude-sonnet-5-5 (faster than Opus;
+//                      the key details and rules around its prompt are fixed text)
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -1227,7 +1231,7 @@ async function writePrompt(layout: string, notes: string, spec: string): Promise
   try {
     const client = new Anthropic({ apiKey: key });
     const response = await client.messages.create({
-      model: env("ANTHROPIC_MODEL", "claude-opus-5-5"),
+      model: env("ANTHROPIC_MODEL", "claude-sonnet-5-5"),
       max_tokens: 6000,
       output_config: { effort: "low" },
       system: PROMPT_WRITER_SYSTEM,
@@ -1256,11 +1260,16 @@ async function writePrompt(layout: string, notes: string, spec: string): Promise
 // ---------------------------------------------------------------------------
 // Image
 // ---------------------------------------------------------------------------
-async function drawImage(prompt: string, images: { label: string; blob: Blob }[]): Promise<Uint8Array> {
+// Daniel (2026-11-02): pictures looked low quality at 1536x1024 with the
+// API's default JPEG compression, so the sheet is drawn larger and saved at
+// JPEG quality 95. If the API refuses the larger size, draw at 1536x1024.
+const FALLBACK_SIZE = "1536x1024";
+async function drawImage(prompt: string, images: { label: string; blob: Blob }[], sizeOverride = ""): Promise<Uint8Array> {
   const key = env("OPENAI_API_KEY");
   if (!key) throw new Error("OPENAI_API_KEY is not set in Edge Function secrets");
   const model = env("IMAGE_MODEL", "gpt-image-2");
-  const size = env("IMAGE_SIZE", "1536x1024");
+  const size = sizeOverride || env("IMAGE_SIZE", "2048x1360");
+  const compression = String(Math.max(0, Math.min(100, Number(env("IMAGE_COMPRESSION", "95")) || 95)));
   const quality = env("IMAGE_QUALITY", "high");
   let res: Response;
   if (images.length) {
@@ -1270,6 +1279,7 @@ async function drawImage(prompt: string, images: { label: string; blob: Blob }[]
     form.append("size", size);
     form.append("quality", quality);
     form.append("output_format", "jpeg");
+    form.append("output_compression", compression);
     form.append("n", "1");
     images.forEach((img, i) => {
       const ext = img.blob.type.includes("png") ? "png" : img.blob.type.includes("webp") ? "webp" : "jpg";
@@ -1284,11 +1294,17 @@ async function drawImage(prompt: string, images: { label: string; blob: Blob }[]
     res = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: "Bearer " + key },
-      body: JSON.stringify({ model, prompt: prompt.slice(0, 30000), n: 1, size, quality, output_format: "jpeg" }),
+      body: JSON.stringify({ model, prompt: prompt.slice(0, 30000), n: 1, size, quality, output_format: "jpeg", output_compression: Number(compression) }),
     });
   }
   const body = await res.text();
-  if (!res.ok) throw new Error("OpenAI image API " + res.status + ": " + body.slice(0, 400));
+  if (!res.ok) {
+    if (res.status === 400 && size !== FALLBACK_SIZE && /size/i.test(body)) {
+      console.warn("Image size " + size + " refused, drawing at " + FALLBACK_SIZE);
+      return drawImage(prompt, images, FALLBACK_SIZE);
+    }
+    throw new Error("OpenAI image API " + res.status + ": " + body.slice(0, 400));
+  }
   const b64 = JSON.parse(body)?.data?.[0]?.b64_json;
   if (!b64) throw new Error("OpenAI image API returned no image");
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
