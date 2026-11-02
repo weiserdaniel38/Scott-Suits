@@ -1899,125 +1899,125 @@ const NEW_FABRICS = [
   { name: "26SU087.DBV402A", displayName: "Fine Cobalt", img: "./assets/jacket-fabric-26su087-dbv402a.jpg", hex: "#181b2c", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Cobalt solid in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
   { name: "26SU088.DBV403A", displayName: "Midnight Navy", img: "./assets/jacket-fabric-26su088-dbv403a.jpg", hex: "#1c1f27", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Midnight Navy solid in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
   { name: "26SU076.DBV405A", displayName: "Cobalt Check", img: "./assets/jacket-fabric-26su076-dbv405a.jpg", hex: "#232c35", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Cobalt check in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
-  { name: "26SU118.DBV386A", displayName: "Charcoal Herringbone", img: "./assets/jacket-fabric-26su118-dbv386a.jpg", hex: "#373a35", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 0, description: "Charcoal herringbone in pure wool. Year-round, from business to evening." }, // $20/m
-  { name: "26L6.DEB5114", displayName: "Classic Slate Gray", img: "./assets/jacket-fabric-26l6-deb5114.jpg", hex: "#515559", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 0, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $22/m
-  { name: "26SU073.DGG1130", displayName: "Gray Check", img: "./assets/jacket-fabric-26su073-dgg1130.jpg", hex: "#5a5e62", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 0, description: "Gray check in Super 110s pure wool. Versatile for any season." }, // $23.5/m
-  { name: "26SU074.DGG1131", displayName: "Navy Check", img: "./assets/jacket-fabric-26su074-dgg1131.jpg", hex: "#252a3c", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy check in Super 110s pure wool. Year-round, from business to evening." }, // $23.5/m
-  { name: "26SU112.DAV7777", displayName: "Onyx", img: "./assets/jacket-fabric-26su112-dav7777.jpg", hex: "#222327", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 0, description: "Onyx solid in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU071.DBV4054", displayName: "Indigo Check", img: "./assets/jacket-fabric-26su071-dbv4054.jpg", hex: "#2e3851", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Indigo check in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU108.DBV4754", displayName: "Classic Charcoal", img: "./assets/jacket-fabric-26su108-dbv4754.jpg", hex: "#23282b", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 0, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU110.DBV4765", displayName: "Classic Midnight Navy", img: "./assets/jacket-fabric-26su110-dbv4765.jpg", hex: "#191d27", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Midnight Navy solid in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU104.DBV5297", displayName: "Smoke Gray", img: "./assets/jacket-fabric-26su104-dbv5297.jpg", hex: "#8a857c", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 0, description: "Smoke Gray solid in pure wool. Versatile for any season." }, // $25/m
-  { name: "26SU107.DBV5298", displayName: "Rich Slate Gray", img: "./assets/jacket-fabric-26su107-dbv5298.jpg", hex: "#535557", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 0, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $25/m
-  { name: "26SU111.DBV5304", displayName: "Rich Midnight Navy", img: "./assets/jacket-fabric-26su111-dbv5304.jpg", hex: "#181a25", pattern: "Solid", family: "Navy", palette: "Navy", tier: 0, description: "Midnight Navy solid in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU369.DBV5955", displayName: "Navy Stripe", img: "./assets/jacket-fabric-26su369-dbv5955.jpg", hex: "#323441", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy stripe in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU094.DBV6378", displayName: "Classic Navy Check", img: "./assets/jacket-fabric-26su094-dbv6378.jpg", hex: "#21262e", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy check in pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26SU096.DZZ0013", displayName: "Classic Navy Stripe", img: "./assets/jacket-fabric-26su096-dzz0013.jpg", hex: "#1e1f2e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $25/m
-  { name: "26L8.DBT6768", displayName: "Black", img: "./assets/jacket-fabric-26l8-dbt6768.jpg", hex: "#121415", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 0, description: "Black solid in pure wool. Year-round, from business to evening." }, // $28/m
-  { name: "26SU078.DLL0153", displayName: "Charcoal Stripe", img: "./assets/jacket-fabric-26su078-dll0153.jpg", hex: "#373737", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 0, description: "Charcoal stripe in Super 110s pure wool. Year-round, from business to evening." }, // $28/m
-  { name: "26SU079.DLL0154", displayName: "Rich Navy Stripe", img: "./assets/jacket-fabric-26su079-dll0154.jpg", hex: "#1f2435", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 0, description: "Navy stripe in Super 110s pure wool. Year-round, from business to evening." }, // $28/m
-  { name: "26SU280.DZZ0016", displayName: "Fine Midnight Navy", img: "./assets/jacket-fabric-26su280-dzz0016.jpg", hex: "#141724", pattern: "Solid", family: "Navy", palette: "Navy", tier: 1, description: "Midnight Navy solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
-  { name: "26SU281.DZZ0017", displayName: "Classic Onyx", img: "./assets/jacket-fabric-26su281-dzz0017.jpg", hex: "#222222", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 1, description: "Onyx solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
-  { name: "26SU279.DZZ0019", displayName: "Fine Charcoal", img: "./assets/jacket-fabric-26su279-dzz0019.jpg", hex: "#37363b", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 1, description: "Charcoal solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
-  { name: "26SU275.DZZ0021", displayName: "Fine Onyx", img: "./assets/jacket-fabric-26su275-dzz0021.jpg", hex: "#262020", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 1, description: "Onyx solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
-  { name: "26SU097.DZZ0085", displayName: "Classic Charcoal Stripe", img: "./assets/jacket-fabric-26su097-dzz0085.jpg", hex: "#313332", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 1, description: "Charcoal stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
-  { name: "26SU098.DZZ0086", displayName: "Midnight Navy Stripe", img: "./assets/jacket-fabric-26su098-dzz0086.jpg", hex: "#191824", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Midnight Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
-  { name: "26SU348.DEB510A", displayName: "Heritage Charcoal", img: "./assets/jacket-fabric-26su348-deb510a.jpg", hex: "#272729", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU338.DEB513A", displayName: "Charcoal Check", img: "./assets/jacket-fabric-26su338-deb513a.jpg", hex: "#2e2e31", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal check in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU374.DEB522A", displayName: "Royal Charcoal", img: "./assets/jacket-fabric-26su374-deb522a.jpg", hex: "#333234", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU376.DEB524A", displayName: "Navy", img: "./assets/jacket-fabric-26su376-deb524a.jpg", hex: "#1d202a", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU377.DEB526A", displayName: "Heritage Onyx", img: "./assets/jacket-fabric-26su377-deb526a.jpg", hex: "#222222", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU360.DEB532A", displayName: "Fine Slate Gray", img: "./assets/jacket-fabric-26su360-deb532a.jpg", hex: "#4c4c4d", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $40/m
-  { name: "26SU353.DEB538A", displayName: "Classic Slate Gray Stripe", img: "./assets/jacket-fabric-26su353-deb538a.jpg", hex: "#403f3f", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU354.DEB539A", displayName: "Heritage Cobalt", img: "./assets/jacket-fabric-26su354-deb539a.jpg", hex: "#323245", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Cobalt solid in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU366.DEB547A", displayName: "Rich Navy Check", img: "./assets/jacket-fabric-26su366-deb547a.jpg", hex: "#2f353d", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool. Year-round, from business to evening." }, // $40/m
-  { name: "26SU344.DEB5121", displayName: "Slate Gray Check", img: "./assets/jacket-fabric-26su344-deb5121.jpg", hex: "#464747", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray check in pure wool. Versatile for any season." }, // $42/m
-  { name: "26SU345.DEB5122", displayName: "Fine Navy Check", img: "./assets/jacket-fabric-26su345-deb5122.jpg", hex: "#2b303f", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool. Year-round, from business to evening." }, // $42/m
-  { name: "26MZ104.DAT5785", displayName: "Gray", img: "./assets/jacket-fabric-26mz104-dat5785.jpg", hex: "#5f5f5d", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
-  { name: "26MZ118.DAT5811", displayName: "Gray Stripe", img: "./assets/jacket-fabric-26mz118-dat5811.jpg", hex: "#736b67", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray stripe in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
-  { name: "26MZ120.DAT5813", displayName: "Classic Gray Stripe", img: "./assets/jacket-fabric-26mz120-dat5813.jpg", hex: "#636362", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray stripe in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
-  { name: "26MZ121.DAT5814", displayName: "Fine Navy Stripe", img: "./assets/jacket-fabric-26mz121-dat5814.jpg", hex: "#2c2c36", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in pure wool from Marzotto, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26MZ051.DAX9347", displayName: "Classic Navy", img: "./assets/jacket-fabric-26mz051-dax9347.jpg", hex: "#1e254c", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool from Marzotto, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26MZ050.DAX9350", displayName: "Heritage Slate Gray", img: "./assets/jacket-fabric-26mz050-dax9350.jpg", hex: "#54535d", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB015.DAY4344", displayName: "Rich Navy", img: "./assets/jacket-fabric-26gb015-day4344.jpg", hex: "#2b3052", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB014.DAY4345", displayName: "Steel Blue", img: "./assets/jacket-fabric-26gb014-day4345.jpg", hex: "#3e55a0", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Steel Blue solid in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB110.DAY4358", displayName: "Onyx Stripe", img: "./assets/jacket-fabric-26gb110-day4358.jpg", hex: "#28272a", pattern: "Pinstripe", family: "Black Pattern", palette: "Jet Black", tier: 2, description: "Onyx stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB111.DAY4359", displayName: "Heritage Navy Stripe", img: "./assets/jacket-fabric-26gb111-day4359.jpg", hex: "#26252f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB078.DAY4366", displayName: "Classic Gray Check", img: "./assets/jacket-fabric-26gb078-day4366.jpg", hex: "#5a5c60", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray check in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB080.DAY4367", displayName: "Heritage Navy Check", img: "./assets/jacket-fabric-26gb080-day4367.jpg", hex: "#272b40", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB079.DAY4368", displayName: "Steel Blue Check", img: "./assets/jacket-fabric-26gb079-day4368.jpg", hex: "#354575", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Steel Blue check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB044.DAY4378", displayName: "Rich Slate Gray Stripe", img: "./assets/jacket-fabric-26gb044-day4378.jpg", hex: "#525759", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB045.DAY4379", displayName: "Rich Charcoal Stripe", img: "./assets/jacket-fabric-26gb045-day4379.jpg", hex: "#343a40", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB046.DAY4380", displayName: "Royal Navy Stripe", img: "./assets/jacket-fabric-26gb046-day4380.jpg", hex: "#262b3f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB099.DAY4386", displayName: "Royal Navy Check", img: "./assets/jacket-fabric-26gb099-day4386.jpg", hex: "#2b2e3a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB100.DAY4387", displayName: "Savile Navy Check", img: "./assets/jacket-fabric-26gb100-day4387.jpg", hex: "#292b3f", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26GB108.DAY4403", displayName: "Fine Slate Gray Stripe", img: "./assets/jacket-fabric-26gb108-day4403.jpg", hex: "#4a494e", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
-  { name: "26GB042.DAY4416", displayName: "Cobalt Stripe", img: "./assets/jacket-fabric-26gb042-day4416.jpg", hex: "#292f45", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Cobalt stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB017.DAY9076", displayName: "Classic Gray", img: "./assets/jacket-fabric-26vb017-day9076.jpg", hex: "#656b6e", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB024.DAY9079", displayName: "Fine Navy", img: "./assets/jacket-fabric-26vb024-day9079.jpg", hex: "#1f1f2f", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB095.DAY9129", displayName: "Classic Slate Gray Check", img: "./assets/jacket-fabric-26vb095-day9129.jpg", hex: "#424546", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray check in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB096.DAY9130", displayName: "Windsor Navy Check", img: "./assets/jacket-fabric-26vb096-day9130.jpg", hex: "#353643", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB083.DAY9131", displayName: "Savile Navy Stripe", img: "./assets/jacket-fabric-26vb083-day9131.jpg", hex: "#25292e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB084.DAY9132", displayName: "Classic Onyx Stripe", img: "./assets/jacket-fabric-26vb084-day9132.jpg", hex: "#1c2121", pattern: "Pinstripe", family: "Black Pattern", palette: "Jet Black", tier: 2, description: "Onyx stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB088.DAY9134", displayName: "Rich Gray Stripe", img: "./assets/jacket-fabric-26vb088-day9134.jpg", hex: "#666b6c", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB089.DAY9135", displayName: "Fine Charcoal Stripe", img: "./assets/jacket-fabric-26vb089-day9135.jpg", hex: "#39383b", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB090.DAY9136", displayName: "Windsor Navy Stripe", img: "./assets/jacket-fabric-26vb090-day9136.jpg", hex: "#2e2c36", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB085.DAY9137", displayName: "Heritage Charcoal Stripe", img: "./assets/jacket-fabric-26vb085-day9137.jpg", hex: "#313536", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB086.DAY9138", displayName: "Mayfair Navy Stripe", img: "./assets/jacket-fabric-26vb086-day9138.jpg", hex: "#282e37", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB092.DAY9140", displayName: "Fine Gray Stripe", img: "./assets/jacket-fabric-26vb092-day9140.jpg", hex: "#676e6f", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB093.DAY9141", displayName: "Royal Charcoal Stripe", img: "./assets/jacket-fabric-26vb093-day9141.jpg", hex: "#292d2e", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB076.DAY9146", displayName: "Slate Gray Herringbone", img: "./assets/jacket-fabric-26vb076-day9146.jpg", hex: "#515657", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB077.DAY9147", displayName: "Classic Charcoal Herringbone", img: "./assets/jacket-fabric-26vb077-day9147.jpg", hex: "#353a3b", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB080.DAY9149", displayName: "Navy Herringbone", img: "./assets/jacket-fabric-26vb080-day9149.jpg", hex: "#252a37", pattern: "Herringbone", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB081.DAY9150", displayName: "Classic Navy Herringbone", img: "./assets/jacket-fabric-26vb081-day9150.jpg", hex: "#212429", pattern: "Herringbone", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB082.DAY9151", displayName: "Onyx Herringbone", img: "./assets/jacket-fabric-26vb082-day9151.jpg", hex: "#1b2021", pattern: "Herringbone", family: "Black Pattern", palette: "Jet Black", tier: 2, description: "Onyx herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB063.DAY9152", displayName: "Rich Gray", img: "./assets/jacket-fabric-26vb063-day9152.jpg", hex: "#666c6d", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB064.DAY9153", displayName: "Royal Slate Gray", img: "./assets/jacket-fabric-26vb064-day9153.jpg", hex: "#474b4c", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB065.DAY9154", displayName: "Savile Charcoal", img: "./assets/jacket-fabric-26vb065-day9154.jpg", hex: "#2f3437", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB066.DAY9155", displayName: "Heritage Navy", img: "./assets/jacket-fabric-26vb066-day9155.jpg", hex: "#263148", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB067.DAY9156", displayName: "Royal Navy", img: "./assets/jacket-fabric-26vb067-day9156.jpg", hex: "#2d3647", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB046.DAY9159", displayName: "Dove Gray", img: "./assets/jacket-fabric-26vb046-day9159.jpg", hex: "#adb5b5", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26VB047.DAY9160", displayName: "Classic Smoke Gray", img: "./assets/jacket-fabric-26vb047-day9160.jpg", hex: "#7e8686", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 2, description: "Smoke Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB048.DAY9161", displayName: "Savile Slate Gray", img: "./assets/jacket-fabric-26vb048-day9161.jpg", hex: "#3e4445", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB044.DAY9162", displayName: "Classic Dove Gray", img: "./assets/jacket-fabric-26vb044-day9162.jpg", hex: "#c4c5c3", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26VB045.DAY9163", displayName: "Fine Gray", img: "./assets/jacket-fabric-26vb045-day9163.jpg", hex: "#71726e", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB058.DAY9164", displayName: "Savile Navy", img: "./assets/jacket-fabric-26vb058-day9164.jpg", hex: "#242c34", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB056.DAY9170", displayName: "Windsor Navy", img: "./assets/jacket-fabric-26vb056-day9170.jpg", hex: "#273653", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB113.DAY9172", displayName: "Smoke Gray Stripe", img: "./assets/jacket-fabric-26vb113-day9172.jpg", hex: "#767b7c", pattern: "Pinstripe", family: "Gray Pattern", palette: "Smoke", tier: 2, description: "Smoke Gray stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB114.DAY9173", displayName: "Heritage Slate Gray Stripe", img: "./assets/jacket-fabric-26vb114-day9173.jpg", hex: "#44494a", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB115.DAY9175", displayName: "Indigo Stripe", img: "./assets/jacket-fabric-26vb115-day9175.jpg", hex: "#3b485f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Indigo stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB116.DAY9176", displayName: "Chelsea Navy Stripe", img: "./assets/jacket-fabric-26vb116-day9176.jpg", hex: "#2b303e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB110.DAY9189", displayName: "Mayfair Navy", img: "./assets/jacket-fabric-26vb110-day9189.jpg", hex: "#24252d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE048.DAY9208", displayName: "Rich Dove Gray", img: "./assets/jacket-fabric-26re048-day9208.jpg", hex: "#bebdc0", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 110s pure wool from Reda, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26RE049.DAY9209", displayName: "Heritage Gray", img: "./assets/jacket-fabric-26re049-day9209.jpg", hex: "#62636b", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 2, description: "Gray solid in Super 110s pure wool from Reda, Italy. Versatile for any season." }, // $45/m
-  { name: "26RE050.DAY9210", displayName: "Royal Cobalt", img: "./assets/jacket-fabric-26re050-day9210.jpg", hex: "#393c4d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Cobalt solid in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE102.DAY9249", displayName: "Royal Slate Gray Stripe", img: "./assets/jacket-fabric-26re102-day9249.jpg", hex: "#4c4d4d", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray stripe in Super 130s pure wool from Reda, Italy. Versatile for any season." }, // $45/m
-  { name: "26RE103.DAY9250", displayName: "Classic Midnight Navy Stripe", img: "./assets/jacket-fabric-26re103-day9250.jpg", hex: "#1b1e27", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Midnight Navy stripe in Super 130s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE104.DAY9251", displayName: "Rich Midnight Navy Stripe", img: "./assets/jacket-fabric-26re104-day9251.jpg", hex: "#15151c", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Midnight Navy stripe in Super 130s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE081.DAY9255", displayName: "Classic Cobalt Check", img: "./assets/jacket-fabric-26re081-day9255.jpg", hex: "#22242d", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Cobalt check in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE071.DAY9257", displayName: "Classic Charcoal Check", img: "./assets/jacket-fabric-26re071-day9257.jpg", hex: "#3a3c3d", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal check in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE072.DAY9259", displayName: "Mayfair Navy Check", img: "./assets/jacket-fabric-26re072-day9259.jpg", hex: "#232833", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB097.DAY9267", displayName: "Dove Gray Check", img: "./assets/jacket-fabric-26vb097-day9267.jpg", hex: "#bdbeba", pattern: "Plaid", family: "Gray Pattern", palette: "Dove Grey", tier: 2, description: "Dove Gray check in pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26VB098.DAY9268", displayName: "Smoke Gray Check", img: "./assets/jacket-fabric-26vb098-day9268.jpg", hex: "#838989", pattern: "Plaid", family: "Gray Pattern", palette: "Smoke", tier: 2, description: "Smoke Gray check in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB099.DAY9269", displayName: "Chelsea Navy Check", img: "./assets/jacket-fabric-26vb099-day9269.jpg", hex: "#292e3a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB100.DAY9273", displayName: "Rich Gray Check", img: "./assets/jacket-fabric-26vb100-day9273.jpg", hex: "#656a6a", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray check in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB102.DAY9274", displayName: "Oxford Navy Check", img: "./assets/jacket-fabric-26vb102-day9274.jpg", hex: "#29313a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Navy check in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB070.DAY9276", displayName: "Gray Herringbone", img: "./assets/jacket-fabric-26vb070-day9276.jpg", hex: "#616667", pattern: "Herringbone", family: "Gray Pattern", palette: "Mid Grey", tier: 2, description: "Gray herringbone in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB059.DAY9284", displayName: "Royal Onyx", img: "./assets/jacket-fabric-26vb059-day9284.jpg", hex: "#1e2423", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB103.DAY9290", displayName: "Fine Dove Gray", img: "./assets/jacket-fabric-26vb103-day9290.jpg", hex: "#b8bcbc", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 2, description: "Dove Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
-  { name: "26VB104.DAY9291", displayName: "Rich Smoke Gray", img: "./assets/jacket-fabric-26vb104-day9291.jpg", hex: "#6f7576", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 2, description: "Smoke Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
-  { name: "26VB105.DAY9292", displayName: "Windsor Slate Gray", img: "./assets/jacket-fabric-26vb105-day9292.jpg", hex: "#414546", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 2, description: "Slate Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB109.DAY9293", displayName: "Chelsea Navy", img: "./assets/jacket-fabric-26vb109-day9293.jpg", hex: "#282b34", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26VB111.DAY9294", displayName: "Savile Onyx", img: "./assets/jacket-fabric-26vb111-day9294.jpg", hex: "#1b1e1b", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
-  { name: "26RE079.DAY9302", displayName: "Rich Slate Gray Check", img: "./assets/jacket-fabric-26re079-day9302.jpg", hex: "#4f4a47", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 2, description: "Slate Gray check in pure wool from Reda, Italy. Versatile for any season." }, // $45/m
-  { name: "26RE080.DAY9303", displayName: "Rich Charcoal Check", img: "./assets/jacket-fabric-26re080-day9303.jpg", hex: "#323333", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal check in pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26SU118.DBV386A", displayName: "Charcoal Herringbone", img: "./assets/jacket-fabric-26su118-dbv386a.jpg", hex: "#373a35", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 1, description: "Charcoal herringbone in pure wool. Year-round, from business to evening." }, // $20/m
+  { name: "26L6.DEB5114", displayName: "Classic Slate Gray", img: "./assets/jacket-fabric-26l6-deb5114.jpg", hex: "#515559", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 1, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $22/m
+  { name: "26SU073.DGG1130", displayName: "Gray Check", img: "./assets/jacket-fabric-26su073-dgg1130.jpg", hex: "#5a5e62", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 1, description: "Gray check in Super 110s pure wool. Versatile for any season." }, // $23.5/m
+  { name: "26SU074.DGG1131", displayName: "Navy Check", img: "./assets/jacket-fabric-26su074-dgg1131.jpg", hex: "#252a3c", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Navy check in Super 110s pure wool. Year-round, from business to evening." }, // $23.5/m
+  { name: "26SU112.DAV7777", displayName: "Onyx", img: "./assets/jacket-fabric-26su112-dav7777.jpg", hex: "#222327", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 1, description: "Onyx solid in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU071.DBV4054", displayName: "Indigo Check", img: "./assets/jacket-fabric-26su071-dbv4054.jpg", hex: "#2e3851", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Indigo check in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU108.DBV4754", displayName: "Classic Charcoal", img: "./assets/jacket-fabric-26su108-dbv4754.jpg", hex: "#23282b", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 1, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU110.DBV4765", displayName: "Classic Midnight Navy", img: "./assets/jacket-fabric-26su110-dbv4765.jpg", hex: "#191d27", pattern: "Solid", family: "Navy", palette: "Navy", tier: 1, description: "Midnight Navy solid in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU104.DBV5297", displayName: "Smoke Gray", img: "./assets/jacket-fabric-26su104-dbv5297.jpg", hex: "#8a857c", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 1, description: "Smoke Gray solid in pure wool. Versatile for any season." }, // $25/m
+  { name: "26SU107.DBV5298", displayName: "Rich Slate Gray", img: "./assets/jacket-fabric-26su107-dbv5298.jpg", hex: "#535557", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 1, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $25/m
+  { name: "26SU111.DBV5304", displayName: "Rich Midnight Navy", img: "./assets/jacket-fabric-26su111-dbv5304.jpg", hex: "#181a25", pattern: "Solid", family: "Navy", palette: "Navy", tier: 1, description: "Midnight Navy solid in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU369.DBV5955", displayName: "Navy Stripe", img: "./assets/jacket-fabric-26su369-dbv5955.jpg", hex: "#323441", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Navy stripe in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU094.DBV6378", displayName: "Classic Navy Check", img: "./assets/jacket-fabric-26su094-dbv6378.jpg", hex: "#21262e", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Navy check in pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26SU096.DZZ0013", displayName: "Classic Navy Stripe", img: "./assets/jacket-fabric-26su096-dzz0013.jpg", hex: "#1e1f2e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $25/m
+  { name: "26L8.DBT6768", displayName: "Black", img: "./assets/jacket-fabric-26l8-dbt6768.jpg", hex: "#121415", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 1, description: "Black solid in pure wool. Year-round, from business to evening." }, // $28/m
+  { name: "26SU078.DLL0153", displayName: "Charcoal Stripe", img: "./assets/jacket-fabric-26su078-dll0153.jpg", hex: "#373737", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 1, description: "Charcoal stripe in Super 110s pure wool. Year-round, from business to evening." }, // $28/m
+  { name: "26SU079.DLL0154", displayName: "Rich Navy Stripe", img: "./assets/jacket-fabric-26su079-dll0154.jpg", hex: "#1f2435", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 1, description: "Navy stripe in Super 110s pure wool. Year-round, from business to evening." }, // $28/m
+  { name: "26SU280.DZZ0016", displayName: "Fine Midnight Navy", img: "./assets/jacket-fabric-26su280-dzz0016.jpg", hex: "#141724", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Midnight Navy solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU281.DZZ0017", displayName: "Classic Onyx", img: "./assets/jacket-fabric-26su281-dzz0017.jpg", hex: "#222222", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU279.DZZ0019", displayName: "Fine Charcoal", img: "./assets/jacket-fabric-26su279-dzz0019.jpg", hex: "#37363b", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU275.DZZ0021", displayName: "Fine Onyx", img: "./assets/jacket-fabric-26su275-dzz0021.jpg", hex: "#262020", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Onyx solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU097.DZZ0085", displayName: "Classic Charcoal Stripe", img: "./assets/jacket-fabric-26su097-dzz0085.jpg", hex: "#313332", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 2, description: "Charcoal stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU098.DZZ0086", displayName: "Midnight Navy Stripe", img: "./assets/jacket-fabric-26su098-dzz0086.jpg", hex: "#191824", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 2, description: "Midnight Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU348.DEB510A", displayName: "Heritage Charcoal", img: "./assets/jacket-fabric-26su348-deb510a.jpg", hex: "#272729", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 3, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU338.DEB513A", displayName: "Charcoal Check", img: "./assets/jacket-fabric-26su338-deb513a.jpg", hex: "#2e2e31", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal check in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU374.DEB522A", displayName: "Royal Charcoal", img: "./assets/jacket-fabric-26su374-deb522a.jpg", hex: "#333234", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 3, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU376.DEB524A", displayName: "Navy", img: "./assets/jacket-fabric-26su376-deb524a.jpg", hex: "#1d202a", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU377.DEB526A", displayName: "Heritage Onyx", img: "./assets/jacket-fabric-26su377-deb526a.jpg", hex: "#222222", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 3, description: "Onyx solid in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU360.DEB532A", displayName: "Fine Slate Gray", img: "./assets/jacket-fabric-26su360-deb532a.jpg", hex: "#4c4c4d", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 3, description: "Slate Gray solid in pure wool. Versatile for any season." }, // $40/m
+  { name: "26SU353.DEB538A", displayName: "Classic Slate Gray Stripe", img: "./assets/jacket-fabric-26su353-deb538a.jpg", hex: "#403f3f", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray stripe in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU354.DEB539A", displayName: "Heritage Cobalt", img: "./assets/jacket-fabric-26su354-deb539a.jpg", hex: "#323245", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Cobalt solid in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU366.DEB547A", displayName: "Rich Navy Check", img: "./assets/jacket-fabric-26su366-deb547a.jpg", hex: "#2f353d", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool. Year-round, from business to evening." }, // $40/m
+  { name: "26SU344.DEB5121", displayName: "Slate Gray Check", img: "./assets/jacket-fabric-26su344-deb5121.jpg", hex: "#464747", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray check in pure wool. Versatile for any season." }, // $42/m
+  { name: "26SU345.DEB5122", displayName: "Fine Navy Check", img: "./assets/jacket-fabric-26su345-deb5122.jpg", hex: "#2b303f", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool. Year-round, from business to evening." }, // $42/m
+  { name: "26MZ104.DAT5785", displayName: "Gray", img: "./assets/jacket-fabric-26mz104-dat5785.jpg", hex: "#5f5f5d", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 3, description: "Gray solid in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
+  { name: "26MZ118.DAT5811", displayName: "Gray Stripe", img: "./assets/jacket-fabric-26mz118-dat5811.jpg", hex: "#736b67", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray stripe in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
+  { name: "26MZ120.DAT5813", displayName: "Classic Gray Stripe", img: "./assets/jacket-fabric-26mz120-dat5813.jpg", hex: "#636362", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray stripe in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
+  { name: "26MZ121.DAT5814", displayName: "Fine Navy Stripe", img: "./assets/jacket-fabric-26mz121-dat5814.jpg", hex: "#2c2c36", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in pure wool from Marzotto, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26MZ051.DAX9347", displayName: "Classic Navy", img: "./assets/jacket-fabric-26mz051-dax9347.jpg", hex: "#1e254c", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in pure wool from Marzotto, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26MZ050.DAX9350", displayName: "Heritage Slate Gray", img: "./assets/jacket-fabric-26mz050-dax9350.jpg", hex: "#54535d", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 3, description: "Slate Gray solid in pure wool from Marzotto, Italy. Versatile for any season." }, // $45/m
+  { name: "26GB015.DAY4344", displayName: "Rich Navy", img: "./assets/jacket-fabric-26gb015-day4344.jpg", hex: "#2b3052", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB014.DAY4345", displayName: "Steel Blue", img: "./assets/jacket-fabric-26gb014-day4345.jpg", hex: "#3e55a0", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Steel Blue solid in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
+  { name: "26GB110.DAY4358", displayName: "Onyx Stripe", img: "./assets/jacket-fabric-26gb110-day4358.jpg", hex: "#28272a", pattern: "Pinstripe", family: "Black Pattern", palette: "Jet Black", tier: 3, description: "Onyx stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB111.DAY4359", displayName: "Heritage Navy Stripe", img: "./assets/jacket-fabric-26gb111-day4359.jpg", hex: "#26252f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB078.DAY4366", displayName: "Classic Gray Check", img: "./assets/jacket-fabric-26gb078-day4366.jpg", hex: "#5a5c60", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray check in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
+  { name: "26GB080.DAY4367", displayName: "Heritage Navy Check", img: "./assets/jacket-fabric-26gb080-day4367.jpg", hex: "#272b40", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB079.DAY4368", displayName: "Steel Blue Check", img: "./assets/jacket-fabric-26gb079-day4368.jpg", hex: "#354575", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Steel Blue check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB044.DAY4378", displayName: "Rich Slate Gray Stripe", img: "./assets/jacket-fabric-26gb044-day4378.jpg", hex: "#525759", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray stripe in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
+  { name: "26GB045.DAY4379", displayName: "Rich Charcoal Stripe", img: "./assets/jacket-fabric-26gb045-day4379.jpg", hex: "#343a40", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB046.DAY4380", displayName: "Royal Navy Stripe", img: "./assets/jacket-fabric-26gb046-day4380.jpg", hex: "#262b3f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB099.DAY4386", displayName: "Royal Navy Check", img: "./assets/jacket-fabric-26gb099-day4386.jpg", hex: "#2b2e3a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB100.DAY4387", displayName: "Savile Navy Check", img: "./assets/jacket-fabric-26gb100-day4387.jpg", hex: "#292b3f", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26GB108.DAY4403", displayName: "Fine Slate Gray Stripe", img: "./assets/jacket-fabric-26gb108-day4403.jpg", hex: "#4a494e", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray stripe in pure wool from Guabello, Italy. Versatile for any season." }, // $45/m
+  { name: "26GB042.DAY4416", displayName: "Cobalt Stripe", img: "./assets/jacket-fabric-26gb042-day4416.jpg", hex: "#292f45", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Cobalt stripe in pure wool from Guabello, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB017.DAY9076", displayName: "Classic Gray", img: "./assets/jacket-fabric-26vb017-day9076.jpg", hex: "#656b6e", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 3, description: "Gray solid in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB024.DAY9079", displayName: "Fine Navy", img: "./assets/jacket-fabric-26vb024-day9079.jpg", hex: "#1f1f2f", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB095.DAY9129", displayName: "Classic Slate Gray Check", img: "./assets/jacket-fabric-26vb095-day9129.jpg", hex: "#424546", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray check in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB096.DAY9130", displayName: "Windsor Navy Check", img: "./assets/jacket-fabric-26vb096-day9130.jpg", hex: "#353643", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB083.DAY9131", displayName: "Savile Navy Stripe", img: "./assets/jacket-fabric-26vb083-day9131.jpg", hex: "#25292e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB084.DAY9132", displayName: "Classic Onyx Stripe", img: "./assets/jacket-fabric-26vb084-day9132.jpg", hex: "#1c2121", pattern: "Pinstripe", family: "Black Pattern", palette: "Jet Black", tier: 3, description: "Onyx stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB088.DAY9134", displayName: "Rich Gray Stripe", img: "./assets/jacket-fabric-26vb088-day9134.jpg", hex: "#666b6c", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB089.DAY9135", displayName: "Fine Charcoal Stripe", img: "./assets/jacket-fabric-26vb089-day9135.jpg", hex: "#39383b", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB090.DAY9136", displayName: "Windsor Navy Stripe", img: "./assets/jacket-fabric-26vb090-day9136.jpg", hex: "#2e2c36", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB085.DAY9137", displayName: "Heritage Charcoal Stripe", img: "./assets/jacket-fabric-26vb085-day9137.jpg", hex: "#313536", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB086.DAY9138", displayName: "Mayfair Navy Stripe", img: "./assets/jacket-fabric-26vb086-day9138.jpg", hex: "#282e37", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB092.DAY9140", displayName: "Fine Gray Stripe", img: "./assets/jacket-fabric-26vb092-day9140.jpg", hex: "#676e6f", pattern: "Pinstripe", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB093.DAY9141", displayName: "Royal Charcoal Stripe", img: "./assets/jacket-fabric-26vb093-day9141.jpg", hex: "#292d2e", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal stripe in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB076.DAY9146", displayName: "Slate Gray Herringbone", img: "./assets/jacket-fabric-26vb076-day9146.jpg", hex: "#515657", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB077.DAY9147", displayName: "Classic Charcoal Herringbone", img: "./assets/jacket-fabric-26vb077-day9147.jpg", hex: "#353a3b", pattern: "Herringbone", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB080.DAY9149", displayName: "Navy Herringbone", img: "./assets/jacket-fabric-26vb080-day9149.jpg", hex: "#252a37", pattern: "Herringbone", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB081.DAY9150", displayName: "Classic Navy Herringbone", img: "./assets/jacket-fabric-26vb081-day9150.jpg", hex: "#212429", pattern: "Herringbone", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB082.DAY9151", displayName: "Onyx Herringbone", img: "./assets/jacket-fabric-26vb082-day9151.jpg", hex: "#1b2021", pattern: "Herringbone", family: "Black Pattern", palette: "Jet Black", tier: 3, description: "Onyx herringbone in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB063.DAY9152", displayName: "Rich Gray", img: "./assets/jacket-fabric-26vb063-day9152.jpg", hex: "#666c6d", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 3, description: "Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB064.DAY9153", displayName: "Royal Slate Gray", img: "./assets/jacket-fabric-26vb064-day9153.jpg", hex: "#474b4c", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 3, description: "Slate Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB065.DAY9154", displayName: "Savile Charcoal", img: "./assets/jacket-fabric-26vb065-day9154.jpg", hex: "#2f3437", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 3, description: "Charcoal solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB066.DAY9155", displayName: "Heritage Navy", img: "./assets/jacket-fabric-26vb066-day9155.jpg", hex: "#263148", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB067.DAY9156", displayName: "Royal Navy", img: "./assets/jacket-fabric-26vb067-day9156.jpg", hex: "#2d3647", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB046.DAY9159", displayName: "Dove Gray", img: "./assets/jacket-fabric-26vb046-day9159.jpg", hex: "#adb5b5", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 3, description: "Dove Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
+  { name: "26VB047.DAY9160", displayName: "Classic Smoke Gray", img: "./assets/jacket-fabric-26vb047-day9160.jpg", hex: "#7e8686", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 3, description: "Smoke Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB048.DAY9161", displayName: "Savile Slate Gray", img: "./assets/jacket-fabric-26vb048-day9161.jpg", hex: "#3e4445", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 3, description: "Slate Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB044.DAY9162", displayName: "Classic Dove Gray", img: "./assets/jacket-fabric-26vb044-day9162.jpg", hex: "#c4c5c3", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 3, description: "Dove Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
+  { name: "26VB045.DAY9163", displayName: "Fine Gray", img: "./assets/jacket-fabric-26vb045-day9163.jpg", hex: "#71726e", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 3, description: "Gray solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB058.DAY9164", displayName: "Savile Navy", img: "./assets/jacket-fabric-26vb058-day9164.jpg", hex: "#242c34", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB056.DAY9170", displayName: "Windsor Navy", img: "./assets/jacket-fabric-26vb056-day9170.jpg", hex: "#273653", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in Super 110s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB113.DAY9172", displayName: "Smoke Gray Stripe", img: "./assets/jacket-fabric-26vb113-day9172.jpg", hex: "#767b7c", pattern: "Pinstripe", family: "Gray Pattern", palette: "Smoke", tier: 3, description: "Smoke Gray stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB114.DAY9173", displayName: "Heritage Slate Gray Stripe", img: "./assets/jacket-fabric-26vb114-day9173.jpg", hex: "#44494a", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB115.DAY9175", displayName: "Indigo Stripe", img: "./assets/jacket-fabric-26vb115-day9175.jpg", hex: "#3b485f", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Indigo stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB116.DAY9176", displayName: "Chelsea Navy Stripe", img: "./assets/jacket-fabric-26vb116-day9176.jpg", hex: "#2b303e", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy stripe in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB110.DAY9189", displayName: "Mayfair Navy", img: "./assets/jacket-fabric-26vb110-day9189.jpg", hex: "#24252d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE048.DAY9208", displayName: "Rich Dove Gray", img: "./assets/jacket-fabric-26re048-day9208.jpg", hex: "#bebdc0", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 3, description: "Dove Gray solid in Super 110s pure wool from Reda, Italy. Light and fresh for spring and summer." }, // $45/m
+  { name: "26RE049.DAY9209", displayName: "Heritage Gray", img: "./assets/jacket-fabric-26re049-day9209.jpg", hex: "#62636b", pattern: "Solid", family: "Gray", palette: "Mid Grey", tier: 3, description: "Gray solid in Super 110s pure wool from Reda, Italy. Versatile for any season." }, // $45/m
+  { name: "26RE050.DAY9210", displayName: "Royal Cobalt", img: "./assets/jacket-fabric-26re050-day9210.jpg", hex: "#393c4d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Cobalt solid in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE102.DAY9249", displayName: "Royal Slate Gray Stripe", img: "./assets/jacket-fabric-26re102-day9249.jpg", hex: "#4c4d4d", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray stripe in Super 130s pure wool from Reda, Italy. Versatile for any season." }, // $45/m
+  { name: "26RE103.DAY9250", displayName: "Classic Midnight Navy Stripe", img: "./assets/jacket-fabric-26re103-day9250.jpg", hex: "#1b1e27", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Midnight Navy stripe in Super 130s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE104.DAY9251", displayName: "Rich Midnight Navy Stripe", img: "./assets/jacket-fabric-26re104-day9251.jpg", hex: "#15151c", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Midnight Navy stripe in Super 130s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE081.DAY9255", displayName: "Classic Cobalt Check", img: "./assets/jacket-fabric-26re081-day9255.jpg", hex: "#22242d", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Cobalt check in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE071.DAY9257", displayName: "Classic Charcoal Check", img: "./assets/jacket-fabric-26re071-day9257.jpg", hex: "#3a3c3d", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal check in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE072.DAY9259", displayName: "Mayfair Navy Check", img: "./assets/jacket-fabric-26re072-day9259.jpg", hex: "#232833", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in Super 110s pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB097.DAY9267", displayName: "Dove Gray Check", img: "./assets/jacket-fabric-26vb097-day9267.jpg", hex: "#bdbeba", pattern: "Plaid", family: "Gray Pattern", palette: "Dove Grey", tier: 3, description: "Dove Gray check in pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
+  { name: "26VB098.DAY9268", displayName: "Smoke Gray Check", img: "./assets/jacket-fabric-26vb098-day9268.jpg", hex: "#838989", pattern: "Plaid", family: "Gray Pattern", palette: "Smoke", tier: 3, description: "Smoke Gray check in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB099.DAY9269", displayName: "Chelsea Navy Check", img: "./assets/jacket-fabric-26vb099-day9269.jpg", hex: "#292e3a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB100.DAY9273", displayName: "Rich Gray Check", img: "./assets/jacket-fabric-26vb100-day9273.jpg", hex: "#656a6a", pattern: "Plaid", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray check in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB102.DAY9274", displayName: "Oxford Navy Check", img: "./assets/jacket-fabric-26vb102-day9274.jpg", hex: "#29313a", pattern: "Plaid", family: "Navy Pattern", palette: "Navy", tier: 3, description: "Navy check in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB070.DAY9276", displayName: "Gray Herringbone", img: "./assets/jacket-fabric-26vb070-day9276.jpg", hex: "#616667", pattern: "Herringbone", family: "Gray Pattern", palette: "Mid Grey", tier: 3, description: "Gray herringbone in pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB059.DAY9284", displayName: "Royal Onyx", img: "./assets/jacket-fabric-26vb059-day9284.jpg", hex: "#1e2423", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 3, description: "Onyx solid in pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB103.DAY9290", displayName: "Fine Dove Gray", img: "./assets/jacket-fabric-26vb103-day9290.jpg", hex: "#b8bcbc", pattern: "Solid", family: "Gray", palette: "Dove Grey", tier: 3, description: "Dove Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Light and fresh for spring and summer." }, // $45/m
+  { name: "26VB104.DAY9291", displayName: "Rich Smoke Gray", img: "./assets/jacket-fabric-26vb104-day9291.jpg", hex: "#6f7576", pattern: "Solid", family: "Gray", palette: "Smoke", tier: 3, description: "Smoke Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Versatile for any season." }, // $45/m
+  { name: "26VB105.DAY9292", displayName: "Windsor Slate Gray", img: "./assets/jacket-fabric-26vb105-day9292.jpg", hex: "#414546", pattern: "Solid", family: "Charcoal", palette: "Slate Grey", tier: 3, description: "Slate Gray solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB109.DAY9293", displayName: "Chelsea Navy", img: "./assets/jacket-fabric-26vb109-day9293.jpg", hex: "#282b34", pattern: "Solid", family: "Navy", palette: "Navy", tier: 3, description: "Navy solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26VB111.DAY9294", displayName: "Savile Onyx", img: "./assets/jacket-fabric-26vb111-day9294.jpg", hex: "#1b1e1b", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 3, description: "Onyx solid in Super 120s pure wool from Vitale Barberis Canonico, Italy. Year-round, from business to evening." }, // $45/m
+  { name: "26RE079.DAY9302", displayName: "Rich Slate Gray Check", img: "./assets/jacket-fabric-26re079-day9302.jpg", hex: "#4f4a47", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray check in pure wool from Reda, Italy. Versatile for any season." }, // $45/m
+  { name: "26RE080.DAY9303", displayName: "Rich Charcoal Check", img: "./assets/jacket-fabric-26re080-day9303.jpg", hex: "#323333", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal check in pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
   // Pink and purple (Daniel, 2026-10-30: "Add back some pink and purple
   // fabrics"). Plum came back after PR #260 took it out; the two Marzotto
   // ones are a wool, silk and linen blend, the only light purples in range.
-  { name: "26VB043.DAY9091", displayName: "Plum", img: "./assets/jacket-fabric-26vb043-day9091.jpg", hex: "#431a37", pattern: "Solid", family: "Purple", palette: "Plum", tier: 2, description: "Plum solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
-  { name: "26VB042.DAY9090", displayName: "Rose Pink", img: "./assets/jacket-fabric-26vb042-day9090.jpg", hex: "#a9517f", pattern: "Solid", family: "Pink", palette: "Dusty Rose", tier: 2, description: "Rose pink solid in pure wool from Vitale Barberis Canonico, Italy. A bold color for spring and summer occasions." }, // $45/m
-  { name: "26MZ055.DAU7636", displayName: "Dusty Mauve", img: "./assets/jacket-fabric-26mz055-dau7636.jpg", hex: "#8a6f70", pattern: "Solid", family: "Pink", palette: "Mauve", tier: 2, description: "Dusty mauve in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
-  { name: "26MZ054.DAU7640", displayName: "Soft Blush", img: "./assets/jacket-fabric-26mz054-dau7640.jpg", hex: "#c2a6aa", pattern: "Solid", family: "Pink", palette: "Blush", tier: 2, description: "Soft blush pink in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
+  { name: "26VB043.DAY9091", displayName: "Plum", img: "./assets/jacket-fabric-26vb043-day9091.jpg", hex: "#431a37", pattern: "Solid", family: "Purple", palette: "Plum", tier: 3, description: "Plum solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
+  { name: "26VB042.DAY9090", displayName: "Rose Pink", img: "./assets/jacket-fabric-26vb042-day9090.jpg", hex: "#a9517f", pattern: "Solid", family: "Pink", palette: "Dusty Rose", tier: 3, description: "Rose pink solid in pure wool from Vitale Barberis Canonico, Italy. A bold color for spring and summer occasions." }, // $45/m
+  { name: "26MZ055.DAU7636", displayName: "Dusty Mauve", img: "./assets/jacket-fabric-26mz055-dau7636.jpg", hex: "#8a6f70", pattern: "Solid", family: "Pink", palette: "Mauve", tier: 3, description: "Dusty mauve in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
+  { name: "26MZ054.DAU7640", displayName: "Soft Blush", img: "./assets/jacket-fabric-26mz054-dau7640.jpg", hex: "#c2a6aa", pattern: "Solid", family: "Pink", palette: "Blush", tier: 3, description: "Soft blush pink in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
 ];
 // Color headings inside the New Fabrics section, in order, each listing the
 // FABRIC_PALETTE colors it covers.
@@ -2430,10 +2430,12 @@ function fabricDescription(pattern, colorGroup, hex) {
 }
 // ---------------------------------------------------------------------
 // Fabric price tiers. Each fabric's factory cost per meter (USD, from the
-// factory's 26FW Swatch / LookBook fabric lists) puts it in one of three
-// tiers, priced so every suit or jacket clears about $100 after the
-// factory's fused-canvas CMT (suit $150 + 3.5 m of fabric, jacket $100 +
-// 2.2 m). Tier 0 is up to $28/m, tier 1 $30-38/m, tier 2 $39-45/m.
+// factory's 26FW Swatch / LookBook fabric lists) puts it in one of four
+// tiers (Daniel, 2026-11-02): the dearest fabric in each tier clears about
+// $150 per suit after the factory's charges and the card fee, except the
+// $350 tier, where $125-130 is fine. Tier 0 is up to $17/m, tier 1
+// $20-28/m, tier 2 $30-38/m, tier 3 $39-45/m. The admin's "My Cost" switch
+// (QA bar) shows the real cost, read from an admin-only database row.
 // The price of an order item comes from fabricPriceTier() in main.js; a
 // fabric missing from FABRIC_PRICE_TIER falls back to the top tier so a
 // newly added fabric is never sold below cost.
@@ -2441,85 +2443,86 @@ function fabricDescription(pattern, colorGroup, hex) {
 // Pants on their own (Daniel, 2026-10-22): from $150, stepping up with the
 // fabric tier.
 const FABRIC_PRICE_TIERS = [
-  { suitUsd: 350, jacketUsd: 265, pantsUsd: 150 },
-  { suitUsd: 385, jacketUsd: 285, pantsUsd: 165 },
-  { suitUsd: 400, jacketUsd: 300, pantsUsd: 180 },
+  { suitUsd: 350, jacketUsd: 275, pantsUsd: 150 },
+  { suitUsd: 410, jacketUsd: 320, pantsUsd: 150 },
+  { suitUsd: 445, jacketUsd: 345, pantsUsd: 165 },
+  { suitUsd: 470, jacketUsd: 360, pantsUsd: 180 },
 ];
 const FABRIC_PRICE_TIER = {
   "26SU210.DBP325A": 0, // $15/m Soft Ivory
   "26SU212.DBQ796A": 0, // $15/m Rich Slate Blue
   "26SU211.DBP323A": 0, // $17/m Deepest Mulberry Red
   "26SU213.DEE1018": 0, // $17/m Sterling Indigo Blue
-  "26SU189.DPP0192": 0, // $20/m Muted Pewter
-  "26SU190.DPP0193": 0, // $20/m Rich Midnight Blue
-  "26SU221.DBV6499": 0, // $20/m Deepest Espresso
-  "26SU225.DBV6495": 0, // $20/m Deep Umber
-  "26SU226.DBV6494": 0, // $20/m Deepest Graphite
-  "26SU175.DGG1132": 0, // $21.5/m Antique Pewter
-  "26SU176.DGG1133": 0, // $21.5/m Antique Navy
-  "26SU182.DGG1119": 0, // $21.5/m Dark Graphite
-  "26SU183.DGG1120": 0, // $21.5/m Deep Cobalt
-  "26SU204.DPP0191": 0, // $24/m Rich Onyx
-  "26SU202.DBV3537": 0, // $25/m Deepest Forest
-  "26SU214.DBV3534": 0, // $25/m Light Fog
-  "26SU215.DBV3535": 0, // $25/m Muted Iron
-  "26SU216.DBV3531": 0, // $25/m Sterling Navy
-  "26SU217.DBV3530": 0, // $25/m Sterling Midnight Blue
-  "26SU218.DBV3529": 0, // $25/m Smoky Onyx
-  "26SU180.DGG1117": 0, // $26/m Muted Slate
-  "26SU181.DGG1118": 0, // $26/m Deep Midnight Blue
-  "26SU196.DLL0167": 0, // $27.5/m Warm Ivory
-  "26SU199.DLL0169": 0, // $27.5/m Sterling Crimson
-  "26SU200.DLL0170": 0, // $27.5/m Dark Terracotta
-  "26SU201.DLL0168": 0, // $27.5/m Deep Berry
-  "26SU203.DLL0160": 0, // $27.5/m Dark Smoke
-  "26SU197.DLL0171": 0, // $28/m Refined Stone
-  "26SU198.DLL0172": 0, // $28/m Rich Chestnut
-  "26SU205.DLL0173": 0, // $28/m Soft Steel Blue
-  "26SU206.DLL0174": 0, // $28/m Rich Cobalt
-  "26SU207.DLL0175": 0, // $28/m Sterling Cobalt
-  "26SU208.DLL0176": 0, // $28/m Dark Slate Blue
-  "26SU209.DLL0177": 0, // $28/m Rich Ink
-  "26SU233.DZZ0060": 1, // $30/m Deepest Charcoal
-  "26SU234.DZZ0061": 1, // $30/m Deepest Cobalt
-  "26SU173.DZZ0110": 1, // $35/m Rich Indigo Blue
-  "26SU187.DZZ0108": 1, // $35/m Dark Midnight Blue
-  "26SU188.DZZ0109": 1, // $35/m Smoky Eggplant
-  "26SU193.DZZ0098": 1, // $36/m Refined Gray
-  "26SU194.DZZ0100": 1, // $36/m Deep Walnut
-  "26SU195.DZZ0099": 1, // $36/m Smoky Olive
-  "26SU186.DZZ0107": 1, // $37/m Deep Indigo Blue
-  "26SU219.DZZ0062": 1, // $38/m Muted Espresso
-  "26SU220.DZZ0064": 1, // $38/m Deepest Navy
-  "26SU238.DZZ0053": 1, // $38/m Deepest Sienna
-  "26SU239.DZZ0055": 1, // $38/m Rich Charcoal
-  "26SU240.DZZ0056": 1, // $38/m Deepest Midnight Blue
-  "26SU241.DZZ0057": 1, // $38/m Smoky Plum
-  "26SU242.DZZ0054": 1, // $38/m Rich Black
-  "26SU179.DZZ0114": 2, // $39/m Dark Cobalt
-  "26SU177.DZZ0112": 2, // $40/m Deepest Teal
-  "26SU178.DZZ0113": 2, // $40/m Deep Navy
-  "26SU222.DZZ0123": 2, // $40/m Deepest Smoke
-  "26SU223.DZZ0125": 2, // $40/m Deepest Slate Blue
-  "26SU224.DZZ0124": 2, // $40/m Dark Steel Blue
-  "26SU243.DZZ0070": 2, // $40/m Deepest Brick
-  "26SU244.DZZ0071": 2, // $40/m Dark Charcoal
-  "26SU245.DZZ0072": 2, // $40/m Rich Raven
-  "26SU246.DZZ0069": 2, // $40/m Deepest Steel Blue
-  "26SU247.DZZ0073": 2, // $40/m Rich Steel Blue
-  "26SU184.DZZ0103": 2, // $42/m Deep Graphite
-  "26SU185.DZZ0105": 2, // $42/m Deep Slate Blue
-  "26SU191.DZZ0101": 2, // $42/m Deep Raven
-  "26SU192.DZZ0102": 2, // $42/m Dark Mulberry
-  "26SU227.DZZ0126": 2, // $45/m Rich Walnut
-  "26SU228.DZZ0127": 2, // $45/m Smoky Slate Blue
-  "26SU229.DZZ0128": 2, // $45/m Deepest Indigo Blue
-  "26SU230.DZZ0129": 2, // $45/m Deep Steel Blue
-  "26SU231.DZZ0130": 2, // $45/m Sterling Jet
-  "26SU232.DZZ0131": 2, // $45/m Deep Smoke
-  "26SU235.DZZ0132": 2, // $45/m Deepest Amethyst
-  "26SU236.DZZ0133": 2, // $45/m Smoky Mulberry
-  "26SU237.DZZ0134": 2, // $45/m Deepest Onyx
+  "26SU189.DPP0192": 1, // $20/m Muted Pewter
+  "26SU190.DPP0193": 1, // $20/m Rich Midnight Blue
+  "26SU221.DBV6499": 1, // $20/m Deepest Espresso
+  "26SU225.DBV6495": 1, // $20/m Deep Umber
+  "26SU226.DBV6494": 1, // $20/m Deepest Graphite
+  "26SU175.DGG1132": 1, // $21.5/m Antique Pewter
+  "26SU176.DGG1133": 1, // $21.5/m Antique Navy
+  "26SU182.DGG1119": 1, // $21.5/m Dark Graphite
+  "26SU183.DGG1120": 1, // $21.5/m Deep Cobalt
+  "26SU204.DPP0191": 1, // $24/m Rich Onyx
+  "26SU202.DBV3537": 1, // $25/m Deepest Forest
+  "26SU214.DBV3534": 1, // $25/m Light Fog
+  "26SU215.DBV3535": 1, // $25/m Muted Iron
+  "26SU216.DBV3531": 1, // $25/m Sterling Navy
+  "26SU217.DBV3530": 1, // $25/m Sterling Midnight Blue
+  "26SU218.DBV3529": 1, // $25/m Smoky Onyx
+  "26SU180.DGG1117": 1, // $26/m Muted Slate
+  "26SU181.DGG1118": 1, // $26/m Deep Midnight Blue
+  "26SU196.DLL0167": 1, // $27.5/m Warm Ivory
+  "26SU199.DLL0169": 1, // $27.5/m Sterling Crimson
+  "26SU200.DLL0170": 1, // $27.5/m Dark Terracotta
+  "26SU201.DLL0168": 1, // $27.5/m Deep Berry
+  "26SU203.DLL0160": 1, // $27.5/m Dark Smoke
+  "26SU197.DLL0171": 1, // $28/m Refined Stone
+  "26SU198.DLL0172": 1, // $28/m Rich Chestnut
+  "26SU205.DLL0173": 1, // $28/m Soft Steel Blue
+  "26SU206.DLL0174": 1, // $28/m Rich Cobalt
+  "26SU207.DLL0175": 1, // $28/m Sterling Cobalt
+  "26SU208.DLL0176": 1, // $28/m Dark Slate Blue
+  "26SU209.DLL0177": 1, // $28/m Rich Ink
+  "26SU233.DZZ0060": 2, // $30/m Deepest Charcoal
+  "26SU234.DZZ0061": 2, // $30/m Deepest Cobalt
+  "26SU173.DZZ0110": 2, // $35/m Rich Indigo Blue
+  "26SU187.DZZ0108": 2, // $35/m Dark Midnight Blue
+  "26SU188.DZZ0109": 2, // $35/m Smoky Eggplant
+  "26SU193.DZZ0098": 2, // $36/m Refined Gray
+  "26SU194.DZZ0100": 2, // $36/m Deep Walnut
+  "26SU195.DZZ0099": 2, // $36/m Smoky Olive
+  "26SU186.DZZ0107": 2, // $37/m Deep Indigo Blue
+  "26SU219.DZZ0062": 2, // $38/m Muted Espresso
+  "26SU220.DZZ0064": 2, // $38/m Deepest Navy
+  "26SU238.DZZ0053": 2, // $38/m Deepest Sienna
+  "26SU239.DZZ0055": 2, // $38/m Rich Charcoal
+  "26SU240.DZZ0056": 2, // $38/m Deepest Midnight Blue
+  "26SU241.DZZ0057": 2, // $38/m Smoky Plum
+  "26SU242.DZZ0054": 2, // $38/m Rich Black
+  "26SU179.DZZ0114": 3, // $39/m Dark Cobalt
+  "26SU177.DZZ0112": 3, // $40/m Deepest Teal
+  "26SU178.DZZ0113": 3, // $40/m Deep Navy
+  "26SU222.DZZ0123": 3, // $40/m Deepest Smoke
+  "26SU223.DZZ0125": 3, // $40/m Deepest Slate Blue
+  "26SU224.DZZ0124": 3, // $40/m Dark Steel Blue
+  "26SU243.DZZ0070": 3, // $40/m Deepest Brick
+  "26SU244.DZZ0071": 3, // $40/m Dark Charcoal
+  "26SU245.DZZ0072": 3, // $40/m Rich Raven
+  "26SU246.DZZ0069": 3, // $40/m Deepest Steel Blue
+  "26SU247.DZZ0073": 3, // $40/m Rich Steel Blue
+  "26SU184.DZZ0103": 3, // $42/m Deep Graphite
+  "26SU185.DZZ0105": 3, // $42/m Deep Slate Blue
+  "26SU191.DZZ0101": 3, // $42/m Deep Raven
+  "26SU192.DZZ0102": 3, // $42/m Dark Mulberry
+  "26SU227.DZZ0126": 3, // $45/m Rich Walnut
+  "26SU228.DZZ0127": 3, // $45/m Smoky Slate Blue
+  "26SU229.DZZ0128": 3, // $45/m Deepest Indigo Blue
+  "26SU230.DZZ0129": 3, // $45/m Deep Steel Blue
+  "26SU231.DZZ0130": 3, // $45/m Sterling Jet
+  "26SU232.DZZ0131": 3, // $45/m Deep Smoke
+  "26SU235.DZZ0132": 3, // $45/m Deepest Amethyst
+  "26SU236.DZZ0133": 3, // $45/m Smoky Mulberry
+  "26SU237.DZZ0134": 3, // $45/m Deepest Onyx
 };
 
 // The New Fabrics' color, description and price tier (see NEW_FABRICS).

@@ -125,6 +125,61 @@ function itemPriceUsd(item) {
   return suitPriceForType(item.type, fabricPriceTier(item.jacket, item.pants)) + jacketSurchargeUsd(item.jacket);
 }
 
+// ---------------------------------------------------------------------
+// Admin "My Cost" (QA bar switch). The shop's real costs -- the factory's
+// making charge per item, metres of fabric used, each fabric's price per
+// metre and the full canvas extra -- are read from public.factory_codes,
+// row list = 'shop_costs' (admin-only by RLS), so they never ship in the
+// public site files. Update that row when the factory's prices change. With the switch on, the fabric step and the Estimated
+// Total show cost and profit next to the price.
+// ---------------------------------------------------------------------
+let adminCosts = null;
+let qaShowMyCost = false;
+const CARD_FEE_PCT = 0.029;
+const CARD_FEE_FIXED = 0.3;
+function cardFeeUsd(price) {
+  return Math.round((price * CARD_FEE_PCT + CARD_FEE_FIXED) * 100) / 100;
+}
+function moneyText(n) {
+  const r = Math.round(n * 100) / 100;
+  return "$" + (Number.isInteger(r) ? String(r) : r.toFixed(2));
+}
+// What one item costs the shop from the factory, or null when a price is
+// missing. A suit in one fabric uses the suit metres; with a different
+// pants fabric the suit metres are split in the jacket:pants proportion.
+function itemFactoryCostUsd(type, jacketSel, pantsSel) {
+  const c = adminCosts;
+  if (!c) return null;
+  const perM = (sel) => (sel && sel.fabric && c.perMeter[sel.fabric] != null ? Number(c.perMeter[sel.fabric]) : null);
+  const canvas = jacketSel && jacketSel.construction === "Full Canvas Construction";
+  let cost;
+  if (isPantsOnlyType(type)) {
+    const p = perM(pantsSel);
+    if (p == null) return null;
+    cost = c.cmt.pants + c.meters.pants * p;
+  } else if (isJacketOnlyType(type)) {
+    const j = perM(jacketSel);
+    if (j == null) return null;
+    cost = c.cmt.jacket + c.meters.jacket * j + (canvas ? c.fullCanvasExtra.jacket : 0);
+  } else {
+    const j = perM(jacketSel);
+    const p = pantsSel && pantsSel.fabric ? perM(pantsSel) : j;
+    if (j == null || p == null) return null;
+    const share = c.meters.jacket / (c.meters.jacket + c.meters.pants);
+    cost = c.cmt.suit + c.meters.suit * (j * share + p * (1 - share)) + (canvas ? c.fullCanvasExtra.suit : 0);
+  }
+  return Math.round(cost * 100) / 100;
+}
+// "Cost $248 + card $12.19 = make $149.81" for a price and a factory cost.
+function myCostText(price, cost) {
+  if (cost == null) return "Cost unknown for this fabric";
+  const fee = cardFeeUsd(price);
+  return "Cost " + moneyText(cost) + " + card " + moneyText(fee) + " \u00b7 you make " + moneyText(price - cost - fee);
+}
+function myCostProfit(price, cost) {
+  return cost == null ? null : price - cost - cardFeeUsd(price);
+}
+
 // The measurement fields relevant to the suit type currently being designed
 // -- a "Jacket Only" order only asks for (and only requires) the 8 jacket
 // measurements (plus height and weight), not the 8 pants ones nobody needs
@@ -755,6 +810,7 @@ let openAdminOrdersPending = new URLSearchParams(window.location.search).get("ad
 if (openAdminOrdersPending) window.history.replaceState(null, "", window.location.pathname + window.location.hash);
 // Set by the QA nav bar code near the end of this file.
 let setQaNavAllowed = null;
+let setQaMyCostAllowed = null;
 
 // The order the admin is editing ("Edit order" under All Orders), or null.
 // Kept in this tab's storage so a reload stays in edit mode. See
@@ -784,6 +840,7 @@ async function refreshAdminStatus() {
   currentIsAdmin = admin;
   document.body.classList.toggle("admin-skip", admin);
   if (setQaNavAllowed) setQaNavAllowed(admin);
+  if (setQaMyCostAllowed) setQaMyCostAllowed(admin);
   const wrap = document.getElementById("adminOrderWrap");
   if (wrap) wrap.hidden = !admin;
   const shipWrap = document.getElementById("adminShippingWrap");
@@ -5550,10 +5607,22 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       grid.appendChild(h);
     };
     const priceText = (tier) => (isJacketOnlyType(currentSuitType) ? "Jacket " : isPantsOnlyType(currentSuitType) ? "Pants " : "Suit ") + "$" + suitPriceForType(currentSuitType, tier);
+    // Admin "My Cost": the whole item made in one fabric, priced at its tier.
+    const tileCost = (code) => {
+      const sel = { fabric: code };
+      return itemFactoryCostUsd(currentSuitType, isPantsOnlyType(currentSuitType) ? null : sel, sel);
+    };
+    const tierProfitText = (tier) => {
+      const price = suitPriceForType(currentSuitType, tier);
+      const ps = tiles.filter((x) => x.tier === tier).map((x) => myCostProfit(price, tileCost(x.opt.name))).filter((v) => v != null);
+      if (!ps.length) return "";
+      const lo = Math.min.apply(null, ps), hi = Math.max.apply(null, ps);
+      return " \u00b7 you make " + moneyText(lo) + (hi - lo >= 1 ? "\u2013" + moneyText(hi) : "");
+    };
     tiles.forEach((t) => {
       if (t.tier !== lastTier && !PRICES_HIDDEN) {
         lastTier = t.tier;
-        divider("opt-section-divider", priceText(t.tier));
+        divider("opt-section-divider", priceText(t.tier) + (qaShowMyCost && adminCosts ? tierProfitText(t.tier) : ""));
       }
       const u = Lmax > Lmin ? (t.L - Lmin) / (Lmax - Lmin) : 0;
       const L = 0.17 + 0.79 * Math.pow(u, 0.75);
@@ -5563,6 +5632,15 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       const card = grid.lastElementChild;
       if (!card) return;
       card.classList.add("fabric-tile");
+      if (qaShowMyCost && adminCosts && !PRICES_HIDDEN) {
+        const line = document.createElement("span");
+        line.className = "my-cost-tile";
+        line.style.cssText = "display:block;font-size:10px;line-height:1.3;letter-spacing:0;text-transform:none;opacity:.85;margin-top:4px";
+        const price = suitPriceForType(currentSuitType, t.tier);
+        const cost = tileCost(t.opt.name);
+        line.textContent = cost == null ? "cost ?" : "cost " + moneyText(cost) + " \u00b7 make " + moneyText(myCostProfit(price, cost));
+        card.appendChild(line);
+      }
       card.style.background = tint;
       card.style.color = L > 0.62 ? "#1c1814" : "#ffffff";
     });
@@ -9832,6 +9910,30 @@ function refreshDesignerPrice() {
     const el = document.getElementById(id);
     if (el) el.textContent = "$" + price;
   });
+  let costLine = "", barLine = "";
+  if (qaShowMyCost && adminCosts && !PRICES_HIDDEN) {
+    let jacketSel = null, pantsSel = null;
+    try { jacketSel = hasJacketStep() ? jacketDesigner.getSelections() : null; } catch (e) { jacketSel = null; }
+    try { pantsSel = hasPantsStep() && !isJacketOnlyType(currentSuitType) ? pantsDesigner.getSelections() : null; } catch (e) { pantsSel = null; }
+    const picked = isPantsOnlyType(currentSuitType) ? pantsSel && pantsSel.fabric : jacketSel && jacketSel.fabric;
+    costLine = picked ? myCostText(price, itemFactoryCostUsd(currentSuitType, jacketSel, pantsSel)) : "Pick a fabric to see your cost";
+    const cost = picked ? itemFactoryCostUsd(currentSuitType, jacketSel, pantsSel) : null;
+    barLine = cost == null ? (picked ? "cost ?" : "") : "make " + moneyText(myCostProfit(price, cost));
+    if (liningUploadSurcharge(jacketSel)) costLine += " (photo lining factory cost not included)";
+  }
+  // The sticky bar under the designer shows the price; the cost line goes
+  // right under it (style.css .wiz-price[data-cost]).
+  document.querySelectorAll(".wiz-bar .wiz-price").forEach((el) => {
+    if (barLine) el.setAttribute("data-cost", barLine);
+    else el.removeAttribute("data-cost");
+  });
+  ["myCostLine", "pantsMyCostLine"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.hidden = !costLine;
+    el.textContent = costLine;
+    el.style.cssText = "margin:4px 0 0;font-size:13px;font-weight:600;color:#1d6b3a";
+  });
 }
 function updatePriceTextForSuitType() {
   const price = suitPriceForType(currentSuitType);
@@ -10248,6 +10350,52 @@ setQaNavAllowed = (function () {
   }
   if (startRaw) setRaw(true);
 })();
+// "My Cost" toggle (admin only): loads the shop's costs once from the
+// admin-only shop_costs row, then shows cost and profit on the fabric step and
+// under the Estimated Total. Hidden and switched off for anyone else.
+setQaMyCostAllowed = (function () {
+  const toggle = document.getElementById("qaMyCostToggle");
+  const label = document.getElementById("qaMyCostLabel");
+  if (!toggle || !label) return null;
+  function redraw() {
+    jacketDesigner.refreshDisplay();
+    pantsDesigner.refreshDisplay();
+    refreshDesignerPrice();
+  }
+  async function setOn(on) {
+    if (on && !adminCosts) {
+      try {
+        const { data, error } = await getSupabase().from("factory_codes").select("data").eq("list", "shop_costs").eq("category", "").maybeSingle();
+        const r = data && data.data;
+        if (error || !r || !r.cmt || !r.perMeter) throw new Error(error ? error.message : "no cost data saved");
+        adminCosts = r;
+      } catch (e) {
+        toggle.checked = false;
+        alert("Couldn\u2019t load your costs: " + (e.message || e));
+        return;
+      }
+    }
+    qaShowMyCost = on;
+    toggle.checked = on;
+    try { localStorage.setItem("qaShowMyCost", on ? "1" : "0"); } catch (e) { /* convenience only */ }
+    redraw();
+  }
+  toggle.addEventListener("change", () => setOn(toggle.checked));
+  let started = false;
+  return function (admin) {
+    label.style.display = admin ? "" : "none";
+    if (!admin) {
+      if (qaShowMyCost) { qaShowMyCost = false; toggle.checked = false; redraw(); }
+      return;
+    }
+    if (started) return;
+    started = true;
+    let stored = false;
+    try { stored = localStorage.getItem("qaShowMyCost") === "1"; } catch (e) { stored = false; }
+    if (stored) setOn(true);
+  };
+})();
+if (setQaMyCostAllowed && currentIsAdmin) setQaMyCostAllowed(true);
 // ==================== END TEMP QA NAV BAR ====================
 
 // A reload that lands back on the Preview page (see restoreDraft) fills it
