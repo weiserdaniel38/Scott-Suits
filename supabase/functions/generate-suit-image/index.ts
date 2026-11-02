@@ -1747,21 +1747,6 @@ Deno.serve(async (req) => {
 
   if (body?.ping) return json({ ok: true, ready: !!env("OPENAI_API_KEY") });
 
-  // TEMPORARY test hook (button stitching tests, expires 2026-11-03).
-  if (body?.stitch_test && Date.now() < Date.parse("2026-11-03T00:00:00Z")) {
-    const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(body.stitch_test))));
-    const hex = Array.from(d).map((x) => x.toString(16).padStart(2, "0")).join("");
-    if (hex !== "40f6e4d984ac8e2898c49b3df3ce380385e3ec3ca8f0662135e68958762851dd") return json({ error: "Unauthorized" }, 401);
-    const id = String(body?.id || "");
-    if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
-    const { data: prev } = await supabase.from("suit_previews").select("visual_spec").eq("id", id).maybeSingle();
-    if (!prev?.visual_spec) return json({ error: "Not found" }, 404);
-    const p = runInBackground(generatePreview(id, String(prev.visual_spec)));
-    // @ts-ignore see runInBackground
-    if (typeof EdgeRuntime === "undefined") await p;
-    return json({ started: true }, 202);
-  }
-
   // Before the order: previews of the suit being designed.
   if (body?.preview) {
     if (!env("OPENAI_API_KEY")) return json({ status: "unavailable" }, 503);
