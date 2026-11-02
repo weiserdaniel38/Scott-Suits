@@ -839,24 +839,68 @@ function setAdminUnread(n) {
   }
 }
 
+// Orders waiting for a fabric to come back in stock at the factory. Once the
+// daily stock file (fabric-stock.json, see loadFabricStock) shows at least
+// minMetres, the admin gets a "back in stock" notification on this page.
+// Remove an entry once that order has gone to the factory.
+const FABRIC_WAITS = [
+  // 2026-11-02: new Rich Slate Blue arrived at the factory, in inspection
+  // (~2 days). The customer chose to wait for it.
+  { fabric: "26SU212.DBQ796A", minMetres: 10, factoryOrderNo: "DWNYP2611001" },
+];
+const FABRIC_WAIT_CLEARED_KEY = "scottSuitsFabricWaitCleared";
+function fabricWaitCleared() {
+  try { return JSON.parse(localStorage.getItem(FABRIC_WAIT_CLEARED_KEY) || "[]"); } catch (e) { return []; }
+}
+// The waits whose fabric is now in stock (and not cleared on this device).
+async function readyFabricWaits() {
+  if (!FABRIC_WAITS.length || typeof SUPABASE_URL === "undefined" || !SUPABASE_URL) return [];
+  try {
+    const res = await fetch(SUPABASE_URL + "/storage/v1/object/public/suit-images/fabric-stock.json?d=" + new Date().toISOString().slice(0, 13));
+    if (!res.ok) return [];
+    const stock = (await res.json()).stock || {};
+    const cleared = fabricWaitCleared();
+    return FABRIC_WAITS.filter((w) => typeof stock[w.fabric] === "number" && stock[w.fabric] >= w.minMetres && cleared.indexOf(w.factoryOrderNo + "|" + w.fabric) === -1)
+      .map((w) => Object.assign({ metres: stock[w.fabric] }, w));
+  } catch (e) {
+    return [];
+  }
+}
+function fabricWaitItem(w) {
+  const item = document.createElement("div");
+  item.className = "admin-notif admin-notif-new";
+  item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>' +
+    '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
+  const opt = JACKET_CATALOG.fabric.options.find((o) => o.name === w.fabric);
+  item.querySelector("b").textContent = (opt ? opt.displayName || opt.name : "A fabric") + " is back in stock";
+  item.querySelector(".admin-notif-meta").textContent = Math.floor(w.metres) + " m at the factory \u00b7 order " + w.factoryOrderNo + " can be paid and sent now";
+  item.querySelector(".admin-notif-clear").addEventListener("click", () => {
+    try { localStorage.setItem(FABRIC_WAIT_CLEARED_KEY, JSON.stringify(fabricWaitCleared().concat(w.factoryOrderNo + "|" + w.fabric))); } catch (e) {}
+    loadAdminNotifications();
+  });
+  return item;
+}
+
 async function loadAdminNotifications() {
   if (!adminNotificationsList) return;
   try {
-    const [{ data, error }, brandRes] = await Promise.all([
+    const [{ data, error }, brandRes, waits] = await Promise.all([
       getSupabase().rpc("admin_list_notifications"),
       getSupabase().rpc("admin_order_brands"),
+      readyFabricWaits(),
     ]);
     if (error) throw error;
     const brandOf = {};
     if (!brandRes.error && brandRes.data) brandRes.data.forEach((x) => (brandOf[x.order_id] = x.brand));
     const rows = data || [];
-    setAdminUnread(rows.filter((n) => !n.read_at).length);
+    setAdminUnread(rows.filter((n) => !n.read_at).length + waits.length);
     if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length;
-    if (!rows.length) {
+    if (!rows.length && !waits.length) {
       adminNotificationsList.innerHTML = '<p class="account-section-note">No notifications.</p>';
       return;
     }
     adminNotificationsList.innerHTML = "";
+    waits.forEach((w) => adminNotificationsList.appendChild(fabricWaitItem(w)));
     rows.forEach((n) => {
       const item = document.createElement("div");
       item.className = "admin-notif" + (n.read_at ? "" : " admin-notif-new");
