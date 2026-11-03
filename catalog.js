@@ -2694,7 +2694,8 @@ JACKET_CATALOG.buttonholeColorPlacement = {
 // Lapel buttonhole style (Daniel, 2026-11-03): machine sewn, or one of the
 // factory's single-color handmade lapel buttonholes. Only asked once a real
 // lapel buttonhole is picked. Each handmade style costs the factory's add-on
-// price plus $30 (Daniel: "I want to make $30 on each"). Pictures are the
+// price plus about $30 (Daniel: "I want to make $30 on each"), rounded to
+// the nearest $5 (Daniel, 2026-11-03). Pictures are the
 // factory's own photos of each style. The multi-color handmade styles were
 // left out on purpose. kute-factory sends factoryCode next to the hole
 // position code (see order.ts); Machine Sewn sends nothing extra.
@@ -2706,14 +2707,14 @@ JACKET_CATALOG.lapelButtonholeStyle = {
   options: [
     { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
     { name: "Handmade", displayName: "Handmade (+$40)", specName: "Handmade", surchargeUsd: 40, factoryCode: "064Q", img: "./assets/jacket-handmadehole-classic.jpg" },
-    { name: "Handmade Knotted End", displayName: "Handmade, Knotted End (+$39)", specName: "Handmade Knotted End", surchargeUsd: 39, factoryCode: "035C", img: "./assets/jacket-handmadehole-knotted.jpg" },
-    { name: "Handmade Small Round End", displayName: "Handmade, Small Round End (+$37)", specName: "Handmade Small Round End", surchargeUsd: 37, factoryCode: "00EC", img: "./assets/jacket-handmadehole-small-round.jpg" },
-    { name: "Handmade Downward Arc", displayName: "Handmade, Slight Downward Arc (+$37)", specName: "Handmade Downward Arc", surchargeUsd: 37, factoryCode: "06EG", img: "./assets/jacket-handmadehole-arc-down.jpg" },
-    { name: "Handmade Upward Arc", displayName: "Handmade, Upward Arc (+$37)", specName: "Handmade Upward Arc", surchargeUsd: 37, factoryCode: "055F", img: "./assets/jacket-handmadehole-arc-up.jpg" },
-    { name: "Journey of Life", displayName: "Journey of Life (+$58)", specName: "Journey of Life Handmade", surchargeUsd: 58, factoryCode: "0352", img: "./assets/jacket-handmadehole-journey.jpg" },
+    { name: "Handmade Knotted End", displayName: "Handmade, Knotted End (+$40)", specName: "Handmade Knotted End", surchargeUsd: 40, factoryCode: "035C", img: "./assets/jacket-handmadehole-knotted.jpg" },
+    { name: "Handmade Small Round End", displayName: "Handmade, Small Round End (+$35)", specName: "Handmade Small Round End", surchargeUsd: 35, factoryCode: "00EC", img: "./assets/jacket-handmadehole-small-round.jpg" },
+    { name: "Handmade Downward Arc", displayName: "Handmade, Slight Downward Arc (+$35)", specName: "Handmade Downward Arc", surchargeUsd: 35, factoryCode: "06EG", img: "./assets/jacket-handmadehole-arc-down.jpg" },
+    { name: "Handmade Upward Arc", displayName: "Handmade, Upward Arc (+$35)", specName: "Handmade Upward Arc", surchargeUsd: 35, factoryCode: "055F", img: "./assets/jacket-handmadehole-arc-up.jpg" },
+    { name: "Journey of Life", displayName: "Journey of Life (+$60)", specName: "Journey of Life Handmade", surchargeUsd: 60, factoryCode: "0352", img: "./assets/jacket-handmadehole-journey.jpg" },
     { name: "Light of Victory", displayName: "Light of Victory (+$40)", specName: "Light of Victory Handmade", surchargeUsd: 40, factoryCode: "0357", img: "./assets/jacket-handmadehole-victory.jpg" },
-    { name: "Rose End", displayName: "Rose End (+$47)", specName: "Rose End Handmade", surchargeUsd: 47, factoryCode: "0359", img: "./assets/jacket-handmadehole-rose.jpg" },
-    { name: "Vertical Flower", displayName: "Vertical Flower (+$43)", specName: "Vertical Flower Handmade", surchargeUsd: 43, factoryCode: "055N", img: "./assets/jacket-handmadehole-flower.jpg" },
+    { name: "Rose End", displayName: "Rose End (+$45)", specName: "Rose End Handmade", surchargeUsd: 45, factoryCode: "0359", img: "./assets/jacket-handmadehole-rose.jpg" },
+    { name: "Vertical Flower", displayName: "Vertical Flower (+$45)", specName: "Vertical Flower Handmade", surchargeUsd: 45, factoryCode: "055N", img: "./assets/jacket-handmadehole-flower.jpg" },
   ],
 };
 // Felt under collar: the hidden structural layer sewn beneath the outer
