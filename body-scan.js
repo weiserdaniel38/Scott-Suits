@@ -675,7 +675,7 @@
       '<p class="bs-lead">Raise your arms like a goalpost, then turn around once, slowly. Your phone measures you from every side. Takes under a minute.</p>' +
       '<div class="bs-poses" aria-hidden="true">' + poseSvg("front") + poseSvg("spin") + "</div>" +
       '<ol class="bs-tips">' +
-      "<li><b>Wear fitted clothes:</b> a snug T-shirt and shorts or leggings. No jacket, no baggy clothes.</li>" +
+      "<li><b>Shirtless is most accurate</b> (like a tailor's tape on skin). Otherwise a tight T-shirt. Snug shorts or leggings, nothing baggy.</li>" +
       "<li><b>Barefoot or socks,</b> hair flat, nothing in your pockets.</li>" +
       "<li><b>Plain wall, good light,</b> nobody else in the picture.</li>" +
       "<li><b>Lean the phone at waist height</b> (on a chair or shelf), then step back about 8 feet. Or have a friend hold it.</li>" +
