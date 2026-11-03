@@ -22,7 +22,8 @@
 // large gallery <img> tags) and reads up to 4 of those photos together, so a
 // shop's trouser and back shots count too. Fetching is limited to public
 // http(s) hosts (no private or local addresses); photos are shrunk to JPEGs
-// and sent back as `photos` so the site can show them. A link with no suit
+// and sent back as `photos`, with `page` (site name, title, address) so the
+// site can show a preview card of the website. A link with no suit
 // gives isSuit false and the site asks for another link.
 // Up to 3 photos can be sent together (e.g. jacket front, trousers, back);
 // they are read as one suit.
@@ -279,11 +280,24 @@ async function decodePhoto(res: Response, type: string, minSide: number): Promis
 }
 // A link to a photo gives that photo; a link to a page gives up to
 // LINK_MAX_PHOTOS of its product photos (jacket, trousers, other angles).
-async function photosFromLink(link: string, room: number): Promise<string[]> {
+type LinkPage = { site: string; title: string; url: string };
+function pageInfo(html: string, url: string): LinkPage {
+  const meta = (name: string) => {
+    const a = new RegExp("<meta[^>]+(?:property|name)=[\"']" + name + "[\"'][^>]*content=[\"']([^\"']*)[\"']", "i").exec(html);
+    const b = new RegExp("<meta[^>]+content=[\"']([^\"']*)[\"'][^>]*(?:property|name)=[\"']" + name + "[\"']", "i").exec(html);
+    return ((a || b || [])[1] || "").trim();
+  };
+  const clean = (t: string) => t.replace(/&amp;/g, "&").replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim().slice(0, 120);
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  const title = clean(meta("og:title") || meta("twitter:title") || ((/<title[^>]*>([^<]*)<\/title>/i.exec(html) || [])[1] || ""));
+  return { site: clean(meta("og:site_name")) || host, title, url };
+}
+async function photosFromLink(link: string, room: number): Promise<{ photos: string[]; page: LinkPage | null }> {
   const res = await fetchChecked(link) as Response & { finalUrl: string };
   const type = (res.headers.get("content-type") || "").toLowerCase();
-  if (!(type.includes("text/html") || type.includes("xhtml"))) return [await decodePhoto(res, type, 0)];
+  if (!(type.includes("text/html") || type.includes("xhtml"))) return { photos: [await decodePhoto(res, type, 0)], page: null };
   const html = new TextDecoder().decode(await readCapped(res, 3_000_000));
+  const page = pageInfo(html, res.finalUrl);
   const urls = pageImages(html, res.finalUrl).slice(0, 10);
   if (!urls.length) throw new Error("no_image_on_page");
   const got = await Promise.all(urls.map(async (u) => {
@@ -294,7 +308,7 @@ async function photosFromLink(link: string, room: number): Promise<string[]> {
   }));
   const photos = got.filter(Boolean).slice(0, Math.max(1, Math.min(room, LINK_MAX_PHOTOS)));
   if (!photos.length) throw new Error("no_image_on_page");
-  return photos;
+  return { photos, page };
 }
 
 type Pic = { mediaType: string; data: string; url: string };
@@ -352,10 +366,13 @@ Deno.serve(async (req) => {
 
   const images: string[] = (Array.isArray(body.images) ? body.images : body.image ? [body.image] : []).slice(0, 3).map((x: unknown) => String(x || "")).filter(Boolean);
   let linked: string[] = [];
+  let page: LinkPage | null = null;
   const fromLink = !!body.imageUrl;
   if (fromLink && images.length < 3 + LINK_MAX_PHOTOS) {
     try {
-      linked = await photosFromLink(String(body.imageUrl).trim().slice(0, 2000), 3 + LINK_MAX_PHOTOS - images.length);
+      const got = await photosFromLink(String(body.imageUrl).trim().slice(0, 2000), 3 + LINK_MAX_PHOTOS - images.length);
+      linked = got.photos;
+      page = got.page;
       images.push(...linked);
     } catch (e) {
       console.warn("Photo link failed:", String(e));
@@ -394,8 +411,8 @@ Deno.serve(async (req) => {
     const out = key
       ? await readWithClaude(key, pics, schema, question)
       : await readWithOpenAI(openaiKey, pics, schema, question);
-    if (!out) return json({ photos: linked.length ? linked : undefined, isSuit: false, message: "Sorry, we couldn't read that photo. Please try another picture of a suit." });
-    return json({ ok: true, result: out, photos: linked.length ? linked : undefined });
+    if (!out) return json({ photos: linked.length ? linked : undefined, page: page || undefined, isSuit: false, message: "Sorry, we couldn't read that photo. Please try another picture of a suit." });
+    return json({ ok: true, result: out, photos: linked.length ? linked : undefined, page: page || undefined });
   } catch (err) {
     console.error("suit-from-photo failed:", err);
     return json({ error: "failed" }, 502);

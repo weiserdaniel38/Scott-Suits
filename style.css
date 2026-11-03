@@ -2266,3 +2266,11 @@ body.order-done-view > .process{display:none !important;}
 .ps-top-many{flex-direction:column;align-items:stretch;gap:10px;}
 .ps-top-many .ps-photos-small{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .ps-top-many .ps-photos-small .ps-photo{flex:0 0 auto;}
+/* Pasted page link: a preview card of the website. */
+.ps-site{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:14px;background:rgba(var(--surface-rgb),0.7);}
+.ps-site-img{flex:0 0 auto;width:72px;height:92px;object-fit:cover;border-radius:10px;background:#fff;}
+.ps-site-text{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:left;}
+.ps-site-name{font:700 11px 'Inter',sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--brass);}
+.ps-site-text b{font-size:15px;font-weight:600;line-height:1.3;color:var(--ivory);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.ps-site-text small{font-size:12.5px;color:var(--ivory-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ps-loading .ps-site{width:100%;}
