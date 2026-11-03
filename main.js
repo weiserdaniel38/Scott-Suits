@@ -938,26 +938,85 @@ function fabricWaitItem(w) {
   return item;
 }
 
+// Suits the factory has finished (status Stocked, or already on its way
+// from the factory). Read from each suit's factory status, which the hourly
+// factory check keeps up to date (supabase/sql/30, kute-factory). Each one
+// shows as a "suit finished" notification until cleared on this device.
+const FACTORY_FINISHED = ["Stocked", "On Delivery", "Signed", "Delivered"];
+const SUIT_DONE_CLEARED_KEY = "scottSuitsFinishedCleared";
+function suitDoneCleared() {
+  try { return JSON.parse(localStorage.getItem(SUIT_DONE_CLEARED_KEY) || "[]"); } catch (e) { return []; }
+}
+function clearSuitDone(keys) {
+  try { localStorage.setItem(SUIT_DONE_CLEARED_KEY, JSON.stringify(suitDoneCleared().concat(keys))); } catch (e) {}
+}
+async function finishedSuits() {
+  try {
+    const client = getSupabase();
+    const [factory, fabrics, orders] = await Promise.all([
+      client.rpc("admin_order_factory"),
+      client.rpc("admin_order_fabrics"),
+      client.rpc("admin_list_orders"),
+    ]);
+    if (factory.error || !factory.data) return [];
+    const cleared = suitDoneCleared();
+    const fabricOf = {};
+    if (!fabrics.error && fabrics.data) fabrics.data.forEach((x) => (fabricOf[x.order_id + "/" + (x.suit_number || 1)] = x));
+    const orderOf = {};
+    if (!orders.error && orders.data) orders.data.forEach((x) => (orderOf[x.order_id] = x));
+    return factory.data
+      .filter((x) => x.factory_order_no && FACTORY_FINISHED.indexOf(x.factory_status) !== -1 && cleared.indexOf(x.factory_order_no) === -1)
+      .map((x) => Object.assign({}, x, { fabricRow: fabricOf[x.order_id + "/" + (x.suit_number || 1)] || null, order: orderOf[x.order_id] || null }));
+  } catch (e) {
+    return [];
+  }
+}
+function suitDoneItem(s) {
+  const item = document.createElement("div");
+  item.className = "admin-notif admin-notif-new admin-notif-done";
+  item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>' +
+    '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
+  const f = s.fabricRow || {};
+  const fabricName = f.suit_type === "pants_only" ? f.pants_fabric || f.fabric : f.fabric;
+  const opt = fabricName ? JACKET_CATALOG.fabric.options.find((o) => o.name === fabricName) : null;
+  const what = (opt ? (opt.displayName || opt.name) + " " : "") + (s.suit_type === "jacket_only" ? "jacket" : s.suit_type === "pants_only" ? "pants" : "suit");
+  const who = s.order && s.order.customer_name ? s.order.customer_name + "’s " : "A ";
+  // Customer-typed text goes in with textContent, never as HTML.
+  item.querySelector("b").textContent = who + what + (s.suit_type === "pants_only" ? " are" : " is") + " finished";
+  const step = s.factory_status === "Stocked" ? "Finished at the factory" : "Finished, on its way from the factory";
+  item.querySelector(".admin-notif-meta").textContent = step + " \u00b7 factory order " + s.factory_order_no +
+    (s.factory_waybill ? " \u00b7 tracking " + s.factory_waybill : "");
+  item.querySelector(".admin-notif-clear").addEventListener("click", () => {
+    clearSuitDone([s.factory_order_no]);
+    loadAdminNotifications();
+  });
+  return item;
+}
+let shownSuitsDone = [];
+
 async function loadAdminNotifications() {
   if (!adminNotificationsList) return;
   try {
-    const [{ data, error }, brandRes, waits] = await Promise.all([
+    const [{ data, error }, brandRes, waits, done] = await Promise.all([
       getSupabase().rpc("admin_list_notifications"),
       getSupabase().rpc("admin_order_brands"),
       readyFabricWaits(),
+      finishedSuits(),
     ]);
+    shownSuitsDone = done.map((d) => d.factory_order_no);
     if (error) throw error;
     const brandOf = {};
     if (!brandRes.error && brandRes.data) brandRes.data.forEach((x) => (brandOf[x.order_id] = x.brand));
     const rows = data || [];
-    setAdminUnread(rows.filter((n) => !n.read_at).length + waits.length);
-    if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length;
-    if (!rows.length && !waits.length) {
+    setAdminUnread(rows.filter((n) => !n.read_at).length + waits.length + done.length);
+    if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length && !done.length;
+    if (!rows.length && !waits.length && !done.length) {
       adminNotificationsList.innerHTML = '<p class="account-section-note">No notifications.</p>';
       return;
     }
     adminNotificationsList.innerHTML = "";
     waits.forEach((w) => adminNotificationsList.appendChild(fabricWaitItem(w)));
+    done.forEach((d) => adminNotificationsList.appendChild(suitDoneItem(d)));
     rows.forEach((n) => {
       const item = document.createElement("div");
       item.className = "admin-notif" + (n.read_at ? "" : " admin-notif-new");
@@ -983,6 +1042,7 @@ async function loadAdminNotifications() {
 const adminNotifClearAll = document.getElementById("adminNotifClearAll");
 // Clears one notification (id) or all of them, then reloads the list.
 async function clearAdminNotifications(id) {
+  if (!id && shownSuitsDone.length) clearSuitDone(shownSuitsDone);
   try {
     const { error } = await getSupabase().rpc("admin_clear_notifications", id ? { p_id: id } : {});
     if (error) throw error;
