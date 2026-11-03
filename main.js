@@ -6006,7 +6006,13 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function renderInlineMore() {
     keys.forEach((k) => {
       const icat = catalog[k];
-      if (!icat || icat.inlineWith !== activeTab || !icat.defaultOption || !isApplicable(k)) return;
+      // Shown at the top of the parent step, even before the parent is
+      // picked (picking a style then also picks the parent's
+      // `parentDefault`, e.g. One on Left Lapel); hidden once the parent is
+      // set to the value that rules it out (No Buttonhole).
+      const req = icat.requiresOtherThan;
+      const parentEmpty = !!(req && !order[req.key]);
+      if (!icat || icat.inlineWith !== activeTab || !icat.defaultOption || !(isApplicable(k) || (parentEmpty && icat.parentDefault))) return;
       if (preset && preset.steps && preset.steps.indexOf(k) === -1 && preset.steps.indexOf(activeTab) === -1) return;
       const current = order[k] || icat.defaultOption;
       const isOpen = inlineMoreOpen[k] != null ? inlineMoreOpen[k] : current !== icat.defaultOption;
@@ -6030,17 +6036,23 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       }
       const g = document.createElement("div");
       g.className = "opt-grid compact-cards inline-more-grid";
-      icat.options.forEach((opt) => {
+      // The default (Machine Sewn) has no card: tapping the picked style
+      // again goes back to it.
+      icat.options.filter((opt) => opt.name !== icat.defaultOption).forEach((opt) => {
         const card = document.createElement("div");
         const shown = opt.displayName || opt.name;
         card.className = "opt-card" + (current === opt.name ? " selected" : "");
         card.innerHTML = '<img class="opt-swatch" src="' + opt.img + '" alt="' + wizEsc(shown) + '" loading="lazy" decoding="async"><div class="opt-name">' + wizEsc(shown) + "</div>";
         card.onclick = () => {
           cancelAutoAdvance();
-          order[k] = opt.name;
-          g.querySelectorAll(".opt-card").forEach((c) => c.classList.toggle("selected", c === card));
-          summary.querySelector(".inline-more-val").textContent = opt.name === icat.defaultOption ? "Optional" : shown;
+          const off = order[k] === opt.name;
+          order[k] = off ? icat.defaultOption : opt.name;
+          const parentWasEmpty = !!(req && !order[req.key]);
+          if (!off && parentWasEmpty) order[req.key] = icat.parentDefault;
+          g.querySelectorAll(".opt-card").forEach((c) => c.classList.toggle("selected", !off && c === card));
+          summary.querySelector(".inline-more-val").textContent = off ? "Optional" : shown;
           if (!embedQuiet) markDesignStarted();
+          if (parentWasEmpty && !off) { renderOptions(); renderTabs(); renderSummary(); saveDraft(); return; }
           renderTabs();
           renderSummary();
           saveDraft();
@@ -6048,7 +6060,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         g.appendChild(card);
       });
       box.appendChild(g);
-      optionsEl.appendChild(box);
+      const mainGrid = optionsEl.querySelector(".opt-grid");
+      if (mainGrid) mainGrid.insertAdjacentElement("beforebegin", box);
+      else optionsEl.appendChild(box);
     });
   }
   // Inline choices with a default (Machine Sewn) count as answered.
