@@ -981,12 +981,12 @@
     openSheet(
       '<div class="bs-cam">' +
       '<video class="bs-video" playsinline muted autoplay></video>' +
-      '<canvas class="bs-overlay"></canvas>' +
-      '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
-      // Big see-through pose figure until the person matches it (MTailor).
+      // Pose figure (under the dots, so the dots show on top) until the person matches it (MTailor).
       // Filled so it reads from 8 feet away (Daniel's ChatGPT silhouette,
       // used as a mask so it can turn from white to gold).
       '<div class="bs-bigpose" aria-hidden="true"><i></i></div>' +
+      '<canvas class="bs-overlay"></canvas>' +
+      '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
       // Live "you're lined up" graphics: frame corners that turn gold when
       // the whole body is in the picture, three checks that light up one by
       // one, and a capture bar while the front frames are taken.
@@ -1087,7 +1087,14 @@
   // keeps the hands close in so the person fills more of the picture.
   // facing: also check the elbows are out to the sides (only visible from
   // the front).
-  function armsUp(lm, facing) {
+  // Landmarks come as fractions of the picture's width and height. The
+  // pose checks compare sideways and up-down distances, so they first put
+  // both in the same units (Daniel's iPhone gives a picture that isn't
+  // 9:16, and "Face the phone." fired while he was facing it).
+  let ASPECT = 9 / 16; // camera picture width / height, set each frame
+  const sq = (lm) => lm.map((p) => ({ x: p.x * ASPECT, y: p.y, visibility: p.visibility }));
+  function armsUp(lm0, facing) {
+    const lm = sq(lm0);
     const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
     const arm = (s, e, w) =>
       Math.abs(lm[e].y - lm[s].y) < T * 0.45 && // elbow roughly level with the shoulder
@@ -1101,11 +1108,15 @@
     }
     return true;
   }
+  function facingPhone(lm0) {
+    const lm = sq(lm0);
+    const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
+    return Math.abs(lm[11].x - lm[12].x) >= T * 0.4;
+  }
   function frontProblem(lm) {
     const p = inFrameProblem(lm);
     if (p) return p;
-    const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
-    if (Math.abs(lm[11].x - lm[12].x) < T * 0.45) return "Face the phone.";
+    if (!facingPhone(lm)) return "Face the phone.";
     if (!armsUp(lm, true)) return "Arms up, like the picture.";
     if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.5) return "Feet a little apart.";
     return "";
@@ -1133,6 +1144,20 @@
     return out;
   }
 
+  // Test aid: add &debug=1 to the link to see the camera size and what the
+  // pose check is waiting for.
+  const DEBUG = /[?&]debug=1\b/.test(location.search);
+  function showDebug(video, lm, problem) {
+    let el = sheet && sheet.querySelector(".bs-debug");
+    if (!el && sheet) { el = document.createElement("div"); el.className = "bs-debug"; sheet.querySelector(".bs-cam").appendChild(el); }
+    if (!el) return;
+    let t = video.videoWidth + "x" + video.videoHeight + " | " + (lm ? "found" : "no person") + " | " + (problem || "pose OK");
+    if (lm) {
+      const q = sq(lm), T = (q[23].y + q[24].y - q[11].y - q[12].y) / 2;
+      t += " | shoulders/torso " + (Math.abs(q[11].x - q[12].x) / T).toFixed(2);
+    }
+    el.textContent = t;
+  }
   const FRONT_FRAMES = 6;
   const SPIN_TIMEOUT_MS = 45000;
   function runLive(video) {
@@ -1156,7 +1181,8 @@
       if (!sheet || !state || state.phase === "done") return;
       rafId = requestAnimationFrame(tick);
       if (video.readyState < 2 || !video.videoWidth) return;
-      if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
+      ASPECT = video.videoWidth / video.videoHeight;
       const ts = state.uploaded ? video.currentTime * 1000 + 2 : performance.now();
       if (ts <= lastTs) return;
       lastTs = ts;
@@ -1169,6 +1195,7 @@
 
       if (state.phase === "front") {
         const problem = frontProblem(lm);
+        if (DEBUG) showDebug(video, lm, problem);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
         const inFrame = !!lm && !inFrameProblem(lm);
         if (bigPose) bigPose.classList.toggle("bs-match", !problem);
@@ -1178,7 +1205,7 @@
           frame: inFrame,
           arms: inFrame && armsUp(lm, true),
           legs: inFrame && Math.abs(lm[27].x - lm[28].x) >= Math.abs(lm[23].x - lm[24].x) * 0.5,
-          body: inFrame && Math.abs(lm[11].x - lm[12].x) >= ((lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2) * 0.45,
+          body: inFrame && facingPhone(lm),
         } : null;
         setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.045);
         // First time they're well placed: say so, then the next step.
@@ -1294,7 +1321,7 @@
     if (!lm || !mask) return;
     const W = canvas.width, H = canvas.height;
     const m = mask.data, mw = mask.width, mh = mask.height;
-    const gap = W / 30, r0 = gap * 0.2;
+    const gap = W / 28, r0 = gap * 0.24;
     const t = performance.now() / 1000;
     const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
     const body = ok ? [226, 196, 141] : [215, 222, 235];
@@ -1311,7 +1338,6 @@
     const blink = 0.5 + 0.5 * Math.sin(t * 9);
     const WHITE = [255, 255, 255];
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
     for (let gy = 0, y = gap / 2; y < H; y += gap, gy++) {
       const my = Math.min(mh - 1, Math.floor((y / H) * mh)) * mw;
       for (let gx = 0, x = gap / 2; x < W; x += gap, gx++) {
