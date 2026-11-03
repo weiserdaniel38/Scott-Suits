@@ -632,9 +632,9 @@
   // when VOICE_CLIPS is on; otherwise the phone's own voice, picking a
   // male one (Daniel: "I want it to be male and sound natural").
   const VOICE_CLIPS = true; // OpenAI "echo" voice (Daniel picked it), recorded 2026-11-03 (supabase/functions/scan-voice)
-  const VOICE_V = "echo1"; // bump when the clips are re-recorded
+  const VOICE_V = "echo2"; // bump when the clips are re-recorded
   const CLIP_FOR = {
-    "Lean the phone at waist height. Step back.": "lean", "Hold the phone at waist height.": "hold",
+    "Lean the phone on the floor. Step back.": "floor", "Hold the phone at waist height.": "hold",
     "Face the phone. Arms up.": "face", "Perfect. Hold still.": "perfect", "3": "3", "2": "2", "1": "1",
     "Now turn slowly, all the way around.": "turn", "Keep turning, slowly.": "keep", "Halfway.": "half",
     "Almost there.": "almost", "Done.": "done", "Arms up.": "armsup", "Arms up, like the picture.": "armspic",
@@ -727,53 +727,85 @@
     return isFinite(v) && v > 0 ? Math.round(v * 2.54 * 10) / 10 : NaN;
   }
 
-  // ---- step 1: what you need ----
-  function showIntro(msg) {
-    const h = state && isFinite(state.heightCm) ? state.heightCm : formHeightCm();
-    const ft = isFinite(h) ? Math.floor(h / 2.54 / 12) : "";
-    const inch = isFinite(h) ? Math.round((h / 2.54 - ft * 12) * 2) / 2 : "";
+  // ---- step 1: one simple instruction per page (Daniel: "easy ... very
+  // simple instructions ... each page just one instruction") ----
+  const intro = { who: "self", ft: "", inch: "" };
+  const ICON = {
+    shorts: '<svg viewBox="0 0 64 64"><path d="M18 14h28l4 36H36l-4-20-4 20H14z"/><path d="M18 20h28"/></svg>',
+    wall: '<svg viewBox="0 0 64 64"><rect x="12" y="18" width="40" height="36" rx="2"/><circle cx="32" cy="9" r="4"/><path d="M32 1v2M24 9h-2M42 9h-2M26 4l1.5 1.5M38 4l-1.5 1.5"/></svg>',
+    height: '<svg viewBox="0 0 64 64"><path d="M22 6v52M16 6h12M16 58h12"/><circle cx="42" cy="13" r="5"/><path d="M42 18v18M42 36l-5 20M42 36l5 20M34 24h16"/></svg>',
+    floor: '<svg viewBox="0 0 64 64"><path d="M50 6v50"/><path d="M4 56h56"/><rect x="0" y="0" width="14" height="26" rx="2.5" transform="translate(34 30) rotate(-12)"/><path d="M45.5 31.5l3 .5"/></svg>',
+    away: '<svg viewBox="0 0 64 64"><circle cx="46" cy="14" r="5"/><path d="M46 19v17M46 36l-5 19M46 36l5 19M38 26h16"/><rect x="4" y="44" width="7" height="12" rx="1.5"/><path d="M15 50h20M19 46l-4 4 4 4M31 46l4 4-4 4"/><path d="M2 56h60"/></svg>',
+  };
+  const PAGES = [
+    { icon: "shorts", title: "Wear shorts. No shirt.", sub: "Or a tight T-shirt." },
+    { icon: "wall", title: "Plain wall. Good light.", sub: "Nobody else in the picture." },
+    { icon: "height", title: "How tall are you?", height: true },
+    { icon: "floor", title: "Put your phone on the floor.", sub: "Lean it against a wall, screen facing you.", who: true },
+    { icon: "away", title: "Stand 8 feet away.", sub: "Your whole body in the picture." },
+    { img: "./assets/scan-figure-tpose.webp", title: "Arms up, like this." },
+    { img: "./assets/scan-figure-turn.webp", title: "Then turn around slowly.", last: true },
+  ];
+  const HEIGHT_PAGE = 2;
+  function showIntro(msg, page) {
+    if (page == null) page = msg ? PAGES.length - 1 : 0;
+    if (intro.ft === "") {
+      const h = state && isFinite(state.heightCm) ? state.heightCm : formHeightCm();
+      if (isFinite(h)) { intro.ft = Math.floor(h / 2.54 / 12); intro.inch = Math.round((h / 2.54 - intro.ft * 12) * 2) / 2; }
+    }
+    const pg = PAGES[page];
+    const dots = PAGES.map((_, i) => '<i class="' + (i === page ? "on" : i < page ? "done" : "") + '"></i>').join("");
     openSheet(head("Scan My Body") +
-      '<div class="ps-body bs-intro">' +
+      '<div class="ps-body bs-intro bs-page">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      '<div class="bs-poses" aria-hidden="true">' + poseSvg("front") + poseSvg("spin") + "</div>" +
-      '<ul class="bs-tips">' +
-      "<li>Shirtless, barefoot</li>" +
-      "<li>Plain wall, good light</li>" +
-      "<li>Phone at waist height, 8 ft away</li>" +
-      "</ul>" +
-      '<div class="bs-row2"><div class="bs-field"><label>Your height</label>' +
-      '<div class="bs-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
-      '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + inch + '" inputmode="decimal"><span class="unit">in</span></div></div></div>' +
-      '<div class="bs-field"><label>Phone held by</label>' +
-      '<div class="ps-type bs-who"><button type="button" data-who="self" class="selected">Nobody</button><button type="button" data-who="friend">A friend</button></div></div></div>' +
+      '<div class="bs-page-art">' + (pg.img ? '<img class="bs-pose-img bs-page-img" src="' + pg.img + '" alt="">' : '<span class="bs-icon">' + ICON[pg.icon] + "</span>") + "</div>" +
+      '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
+      (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
+      (pg.height ? '<div class="bs-height bs-page-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + intro.ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
+        '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + intro.inch + '" inputmode="decimal"><span class="unit">in</span></div></div>' : "") +
+      (pg.who ? '<button type="button" class="bs-friend' + (intro.who === "friend" ? " on" : "") + '">' + (intro.who === "friend" ? "&#10003; A friend is holding it" : "A friend will hold it instead") + "</button>" : "") +
+      '<div class="bs-dots" aria-hidden="true">' + dots + "</div>" +
       "</div>" +
-      '<div class="ps-actions"><button type="button" class="btn-primary bs-start">Start the Scan</button>' +
-      '<label class="btn-ghost bs-upload">Use a video I already took<input type="file" accept="video/*" hidden></label></div>');
-    let who = "self";
-    sheet.querySelectorAll(".bs-who button").forEach((b) => (b.onclick = () => {
-      who = b.dataset.who;
-      sheet.querySelectorAll(".bs-who button").forEach((x) => x.classList.toggle("selected", x === b));
-    }));
+      '<div class="ps-actions">' +
+      (pg.last ? '<button type="button" class="btn-primary bs-start">Start the Scan</button>' +
+        '<label class="btn-ghost bs-upload">Use a video I already took<input type="file" accept="video/*" hidden></label>'
+        : '<button type="button" class="btn-primary bs-next">Next</button>' +
+          (page > 0 ? '<button type="button" class="btn-ghost bs-back">Back</button>' : "")) +
+      "</div>");
     const readHeight = () => {
-      const f = parseFloat(sheet.querySelector("#bsFt").value);
-      const i = parseFloat(sheet.querySelector("#bsIn").value) || 0;
+      const f = parseFloat(intro.ft), i = parseFloat(intro.inch) || 0;
       const cm = (f * 12 + i) * 2.54;
       return isFinite(cm) && cm >= 122 && cm <= 244 ? cm : NaN;
     };
+    const keepHeight = () => {
+      const ftEl = sheet.querySelector("#bsFt"), inEl = sheet.querySelector("#bsIn");
+      if (ftEl) { intro.ft = ftEl.value; intro.inch = inEl.value; }
+    };
+    const friend = sheet.querySelector(".bs-friend");
+    if (friend) friend.onclick = () => { intro.who = intro.who === "friend" ? "self" : "friend"; showIntro(null, page); };
+    const next = sheet.querySelector(".bs-next");
+    if (next) next.onclick = () => {
+      keepHeight();
+      if (pg.height && !isFinite(readHeight())) { showIntro("Enter your height.", page); return; }
+      showIntro(null, page + 1);
+    };
+    const back = sheet.querySelector(".bs-back");
+    if (back) back.onclick = () => { keepHeight(); showIntro(null, page - 1); };
+    if (!pg.last) return;
+    const who = intro.who;
     sheet.querySelector(".bs-start").onclick = () => {
       const hcm = readHeight();
-      if (!isFinite(hcm)) { showIntro("Please enter your height first."); return; }
+      if (!isFinite(hcm)) { showIntro("Enter your height.", HEIGHT_PAGE); return; }
       state = { heightCm: hcm, who, voice: true };
       tone(1, 10); // wakes the sound up inside the tap (iPhone)
       preloadVoice();
       // iPhone only lets a page speak after a tap: say something now.
-      say(who === "self" ? "Lean the phone at waist height. Step back." : "Hold the phone at waist height.", true);
+      say(who === "self" ? "Lean the phone on the floor. Step back." : "Hold the phone at waist height.", true);
       startCamera();
     };
     const fileInput = sheet.querySelector(".bs-upload input");
     fileInput.onclick = (e) => {
-      const hcm = readHeight();
-      if (!isFinite(hcm)) { e.preventDefault(); showIntro("Please enter your height first."); }
+      if (!isFinite(readHeight())) { e.preventDefault(); showIntro("Enter your height.", HEIGHT_PAGE); }
     };
     fileInput.onchange = () => {
       const f = fileInput.files && fileInput.files[0];
@@ -836,6 +868,12 @@
       '<canvas class="bs-overlay"></canvas>' +
       '<div class="bs-ghost" aria-hidden="true"><img src="./assets/scan-figure-guide.webp" alt=""></div>' +
       '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
+      // Live "you're lined up" graphics: frame corners that turn gold when
+      // the whole body is in the picture, three checks that light up one by
+      // one, and a capture bar while the front frames are taken.
+      '<div class="bs-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' +
+      '<div class="bs-checks" aria-hidden="true"><span data-k="frame">In frame</span><span data-k="pose">Arms up</span><span data-k="still">Still</span></div>' +
+      '<div class="bs-capture" aria-hidden="true" hidden><span>Capturing</span><b><i></i></b></div>' +
       '<div class="bs-cam-top"><span class="bs-step">Getting ready&hellip;</span><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
       '<div class="bs-ring" hidden><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bs-ring-bg"/><circle cx="22" cy="22" r="19" class="bs-ring-fg" pathLength="100" stroke-dasharray="0 100"/></svg><span>0%</span></div>' +
       '<div class="bs-cam-msg" role="status" aria-live="polite">Loading the scanner&hellip;</div>' +
@@ -952,10 +990,10 @@
     return "";
   }
   function stillness(history) {
-    if (history.length < 12) return Infinity;
+    if (history.length < 8) return Infinity;
     const pts = [0, 11, 12, 23, 24, 27, 28];
     let maxMove = 0;
-    const a = history[0], b = history[history.length - 1];
+    const a = history[history.length - 8], b = history[history.length - 1];
     pts.forEach((i) => { maxMove = Math.max(maxMove, Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y)); });
     return maxMove;
   }
@@ -1010,10 +1048,11 @@
       if (state.phase === "front") {
         const problem = frontProblem(lm);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
+        setChecks(!!lm && !inFrameProblem(lm), !problem, !problem && stillness(state.history) < 0.03);
         if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
         setMsg("Hold still.", true);
         if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
-        if (ts - state.okSince > 900 && stillness(state.history) < 0.012) {
+        if (ts - state.okSince > 400 && stillness(state.history) < 0.03) {
           if (state.uploaded) { state.phase = "frontCapture"; return; }
           counting = true;
           countdown(countEl, () => { counting = false; state.phase = "frontCapture"; });
@@ -1022,14 +1061,19 @@
       }
 
       if (state.phase === "frontCapture") {
-        if (!d || !d.mask || frontProblem(lm)) return;
+        setMsg("Capturing… hold still.", true);
+        setCapture(state.fronts.length / FRONT_FRAMES);
+        if (!d || !d.mask || !lm || inFrameProblem(lm)) return;
         const f = G.measureFrontFrame(lm, d.mask);
         if (!f.error) state.fronts.push(f);
+        setCapture(state.fronts.length / FRONT_FRAMES);
         if (state.fronts.length < FRONT_FRAMES) return;
         state.base = G.combine(state.fronts);
         if (state.base.error) { state.fronts = []; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
         state.phase = "spin";
+        setCapture(null);
+        setChecks(null);
         scanline.hidden = false;
         cue.go();
         state.spinStart = ts;
@@ -1094,7 +1138,7 @@
       say(String(n), true);
       cue.tick();
       n--;
-      setTimeout(step, 900);
+      setTimeout(step, 650);
     };
     step();
   }
@@ -1114,6 +1158,25 @@
     ghost.dataset.kind = kind;
     ghost.querySelector("img").src = GHOST_SRC[kind];
     ghost.classList.toggle("bs-ghost-dim", kind !== "guide");
+  }
+
+  // frame / pose / still: true, false, or null (hide all checks).
+  function setChecks(frame, pose, still) {
+    if (!sheet) return;
+    const box = sheet.querySelector(".bs-checks"), fr = sheet.querySelector(".bs-frame"), gh = sheet.querySelector(".bs-ghost");
+    if (!box) return;
+    box.hidden = frame === null;
+    const on = { frame: !!frame, pose: !!(frame && pose), still: !!(frame && pose && still) };
+    box.querySelectorAll("span").forEach((el) => el.classList.toggle("on", on[el.dataset.k]));
+    fr.classList.toggle("bs-ok", !!frame);
+    fr.classList.toggle("bs-hide", frame === null);
+    gh.classList.toggle("bs-ghost-lock", on.pose);
+  }
+  function setCapture(frac) {
+    const c = sheet && sheet.querySelector(".bs-capture");
+    if (!c) return;
+    c.hidden = frac === null;
+    if (frac !== null) c.querySelector("i").style.width = Math.round(frac * 100) + "%";
   }
 
   // ---- step 3: the numbers ----
@@ -1273,6 +1336,8 @@
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
     setGhost(sheet.querySelector(".bs-ghost"), lm, phase);
+    if (phase === "spin") setChecks(null); else setChecks(!!lm, !!lm && pct !== 1, !!lm && pct !== 1 && pct !== 2);
+    setCapture(phase === "capture" ? 0.6 : null);
     sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
     sheet.querySelector(".bs-scanline").hidden = phase !== "spin";
     const ring = sheet.querySelector(".bs-ring");
