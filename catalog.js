@@ -2702,7 +2702,13 @@ JACKET_CATALOG.buttonholeColorPlacement = {
 JACKET_CATALOG.lapelButtonholeStyle = {
   label: "Lapel Buttonhole Style",
   column: "jacket_lapel_buttonhole_style",
-  description: "Keep the standard machine-sewn buttonhole, or have it stitched by hand in one of these shapes. Its thread color is your Lapel Buttonhole Color.",
+  // Not a step of its own: a small "Handmade buttonhole styles" section
+  // the customer can open on the Lapel Buttonhole step. Machine Sewn is
+  // used until they pick a handmade style.
+  inlineWith: "lapelbuttonhole",
+  defaultOption: "Machine Sewn",
+  inlineToggleLabel: "Handmade buttonhole styles",
+  description: "Have your lapel buttonhole stitched by hand in one of these shapes. Shown in navy; yours is sewn in your Lapel Buttonhole Color.",
   requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
   options: [
     { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
