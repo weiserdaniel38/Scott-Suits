@@ -2515,3 +2515,5 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-bigpose.bs-match i{background:#d9b77a;opacity:.6;}
 .bs-review .bs-q{transition:opacity .3s;}
 .bs-review .bs-q.bs-q-wait{opacity:.3;pointer-events:none;}
+.bs-cl img{display:block;height:min(150px,17dvh);width:auto;max-width:100%;object-fit:contain;}
+.bs-clothes{max-width:420px;}

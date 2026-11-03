@@ -780,25 +780,19 @@
   ];
   const HEIGHT_PAGE = 1;
   // Upper body and lower body, each with two good choices and one to avoid.
+  // Daniel's drawings (ChatGPT, 2026-11-03), tick or cross included.
   const CLOTHES = [
-    ["Upper body", [
-      ["Shirtless", true, '<path d="M20 14c4 3 8 4 12 4s8-1 12-4l8 6-4 8-4-2v26H20V26l-4 2-4-8z"/><path d="M26 30c2 2 4 2 6 0M32 30c2 2 4 2 6 0M32 22v14"/>'],
-      ["Tight shirt", true, '<path d="M24 12l-12 7 4 9 6-3v27h20V25l6 3 4-9-12-7c-1 4-4 6-8 6s-7-2-8-6z"/>'],
-      ["Loose clothes", false, '<path d="M22 12L6 20l5 11 7-3v28h28V28l7 3 5-11-16-8c-1 4-5 7-10 7s-9-3-10-7z"/>'],
-    ]],
-    ["Lower body", [
-      ["Spandex", true, '<path d="M18 14h28l-2 34h-9l-3-22-3 22h-9z"/><path d="M18 20h28"/>'],
-      ["Boxers or briefs", true, '<path d="M16 18h32l-3 18H35l-3-8-3 8H19z"/><path d="M16 23h32"/>'],
-      ["Other pants or shorts", false, '<path d="M18 10h28l3 46H37l-5-34-5 34H15z"/><path d="M18 16h28"/>'],
-    ]],
+    ["Upper body", [["Shirtless", "shirtless"], ["Tight shirt", "tightshirt"], ["Loose clothes", "loose"]]],
+    ["Lower body", [["Spandex", "spandex"], ["Boxers or briefs", "boxers"], ["Other pants or shorts", "pants"]]],
   ];
   function clothesGrid() {
     return '<div class="bs-clothes">' + CLOTHES.map(([part, items]) =>
       '<div class="bs-clothes-part">' + esc(part) + "</div>" +
-      '<div class="bs-clothes-row">' + items.map(([label, ok, path]) =>
-        '<div class="bs-cl"><span class="bs-cl-ic"><svg viewBox="0 0 64 64">' + path + "</svg><b class=\"" + (ok ? "ok" : "no") + "\">" + (ok ? "&#10003;" : "&#10005;") + "</b></span>" + esc(label) + "</div>").join("") + "</div>").join("") +
+      '<div class="bs-clothes-row">' + items.map(([label, file]) =>
+        '<div class="bs-cl"><img src="./assets/scan-clothes/' + file + '.webp?v=2" alt="" width="240" height="300">' + esc(label) + "</div>").join("") + "</div>").join("") +
       "</div>";
   }
+
   function showIntro(msg, page) {
     preloadModel();
     if (page == null) page = msg ? PAGES.length - 1 : 0;
