@@ -1491,10 +1491,45 @@
     if (lm !== undefined) {
       if (lm && mask) {
         const m = mask.data, mw = mask.width, mh = mask.height;
+        // Dots only on the person (Daniel: "nothing else in the screen"):
+        // anything the outline catches outside a box around their joints
+        // (a chair, a coat, the bookshelf) gets no dots.
+        let bx0 = 1e9, bx1 = -1e9, by0 = 1e9, by1 = -1e9;
+        lm.forEach((q) => { if ((q.visibility == null ? 1 : q.visibility) < 0.3) return; bx0 = Math.min(bx0, q.x); bx1 = Math.max(bx1, q.x); by0 = Math.min(by0, q.y); by1 = Math.max(by1, q.y); });
+        const shw = Math.abs(lm[11].x - lm[12].x) * W, tor = Math.abs((lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2) * H;
+        bx0 = bx0 * W - shw * 0.3; bx1 = bx1 * W + shw * 0.3;
+        by0 = by0 * H - tor * 0.45; by1 = by1 * H + tor * 0.2;
         for (let gy = 0; gy < rows; gy++) {
           const my = Math.min(mh - 1, Math.floor((((gy + 0.5) * gap) / H) * mh)) * mw;
-          for (let gx = 0; gx < cols; gx++) dots.tgt[gy * cols + gx] = m[my + Math.min(mw - 1, Math.floor((((gx + 0.5) * gap) / W) * mw))] > 0.5 ? 1 : 0;
+          const yy = (gy + 0.5) * gap;
+          for (let gx = 0; gx < cols; gx++) {
+            const xx = (gx + 0.5) * gap;
+            dots.tgt[gy * cols + gx] = xx >= bx0 && xx <= bx1 && yy >= by0 && yy <= by1 && m[my + Math.min(mw - 1, Math.floor((xx / W) * mw))] > 0.5 ? 1 : 0;
+          }
         }
+        // Keep only dots joined to the body (flood fill from the chest), so
+        // a chair or coat touching nothing gets no dots.
+        // Seeds: the middle of the chest and each body joint.
+        const keep = new Uint8Array(cols * rows), stack = [];
+        const seeds = [{ x: (lm[11].x + lm[12].x + lm[23].x + lm[24].x) / 4, y: (lm[11].y + lm[12].y + lm[23].y + lm[24].y) / 4 }]
+          .concat([0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].map((k) => lm[k]).filter((q) => (q.visibility == null ? 1 : q.visibility) > 0.5));
+        seeds.forEach((q) => {
+          const sx = Math.floor((q.x * W) / gap), sy = Math.floor((q.y * H) / gap);
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const gx = sx + dx, gy = sy + dy, j = gy * cols + gx;
+            if (gx >= 0 && gy >= 0 && gx < cols && gy < rows && dots.tgt[j] && !keep[j]) { keep[j] = 1; stack.push(j); }
+          }
+        });
+        while (stack.length) {
+          const i = stack.pop(), gx = i % cols, gy = (i - gx) / cols;
+          [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => {
+            const nx = gx + dx, ny = gy + dy;
+            if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) return;
+            const j = ny * cols + nx;
+            if (!keep[j] && dots.tgt[j]) { keep[j] = 1; stack.push(j); }
+          });
+        }
+        if (stack.length === 0 && keep.some((k) => k)) for (let i = 0; i < keep.length; i++) dots.tgt[i] = keep[i];
         dots.lm = lm;
         if (fresh) dots.cur.set(dots.tgt);
       } else dots.tgt.fill(0);
@@ -1521,7 +1556,8 @@
       const y = (gy + 0.5) * gap;
       for (let gx = 0; gx < cols; gx++) {
         const i = gy * cols + gx;
-        const v = (dots.cur[i] += (dots.tgt[i] - dots.cur[i]) * 0.3);
+        // Follow quickly: dots appear and leave with the person, no trail.
+        const v = (dots.cur[i] += (dots.tgt[i] - dots.cur[i]) * 0.6);
         if (v < 0.04) continue;
         const x = (gx + 0.5) * gap;
         const face = Math.hypot(x - fx, y - fy) < fr;
