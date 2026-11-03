@@ -2012,12 +2012,12 @@ const NEW_FABRICS = [
   { name: "26RE079.DAY9302", displayName: "Rich Slate Gray Check", img: "./assets/jacket-fabric-26re079-day9302.jpg", hex: "#4f4a47", pattern: "Plaid", family: "Charcoal Pattern", palette: "Slate Grey", tier: 3, description: "Slate Gray check in pure wool from Reda, Italy. Versatile for any season." }, // $45/m
   { name: "26RE080.DAY9303", displayName: "Rich Charcoal Check", img: "./assets/jacket-fabric-26re080-day9303.jpg", hex: "#323333", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 3, description: "Charcoal check in pure wool from Reda, Italy. Year-round, from business to evening." }, // $45/m
   // Pink and purple (Daniel, 2026-10-30: "Add back some pink and purple
-  // fabrics"). Plum came back after PR #260 took it out; the two Marzotto
-  // ones are a wool, silk and linen blend, the only light purples in range.
+  // fabrics"). Plum came back after PR #260 took it out. The two Marzotto
+  // wool/silk/linen blends (Dusty Mauve 26MZ055.DAU7636, Soft Blush
+  // 26MZ054.DAU7640) were removed 2026-11-03: wool with linen is shatnez
+  // (Daniel: "Anything with shatnez remove"). Never add a wool + linen fabric.
   { name: "26VB043.DAY9091", displayName: "Plum", img: "./assets/jacket-fabric-26vb043-day9091.jpg", hex: "#431a37", pattern: "Solid", family: "Purple", palette: "Plum", tier: 3, description: "Plum solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB042.DAY9090", displayName: "Rose Pink", img: "./assets/jacket-fabric-26vb042-day9090.jpg", hex: "#a9517f", pattern: "Solid", family: "Pink", palette: "Dusty Rose", tier: 3, description: "Rose pink solid in pure wool from Vitale Barberis Canonico, Italy. A bold color for spring and summer occasions." }, // $45/m
-  { name: "26MZ055.DAU7636", displayName: "Dusty Mauve", img: "./assets/jacket-fabric-26mz055-dau7636.jpg", hex: "#8a6f70", pattern: "Solid", family: "Pink", palette: "Mauve", tier: 3, description: "Dusty mauve in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
-  { name: "26MZ054.DAU7640", displayName: "Soft Blush", img: "./assets/jacket-fabric-26mz054-dau7640.jpg", hex: "#c2a6aa", pattern: "Solid", family: "Pink", palette: "Blush", tier: 3, description: "Soft blush pink in a wool, silk and linen blend from Marzotto, Italy. Light and breathable for spring and summer." }, // $45/m
 ];
 // Color headings inside the New Fabrics section, in order, each listing the
 // FABRIC_PALETTE colors it covers.
@@ -3091,8 +3091,6 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26VB105.DAY9292": { sprite: "./assets/fabric-zoom-26vb105-day9292.avif", col: 0, row: 0, tile: 1200 },
   "26VB043.DAY9091": { sprite: "./assets/fabric-zoom-26vb043-day9091.avif", col: 0, row: 0, tile: 1200 },
   "26VB042.DAY9090": { sprite: "./assets/fabric-zoom-26vb042-day9090.avif", col: 0, row: 0, tile: 1200 },
-  "26MZ055.DAU7636": { sprite: "./assets/fabric-zoom-26mz055-dau7636.avif", col: 0, row: 0, tile: 1200 },
-  "26MZ054.DAU7640": { sprite: "./assets/fabric-zoom-26mz054-dau7640.avif", col: 0, row: 0, tile: 1200 },
   "26VB109.DAY9293": { sprite: "./assets/fabric-zoom-26vb109-day9293.avif", col: 0, row: 0, tile: 1200 },
   "26VB111.DAY9294": { sprite: "./assets/fabric-zoom-26vb111-day9294.avif", col: 0, row: 0, tile: 1200 },
   "26RE079.DAY9302": { sprite: "./assets/fabric-zoom-26re079-day9302.avif", col: 0, row: 0, tile: 1200 },
