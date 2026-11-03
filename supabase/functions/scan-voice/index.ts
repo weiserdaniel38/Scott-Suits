@@ -8,6 +8,7 @@
 
 const LINES: Record<string, string> = {
   lean: "Lean the phone at waist height. Then step back.",
+  floor: "Lean the phone on the floor, against the wall. Then step back, about eight feet.",
   hold: "Hold the phone at waist height.",
   face: "Face the phone. Arms up.",
   perfect: "Perfect. Hold still.",
