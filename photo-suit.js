@@ -442,21 +442,28 @@
     showLoading();
     let data = null;
     let status = 0;
-    try {
-      const res = await fetch(FN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          images: photos,
-          imageUrl: link || undefined,
-          jacketSteps: stepsPayload(JACKET_CATALOG, JACKET_PHOTO_STEPS),
-          pantsSteps: stepsPayload(PANTS_CATALOG, PANTS_PHOTO_STEPS),
-        }),
-      });
-      status = res.status;
-      data = await res.json().catch(() => null);
-    } catch (e) {
+    const payload = JSON.stringify({
+      images: photos,
+      imageUrl: link || undefined,
+      jacketSteps: stepsPayload(JACKET_CATALOG, JACKET_PHOTO_STEPS),
+      pantsSteps: stepsPayload(PANTS_CATALOG, PANTS_PHOTO_STEPS),
+    });
+    // A dropped connection or a busy server gets one quiet second try, so a
+    // phone switching networks or a brief hiccup doesn't end in an error.
+    for (let attempt = 0; attempt < 2; attempt++) {
       data = null;
+      status = 0;
+      try {
+        const res = await fetch(FN_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload });
+        status = res.status;
+        data = await res.json().catch(() => null);
+      } catch (e) {
+        data = null;
+      }
+      if (!sheet) return;
+      if (data && (data.ok || data.error === "link" || data.isSuit === false)) break;
+      if (status === 429 || (status >= 400 && status < 500)) break;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
     if (!sheet) return; // closed while waiting
     if (data && data.photo) state.photos.push(data.photo);
@@ -471,17 +478,35 @@
     showSummary();
   }
 
+  // One file input that lives in the page. iPhone Safari can drop a picker's
+  // "change" event when the input isn't attached to the page, so the photo
+  // would silently never upload; a kept, attached input avoids that.
+  function fileInput() {
+    let input = document.getElementById("psFileInput");
+    if (!input) {
+      input = document.createElement("input");
+      input.id = "psFileInput";
+      input.type = "file";
+      input.accept = "image/*";
+      input.tabIndex = -1;
+      input.setAttribute("aria-hidden", "true");
+      input.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;";
+      document.body.appendChild(input);
+    }
+    return input;
+  }
+
   function pickPhoto(keep) {
     const room = MAX_PHOTOS - (keep && state && state.photos ? state.photos.length : 0);
     if (room <= 0) return;
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
+    const input = fileInput();
+    input.value = "";
     input.multiple = room > 1;
     input.onchange = () => {
       const files = Array.from(input.files || []).slice(0, room);
+      input.onchange = null;
       if (!files.length) return;
-      if (files.some((f) => !/^image\//.test(f.type))) { alert("Please choose image files (JPG or PNG)."); return; }
+      if (files.some((f) => f.type && !/^image\//.test(f.type))) { alert("Please choose image files (JPG or PNG)."); return; }
       if (files.some((f) => f.size > 25 * 1024 * 1024)) { alert("That photo is too large \u2014 please choose one under 25 MB."); return; }
       run(files, null, keep);
     };
@@ -504,7 +529,7 @@
       "</form>" +
       '<p class="ps-link-error" hidden></p>' +
       "</div>");
-    sheet.querySelector(".ps-upload").onclick = () => { closeSheet(); pickPhoto(); };
+    sheet.querySelector(".ps-upload").onclick = () => pickPhoto();
     const form = sheet.querySelector(".ps-link-form");
     const input = sheet.querySelector("#psLinkInput");
     const err = sheet.querySelector(".ps-link-error");
