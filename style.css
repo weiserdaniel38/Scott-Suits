@@ -2445,8 +2445,10 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-dots i.done{background:rgba(201,164,103,0.55);}
 .bs-dots i.on{background:#e2c48d;width:20px;border-radius:4px;}
 /* MTailor-style pieces (Daniel's recording, 2026-11-03) */
-.bs-bigpose{position:absolute;left:50%;top:50%;width:86%;max-height:78%;object-fit:contain;transform:translate(-50%,-48%);opacity:.55;pointer-events:none;filter:drop-shadow(0 0 10px rgba(226,196,141,0.45));transition:opacity .5s,transform .5s;}
-.bs-bigpose.bs-gone{opacity:0;transform:translate(-50%,-48%) scale(1.06);}
+.bs-bigpose{position:absolute;left:50%;top:52%;height:74%;max-width:92%;transform:translate(-50%,-50%);pointer-events:none;transition:opacity .5s,transform .5s;}
+.bs-bigpose g{fill:#fff;stroke:#fff;opacity:.34;transition:fill .3s,stroke .3s;}
+.bs-bigpose.bs-match g{fill:#e2c48d;stroke:#e2c48d;opacity:.3;}
+.bs-bigpose.bs-gone{opacity:0;transform:translate(-50%,-50%) scale(1.06);}
 .bs-level{position:relative;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:calc(64px + env(safe-area-inset-top,0px)) 24px calc(20px + env(safe-area-inset-bottom,0px));background:#0b0c0e;color:var(--ivory);}
 .bs-level .bs-page-title{font-size:22px;max-width:320px;text-wrap:balance;}
 .bs-level .bs-page-sub{max-width:300px;}

@@ -668,7 +668,9 @@
   function say(text, force) {
     if (!state || !state.voice) return;
     const now = Date.now();
-    if (!force && (text === lastSpoken || now - lastSpokenAt < 2600)) return;
+    // The same instruction repeats every 4 s until it's fixed (Daniel: "have
+    // the voice tell me what it needs me to do").
+    if (!force && (now - lastSpokenAt < 2600 || (text === lastSpoken && now - lastSpokenAt < 4000))) return;
     lastSpoken = text;
     lastSpokenAt = now;
     const clip = VOICE_CLIPS && CLIP_FOR[text];
@@ -982,7 +984,13 @@
       '<canvas class="bs-overlay"></canvas>' +
       '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
       // Big see-through pose figure until the person matches it (MTailor).
-      '<img class="bs-bigpose" src="./assets/scan-figure-tpose.webp" alt="" aria-hidden="true">' +
+      // Filled so it reads from 8 feet away (Daniel).
+      '<svg class="bs-bigpose" viewBox="0 0 300 560" aria-hidden="true"><g>' +
+      '<circle cx="150" cy="58" r="36"/>' +
+      '<path d="M62 30V112H238V30" fill="none" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<rect x="102" y="96" width="96" height="214" rx="30"/>' +
+      '<path d="M126 290L112 532M174 290L188 532" fill="none" stroke-width="42" stroke-linecap="round"/>' +
+      "</g></svg>" +
       // Live "you're lined up" graphics: frame corners that turn gold when
       // the whole body is in the picture, three checks that light up one by
       // one, and a capture bar while the front frames are taken.
@@ -1086,13 +1094,14 @@
   function armsUp(lm, facing) {
     const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
     const arm = (s, e, w) =>
-      Math.abs(lm[e].y - lm[s].y) < T * 0.3 && // elbow about level with the shoulder
-      lm[e].y - lm[w].y > T * 0.25 && // wrist well above the elbow
-      Math.abs(lm[w].x - lm[e].x) < T * 0.35; // forearm roughly upright
+      Math.abs(lm[e].y - lm[s].y) < T * 0.45 && // elbow roughly level with the shoulder
+      lm[e].y - lm[w].y > T * 0.15 && // wrist above the elbow
+      Math.abs(lm[w].x - lm[e].x) < T * 0.55; // forearm roughly upright
+    // (loosened 2026-11-03: Daniel's real test never got past the pose check)
     if (!arm(11, 13, 15) || !arm(12, 14, 16)) return false;
     if (facing) {
       const cx = (lm[11].x + lm[12].x) / 2, half = Math.abs(lm[11].x - lm[12].x) / 2;
-      if (Math.abs(lm[13].x - cx) < half + T * 0.2 || Math.abs(lm[14].x - cx) < half + T * 0.2) return false;
+      if (Math.abs(lm[13].x - cx) < half + T * 0.08 || Math.abs(lm[14].x - cx) < half + T * 0.08) return false;
     }
     return true;
   }
@@ -1100,9 +1109,9 @@
     const p = inFrameProblem(lm);
     if (p) return p;
     const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
-    if (Math.abs(lm[11].x - lm[12].x) < T * 0.55) return "Face the phone.";
+    if (Math.abs(lm[11].x - lm[12].x) < T * 0.45) return "Face the phone.";
     if (!armsUp(lm, true)) return "Arms up, like the picture.";
-    if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.9) return "Feet a little apart.";
+    if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.5) return "Feet a little apart.";
     return "";
   }
   function stillness(history) {
@@ -1166,8 +1175,16 @@
         const problem = frontProblem(lm);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
         const inFrame = !!lm && !inFrameProblem(lm);
-        if (bigPose) bigPose.classList.toggle("bs-gone", !problem);
-        setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.03);
+        if (bigPose) bigPose.classList.toggle("bs-match", !problem);
+        // Which parts are right: the dots on those parts turn gold, the
+        // others blink white, so the person sees what to fix.
+        state.parts = lm ? {
+          frame: inFrame,
+          arms: inFrame && armsUp(lm, true),
+          legs: inFrame && Math.abs(lm[27].x - lm[28].x) >= Math.abs(lm[23].x - lm[24].x) * 0.5,
+          body: inFrame && Math.abs(lm[11].x - lm[12].x) >= ((lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2) * 0.45,
+        } : null;
+        setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.045);
         // First time they're well placed: say so, then the next step.
         if (inFrame && !state.spotSaid) {
           state.spotSaid = true;
@@ -1176,7 +1193,7 @@
         if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
         setMsg("Hold still.", true);
         if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
-        if (ts - state.okSince > 400 && stillness(state.history) < 0.03) {
+        if (ts - state.okSince > 400 && stillness(state.history) < 0.045) {
           if (state.uploaded) { state.phase = "frontCapture"; return; }
           counting = true;
           countdown(countEl, () => { counting = false; state.phase = "frontCapture"; });
@@ -1185,6 +1202,8 @@
       }
 
       if (state.phase === "frontCapture") {
+        if (bigPose) bigPose.classList.add("bs-gone");
+        state.parts = null;
         setMsg("Capturing… hold still.", true);
         setCapture(state.fronts.length / FRONT_FRAMES);
         if (!d || !d.mask || !lm || inFrameProblem(lm)) return;
@@ -1196,6 +1215,7 @@
         if (state.base.error) { state.fronts = []; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
         state.phase = "spin";
+        state.parts = null;
         if (bigPose) bigPose.classList.add("bs-gone");
         setCapture(null);
         setChecks(null);
@@ -1289,6 +1309,11 @@
     const nose = lm[0], earL = lm[7], earR = lm[8];
     const fr = earL && earR ? Math.max(Math.abs(earL.x - earR.x) * W * 0.85, gap * 1.5) : gap * 2;
     const fx = nose.x * W, fy = nose.y * H;
+    const parts = state && state.phase === "front" ? state.parts : null;
+    const shY = ((lm[11].y + lm[12].y) / 2) * H, hipY = ((lm[23].y + lm[24].y) / 2) * H;
+    const shL = Math.min(lm[11].x, lm[12].x) * W, shR = Math.max(lm[11].x, lm[12].x) * W;
+    const blink = 0.5 + 0.5 * Math.sin(t * 9);
+    const WHITE = [255, 255, 255];
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (let gy = 0, y = gap / 2; y < H; y += gap, gy++) {
@@ -1298,9 +1323,17 @@
         const face = Math.hypot(x - fx, y - fy) < fr;
         const tw = 0.55 + 0.45 * Math.sin(t * 2.2 + gx * 1.7 + gy * 2.3);
         const band = Math.max(0, 1 - Math.abs(y - by) / (H * 0.07));
-        const a = Math.min(1, 0.35 + 0.45 * tw + 0.5 * band + flash);
+        let a = Math.min(1, 0.35 + 0.45 * tw + 0.5 * band + flash);
         const r = r0 * (0.75 + 0.35 * tw + 0.5 * band + 0.6 * flash);
-        const c = face || flash > 0.5 ? [255, 255, 255] : body;
+        let c = face || flash > 0.5 ? WHITE : body;
+        let aa = 1;
+        if (parts && !face) {
+          // Arm dots: above the shoulders or out past them. Leg dots: below the hips.
+          const part = !parts.frame ? "frame" : (y < shY + gap || x < shL - gap || x > shR + gap) ? "arms" : y > hipY ? "legs" : "body";
+          if (parts[part]) c = [226, 196, 141];
+          else { c = WHITE; aa = 0.35 + 0.65 * blink; }
+        }
+        a *= aa;
         ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * 0.22).toFixed(3) + ")";
         ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, 6.283); ctx.fill(); // glow
         ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
@@ -1320,25 +1353,6 @@
     box.hidden = frame === null;
     const on = { frame: !!frame, pose: !!(frame && pose), still: !!(frame && pose && still) };
     box.querySelectorAll("span").forEach((el) => el.classList.toggle("on", on[el.dataset.k]));
-  }
-  function setCapture(frac) {
-    const c = sheet && sheet.querySelector(".bs-capture");
-    if (!c) return;
-    c.hidden = frac === null;
-    if (frac !== null) c.querySelector("i").style.width = Math.round(frac * 100) + "%";
-  }
-
-  // frame / pose / still: true, false, or null (hide all checks).
-  function setChecks(frame, pose, still) {
-    if (!sheet) return;
-    const box = sheet.querySelector(".bs-checks"), fr = sheet.querySelector(".bs-frame"), gh = sheet.querySelector(".bs-ghost");
-    if (!box) return;
-    box.hidden = frame === null;
-    const on = { frame: !!frame, pose: !!(frame && pose), still: !!(frame && pose && still) };
-    box.querySelectorAll("span").forEach((el) => el.classList.toggle("on", on[el.dataset.k]));
-    fr.classList.toggle("bs-ok", !!frame);
-    fr.classList.toggle("bs-hide", frame === null);
-    gh.classList.toggle("bs-ghost-lock", on.pose);
   }
   function setCapture(frac) {
     const c = sheet && sheet.querySelector(".bs-capture");
@@ -1522,7 +1536,10 @@
     const c = sheet.querySelector(".bs-overlay");
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
-    sheet.querySelector(".bs-bigpose").classList.toggle("bs-gone", !!lm && (phase !== "front" || pct !== 1));
+    sheet.querySelector(".bs-bigpose").classList.toggle("bs-gone", phase !== "front");
+    sheet.querySelector(".bs-bigpose").classList.toggle("bs-match", phase === "front" && !!lm && pct !== 1);
+    state.parts = phase === "front" && lm ? { frame: true, arms: pct !== 1, legs: true, body: true } : null;
+    drawGuide(c.getContext("2d"), c, lm, mask);
     if (phase === "spin") setChecks(null); else setChecks(!!lm, !!lm && pct !== 1, !!lm && pct !== 1 && pct !== 2);
     setCapture(phase === "capture" ? 0.6 : null);
     sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
