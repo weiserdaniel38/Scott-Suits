@@ -116,6 +116,8 @@ def rewrite_page(path, brand_id, b, domain):
         count=1,
     )
     rest = re.sub(r'<script data-goatcounter[^>]*></script>\s*', "", rest)
+    # Lines that state Scott's Suits prices (fabrics.html "Fabric facts").
+    rest = re.sub(r"<li data-scott-only>.*?</li>\s*", "", rest, flags=re.S)
     # The page text and logo too, so even the page source shows the brand
     # (brand.js does the same in the browser, plus the text main.js writes).
     rest = re.sub(r"Scott['\u2019]s Suits|Scott Suits", lambda m: b["name"], rest)
