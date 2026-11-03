@@ -166,12 +166,16 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
    to white, keeping its hue). Phones keep the
    card with the faint line art above. */
 @media (min-width:901px){
-  html[data-brand="scott"] #lightbox{padding:0;background:#f3ede5;}
+  /* 2026-11-03, Daniel: "make desktop fabric page even brighter and
+     lighter". A soft warm-white wash over the cloth picture on desktop
+     only (phones keep the picture as is); folds and window light still
+     show through, just paler. */
+  html[data-brand="scott"] #lightbox{padding:0;background:#faf7f3;}
   html[data-brand="scott"] #lightbox .lightbox-card{width:100vw;height:calc(100vh - var(--qa-nav-height,0px));max-width:none;max-height:none;border:0;border-radius:0;justify-content:safe center;padding:18px 40px;
-    background:#f5f0e9 url("./assets/fabric-zoom-bg.jpg?v=20261101beige") center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+    background:linear-gradient(rgba(255,254,252,0.55),rgba(255,254,252,0.55)),#fbf9f6 url("./assets/fabric-zoom-bg.jpg?v=20261101beige") center/cover no-repeat;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
   html[data-brand="scott"] #lightbox .lightbox-card::before{display:none;}
   html[data-brand="scott"] #lightbox .lightbox-close{top:26px;right:30px;}
-  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.45);border-color:rgba(255,255,255,0.8);margin-bottom:14px;}
+  html[data-brand="scott"] #lightbox .lb-view-toggle{background:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.95);margin-bottom:14px;}
   html[data-brand="scott"] #lightbox .lb-view-toggle button{padding:9px 26px;font-size:14.5px;}
   /* Daniel, 2026-10-30: "make draped fabric bigger" on desktop. */
   html[data-brand="scott"] #lightbox .fabric-drape{width:min(40vw,520px);max-height:calc(100vh - 350px);}
@@ -179,7 +183,7 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
   html[data-brand="scott"] #lightbox .lightbox-frame,
   html[data-brand="scott"] #lightbox .lightbox-frame.lightbox-frame-xl{max-height:calc(100vh - 430px);max-width:min(60vw,calc(100vh - 430px));}
   html[data-brand="scott"] #lightbox .lightbox-caption{font-size:32px;}
-  html[data-brand="scott"] #lightbox .lb-nav{width:36px;height:36px;background:rgba(255,255,255,0.5);margin:0 14px;}
+  html[data-brand="scott"] #lightbox .lb-nav{width:36px;height:36px;background:rgba(255,255,255,0.75);margin:0 14px;}
   html[data-brand="scott"] #lightbox .lightbox-sub{font-size:15px;}
   html[data-brand="scott"] #lightbox .lightbox-sub .lb-pattern{font-size:14.5px;}
   html[data-brand="scott"] #lightbox .lightbox-desc{font-size:15.5px;max-width:560px;}
