@@ -903,7 +903,7 @@
            the factory has finished (main.js finishedSuits). -->
       <details class="account-collapse" id="adminNotificationsSection" hidden>
         <summary><h3>Notifications <span class="admin-notif-count" id="adminNotifCount" hidden></span></h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
-        <p class="account-section-note">Only you see this (shop admin). Every order placed, and every suit the factory finishes, shows up here.</p>
+        <p class="account-section-note">Only you see this (shop admin). Every order placed, and every suit the factory finishes, shows up here with the date and time it was sent. Clearing one clears it on all your devices.</p>
         <button type="button" class="btn-ghost admin-notif-clear-all" id="adminNotifClearAll" hidden>Clear all</button>
         <div id="adminNotificationsList" class="brand-keep"></div>
       </details>
@@ -1069,7 +1069,7 @@
 <script src="./catalog.js?v=20261103threadblue"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261103bodyscan"></script>
+<script src="./main.js?v=20261103notifsync"></script>
 <script src="./photo-suit.js?v=20261103photoorlink"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261103fast"; document.body.appendChild(bsS); }</script>
