@@ -941,7 +941,7 @@
       try { d = detect(video, ts, true); } catch (e) { return; }
       const lm = d ? d.lm : null;
       drawGuide(ctx, canvas, lm, d && d.mask);
-      ghost.classList.toggle("bs-ghost-off", !!lm);
+      setGhost(ghost, lm, state.phase);
       if (counting) return;
 
       if (state.phase === "front") {
@@ -1029,46 +1029,22 @@
     };
     step();
   }
-  // The person's outline glowing gold over the video, plus a fine
-  // skeleton: white while we wait for the right pose, gold once it's right.
-  let maskCanvas = null, maskImg = null;
-  function drawGuide(ctx, canvas, lm, mask) {
+  // Nothing is drawn over the person (Daniel: no body block, no skeleton
+  // lines): the camera picture stays clean. The message bar, scan line and
+  // % ring say how it's going.
+  function drawGuide(ctx, canvas) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!lm) return;
-    const W = canvas.width, H = canvas.height;
-    const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
-    if (mask) {
-      if (!maskCanvas || maskCanvas.width !== mask.width || maskCanvas.height !== mask.height) {
-        maskCanvas = document.createElement("canvas");
-        maskCanvas.width = mask.width;
-        maskCanvas.height = mask.height;
-        maskImg = maskCanvas.getContext("2d").createImageData(mask.width, mask.height);
-      }
-      const px = maskImg.data, m = mask.data;
-      const [r, g, b] = ok ? [201, 164, 103] : [235, 228, 216];
-      for (let i = 0, j = 0; i < m.length; i++, j += 4) {
-        px[j] = r; px[j + 1] = g; px[j + 2] = b;
-        px[j + 3] = m[i] > 0.5 ? 70 + Math.round((1 - Math.abs(m[i] - 0.75) * 4) * 60) : 0;
-      }
-      maskCanvas.getContext("2d").putImageData(maskImg, 0, 0);
-      ctx.save();
-      ctx.shadowColor = ok ? "rgba(201,164,103,0.9)" : "rgba(255,255,255,0.6)";
-      ctx.shadowBlur = Math.max(8, W / 60);
-      ctx.drawImage(maskCanvas, 0, 0, W, H);
-      ctx.restore();
-    }
-    const lines = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28]];
-    ctx.lineWidth = Math.max(2, W / 360);
-    ctx.strokeStyle = ok ? "rgba(255,236,200,0.85)" : "rgba(255,255,255,0.7)";
-    ctx.beginPath();
-    lines.forEach(([a, b2]) => { ctx.moveTo(lm[a].x * W, lm[a].y * H); ctx.lineTo(lm[b2].x * W, lm[b2].y * H); });
-    ctx.stroke();
-    ctx.fillStyle = ctx.strokeStyle;
-    [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach((i) => {
-      ctx.beginPath();
-      ctx.arc(lm[i].x * W, lm[i].y * H, Math.max(3, W / 240), 0, Math.PI * 2);
-      ctx.fill();
-    });
+  }
+  // Daniel's figures over the camera: the dashed guide until we see you,
+  // then the gold arms-up figure while you face the phone, and the gold
+  // turning figure while you turn (faint, so you still see yourself).
+  const GHOST_SRC = { guide: "./assets/scan-figure-guide.webp", front: "./assets/scan-figure-tpose.webp", spin: "./assets/scan-figure-turn.webp" };
+  function setGhost(ghost, lm, phase) {
+    const kind = !lm ? "guide" : phase === "spin" ? "spin" : "front";
+    if (ghost.dataset.kind === kind) return;
+    ghost.dataset.kind = kind;
+    ghost.querySelector("img").src = GHOST_SRC[kind];
+    ghost.classList.toggle("bs-ghost-dim", kind !== "guide");
   }
 
   // ---- step 3: the numbers ----
@@ -1183,7 +1159,7 @@
     const c = sheet.querySelector(".bs-overlay");
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
-    sheet.querySelector(".bs-ghost").classList.toggle("bs-ghost-off", !!lm);
+    setGhost(sheet.querySelector(".bs-ghost"), lm, phase);
     sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
     sheet.querySelector(".bs-scanline").hidden = phase !== "spin";
     const ring = sheet.querySelector(".bs-ring");
