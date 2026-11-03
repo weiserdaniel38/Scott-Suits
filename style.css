@@ -2350,6 +2350,7 @@ body.order-done-view > .process{display:none !important;}
 .bs-ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .4s;}
 .bs-ghost img{width:88%;max-height:66%;margin-bottom:18%;object-fit:contain;opacity:.8;animation:bs-breathe 2.4s ease-in-out infinite;}
 .bs-ghost-off{opacity:0;}
+.bs-ghost-dim img{opacity:.6;filter:drop-shadow(0 0 8px rgba(201,164,103,0.5));}
 /* The scan line sweeping over the person while they turn. */
 .bs-scanline{position:absolute;left:0;right:0;height:3px;top:10%;background:linear-gradient(90deg,rgba(201,164,103,0),rgba(255,226,170,0.95),rgba(201,164,103,0));box-shadow:0 0 24px 6px rgba(201,164,103,0.45);animation:bs-sweep 2.6s ease-in-out infinite alternate;pointer-events:none;}
 .bs-scanline[hidden]{display:none;}
