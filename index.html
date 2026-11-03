@@ -513,16 +513,6 @@
     </button>
   </div>
 
-  <!-- Phone body scan (body-scan.js): front + side photos measured on the
-       phone, filling the body measurements below. -->
-  <div class="size-estimate body-scan-box" id="bodyScanBox">
-    <button type="button" class="size-estimate-toggle body-scan-toggle" id="bodyScanBtn">
-      <span>No tape measure? <span class="body-scan-new">New</span></span>
-      <span class="size-estimate-toggle-cta">Scan my body with my phone</span>
-    </button>
-    <p class="body-scan-done" id="bodyScanDone" hidden>Your scan filled in the body measurements below. Please look them over; our tailor reviews every scan before your suit is cut.</p>
-  </div>
-
   <!-- Partner tailors near the customer's address or ZIP, closest first. The list
        lives in Supabase (supabase/sql/22_partner_tailors.sql) and the admin
        edits it in My Account > Partner Tailors. See initTailorFinder() in
@@ -1070,7 +1060,6 @@
 <script src="./fabric-drape.js?v=20261030matte"></script>
 <script src="./main.js?v=20261103bodyscan"></script>
 <script src="./photo-suit.js?v=20261103photoorlink"></script>
-<script src="./body-scan.js?v=20261103bodyscan"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261101redrawload"></script> -->
 
