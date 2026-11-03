@@ -744,7 +744,7 @@
   };
   const PAGES = [
     { icon: "shorts", title: "Wear shorts. No shirt.", sub: "Or a tight T-shirt." },
-    { icon: "wall", title: "Plain wall. Good light.", sub: "Nobody else in the picture." },
+    { icon: "wall", title: "Good light. Nobody else in the picture.", sub: "A plain wall is best." },
     { icon: "height", title: "How tall are you?", height: true },
     { icon: "floor", title: "Put your phone on the floor.", sub: "Lean it against a wall, screen facing you.", who: true },
     { icon: "away", title: "Stand 8 feet away.", sub: "Your whole body in the picture." },
@@ -1518,7 +1518,7 @@
     const qs = [
       "Shirtless or a tight shirt?",
       "Barefoot?",
-      "Plain wall, nothing behind you?",
+      "Nobody else in the picture?",
       state.who === "friend" ? "Phone held steady?" : "Phone didn't move?",
       "Arms up the whole turn?",
       "Height is " + ft + " ft " + inch + " in?",
