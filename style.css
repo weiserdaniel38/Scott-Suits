@@ -2278,7 +2278,7 @@ body.order-done-view > .process{display:none !important;}
 .ps-head-long h3{font-size:clamp(19px,5.3vw,26px);white-space:nowrap;}
 /* Small optional section under a step's cards (e.g. handmade lapel
    buttonhole styles): a quiet link-like row that opens on tap. */
-.inline-more{margin:18px 0 4px;border-top:1px solid var(--line);padding-top:12px;}
+.inline-more{margin:4px 0 16px;border-bottom:1px solid var(--line);padding-bottom:10px;}
 .inline-more>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--ivory-dim);padding:4px 2px;-webkit-tap-highlight-color:transparent;}
 .inline-more>summary::-webkit-details-marker{display:none;}
 .inline-more-title{display:inline-flex;align-items:center;gap:8px;text-decoration:underline;text-decoration-color:rgba(var(--brass-rgb),0.5);text-underline-offset:3px;}

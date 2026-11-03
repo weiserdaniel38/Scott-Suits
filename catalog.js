@@ -2707,8 +2707,9 @@ JACKET_CATALOG.lapelButtonholeStyle = {
   // used until they pick a handmade style.
   inlineWith: "lapelbuttonhole",
   defaultOption: "Machine Sewn",
+  parentDefault: "Standard",
   inlineToggleLabel: "Handmade buttonhole styles",
-  description: "Have your lapel buttonhole stitched by hand in one of these shapes. Shown in navy; yours is sewn in your Lapel Buttonhole Color.",
+  description: "Have your lapel buttonhole stitched by hand in one of these shapes. Shown in navy; yours is sewn in your Lapel Buttonhole Color. Tap a picked style again to remove it.",
   requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
   options: [
     { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
