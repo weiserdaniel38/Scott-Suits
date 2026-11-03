@@ -531,6 +531,9 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-suit-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:15px;}
 .admin-suit-head b{font-weight:600;}
 .admin-suit-head .admin-factory-state:empty{display:none;}
+.admin-suit-due{display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(var(--brass-rgb),.32);color:var(--ivory);font-size:12px;font-weight:600;}
+.admin-suit-due.is-done{background:rgba(70,160,100,.28);}
+.admin-suit-due[hidden]{display:none;}
 .admin-suit-body{display:grid;grid-template-columns:minmax(0,240px) 1fr;gap:16px;align-items:start;}
 .admin-suit-pic-col:empty{display:none;}
 .admin-suit-pic-col:empty + .admin-suit-info{grid-column:1 / -1;}
