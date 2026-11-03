@@ -6622,6 +6622,12 @@ function bodyScanSummaryLines(scan, measurements) {
     lines.push("Extra body measurements (optional on the factory site):");
     exIds.forEach((k) => lines.push(BODY_SCAN_EXTRA_LABELS[k] + ": " + ex[k] + " cm"));
   }
+  const fin = scan.finished || {};
+  const finIds = Object.keys(fin);
+  if (finIds.length) {
+    lines.push("Finished suit sizes estimated from the scan (Regular fit, for checking):");
+    finIds.forEach((k) => { const d = MEASUREMENTS.find((m) => m.id === k); lines.push((d ? (/pants|jacket/i.test(d.label) ? "" : d.part === "pants" ? "Pants " : "Jacket ") + d.label : k) + ": " + fin[k] + " cm"); });
+  }
   if (scan.flags && scan.flags.length) lines.push("Scan warnings: " + scan.flags.map((f) => (f === "arms" ? "arms close to the body (chest may read big)" : f === "legs" ? "no gap between the legs (thigh/rise rough)" : f)).join("; "));
   return lines;
 }
