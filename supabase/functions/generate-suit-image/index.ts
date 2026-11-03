@@ -185,6 +185,21 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Right & Left Buttonhole": "one buttonhole on EACH lapel, mirrored at the same height",
     "No Lapel Buttonhole": "NO buttonhole on either lapel; both lapels are plain",
   },
+  // Lapel buttonhole style (2026-11-03): machine sewn, or one of the
+  // factory's handmade lapel buttonhole shapes, sewn in the lapel buttonhole
+  // thread color.
+  "Lapel Buttonhole Style": {
+    "Machine Sewn": "a neat, flat machine-sewn keyhole buttonhole",
+    Handmade: "a HANDMADE keyhole buttonhole: a straight slit edged with a raised, slightly glossy, hand-stitched corded edge that ends in a small rounded eye at the end nearest the lapel edge",
+    "Handmade Knotted End": "a HANDMADE straight buttonhole with a raised hand-stitched corded edge, a rounded eye at one end and a small squared knot (bar) at the other end",
+    "Handmade Small Round End": "a HANDMADE straight buttonhole sewn in thick, raised, rope-like hand stitches (a visibly twisted purl edge) ending in a small round eye",
+    "Handmade Downward Arc": "a HANDMADE buttonhole that curves gently DOWNWARD like a shallow smile, with a raised hand-stitched corded edge and a rounded eye at one end",
+    "Handmade Upward Arc": "a HANDMADE buttonhole that bows gently UPWARD like a shallow arch, with a raised hand-stitched corded edge and a rounded eye at one end",
+    "Journey of Life Handmade": "a decorative HANDMADE buttonhole whose stitched line runs in a gentle WAVE (like a small ribbon or wave) and finishes in a small curled loop at the end, all in raised hand-stitched cord",
+    "Light of Victory Handmade": "a decorative HANDMADE buttonhole shaped like an ARROW: a straight raised hand-stitched slit with a small flared, spiky arrowhead tip at one end and a short crossbar at the other",
+    "Rose End Handmade": "a decorative HANDMADE buttonhole: a straight raised hand-stitched slit with a small round ROSE (a tight stitched spiral, like a rosette) at one end",
+    "Vertical Flower Handmade": "a decorative HANDMADE buttonhole standing VERTICALLY like a flower: a straight stitched stem with a small three-petal flower of stitched loops at its top",
+  },
   "Front Button": {
     "Single Breasted One Button": "single-breasted, ONE button at the waist; the lapels roll long, down to that button",
     "Single Breasted Two Buttons": "single-breasted, TWO buttons in a vertical line; only the top one fastens at the waist",
@@ -1075,6 +1090,11 @@ function fixedRules(spec: string, buttonPhoto = false): string {
           : "") +
         "Stitch them in the lapel buttonhole thread color.",
     );
+    const holeStyle = (spec.match(/^Lapel Buttonhole Style: (.+)$/m) || [])[1] || "";
+    const holeLook = (OPTION_LOOKS["Lapel Buttonhole Style"] || {})[holeStyle.trim()];
+    if (holeLook && holeStyle.trim() !== "Machine Sewn") {
+      rules.push("- Lapel buttonhole style, in the front view and every lapel close-up: each lapel buttonhole is " + holeLook + ", in the lapel buttonhole thread color. Keep it small and delicate (about 2.5 to 3 cm), never a plain flat machine buttonhole.");
+    }
   }
   const holePlace = (spec.match(/^Which Buttonholes Get the Color: (.+)$/m) || [])[1] || "";
   if (holePlace && holePlace !== "Front & Sleeves" && OPTION_LOOKS["Which Buttonholes Get the Color"][holePlace]) {

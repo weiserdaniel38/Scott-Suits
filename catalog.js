@@ -200,7 +200,7 @@ const JACKET_CATALOG = {
       // 2026-10-21): picking "No Lining Construction" moves fused or full
       // canvas to Unconstructed.
       { name: "Fused Construction", displayName: "Fused", specName: "Fused Construction", factoryCode: "00C1", img: "./assets/jacket-construction-new-fused-v2.jpg", badge: "Standard", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
-      { name: "Full Canvas Construction", displayName: "Full Canvas (+$200)", specName: "Full Canvas Construction (+$200)", surchargeUsd: 200, factoryCode: "000A", img: "./assets/jacket-construction-new-canvas-v2.jpg", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
+      { name: "Full Canvas Construction", displayName: "Full Canvas (+$200)", specName: "Full Canvas Construction", surchargeUsd: 200, factoryCode: "000A", img: "./assets/jacket-construction-new-canvas-v2.jpg", hiddenWhen: { facing: ["No Lining Construction"] }, replaceWith: "Unconstructed" },
       { name: "Unconstructed", displayName: "Unconstructed (Soft)", specName: "Unconstructed", factoryCode: "00D1", img: "./assets/jacket-construction-new-unconstructed-v2.jpg" },
     ],
   },
@@ -342,7 +342,7 @@ const JACKET_CATALOG_GROUPS = [
   { label: "Shape & Lapel", keys: ["frontbutton", "collar", "lapelwidth"] },
   { label: "Pockets & Vents", keys: ["pockettype", "lowerpocket", "backvent"] },
   { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
-  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "lapelButtonholeStyle", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
   // Technical tailoring questions go last so they don't slow down the
   // visible style choices above.
@@ -2691,6 +2691,31 @@ JACKET_CATALOG.buttonholeColorPlacement = {
     { name: "Top Front Buttonhole", specName: "Top Front Buttonhole", displayName: "Top Front Buttonhole Only", img: "./assets/jacket-contrastholes-top-front-only.jpg" },
   ],
 };
+// Lapel buttonhole style (Daniel, 2026-11-03): machine sewn, or one of the
+// factory's single-color handmade lapel buttonholes. Only asked once a real
+// lapel buttonhole is picked. Each handmade style costs the factory's add-on
+// price plus $30 (Daniel: "I want to make $30 on each"). Pictures are the
+// factory's own photos of each style. The multi-color handmade styles were
+// left out on purpose. kute-factory sends factoryCode next to the hole
+// position code (see order.ts); Machine Sewn sends nothing extra.
+JACKET_CATALOG.lapelButtonholeStyle = {
+  label: "Lapel Buttonhole Style",
+  column: "jacket_lapel_buttonhole_style",
+  description: "Keep the standard machine-sewn buttonhole, or have it stitched by hand in one of these shapes. Its thread color is your Lapel Buttonhole Color.",
+  requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
+  options: [
+    { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
+    { name: "Handmade", displayName: "Handmade (+$40)", specName: "Handmade", surchargeUsd: 40, factoryCode: "064Q", img: "./assets/jacket-handmadehole-classic.jpg" },
+    { name: "Handmade Knotted End", displayName: "Handmade, Knotted End (+$39)", specName: "Handmade Knotted End", surchargeUsd: 39, factoryCode: "035C", img: "./assets/jacket-handmadehole-knotted.jpg" },
+    { name: "Handmade Small Round End", displayName: "Handmade, Small Round End (+$37)", specName: "Handmade Small Round End", surchargeUsd: 37, factoryCode: "00EC", img: "./assets/jacket-handmadehole-small-round.jpg" },
+    { name: "Handmade Downward Arc", displayName: "Handmade, Slight Downward Arc (+$37)", specName: "Handmade Downward Arc", surchargeUsd: 37, factoryCode: "06EG", img: "./assets/jacket-handmadehole-arc-down.jpg" },
+    { name: "Handmade Upward Arc", displayName: "Handmade, Upward Arc (+$37)", specName: "Handmade Upward Arc", surchargeUsd: 37, factoryCode: "055F", img: "./assets/jacket-handmadehole-arc-up.jpg" },
+    { name: "Journey of Life", displayName: "Journey of Life (+$58)", specName: "Journey of Life Handmade", surchargeUsd: 58, factoryCode: "0352", img: "./assets/jacket-handmadehole-journey.jpg" },
+    { name: "Light of Victory", displayName: "Light of Victory (+$40)", specName: "Light of Victory Handmade", surchargeUsd: 40, factoryCode: "0357", img: "./assets/jacket-handmadehole-victory.jpg" },
+    { name: "Rose End", displayName: "Rose End (+$47)", specName: "Rose End Handmade", surchargeUsd: 47, factoryCode: "0359", img: "./assets/jacket-handmadehole-rose.jpg" },
+    { name: "Vertical Flower", displayName: "Vertical Flower (+$43)", specName: "Vertical Flower Handmade", surchargeUsd: 43, factoryCode: "055N", img: "./assets/jacket-handmadehole-flower.jpg" },
+  ],
+};
 // Felt under collar: the hidden structural layer sewn beneath the outer
 // collar fabric (not visible when worn) -- a plain style pick like Facing
 // Style above, not a colorFamilies swatch picker, since the supplier's own
@@ -3105,6 +3130,7 @@ const JACKET_STEP_TAGLINES = {
   collar: "Your lapels walk into the room before you do.",
   lapelwidth: "Skinny, classic or full 1970s game show host.",
   lapelbuttonhole: "A tiny slit with big boutonniere dreams.",
+  lapelButtonholeStyle: "Machine neat, or stitched by hand like the old masters.",
   frontbutton: "How many buttons are on the payroll.",
   sleevecrown: "Shoulders: smooth operator or a little extra.",
   pockettype: "A cozy apartment for your pocket square.",
@@ -3183,6 +3209,7 @@ const CLASSIC_SUIT_PRESET = {
       buttoncolor: "Best Match to Fabric",
       lining: "Match Fabric",
       lapelbuttonhole: "Standard",
+      lapelButtonholeStyle: "Machine Sewn",
       buttonholeThreadColor: "Match Fabric Color",
       frontButtonholeThreadColor: "Match Fabric Color",
       feltundercollar: "Match Felt Undercollar",

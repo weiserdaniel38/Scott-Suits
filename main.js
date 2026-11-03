@@ -115,9 +115,18 @@ function constructionSurcharge(jacketSel) {
   const opt = jacketSel && (JACKET_CATALOG.construction.options || []).find((o) => o.name === jacketSel.construction);
   return (opt && opt.surchargeUsd) || 0;
 }
-// All option surcharges on a jacket: the custom lining photo and full canvas.
+// Extra charge for a handmade lapel buttonhole style (Daniel, 2026-11-03):
+// only counts while a real lapel buttonhole is picked.
+function lapelButtonholeStyleSurcharge(jacketSel) {
+  if (!jacketSel || !JACKET_CATALOG.lapelButtonholeStyle) return 0;
+  if (!jacketSel.lapelbuttonhole || jacketSel.lapelbuttonhole === "No Lapel Buttonhole") return 0;
+  const opt = JACKET_CATALOG.lapelButtonholeStyle.options.find((o) => o.name === jacketSel.lapelButtonholeStyle);
+  return (opt && opt.surchargeUsd) || 0;
+}
+// All option surcharges on a jacket: the custom lining photo, full canvas
+// and a handmade lapel buttonhole.
 function jacketSurchargeUsd(jacketSel) {
-  return liningUploadSurcharge(jacketSel) + constructionSurcharge(jacketSel);
+  return liningUploadSurcharge(jacketSel) + constructionSurcharge(jacketSel) + lapelButtonholeStyleSurcharge(jacketSel);
 }
 // Price of one suit in the cart: the suit-type price for its fabric tier
 // plus any option surcharge.
@@ -167,6 +176,10 @@ function itemFactoryCostUsd(type, jacketSel, pantsSel) {
     if (j == null || p == null) return null;
     const share = c.meters.jacket / (c.meters.jacket + c.meters.pants);
     cost = c.cmt.suit + c.meters.suit * (j * share + p * (1 - share)) + (canvas ? c.fullCanvasExtra.suit : 0);
+  }
+  // Handmade lapel buttonhole: the factory's add-on price (admin-only row).
+  if (jacketSel && lapelButtonholeStyleSurcharge(jacketSel) && c.lapelButtonholeStyle) {
+    cost += Number(c.lapelButtonholeStyle[jacketSel.lapelButtonholeStyle]) || 0;
   }
   return Math.round(cost * 100) / 100;
 }

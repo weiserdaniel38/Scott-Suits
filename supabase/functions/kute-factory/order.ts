@@ -56,7 +56,7 @@ const BUCKLE_CODES = new Set(["3352", "33TG"]);
 const BUCKLE = "QZMAB01-2";
 
 // Steps handled by hand below rather than by the catalog's own codes.
-const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "monogramThreadColor", "fabric"]);
+const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "lapelButtonholeStyle", "monogramThreadColor", "fabric"]);
 const PANTS_BY_HAND = new Set(["monogram", "monogramFont", "monogramThreadColor", "threadColor", "fabric"]);
 
 const CUFF_BUTTON_CODES: Record<string, string> = {
@@ -311,6 +311,16 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     // Button sewing thread.
     const thread = s(row.jacket_thread_color);
     jc.push(matched(jacket.threadColor, thread) ? "064C" : "064D:" + thread);
+
+    // Handmade lapel buttonhole style (2026-11-03): its factory add-on code
+    // goes next to the hole position code. Machine Sewn (or no value, older
+    // orders) sends nothing; no lapel buttonhole means no style.
+    const holeStyle = s(row.jacket_lapel_buttonhole_style);
+    if (holeStyle && holeStyle !== "Machine Sewn" && s(row.lapel_buttonhole) !== "No Lapel Buttonhole") {
+      const o = findOption(jacket.lapelButtonholeStyle, holeStyle);
+      if (o && o.factoryCode) jc.push(o.factoryCode);
+      else warnings.push("Jacket: no factory code for lapel buttonhole style \"" + holeStyle + "\"; set it on the factory site.");
+    }
 
     // Buttonhole thread: lapel, and front + sleeve. The front/sleeve color
     // can go on the front and all sleeve buttonholes (no placement saved =
