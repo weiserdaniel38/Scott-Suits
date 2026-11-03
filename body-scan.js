@@ -620,7 +620,7 @@
   // The voice. Recorded clips of a natural male voice (assets/voice/*.mp3)
   // when VOICE_CLIPS is on; otherwise the phone's own voice, picking a
   // male one (Daniel: "I want it to be male and sound natural").
-  const VOICE_CLIPS = false;
+  const VOICE_CLIPS = true; // OpenAI "ash" voice, recorded 2026-11-03 (supabase/functions/scan-voice)
   const CLIP_FOR = {
     "Lean the phone at waist height. Step back.": "lean", "Hold the phone at waist height.": "hold",
     "Face the phone. Arms up.": "face", "Perfect. Hold still.": "perfect", "3": "3", "2": "2", "1": "1",
@@ -631,6 +631,12 @@
     "Face the phone.": "facephone", "Feet a little apart.": "apart",
   };
   let clipAudio = null;
+  // Fetch every clip once when the scan starts, so each line plays at once.
+  function preloadVoice() {
+    if (!VOICE_CLIPS || preloadVoice.done) return;
+    preloadVoice.done = true;
+    Object.values(CLIP_FOR).forEach((c) => { try { fetch("./assets/voice/" + c + ".mp3").catch(() => {}); } catch (e) {} });
+  }
   // Best male English voice on this phone: enhanced/premium/natural ones
   // first, then known male voice names. Robotic novelty voices are skipped.
   const MALE = /\b(aaron|arthur|daniel|gordon|alex|evan|nathan|tom|reed|oliver|rishi|lee|guy|andrew|christopher|eric|brian|davis|roger|ryan|thomas|male)\b/i;
@@ -747,6 +753,7 @@
       if (!isFinite(hcm)) { showIntro("Please enter your height first."); return; }
       state = { heightCm: hcm, who, voice: true };
       tone(1, 10); // wakes the sound up inside the tap (iPhone)
+      preloadVoice();
       // iPhone only lets a page speak after a tap: say something now.
       say(who === "self" ? "Lean the phone at waist height. Step back." : "Hold the phone at waist height.", true);
       startCamera();
