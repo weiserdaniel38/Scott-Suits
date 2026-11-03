@@ -4504,6 +4504,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // so the customer is asked again instead of keeping an invalid combination.
   function reconcileSelections() {
     applyPresetFixed();
+    fillInlineDefaults();
     // `fixedBySelection: { otherKey: { value: name } }`: that pick sets this
     // step itself and the step is skipped (a Diamond Lapel is always 8 cm).
     keys.forEach((k) => {
@@ -5993,6 +5994,69 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       }
       renderSwatchCard(cat, opt, grid);
     });
+    renderInlineMore();
+  }
+
+  // A small optional section under a step's cards that the customer can
+  // open (catalog `inlineWith` + `defaultOption`, e.g. the handmade
+  // Lapel Buttonhole Styles on the Lapel Buttonhole step). It stays closed
+  // until tapped, or opens by itself when a non-default choice is on file.
+  // Picking a card keeps the customer on this step.
+  const inlineMoreOpen = {};
+  function renderInlineMore() {
+    keys.forEach((k) => {
+      const icat = catalog[k];
+      if (!icat || icat.inlineWith !== activeTab || !icat.defaultOption || !isApplicable(k)) return;
+      if (preset && preset.steps && preset.steps.indexOf(k) === -1 && preset.steps.indexOf(activeTab) === -1) return;
+      const current = order[k] || icat.defaultOption;
+      const isOpen = inlineMoreOpen[k] != null ? inlineMoreOpen[k] : current !== icat.defaultOption;
+      const box = document.createElement("details");
+      box.className = "inline-more";
+      if (isOpen) box.open = true;
+      const curOpt = icat.options.find((o) => o.name === current);
+      const summary = document.createElement("summary");
+      summary.innerHTML = '<span class="inline-more-title">' + (icat.inlineToggleLabel || icat.label) + "</span>" +
+        '<span class="inline-more-val">' + (current === icat.defaultOption ? "Optional" : wizEsc(curOpt ? curOpt.displayName || curOpt.name : current)) + "</span>";
+      box.appendChild(summary);
+      box.addEventListener("toggle", () => {
+        inlineMoreOpen[k] = box.open;
+        if (box.open) cancelAutoAdvance();
+      });
+      if (icat.description) {
+        const d = document.createElement("p");
+        d.className = "inline-more-desc";
+        d.textContent = icat.description;
+        box.appendChild(d);
+      }
+      const g = document.createElement("div");
+      g.className = "opt-grid compact-cards inline-more-grid";
+      icat.options.forEach((opt) => {
+        const card = document.createElement("div");
+        const shown = opt.displayName || opt.name;
+        card.className = "opt-card" + (current === opt.name ? " selected" : "");
+        card.innerHTML = '<img class="opt-swatch" src="' + opt.img + '" alt="' + wizEsc(shown) + '" loading="lazy" decoding="async"><div class="opt-name">' + wizEsc(shown) + "</div>";
+        card.onclick = () => {
+          cancelAutoAdvance();
+          order[k] = opt.name;
+          g.querySelectorAll(".opt-card").forEach((c) => c.classList.toggle("selected", c === card));
+          summary.querySelector(".inline-more-val").textContent = opt.name === icat.defaultOption ? "Optional" : shown;
+          if (!embedQuiet) markDesignStarted();
+          renderTabs();
+          renderSummary();
+          saveDraft();
+        };
+        g.appendChild(card);
+      });
+      box.appendChild(g);
+      optionsEl.appendChild(box);
+    });
+  }
+  // Inline choices with a default (Machine Sewn) count as answered.
+  function fillInlineDefaults() {
+    keys.forEach((k) => {
+      const c = catalog[k];
+      if (c && c.defaultOption && !order[k] && isApplicable(k)) order[k] = c.defaultOption;
+    });
   }
 
   // The Monogram Font picker: a small row of font buttons inside the
@@ -6064,8 +6128,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   renderSummary();
 
   return {
-    isComplete: () => keys.filter(isApplicable).every((k) => order[k] && !textMissing(k)),
-    missingLabels: () => keys.filter(isApplicable).filter((k) => !order[k] || textMissing(k)).map((k) => catalog[k].label),
+    isComplete: () => (fillInlineDefaults(), keys.filter(isApplicable).every((k) => order[k] && !textMissing(k))),
+    missingLabels: () => (fillInlineDefaults(), keys.filter(isApplicable).filter((k) => !order[k] || textMissing(k)).map((k) => catalog[k].label)),
     // Free-text answers by category key (e.g. { monogram: "ABC" }) -- only
     // those that currently apply.
     getTexts: () => {
@@ -6127,7 +6191,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // designer's page is navigated to, so it never opens on whatever tab
     // happened to be open last.
     // First question still unanswered (in step order), or null when done.
-    firstMissingKey: () => keys.filter(isApplicable).find((k) => !order[k] || textMissing(k)) || null,
+    firstMissingKey: () => (fillInlineDefaults(), keys.filter(isApplicable).find((k) => !order[k] || textMissing(k)) || null),
     // Loads a preset (CLASSIC_SUIT_PRESET.jacket / .pants) or, with null,
     // goes back to the fully custom designer. Picks outside the preset's
     // allowed options are cleared; its fixed answers are filled in.
