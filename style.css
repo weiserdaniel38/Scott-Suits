@@ -2254,3 +2254,4 @@ body.order-done-view > .process{display:none !important;}
 .ps-photos-small .ps-photo:only-child{width:84px;height:110px;}
 .ps-add-photo{align-self:flex-start;margin:0 0 10px;padding:6px 0;background:none;border:0;font:600 13.5px 'Inter',sans-serif;color:var(--brass);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
 .ps-start .ps-hint{margin:-4px 0 0;font-size:12.5px;color:var(--ivory-dim);text-align:center;}
+.admin-notif-done.admin-notif-new{border-left-color:#2e7d32;background:rgba(46,125,50,0.06);}
