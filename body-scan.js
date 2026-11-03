@@ -862,7 +862,9 @@
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 1280 } },
+        // Portrait (tall) picture to match a phone held upright; it fills the
+        // screen (Daniel's iPhone showed a square picture with black bars).
+        video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 9 / 16 } },
       });
     } catch (e) {
       showIntro("Camera blocked. Allow camera access in Settings.");
