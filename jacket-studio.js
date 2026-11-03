@@ -74,6 +74,7 @@
     collar: "Notch Lapel",
     lapelwidth: "9 cm",
     lapelbuttonhole: "Standard",
+    lapelButtonholeStyle: "Machine Sewn",
     frontbutton: "Single Breasted Two Buttons",
     pockettype: "Normal Pocket",
     lowerpocket: "Double Besom W/ Flap",
@@ -102,7 +103,7 @@
     { id: "pockets", label: "Pockets", view: "front", lp: "below", keys: ["lowerpocket", "pockettype"], at: { front: "pocket" } },
     { id: "cuff", label: "Sleeve Buttons", view: "front", lp: "below", keys: ["cuffbuttons", "sleevecuffstyle"], at: { front: [62, 772], back: [62, 772] }, zoom: { front: [130, 740, 2.4], back: [130, 740, 2.4] } },
     { id: "lining", label: "Lining", view: "inside", keys: ["lining", "facing", "insidepocket"], at: { inside: [400, 560] } },
-    { id: "lapelhole", label: "Buttonhole", view: "front", keys: ["lapelbuttonhole", "buttonholeThreadColor"], at: { front: "lapelHole" }, zoom: { front: [520, 200, 2.2] } },
+    { id: "lapelhole", label: "Buttonhole", view: "front", keys: ["lapelbuttonhole", "lapelButtonholeStyle", "buttonholeThreadColor"], at: { front: "lapelHole" }, zoom: { front: [520, 200, 2.2] } },
     { id: "vents", label: "Back Vents", view: "back", keys: ["backvent"], at: { back: [400, 820] } },
     { id: "monogram", label: "Monogram", view: "inside", keys: ["monogram", "monogramFont", "monogramThreadColor"], at: { inside: [520, 400] } },
     { id: "collar", label: "Under Collar", view: "back", keys: ["feltundercollar", "feltColor"], at: { back: [400, 52], inside: [400, 52] } },
@@ -680,7 +681,10 @@
     // Lapel buttonholes.
     const lapelHoleHex = threadHex("buttonholeThreadColor", v, fabricHex);
     const spots = lapelHoleSpots(v);
-    spots.forEach((s) => hole(g, s[1], s[0], lapelHoleHex, 2.4));
+    // A handmade lapel buttonhole (2026-11-03) shows as a thicker, raised
+    // corded hole with a bigger eye; the exact shapes are in the factory photos.
+    const handHole = !!v.lapelButtonholeStyle && v.lapelButtonholeStyle !== "Machine Sewn";
+    spots.forEach((s) => hole(g, s[1], s[0], lapelHoleHex, handHole ? 3.4 : 2.4));
     anchors.lapelHole = spots.length ? [spots[0][0][0] + 4, spots[0][0][1] - 22] : [520, 134];
     if (v.monogram === "Monogram Placement On Left Button") monogramText(g, 520, 214, v, 10, -1.17);
 
