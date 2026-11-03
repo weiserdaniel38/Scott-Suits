@@ -2,7 +2,9 @@
 // Phone Body Scan (Daniel, 2026-11-03)
 //
 // "Scan my body with my phone" on the Measurements step. The customer
-// stands in a T facing the phone, then keeps the T and turns around once,
+// faces the phone in the "goalpost" pose (upper arms out at shoulder
+// height, elbows bent, forearms straight up, fists closed), then keeps
+// that pose and turns around once,
 // slowly (like MTailor). The phone measures every frame as they turn and
 // works out their BODY measurements (the factory's body list, the optional
 // positions too), using their height for the scale.
@@ -17,7 +19,7 @@
 //      points and an outline of the person in each video frame.
 //   2. Height in pixels (top of the head to the floor) against the height
 //      the customer typed gives centimeters per pixel, frame by frame.
-//   3. The T-pose frames give the lengths (arm, outseam, nape to waist,
+//   3. The facing-the-phone frames give the lengths (arm, outseam, nape to waist,
 //      ...) and the leg and arm widths.
 //   4. While turning, each frame gives the body's width at the chest,
 //      stomach, waist, seat and neck, and the turn angle (from how far
@@ -361,7 +363,7 @@
   // Final numbers from front frames and measured side frames.
   // opts.spin: { thetas, frames } from a turn-around video: the girths
   // then come from every angle (spinGirth) instead of an ellipse, and the
-  // shoulder from the joints (arms out in a T hide the shoulder caps).
+  // shoulder from the joints (the raised arms hide the shoulder caps).
   function finish(front, sidesMeasured, heightCm, opts) {
     opts = opts || {};
     const fronts = front.fronts;
@@ -670,7 +672,7 @@
     openSheet(head("Scan My Body") +
       '<div class="ps-body bs-intro">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      '<p class="bs-lead">Stand in a T, then turn around once, slowly. Your phone measures you from every side. Takes under a minute.</p>' +
+      '<p class="bs-lead">Raise your arms like a goalpost, then turn around once, slowly. Your phone measures you from every side. Takes under a minute.</p>' +
       '<div class="bs-poses" aria-hidden="true">' + poseSvg("front") + poseSvg("spin") + "</div>" +
       '<ol class="bs-tips">' +
       "<li><b>Wear fitted clothes:</b> a snug T-shirt and shorts or leggings. No jacket, no baggy clothes.</li>" +
@@ -720,12 +722,12 @@
     };
   }
 
-  // Little figure drawings: the T, and turning around.
+  // The two figures on the start screen (Daniel's ChatGPT drawings, gold
+  // outlines on transparent).
   function poseSvg(kind) {
-    const t = '<circle cx="40" cy="14" r="8"/><path d="M40 22v38M12 30h56M40 60l-10 34M40 60l10 34"/>';
-    const spin = '<circle cx="40" cy="14" r="8"/><path d="M40 22v38M22 30h36M40 60l-6 34M40 60l6 34"/><path d="M14 78a26 9 0 1 0 52 0" /><path d="M60 72l6 6-8 3"/>';
-    return '<figure><svg viewBox="0 0 80 100" class="bs-pose-svg">' + (kind === "front" ? t : spin) + "</svg><figcaption>" +
-      (kind === "front" ? "1. Face the phone, arms straight out, feet a little apart" : "2. Keep the T and turn around once, slowly") + "</figcaption></figure>";
+    const src = kind === "front" ? "./assets/scan-figure-tpose.webp" : "./assets/scan-figure-turn.webp";
+    return '<figure><img class="bs-pose-img" src="' + src + '" alt="" width="200" height="236">' + "<figcaption>" +
+      (kind === "front" ? "1. Face the phone: elbows out at shoulder height, forearms straight up, fists closed, feet a little apart" : "2. Keep your arms up and turn around once, slowly") + "</figcaption></figure>";
   }
 
   // ---- the pose model (loaded only when the scan starts) ----
@@ -771,7 +773,7 @@
       '<div class="bs-cam">' +
       '<video class="bs-video" playsinline muted autoplay></video>' +
       '<canvas class="bs-overlay"></canvas>' +
-      '<div class="bs-ghost" aria-hidden="true"><svg viewBox="0 0 100 200"><path d="M50 8a13 13 0 1 1 0 26a13 13 0 1 1 0-26zM38 40h24l4 6h30v10H66v50l6 88H58l-8-66-8 66H28l6-88V56H4V46h30z"/></svg></div>' +
+      '<div class="bs-ghost" aria-hidden="true"><img src="./assets/scan-figure-guide.webp" alt=""></div>' +
       '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
       '<div class="bs-cam-top"><span class="bs-step">Getting ready&hellip;</span><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
       '<div class="bs-ring" hidden><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bs-ring-bg"/><circle cx="22" cy="22" r="19" class="bs-ring-fg" pathLength="100" stroke-dasharray="0 100"/></svg><span>0%</span></div>' +
@@ -818,7 +820,7 @@
     video.removeAttribute("autoplay");
     video.src = fileUrl;
     video.onended = () => {
-      if (state && state.phase !== "done") showIntro("The video ended before a full turn was seen. Take a video standing in a T, then turning around once, slowly, with your whole body in the picture.");
+      if (state && state.phase !== "done") showIntro("The video ended before a full turn was seen. Take a video standing with your arms raised like a goalpost (elbows out at shoulder height, forearms up), then turning around once, slowly, with your whole body in the picture.");
     };
     begin(video);
   }
@@ -857,17 +859,32 @@
     if (sh.x < 0.25 || sh.x > 0.75) return "Move to the middle of the picture.";
     return "";
   }
-  function armsOut(lm) {
+  // The "goalpost" pose: upper arms out at shoulder height, elbows bent,
+  // forearms straight up, fists closed. It keeps the arms off the torso
+  // from every side while turning (so the chest, waist and seat outlines
+  // are clean), opens the armpits, holds steadier than straight arms, and
+  // keeps the hands close in so the person fills more of the picture.
+  // facing: also check the elbows are out to the sides (only visible from
+  // the front).
+  function armsUp(lm, facing) {
     const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
-    // Wrists at about shoulder height, well away from the body.
-    return Math.abs(lm[15].y - lm[11].y) < T * 0.35 && Math.abs(lm[16].y - lm[12].y) < T * 0.35;
+    const arm = (s, e, w) =>
+      Math.abs(lm[e].y - lm[s].y) < T * 0.3 && // elbow about level with the shoulder
+      lm[e].y - lm[w].y > T * 0.25 && // wrist well above the elbow
+      Math.abs(lm[w].x - lm[e].x) < T * 0.35; // forearm roughly upright
+    if (!arm(11, 13, 15) || !arm(12, 14, 16)) return false;
+    if (facing) {
+      const cx = (lm[11].x + lm[12].x) / 2, half = Math.abs(lm[11].x - lm[12].x) / 2;
+      if (Math.abs(lm[13].x - cx) < half + T * 0.2 || Math.abs(lm[14].x - cx) < half + T * 0.2) return false;
+    }
+    return true;
   }
   function frontProblem(lm) {
     const p = inFrameProblem(lm);
     if (p) return p;
     const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
     if (Math.abs(lm[11].x - lm[12].x) < T * 0.55) return "Face the phone straight on.";
-    if (!armsOut(lm)) return "Hold your arms straight out to the sides, like a T.";
+    if (!armsUp(lm, true)) return "Raise your arms like a goalpost: elbows out at shoulder height, forearms straight up, fists closed.";
     if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.9) return "Stand with your feet a little apart.";
     return "";
   }
@@ -909,9 +926,9 @@
     let lastTs = -1;
     let counting = false;
     const setMsg = (text, ok) => { msgEl.textContent = text; msgEl.classList.toggle("bs-ok", !!ok); };
-    stepEl.textContent = "Step 1 of 2: stand in a T";
-    setMsg("Face the phone with your arms straight out, like a T.");
-    say("Face the phone with your arms straight out, like a T.", true);
+    stepEl.textContent = "Step 1 of 2: arms up";
+    setMsg("Face the phone. Raise your elbows out to shoulder height, forearms straight up, fists closed.");
+    say("Face the phone. Raise your elbows out to shoulder height, with your forearms straight up and your fists closed.", true);
     const tick = () => {
       if (!sheet || !state || state.phase === "done") return;
       rafId = requestAnimationFrame(tick);
@@ -956,15 +973,15 @@
         state.lastAngleTs = ts;
         stepEl.textContent = "Step 2 of 2: turn around";
         ring.hidden = false;
-        setMsg("Now keep your arms out and turn slowly to your left, all the way around.", true);
-        say("Got it. Now keep your arms out and turn slowly to your left, all the way around.", true);
+        setMsg("Now keep your arms up and turn slowly to your left, all the way around.", true);
+        say("Got it. Now keep your arms up and turn slowly to your left, all the way around.", true);
         return;
       }
 
       if (state.phase === "spin") {
         const p = inFrameProblem(lm);
         if (p) { setMsg(p); say(p); }
-        else if (!armsOut(lm)) { setMsg("Keep your arms out, like a T."); say("Keep your arms out."); }
+        else if (!armsUp(lm)) { setMsg("Keep your arms up: elbows at shoulder height, forearms straight up."); say("Keep your arms up."); }
         if (d && d.mask && !p) {
           const f = G.measureSideFrame(lm, d.mask, state.base.sideFracs);
           if (!f.error) {
@@ -978,7 +995,7 @@
         const pct = Math.min(100, Math.round((state.theta / 360) * 100));
         ring.querySelector(".bs-ring-fg").setAttribute("stroke-dasharray", pct + " 100");
         ring.querySelector("span").textContent = pct + "%";
-        if (!p && armsOut(lm)) {
+        if (!p && armsUp(lm)) {
           const said = state.saidPct || 0;
           if (pct >= 25 && said < 25) { state.saidPct = 25; say("Keep turning, slowly.", true); }
           else if (pct >= 50 && said < 50) { state.saidPct = 50; say("Halfway.", true); }
@@ -989,7 +1006,7 @@
         if (ts - state.spinStart > SPIN_TIMEOUT_MS || (ts - state.lastAngleTs > 12000 && state.spin.length > 20)) {
           state.phase = "done";
           stopCamera();
-          showIntro("We didn't see a full turn. Keep your whole body in the picture and turn around once, slowly, with your arms out.");
+          showIntro("We didn't see a full turn. Keep your whole body in the picture and turn around once, slowly, with your arms up.");
         }
       }
     };
@@ -1167,7 +1184,7 @@
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
     sheet.querySelector(".bs-ghost").classList.toggle("bs-ghost-off", !!lm);
-    sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: stand in a T";
+    sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
     sheet.querySelector(".bs-scanline").hidden = phase !== "spin";
     const ring = sheet.querySelector(".bs-ring");
     ring.hidden = phase !== "spin";
