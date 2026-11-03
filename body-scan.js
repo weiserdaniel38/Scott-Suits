@@ -534,6 +534,17 @@
   if (!entryBtn || typeof MEASUREMENTS === "undefined") return;
   const box = document.getElementById("bodyScanBox");
   if (box) box.hidden = false;
+  // The test link (?bodyscan=1) jumps straight to the Measurements step
+  // and the scan card (Daniel: "Have the link take me directly to measurements").
+  setTimeout(() => {
+    try {
+      const meas = document.getElementById("measurementsSection");
+      const cur = document.querySelector(".step.active");
+      if (!meas || !cur || typeof goToStep !== "function") return;
+      if (cur !== meas) goToStep(cur, meas);
+      setTimeout(() => { if (box) box.scrollIntoView({ block: "center", behavior: "smooth" }); }, 900);
+    } catch (e) {}
+  }, 600);
   const G = window.BodyScanGeometry;
 
   const MP_VERSION = "0.10.14";
