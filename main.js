@@ -6075,6 +6075,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
           g.querySelectorAll(".opt-card").forEach((c) => c.classList.toggle("selected", !off && c === card));
           summary.querySelector(".inline-more-val").textContent = off ? "Optional" : shown;
           if (!embedQuiet) markDesignStarted();
+          // A pick folds the section back up.
+          if (!off) { inlineMoreOpen[k] = false; box.open = false; }
           if (parentWasEmpty && !off) { renderOptions(); renderTabs(); renderSummary(); saveDraft(); return; }
           renderTabs();
           renderSummary();
