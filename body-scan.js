@@ -817,7 +817,6 @@
     video.removeAttribute("autoplay");
     video.src = fileUrl;
     video.onended = () => {
-      if (state && state.phase === "leave") { leaveDone(true); return; }
       if (state && state.phase !== "done") showIntro("The video ended too soon. Film one full turn, arms up.");
     };
     begin(video);
@@ -976,17 +975,6 @@
         return;
       }
 
-      if (state.phase === "leave") {
-        if (lm) { state.emptySince = 0; setMsg("Step out of the picture."); }
-        else {
-          if (!state.emptySince) state.emptySince = ts;
-          setMsg("Checking the background…", true);
-          if (ts - state.emptySince > 1500) { leaveDone(true); return; }
-        }
-        if (ts - state.leaveStart > 20000) leaveDone(false);
-        return;
-      }
-
       if (state.phase === "spin") {
         const p = inFrameProblem(lm);
         if (p) { setMsg(p); say(p); }
@@ -1012,20 +1000,10 @@
           setMsg("Keep turning… " + pct + "%", true);
         }
         if (state.theta >= 345) {
-          // Like MTailor: once the turn is done, the person steps out so we
-          // can check the background is empty (nothing person-shaped left
-          // behind them, like a coat, poster, mirror or another person).
           state.result = spinResult();
           if (!state.result) return;
-          state.phase = "leave";
-          state.leaveStart = ts;
-          state.emptySince = 0;
-          scanline.hidden = true;
-          ring.hidden = true;
           cue.done();
-          stepEl.textContent = "Last step: step out";
-          setMsg("Step out of the picture.", true);
-          say("Got it. Now step out of the picture.", true);
+          finishScan();
           return;
         }
         if (ts - state.spinStart > SPIN_TIMEOUT_MS || (ts - state.lastAngleTs > 12000 && state.spin.length > 20)) {
@@ -1065,8 +1043,6 @@
   // turning figure while you turn (faint, so you still see yourself).
   const GHOST_SRC = { guide: "./assets/scan-figure-guide.webp", front: "./assets/scan-figure-tpose.webp", spin: "./assets/scan-figure-turn.webp" };
   function setGhost(ghost, lm, phase) {
-    // Stepping out at the end: nothing over the picture, it should be empty.
-    ghost.classList.toggle("bs-ghost-off", phase === "leave");
     const kind = !lm ? "guide" : phase === "spin" ? "spin" : "front";
     if (ghost.dataset.kind === kind) return;
     ghost.dataset.kind = kind;
@@ -1093,12 +1069,10 @@
     state.fronts = [];
     return result;
   }
-  // bgClear: nobody (and nothing person-shaped) was seen once they left.
-  function leaveDone(bgClear) {
+  function finishScan() {
     state.phase = "done";
     stopCamera();
     say("Done.", true);
-    state.bgClear = bgClear;
     showReview(state.result);
   }
 
@@ -1109,7 +1083,7 @@
     const qs = [
       "Shirtless or a tight shirt?",
       "Barefoot?",
-      state.bgClear ? "Plain wall, nothing behind you?" : "Plain wall, nothing behind you? (We saw something there.)",
+      "Plain wall, nothing behind you?",
       state.who === "friend" ? "Phone held steady?" : "Phone didn't move?",
       "Arms up the whole turn?",
       "Height is " + ft + " ft " + inch + " in?",
@@ -1233,7 +1207,7 @@
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
     setGhost(sheet.querySelector(".bs-ghost"), lm, phase);
-    sheet.querySelector(".bs-step").textContent = phase === "leave" ? "Last step: step out" : phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
+    sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
     sheet.querySelector(".bs-scanline").hidden = phase !== "spin";
     const ring = sheet.querySelector(".bs-ring");
     ring.hidden = phase !== "spin";
@@ -1245,8 +1219,8 @@
   };
   // For previews and testing: show the results screen with given numbers.
   window.__bodyScanPreview = (result) => showResults(result);
-  window.__bodyScanPreviewReview = (result, bgClear) => {
-    state = { heightCm: 178, who: "self", bgClear: bgClear !== false, result };
+  window.__bodyScanPreviewReview = (result) => {
+    state = { heightCm: 178, who: "self", result };
     showReview(result);
   };
 })();
