@@ -751,6 +751,7 @@
   ];
   const HEIGHT_PAGE = 2;
   function showIntro(msg, page) {
+    preloadModel();
     if (page == null) page = msg ? PAGES.length - 1 : 0;
     if (intro.ft === "") {
       const h = state && isFinite(state.heightCm) ? state.heightCm : formHeightCm();
@@ -909,12 +910,30 @@
       minPosePresenceConfidence: 0.5,
       minTrackingConfidence: 0.5,
     });
+    let m;
     try {
-      model = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("GPU"));
+      m = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("GPU"));
     } catch (e) {
-      model = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("CPU"));
+      m = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("CPU"));
     }
+    // Warm it up once on a blank picture: the very first run on a phone is
+    // slow (it sets up the graphics chip), so do it before the camera opens.
+    try {
+      const c = document.createElement("canvas");
+      c.width = 256; c.height = 456;
+      m.detectForVideo(c, 1, () => {});
+    } catch (e) {}
+    model = m;
     return model;
+  }
+  // Start loading the scanner as soon as the scan sheet opens, so it's
+  // ready by the time the person taps Start (Daniel: "It's not capturing
+  // me fast on the first go").
+  let modelLoading = null;
+  function preloadModel() {
+    if (model || modelLoading) return modelLoading;
+    modelLoading = loadModel().catch(() => { modelLoading = null; });
+    return modelLoading;
   }
 
   // ---- step 2: the camera (or a video file) ----
@@ -1023,7 +1042,8 @@
   }
   async function begin(video) {
     try {
-      await loadModel();
+      await (preloadModel() || loadModel());
+      if (!model) await loadModel();
     } catch (e) {
       showIntro("The scanner didn't load. Check your connection and try again.");
       return;
@@ -1132,7 +1152,7 @@
       rafId = requestAnimationFrame(tick);
       if (video.readyState < 2 || !video.videoWidth) return;
       if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
-      const ts = state.uploaded ? video.currentTime * 1000 + 1 : performance.now();
+      const ts = state.uploaded ? video.currentTime * 1000 + 2 : performance.now();
       if (ts <= lastTs) return;
       lastTs = ts;
       let d = null;
@@ -1243,7 +1263,7 @@
       say(String(n), true);
       cue.tick();
       n--;
-      setTimeout(step, 650);
+      setTimeout(step, 550);
     };
     step();
   }
