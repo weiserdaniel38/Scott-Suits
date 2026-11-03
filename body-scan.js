@@ -817,6 +817,7 @@
     video.removeAttribute("autoplay");
     video.src = fileUrl;
     video.onended = () => {
+      if (state && state.phase === "leave") { leaveDone(true); return; }
       if (state && state.phase !== "done") showIntro("The video ended too soon. Film one full turn, arms up.");
     };
     begin(video);
@@ -975,6 +976,17 @@
         return;
       }
 
+      if (state.phase === "leave") {
+        if (lm) { state.emptySince = 0; setMsg("Step out of the picture."); }
+        else {
+          if (!state.emptySince) state.emptySince = ts;
+          setMsg("Checking the background…", true);
+          if (ts - state.emptySince > 1500) { leaveDone(true); return; }
+        }
+        if (ts - state.leaveStart > 20000) leaveDone(false);
+        return;
+      }
+
       if (state.phase === "spin") {
         const p = inFrameProblem(lm);
         if (p) { setMsg(p); say(p); }
@@ -999,7 +1011,23 @@
           else if (pct >= 75 && said < 75) { state.saidPct = 75; say("Almost there.", true); }
           setMsg("Keep turning… " + pct + "%", true);
         }
-        if (state.theta >= 345) { finishSpin(); return; }
+        if (state.theta >= 345) {
+          // Like MTailor: once the turn is done, the person steps out so we
+          // can check the background is empty (nothing person-shaped left
+          // behind them, like a coat, poster, mirror or another person).
+          state.result = spinResult();
+          if (!state.result) return;
+          state.phase = "leave";
+          state.leaveStart = ts;
+          state.emptySince = 0;
+          scanline.hidden = true;
+          ring.hidden = true;
+          cue.done();
+          stepEl.textContent = "Last step: step out";
+          setMsg("Step out of the picture.", true);
+          say("Got it. Now step out of the picture.", true);
+          return;
+        }
         if (ts - state.spinStart > SPIN_TIMEOUT_MS || (ts - state.lastAngleTs > 12000 && state.spin.length > 20)) {
           state.phase = "done";
           stopCamera();
@@ -1037,6 +1065,8 @@
   // turning figure while you turn (faint, so you still see yourself).
   const GHOST_SRC = { guide: "./assets/scan-figure-guide.webp", front: "./assets/scan-figure-tpose.webp", spin: "./assets/scan-figure-turn.webp" };
   function setGhost(ghost, lm, phase) {
+    // Stepping out at the end: nothing over the picture, it should be empty.
+    ghost.classList.toggle("bs-ghost-off", phase === "leave");
     const kind = !lm ? "guide" : phase === "spin" ? "spin" : "front";
     if (ghost.dataset.kind === kind) return;
     ghost.dataset.kind = kind;
@@ -1045,16 +1075,15 @@
   }
 
   // ---- step 3: the numbers ----
-  function finishSpin() {
-    state.phase = "done";
-    stopCamera();
-    cue.done();
-    say("Done.", true);
+  // The numbers from the turn (null if the turn was too quick to use).
+  function spinResult() {
     const thetas = G.spinAngles(state.spin, state.frontSh2d);
     const chestCover = G.spinGirth(state.spin, thetas, "chest", state.heightCm);
     if (!isFinite(chestCover.value)) {
+      state.phase = "done";
+      stopCamera();
       showIntro("Too fast. Try again, slower.");
-      return;
+      return null;
     }
     // Side-on frames give the leg depths (thigh, calf).
     let sides = state.spin.filter((f) => f.sh2d / state.frontSh2d < 0.35);
@@ -1062,7 +1091,54 @@
     const result = G.finish(state.base, sides, state.heightCm, { spin: { frames: state.spin, thetas } });
     state.spin = [];
     state.fronts = [];
-    showResults(result);
+    return result;
+  }
+  // bgClear: nobody (and nothing person-shaped) was seen once they left.
+  function leaveDone(bgClear) {
+    state.phase = "done";
+    stopCamera();
+    say("Done.", true);
+    state.bgClear = bgClear;
+    showReview(state.result);
+  }
+
+  // ---- step 3b: check each requirement (like MTailor) ----
+  // Every answer must be Yes before the numbers show; a No means scan again.
+  function showReview(result) {
+    const h = state.heightCm, ft = Math.floor(h / 2.54 / 12), inch = Math.round((h / 2.54 - ft * 12) * 2) / 2;
+    const qs = [
+      "Shirtless or a tight shirt?",
+      "Barefoot?",
+      state.bgClear ? "Plain wall, nothing behind you?" : "Plain wall, nothing behind you? (We saw something there.)",
+      state.who === "friend" ? "Phone held steady?" : "Phone didn't move?",
+      "Arms up the whole turn?",
+      "Height is " + ft + " ft " + inch + " in?",
+    ];
+    openSheet(head("Quick Check") +
+      '<div class="ps-body bs-review">' +
+      qs.map((q, i) => '<div class="bs-q" data-i="' + i + '"><span>' + esc(q) + "</span>" +
+        '<div class="ps-type bs-yn"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div></div>').join("") +
+      '<p class="bs-alert bs-redo-msg" hidden>Fix that, then scan again.</p>' +
+      "</div>" +
+      '<div class="ps-actions"><button type="button" class="btn-primary bs-see" disabled>See My Measurements</button>' +
+      '<button type="button" class="btn-ghost bs-redo">Scan again</button></div>');
+    const answers = qs.map(() => null);
+    const update = () => {
+      const anyNo = answers.indexOf("no") !== -1;
+      sheet.querySelector(".bs-see").disabled = anyNo || answers.indexOf(null) !== -1;
+      sheet.querySelector(".bs-redo-msg").hidden = !anyNo;
+    };
+    sheet.querySelectorAll(".bs-q").forEach((q) => {
+      const i = +q.dataset.i;
+      q.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+        answers[i] = b.dataset.v;
+        q.querySelectorAll("button").forEach((x) => x.classList.toggle("selected", x === b));
+        q.classList.toggle("bs-q-no", b.dataset.v === "no");
+        update();
+      }));
+    });
+    sheet.querySelector(".bs-see").onclick = () => showResults(result);
+    sheet.querySelector(".bs-redo").onclick = () => showIntro();
   }
 
   // ---- step 4: check the numbers ----
@@ -1086,12 +1162,12 @@
     openSheet(head("Your Measurements") +
       '<div class="ps-body bs-results">' +
       '<div class="bs-done-badge"><span class="bs-done-check" aria-hidden="true"></span>Scan complete</div>' +
-      '<p class="bs-lead">Here\'s what the scan measured. Check anything that looks off; you can change any number.</p>' +
+      '<p class="bs-lead">Tap a number to change it.</p>' +
       warn.map((w) => '<p class="bs-alert">' + esc(w) + "</p>").join("") +
       '<div class="ps-group">Jacket</div>' + jacketRows +
       '<div class="ps-group">Pants</div>' + pantsRows +
       '<details class="bs-extra"><summary>Extra measurements for our tailor</summary>' + extraRows + "</details>" +
-      '<p class="bs-small">A phone scan is usually within about an inch. The &plusmn; next to each number is the scan\'s own margin. Our tailor reviews every scan, and may message you to double-check a number before your suit is cut.</p>' +
+      '<p class="bs-small">Our tailor checks every scan.</p>' +
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary bs-use">Use These Measurements</button>' +
       '<button type="button" class="btn-ghost bs-again">Scan again</button></div>');
@@ -1157,7 +1233,7 @@
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
     setGhost(sheet.querySelector(".bs-ghost"), lm, phase);
-    sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
+    sheet.querySelector(".bs-step").textContent = phase === "leave" ? "Last step: step out" : phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
     sheet.querySelector(".bs-scanline").hidden = phase !== "spin";
     const ring = sheet.querySelector(".bs-ring");
     ring.hidden = phase !== "spin";
@@ -1169,4 +1245,8 @@
   };
   // For previews and testing: show the results screen with given numbers.
   window.__bodyScanPreview = (result) => showResults(result);
+  window.__bodyScanPreviewReview = (result, bgClear) => {
+    state = { heightCm: 178, who: "self", bgClear: bgClear !== false, result };
+    showReview(result);
+  };
 })();
