@@ -745,16 +745,21 @@
     floor: '<svg viewBox="0 0 64 64"><path d="M50 6v50"/><path d="M4 56h56"/><rect x="0" y="0" width="14" height="26" rx="2.5" transform="translate(34 30) rotate(-12)"/><path d="M45.5 31.5l3 .5"/></svg>',
     away: '<svg viewBox="0 0 64 64"><circle cx="46" cy="14" r="5"/><path d="M46 19v17M46 36l-5 19M46 36l5 19M38 26h16"/><rect x="4" y="44" width="7" height="12" rx="1.5"/><path d="M15 50h20M19 46l-4 4 4 4M31 46l4 4-4 4"/><path d="M2 56h60"/></svg>',
   };
+  // A few tips per card, so it's fewer taps on Next (Daniel 2026-11-03:
+  // "don't have to keep pressing next, compile a few in one card").
   const PAGES = [
-    { icon: "shorts", title: "Wear shorts. No shirt.", sub: "Or a tight T-shirt." },
-    { icon: "wall", title: "Good light. Nobody else in the picture.", sub: "A plain wall is best." },
+    { title: "Get ready", tips: [
+      ["shorts", "Wear shorts. No shirt.", "Or a tight T-shirt."],
+      ["wall", "Good light. Nobody else in the picture.", "A plain wall is best."],
+    ] },
     { icon: "height", title: "How tall are you?", height: true },
-    { icon: "floor", title: "Put your phone on the floor.", sub: "Lean it against a wall, screen facing you.", who: true },
-    { icon: "away", title: "Stand 8 feet away.", sub: "Your whole body in the picture." },
-    { img: "./assets/scan-figure-tpose.webp", title: "Arms up, like this." },
-    { img: "./assets/scan-figure-turn.webp", title: "Then turn around slowly.", last: true },
+    { title: "Set up your phone", tips: [
+      ["floor", "Lean your phone on the floor, against a wall.", "Screen facing you."],
+      ["away", "Stand 8 feet away.", "Your whole body in the picture."],
+    ] },
+    { figs: true, title: "Arms up, then turn around slowly.", last: true },
   ];
-  const HEIGHT_PAGE = 2;
+  const HEIGHT_PAGE = 1;
   function showIntro(msg, page) {
     preloadModel();
     if (page == null) page = msg ? PAGES.length - 1 : 0;
@@ -767,8 +772,11 @@
     openSheet(head("Scan My Body") +
       '<div class="ps-body bs-intro bs-page">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      '<div class="bs-page-art">' + (pg.img ? '<img class="bs-pose-img bs-page-img" src="' + pg.img + '" alt="">' : '<span class="bs-icon">' + ICON[pg.icon] + "</span>") + "</div>" +
-      '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
+      (pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
+        '<div class="bs-tips">' + pg.tips.map((t) => '<div class="bs-tip"><span class="bs-icon">' + ICON[t[0]] + '</span><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>"
+      : (pg.figs ? '<div class="bs-page-art bs-figs">' + poseSvg("front") + poseSvg("turn") + "</div>"
+        : '<div class="bs-page-art"><span class="bs-icon">' + ICON[pg.icon] + "</span></div>") +
+        '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>") +
       (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
       (pg.height ? '<div class="bs-height bs-page-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + intro.ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
         '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + intro.inch + '" inputmode="decimal"><span class="unit">in</span></div></div>' : "") +
@@ -825,13 +833,15 @@
         clipAudio.play().then(() => { clipAudio.pause(); clipAudio.muted = false; }).catch(() => { clipAudio.muted = false; });
       } catch (e) {}
       tone(660, 60);
-      // Tilt check first (like MTailor). iPhone asks for motion access, and
-      // only inside a tap.
+      // Camera access first (Daniel: "allow camera access before phone
+      // tilting"), then the tilt check (like MTailor). Both are asked for
+      // right here inside the tap, which iPhone requires.
+      const cam = openCam();
       const ask = window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission;
-      if (typeof ask === "function") {
-        ask.call(DeviceOrientationEvent).then((r) => (r === "granted" ? showLevel() : startCamera())).catch(() => startCamera());
-      } else if (window.DeviceOrientationEvent) showLevel();
-      else startCamera();
+      const motion = typeof ask === "function" ? ask.call(DeviceOrientationEvent).catch(() => "denied")
+        : Promise.resolve(window.DeviceOrientationEvent ? "granted" : "none");
+      cam.then(() => motion).then((r) => (r === "granted" ? showLevel() : startCamera()))
+        .catch(() => showIntro("Camera blocked. Allow camera access in Settings."));
     };
     const fileInput = sheet.querySelector(".bs-upload input");
     fileInput.onclick = (e) => {
@@ -1041,15 +1051,18 @@
     };
     return sheet.querySelector(".bs-video");
   }
+  function openCam() {
+    return navigator.mediaDevices.getUserMedia({
+      audio: false,
+      // Portrait (tall) picture to match a phone held upright; it fills the
+      // screen (Daniel's iPhone showed a square picture with black bars).
+      video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 9 / 16 } },
+    }).then((s) => { stream = s; return s; });
+  }
   async function startCamera() {
     const video = camScreen();
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        // Portrait (tall) picture to match a phone held upright; it fills the
-        // screen (Daniel's iPhone showed a square picture with black bars).
-        video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 9 / 16 } },
-      });
+      if (!stream || !stream.active) await openCam();
     } catch (e) {
       showIntro("Camera blocked. Allow camera access in Settings.");
       return;
@@ -1225,9 +1238,12 @@
       msgEl.classList.remove("bs-msg-in"); void msgEl.offsetWidth; msgEl.classList.add("bs-msg-in");
       return true;
     };
-    stepEl.textContent = "Step 1 of 2: arms up";
-    setMsg("Face the phone. Arms up.");
-    say("Face the phone. Arms up.", true);
+    // First just get seen clearly, arms relaxed (like MTailor); the arms-up
+    // figure only shows once they're in a good spot.
+    stepEl.textContent = "Step 1 of 2: get in the picture";
+    if (bigPose) bigPose.classList.add("bs-gone");
+    setMsg("Step into the picture.", false, true);
+    say("Step into the picture.", true);
     const tick = () => {
       if (!sheet || !state || state.phase === "done") return;
       rafId = requestAnimationFrame(tick);
@@ -1255,6 +1271,29 @@
         const problem = frontProblem(lm);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
         const inFrame = !!lm && !inFrameProblem(lm);
+        // Stage 1 (Daniel, from MTailor: "first it makes me stand in position
+        // where I am seen clearly"): only the whole body in the picture
+        // matters, arms relaxed, no pose figure yet.
+        if (!state.spotSaid) {
+          const solid0 = inFrame && [0, 11, 12, 23, 24, 27, 28].every((i) => (lm[i].visibility == null ? 1 : lm[i].visibility) > 0.7);
+          state.parts = lm ? { frame: inFrame, arms: true, legs: true, body: true } : null;
+          setChecks(inFrame, false, false);
+          if (!solid0) {
+            state.inFrameSince = 0;
+            const p0 = inFrameProblem(lm);
+            if (setMsg(p0 || "Stand still so we can see all of you.") && p0) say(p0);
+            return;
+          }
+          if (!state.inFrameSince) state.inFrameSince = ts;
+          setMsg("Hold there…", true);
+          if (ts - state.inFrameSince < 700) return;
+          state.spotSaid = true;
+          stepEl.textContent = "Step 1 of 2: arms up";
+          if (bigPose) bigPose.classList.remove("bs-gone");
+          setMsg("Good spot. Now arms up, like the picture.", true);
+          say("Great, that's a good spot. Now raise your arms, like the picture.", true);
+          return;
+        }
         if (bigPose) bigPose.classList.toggle("bs-match", !problem);
         // Which parts are right: the dots on those parts turn gold, the
         // others blink white, so the person sees what to fix.
@@ -1443,7 +1482,9 @@
   let dots = null;
   function drawGuide(ctx, canvas, lm, mask) {
     const W = canvas.width, H = canvas.height;
-    const gap = W / 28, r0 = gap * 0.24;
+    // Bigger, even, solid dots with no glow or twinkle (Daniel sent
+    // MTailor's screen: "notice how clear and simple this is").
+    const gap = W / 22, r0 = gap * 0.27;
     const cols = Math.ceil(W / gap), rows = Math.ceil(H / gap);
     let fresh = false;
     if (!dots || dots.cols !== cols || dots.rows !== rows) { dots = { cols, rows, cur: new Float32Array(cols * rows), tgt: new Float32Array(cols * rows), lm: null }; fresh = true; }
@@ -1466,7 +1507,6 @@
     const body = ok ? [226, 196, 141] : [215, 222, 235];
     const since = state && state.flashAt ? performance.now() - state.flashAt : 1e9;
     const flash = since < 260 ? 1 - since / 260 : 0;
-    const by = (0.5 + 0.5 * Math.sin(t * 1.4)) * H; // sweeping band
     // Face: around the nose, out to the ears.
     const nose = L[0], earL = L[7], earR = L[8];
     const fr = earL && earR ? Math.max(Math.abs(earL.x - earR.x) * W * 0.85, gap * 1.5) : gap * 2;
@@ -1485,19 +1525,16 @@
         if (v < 0.04) continue;
         const x = (gx + 0.5) * gap;
         const face = Math.hypot(x - fx, y - fy) < fr;
-        const tw = 0.55 + 0.45 * Math.sin(t * 2.2 + gx * 1.7 + gy * 2.3);
-        const band = Math.max(0, 1 - Math.abs(y - by) / (H * 0.07));
-        let a = Math.min(1, 0.35 + 0.45 * tw + 0.5 * band + flash) * v;
-        const r = r0 * (0.75 + 0.35 * tw + 0.5 * band + 0.6 * flash) * (0.6 + 0.4 * v);
-        let c = face || flash > 0.5 ? WHITE : body;
+        let a = Math.min(1, 0.92 * v + flash);
+        const r = r0 * (0.55 + 0.45 * v) * (1 + 0.3 * flash);
+        // Face white, body gold, legs a lighter gold (MTailor shades by area).
+        let c = face || flash > 0.5 ? WHITE : y > hipY ? (ok ? [240, 218, 170] : body) : body;
         if (parts && !face) {
           // Arm dots: above the shoulders or out past them. Leg dots: below the hips.
           const part = !parts.frame ? "frame" : (y < shY + gap || x < shL - gap || x > shR + gap) ? "arms" : y > hipY ? "legs" : "body";
-          if (parts[part]) c = [226, 196, 141];
-          else { c = WHITE; a *= 0.35 + 0.65 * blink; }
+          if (parts[part]) c = y > hipY ? [240, 218, 170] : [226, 196, 141];
+          else { c = WHITE; a *= 0.45 + 0.55 * blink; }
         }
-        ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * 0.22).toFixed(3) + ")";
-        ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, 6.283); ctx.fill(); // glow
         ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
         ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
       }
