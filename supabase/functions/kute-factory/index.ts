@@ -247,8 +247,21 @@ async function factoryOrder(input: Record<string, unknown>) {
   return { row, ...built };
 }
 
+// Daniel (2026-11-03): a customer's suit never goes to the factory (no
+// draft, no submit) until the order is paid. Admin "Place order without
+// payment" orders and S.W. Atelier requests (that storefront takes no
+// payment) are exempt.
+function unpaidBlock(row: Record<string, unknown>): string | null {
+  if (row.admin_no_payment) return null;
+  if (String(row.brand || "scott") === "sw") return null;
+  if (String(row.payment_status || "") === "paid") return null;
+  return "This order isn't paid yet, so it can't go to the factory. It can be sent once the customer pays.";
+}
+
 async function saveDraft(input: Record<string, unknown>) {
   const { row, body, warnings, blocking } = await factoryOrder(input);
+  const unpaid = unpaidBlock(row);
+  if (unpaid) return { ok: false, error: unpaid, warnings };
   if (blocking.length) return { ok: false, blocking, warnings };
   body.submit = false; // never submit from here
   let r = await kute("POST", "/order/saveOrder", {}, body);
@@ -302,6 +315,8 @@ const DRAFT_STATUSES = [10035, 10039, 10045]; // Saving, Stay Payments, Draft
 async function submitDraft(input: Record<string, unknown>) {
   const { row, body, warnings, blocking } = await factoryOrder(input);
   const orderNo = String(row.factory_order_no || "");
+  const unpaid = unpaidBlock(row);
+  if (unpaid) return { ok: false, orderNo: orderNo || null, error: unpaid, warnings };
   if (!orderNo) return { ok: false, error: "Save it as a draft at the factory first." };
   if (blocking.length) return { ok: false, blocking, warnings };
   const st = await kute("GET", "/order/status/" + encodeURIComponent(orderNo));

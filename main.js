@@ -2296,10 +2296,29 @@ function adminRedrawOverlay(suitBox, had) {
   };
 }
 
+// Daniel (2026-11-03): an unpaid customer order can't go to the factory
+// (kute-factory refuses too). Admin no-payment orders and S.W. Atelier
+// requests are exempt.
+function adminAwaitingPayment(o) {
+  if (o.admin_no_payment) return false;
+  if ((o.brand || "scott") === "sw") return false;
+  return o.payment_status !== "paid";
+}
+
+function adminWaitingPaymentButton() {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "admin-ship-factory";
+  btn.disabled = true;
+  btn.textContent = "Factory: waiting for payment";
+  return btn;
+}
+
 // "Send to factory" on one suit card: opens that suit's factory tools
 // (height/weight, Check, Save/Update draft, Factory status) inside the card.
 // The suit's factory fields are read fresh each time it opens.
 function adminSuitFactoryButton(o, s, suitBox, stateEl) {
+  if (adminAwaitingPayment(o)) return adminWaitingPaymentButton();
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "admin-ship-factory admin-suit-factory-btn";
@@ -2590,6 +2609,10 @@ function adminOrderRow(o) {
   // Send to factory only stays for orders without them.
   const factoryBtn = row.querySelector(".admin-ship-send");
   if (hasSuitCards) factoryBtn.remove();
+  else if (adminAwaitingPayment(o)) {
+    factoryBtn.disabled = true;
+    factoryBtn.textContent = "Factory: waiting for payment";
+  }
   let factoryPanel = null;
   factoryBtn.addEventListener("click", () => {
     if (factoryPanel) {
