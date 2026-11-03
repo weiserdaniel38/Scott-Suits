@@ -260,7 +260,7 @@
   const head = (title) => '<div class="wiz-sheet-head"><h3>' + esc(title) + '</h3><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>';
 
   function showLoading() {
-    openSheet(head("Build From a Photo") +
+    openSheet(head(state && state.link ? "Build From a Link" : "Build From a Photo") +
       '<div class="ps-body ps-loading">' +
       photoStrip() +
       '<span class="ps-spinner" aria-hidden="true"></span>' +
@@ -270,7 +270,7 @@
   }
   function showError(msg) {
     const fromLink = !!(state && state.link);
-    openSheet(head("Build From a Photo") +
+    openSheet(head(state && state.link ? "Build From a Link" : "Build From a Photo") +
       '<div class="ps-body ps-loading">' +
       photoStrip() +
       "<b>" + esc(msg) + "</b>" +
