@@ -2365,7 +2365,7 @@ body.order-done-view > .process{display:none !important;}
 @keyframes bs-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.bs-sheet.bs-full .bs-card,.bs-pose-svg,.bs-ghost img,.bs-pose-img,.bs-scanline,.bs-count.bs-pop,.bs-results .bs-row{animation:none!important;}}
 .bs-cam{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:#000;color:#fff;}
-.bs-video,.bs-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+.bs-video,.bs-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .bs-mirror{transform:scaleX(-1);}
 .bs-cam-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0));}
 .bs-cam-top .wiz-close{color:#fff;}
