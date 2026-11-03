@@ -984,13 +984,9 @@
       '<canvas class="bs-overlay"></canvas>' +
       '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
       // Big see-through pose figure until the person matches it (MTailor).
-      // Filled so it reads from 8 feet away (Daniel).
-      '<svg class="bs-bigpose" viewBox="0 0 300 560" aria-hidden="true"><g>' +
-      '<circle cx="150" cy="58" r="36"/>' +
-      '<path d="M62 30V112H238V30" fill="none" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<rect x="102" y="96" width="96" height="214" rx="30"/>' +
-      '<path d="M126 290L112 532M174 290L188 532" fill="none" stroke-width="42" stroke-linecap="round"/>' +
-      "</g></svg>" +
+      // Filled so it reads from 8 feet away (Daniel's ChatGPT silhouette,
+      // used as a mask so it can turn from white to gold).
+      '<div class="bs-bigpose" aria-hidden="true"><i></i></div>' +
       // Live "you're lined up" graphics: frame corners that turn gold when
       // the whole body is in the picture, three checks that light up one by
       // one, and a capture bar while the front frames are taken.
