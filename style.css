@@ -2476,3 +2476,14 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-meas-list li{display:flex;align-items:center;gap:10px;font-size:17px;opacity:0;animation:bs-rise .35s ease forwards;}
 .bs-meas-list b{width:20px;height:20px;border-radius:50%;flex:none;background:#e2c48d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3.5 7.2l2.3 2.3 4.7-5' fill='none' stroke='%23111' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;box-shadow:0 0 12px rgba(201,164,103,0.6);}
 @media (prefers-reduced-motion:reduce){.bs-meas-fig i,.bs-meas-line,.bs-cam-msg.bs-msg-in{animation:none!important;}.bs-meas-list li{animation-duration:.01s!important;}}
+/* Body scan: tip cards (a few tips per card) and the two figures side by side (2026-11-03) */
+.bs-tips{display:flex;flex-direction:column;gap:22px;margin:26px auto 8px;max-width:420px;text-align:left;}
+.bs-tip{display:flex;align-items:center;gap:18px;}
+.bs-tip .bs-icon svg{width:64px;height:64px;animation:none;}
+.bs-tip b{display:block;font-size:19px;font-weight:600;line-height:1.3;}
+.bs-tip span:not(.bs-icon){display:block;color:var(--ivory-dim);font-size:15px;margin-top:3px;}
+.bs-figs{gap:14px;}
+.bs-figs figure{margin:0;text-align:center;}
+.bs-figs .bs-pose-img{max-height:min(220px,28dvh);width:auto;}
+.bs-figs figcaption{color:var(--ivory-dim);font-size:14px;margin-top:6px;}
+.bs-sheet .bs-video{filter:brightness(.62);} /* dim the camera so the dots stand out (MTailor) */
