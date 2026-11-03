@@ -769,7 +769,6 @@
       (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
       (pg.height ? '<div class="bs-height bs-page-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + intro.ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
         '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + intro.inch + '" inputmode="decimal"><span class="unit">in</span></div></div>' : "") +
-      (pg.who ? '<button type="button" class="bs-friend' + (intro.who === "friend" ? " on" : "") + '">' + (intro.who === "friend" ? "&#10003; A friend is holding it" : "A friend will hold it instead") + "</button>" : "") +
       '<div class="bs-dots" aria-hidden="true">' + dots + "</div>" +
       "</div>" +
       '<div class="ps-actions">' +
@@ -792,9 +791,17 @@
     const next = sheet.querySelector(".bs-next");
     if (next) next.onclick = () => {
       keepHeight();
-      if (pg.height && !isFinite(readHeight())) { showIntro("Enter your height.", page); return; }
+      if (pg.height && (String(intro.ft).trim() === "" || String(intro.inch).trim() === "" || !isFinite(readHeight()))) { showIntro("Fill in feet and inches.", page); return; }
       showIntro(null, page + 1);
     };
+    // Height page: Next stays off until both feet and inches are filled in.
+    if (pg.height && next) {
+      const ftEl = sheet.querySelector("#bsFt"), inEl = sheet.querySelector("#bsIn");
+      const check = () => { next.disabled = ftEl.value.trim() === "" || inEl.value.trim() === ""; };
+      ftEl.addEventListener("input", check);
+      inEl.addEventListener("input", check);
+      check();
+    }
     const back = sheet.querySelector(".bs-back");
     if (back) back.onclick = () => { keepHeight(); showIntro(null, page - 1); };
     if (!pg.last) return;
@@ -996,7 +1003,7 @@
       '<div class="bs-ring" hidden><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bs-ring-bg"/><circle cx="22" cy="22" r="19" class="bs-ring-fg" pathLength="100" stroke-dasharray="0 100"/></svg><span>0%</span></div>' +
       '<div class="bs-cam-msg" role="status" aria-live="polite">Loading the scanner&hellip;</div>' +
       '<div class="bs-count" hidden></div>' +
-      (state.uploaded ? "" : '<div class="bs-cam-bottom"><button type="button" class="bs-voice" aria-pressed="true">Voice on</button><button type="button" class="bs-flip">Switch camera</button></div>') +
+      (state.uploaded ? "" : '<div class="bs-cam-bottom"><button type="button" class="bs-voice" aria-pressed="true">Voice on</button></div>') +
       "</div>", true);
     const voice = sheet.querySelector(".bs-voice");
     if (voice) voice.onclick = () => {
@@ -1144,21 +1151,8 @@
     return out;
   }
 
-  // Test aid: add &debug=1 to the link to see the camera size and what the
-  // pose check is waiting for.
-  const DEBUG = /[?&]debug=1\b/.test(location.search);
-  function showDebug(video, lm, problem) {
-    let el = sheet && sheet.querySelector(".bs-debug");
-    if (!el && sheet) { el = document.createElement("div"); el.className = "bs-debug"; sheet.querySelector(".bs-cam").appendChild(el); }
-    if (!el) return;
-    let t = video.videoWidth + "x" + video.videoHeight + " | " + (lm ? "found" : "no person") + " | " + (problem || "pose OK");
-    if (lm) {
-      const q = sq(lm), T = (q[23].y + q[24].y - q[11].y - q[12].y) / 2;
-      t += " | shoulders/torso " + (Math.abs(q[11].x - q[12].x) / T).toFixed(2);
-    }
-    el.textContent = t;
-  }
   const FRONT_FRAMES = 6;
+  const CAPTURE_GAP_MS = 380; // 6 frames ≈ 2 seconds holding the pose
   const SPIN_TIMEOUT_MS = 45000;
   function runLive(video) {
     const canvas = sheet && sheet.querySelector(".bs-overlay");
@@ -1195,7 +1189,6 @@
 
       if (state.phase === "front") {
         const problem = frontProblem(lm);
-        if (DEBUG) showDebug(video, lm, problem);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
         const inFrame = !!lm && !inFrameProblem(lm);
         if (bigPose) bigPose.classList.toggle("bs-match", !problem);
@@ -1223,17 +1216,21 @@
       }
 
       if (state.phase === "frontCapture") {
-        if (bigPose) bigPose.classList.add("bs-gone");
-        state.parts = null;
+        // Keep the gold figure up and hold the pose about 2 seconds while
+        // the frames are taken (Daniel: "the capture was too fast, keep me
+        // in that position with the gold body").
+        if (bigPose) bigPose.classList.add("bs-match");
+        state.parts = { frame: true, arms: true, legs: true, body: true };
         setMsg("Capturing… hold still.", true);
         setCapture(state.fronts.length / FRONT_FRAMES);
         if (!d || !d.mask || !lm || inFrameProblem(lm)) return;
+        if (state.lastFrontAt && ts - state.lastFrontAt < CAPTURE_GAP_MS) return;
         const f = G.measureFrontFrame(lm, d.mask);
-        if (!f.error) { state.fronts.push(f); state.flashAt = performance.now(); cue.tick(); }
+        if (!f.error) { state.fronts.push(f); state.lastFrontAt = ts; state.flashAt = performance.now(); cue.tick(); }
         setCapture(state.fronts.length / FRONT_FRAMES);
         if (state.fronts.length < FRONT_FRAMES) return;
         state.base = G.combine(state.fronts);
-        if (state.base.error) { state.fronts = []; state.phase = "front"; return; }
+        if (state.base.error) { state.fronts = []; state.lastFrontAt = 0; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
         state.phase = "spin";
         state.parts = null;
@@ -1330,7 +1327,7 @@
     const nose = lm[0], earL = lm[7], earR = lm[8];
     const fr = earL && earR ? Math.max(Math.abs(earL.x - earR.x) * W * 0.85, gap * 1.5) : gap * 2;
     const fx = nose.x * W, fy = nose.y * H;
-    const parts = state && state.phase === "front" ? state.parts : null;
+    const parts = state && (state.phase === "front" || state.phase === "frontCapture") ? state.parts : null;
     const shY = ((lm[11].y + lm[12].y) / 2) * H, hipY = ((lm[23].y + lm[24].y) / 2) * H;
     const shL = Math.min(lm[11].x, lm[12].x) * W, shR = Math.max(lm[11].x, lm[12].x) * W;
     const blink = 0.5 + 0.5 * Math.sin(t * 9);
@@ -1556,9 +1553,10 @@
     const c = sheet.querySelector(".bs-overlay");
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
-    sheet.querySelector(".bs-bigpose").classList.toggle("bs-gone", phase !== "front");
-    sheet.querySelector(".bs-bigpose").classList.toggle("bs-match", phase === "front" && !!lm && pct !== 1);
-    state.parts = phase === "front" && lm ? { frame: true, arms: pct !== 1, legs: true, body: true } : null;
+    sheet.querySelector(".bs-bigpose").classList.toggle("bs-gone", phase === "spin");
+    sheet.querySelector(".bs-bigpose").classList.toggle("bs-match", phase === "capture" || (phase === "front" && !!lm && pct !== 1));
+    if (phase === "capture") state.phase = "frontCapture";
+    state.parts = phase !== "spin" && lm ? { frame: true, arms: pct !== 1, legs: true, body: true } : null;
     drawGuide(c.getContext("2d"), c, lm, mask);
     if (phase === "spin") setChecks(null); else setChecks(!!lm, !!lm && pct !== 1, !!lm && pct !== 1 && pct !== 2);
     setCapture(phase === "capture" ? 0.6 : null);
