@@ -918,19 +918,59 @@ const FABRIC_WAITS = [
   // (~2 days). The customer chose to wait for it.
   { fabric: "26SU212.DBQ796A", minMetres: 10, factoryOrderNo: "DWNYP2611001" },
 ];
+// Before 2026-11-03 clears were kept per device under these keys; they are
+// sent to the server once (moveLocalClears) and then removed.
 const FABRIC_WAIT_CLEARED_KEY = "scottSuitsFabricWaitCleared";
-function fabricWaitCleared() {
-  try { return JSON.parse(localStorage.getItem(FABRIC_WAIT_CLEARED_KEY) || "[]"); } catch (e) { return []; }
+const SUIT_DONE_CLEARED_KEY = "scottSuitsFinishedCleared";
+const fabricWaitKey = (w) => "fabric_wait:" + w.factoryOrderNo + "|" + w.fabric;
+const suitDoneKey = (s) => "suit_done:" + s.factory_order_no;
+
+// "Suit finished" and "back in stock" notices: when each was sent and whether
+// it was cleared are kept on the server by the admin-notices edge function,
+// so clearing one on any device clears it on all of them (Daniel 2026-11-03).
+const ADMIN_NOTICES_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/admin-notices" : "";
+async function callAdminNotices(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json" }, await suitImageAuthHeaders());
+  const res = await fetch(ADMIN_NOTICES_FN_URL, { method: "POST", headers, body: JSON.stringify(payload) });
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(r.error || "error " + res.status);
+  return r;
 }
-// The waits whose fabric is now in stock (and not cleared on this device).
+async function moveLocalClears() {
+  let keys = [];
+  try {
+    keys = JSON.parse(localStorage.getItem(SUIT_DONE_CLEARED_KEY) || "[]").map((no) => "suit_done:" + no)
+      .concat(JSON.parse(localStorage.getItem(FABRIC_WAIT_CLEARED_KEY) || "[]").map((k) => "fabric_wait:" + k));
+  } catch (e) {}
+  if (!keys.length) return;
+  await callAdminNotices({ action: "clear", keys });
+  try { localStorage.removeItem(SUIT_DONE_CLEARED_KEY); localStorage.removeItem(FABRIC_WAIT_CLEARED_KEY); } catch (e) {}
+}
+// Clears notices on every device, then reloads the list.
+async function clearAdminNotices(keys) {
+  try {
+    if (keys.length) await callAdminNotices({ action: "clear", keys });
+  } catch (e) {
+    console.error("Failed to clear notifications:", e);
+  }
+  loadAdminNotifications();
+}
+// "Sent Nov 3, 2026, 2:05 PM" for a notification card.
+function adminNotifWhen(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return "Sent " + d.toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// The waits whose fabric is now in stock (cleared ones are dropped later).
 async function readyFabricWaits() {
   if (!FABRIC_WAITS.length || typeof SUPABASE_URL === "undefined" || !SUPABASE_URL) return [];
   try {
     const res = await fetch(SUPABASE_URL + "/storage/v1/object/public/suit-images/fabric-stock.json?d=" + new Date().toISOString().slice(0, 13));
     if (!res.ok) return [];
     const stock = (await res.json()).stock || {};
-    const cleared = fabricWaitCleared();
-    return FABRIC_WAITS.filter((w) => typeof stock[w.fabric] === "number" && stock[w.fabric] >= w.minMetres && cleared.indexOf(w.factoryOrderNo + "|" + w.fabric) === -1)
+    return FABRIC_WAITS.filter((w) => typeof stock[w.fabric] === "number" && stock[w.fabric] >= w.minMetres)
       .map((w) => Object.assign({ metres: stock[w.fabric] }, w));
   } catch (e) {
     return [];
@@ -943,28 +983,19 @@ function fabricWaitItem(w) {
     '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
   const opt = JACKET_CATALOG.fabric.options.find((o) => o.name === w.fabric);
   item.querySelector("b").textContent = (opt ? opt.displayName || opt.name : "A fabric") + " is back in stock";
-  item.querySelector(".admin-notif-meta").textContent = Math.floor(w.metres) + " m at the factory \u00b7 order " + w.factoryOrderNo + " can be paid and sent now";
-  item.querySelector(".admin-notif-clear").addEventListener("click", () => {
-    try { localStorage.setItem(FABRIC_WAIT_CLEARED_KEY, JSON.stringify(fabricWaitCleared().concat(w.factoryOrderNo + "|" + w.fabric))); } catch (e) {}
-    loadAdminNotifications();
-  });
+  const sent = adminNotifWhen(w.sentAt);
+  item.querySelector(".admin-notif-meta").textContent = (sent ? sent + " \u00b7 " : "") + Math.floor(w.metres) + " m at the factory \u00b7 order " + w.factoryOrderNo + " can be paid and sent now";
+  item.querySelector(".admin-notif-clear").addEventListener("click", () => clearAdminNotices([fabricWaitKey(w)]));
   return item;
 }
 
 // Suits the factory has finished (status Stocked, or already on its way
 // from the factory). Read from each suit's factory status, which the hourly
 // factory check keeps up to date (supabase/sql/30, kute-factory). Each one
-// shows as a "suit finished" notification until cleared on this device.
+// shows as a "suit finished" notification until cleared (on any device).
 const FACTORY_FINISHED = ["Stocked", "On Delivery", "Signed", "Delivered"];
 // Factory statuses that are still an unsubmitted draft (Submit to factory shows).
 const FACTORY_DRAFT_STATUSES = ["Draft", "Saving", "Stay Payments"];
-const SUIT_DONE_CLEARED_KEY = "scottSuitsFinishedCleared";
-function suitDoneCleared() {
-  try { return JSON.parse(localStorage.getItem(SUIT_DONE_CLEARED_KEY) || "[]"); } catch (e) { return []; }
-}
-function clearSuitDone(keys) {
-  try { localStorage.setItem(SUIT_DONE_CLEARED_KEY, JSON.stringify(suitDoneCleared().concat(keys))); } catch (e) {}
-}
 async function finishedSuits() {
   try {
     const client = getSupabase();
@@ -974,13 +1005,12 @@ async function finishedSuits() {
       client.rpc("admin_list_orders"),
     ]);
     if (factory.error || !factory.data) return [];
-    const cleared = suitDoneCleared();
     const fabricOf = {};
     if (!fabrics.error && fabrics.data) fabrics.data.forEach((x) => (fabricOf[x.order_id + "/" + (x.suit_number || 1)] = x));
     const orderOf = {};
     if (!orders.error && orders.data) orders.data.forEach((x) => (orderOf[x.order_id] = x));
     return factory.data
-      .filter((x) => x.factory_order_no && FACTORY_FINISHED.indexOf(x.factory_status) !== -1 && cleared.indexOf(x.factory_order_no) === -1)
+      .filter((x) => x.factory_order_no && FACTORY_FINISHED.indexOf(x.factory_status) !== -1)
       .map((x) => Object.assign({}, x, { fabricRow: fabricOf[x.order_id + "/" + (x.suit_number || 1)] || null, order: orderOf[x.order_id] || null }));
   } catch (e) {
     return [];
@@ -999,33 +1029,53 @@ function suitDoneItem(s) {
   // Customer-typed text goes in with textContent, never as HTML.
   item.querySelector("b").textContent = who + what + (s.suit_type === "pants_only" ? " are" : " is") + " finished";
   const step = s.factory_status === "Stocked" ? "Finished at the factory" : "Finished, on its way from the factory";
-  item.querySelector(".admin-notif-meta").textContent = step + " \u00b7 factory order " + s.factory_order_no +
+  const sent = adminNotifWhen(s.sentAt);
+  item.querySelector(".admin-notif-meta").textContent = (sent ? sent + " \u00b7 " : "") + step + " \u00b7 factory order " + s.factory_order_no +
     (s.factory_waybill ? " \u00b7 tracking " + s.factory_waybill : "");
-  item.querySelector(".admin-notif-clear").addEventListener("click", () => {
-    clearSuitDone([s.factory_order_no]);
-    loadAdminNotifications();
-  });
+  item.querySelector(".admin-notif-clear").addEventListener("click", () => clearAdminNotices([suitDoneKey(s)]));
   return item;
 }
-let shownSuitsDone = [];
+let shownNoticeKeys = [];
+
+// Drops cleared notices and adds each one's sent time from the server. If the
+// server can't be reached they all show, without a time.
+async function withNoticeState(waits, done) {
+  const keys = waits.map(fabricWaitKey).concat(done.map(suitDoneKey));
+  if (!keys.length) return { waits, done };
+  try {
+    await moveLocalClears().catch((e) => console.error(e));
+    const { notices } = await callAdminNotices({ action: "list", keys });
+    const keep = (key, x) => {
+      const n = (notices || {})[key];
+      return n && n.cleared_at ? null : Object.assign({}, x, { sentAt: n ? n.sent_at : null });
+    };
+    return {
+      waits: waits.map((w) => keep(fabricWaitKey(w), w)).filter(Boolean),
+      done: done.map((d) => keep(suitDoneKey(d), d)).filter(Boolean),
+    };
+  } catch (e) {
+    console.error("Failed to load notification times:", e);
+    return { waits, done };
+  }
+}
 
 async function loadAdminNotifications() {
   if (!adminNotificationsList) return;
   try {
-    const [{ data, error }, brandRes, waits, done] = await Promise.all([
+    const [{ data, error }, brandRes, notices] = await Promise.all([
       getSupabase().rpc("admin_list_notifications"),
       getSupabase().rpc("admin_order_brands"),
-      readyFabricWaits(),
-      finishedSuits(),
+      Promise.all([readyFabricWaits(), finishedSuits()]).then(([w, d]) => withNoticeState(w, d)),
     ]);
-    shownSuitsDone = done.map((d) => d.factory_order_no);
+    const { waits, done } = notices;
+    shownNoticeKeys = waits.map(fabricWaitKey).concat(done.map(suitDoneKey));
     if (error) throw error;
     const brandOf = {};
     if (!brandRes.error && brandRes.data) brandRes.data.forEach((x) => (brandOf[x.order_id] = x.brand));
     // Unpaid customer orders don't show (Daniel 2026-11-03); see adminAwaitingPayment.
     const rows = (data || []).filter((n) => !adminAwaitingPayment(Object.assign({ brand: brandOf[n.order_id] }, n)));
     setAdminUnread(rows.filter((n) => !n.read_at).length + waits.length + done.length);
-    if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length && !done.length;
+    if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length && !shownNoticeKeys.length;
     if (!rows.length && !waits.length && !done.length) {
       adminNotificationsList.innerHTML = '<p class="account-section-note">No notifications.</p>';
       return;
@@ -1036,7 +1086,7 @@ async function loadAdminNotifications() {
     rows.forEach((n) => {
       const item = document.createElement("div");
       item.className = "admin-notif" + (n.read_at ? "" : " admin-notif-new");
-      const when = n.created_at ? new Date(n.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+      const when = adminNotifWhen(n.created_at);
       const suits = n.suits > 1 ? n.suits + " suits" : "1 suit";
       item.innerHTML = '<div><b></b><span class="admin-notif-meta"></span></div><span class="admin-notif-total"></span>' +
         '<button type="button" class="admin-notif-clear" aria-label="Clear this notification">&times;</button>';
@@ -1044,7 +1094,7 @@ async function loadAdminNotifications() {
       // Customer-typed text goes in with textContent, never as HTML.
       const nb = SITE_BRANDS[brandOf[n.order_id]];
       item.querySelector("b").textContent = "New " + (nb && nb.id !== "scott" ? nb.name + " " : "") + "order from " + (n.customer_name || "a customer");
-      item.querySelector(".admin-notif-meta").textContent = when + " \u00b7 " + suits + " \u00b7 " +
+      item.querySelector(".admin-notif-meta").textContent = (when ? when + " \u00b7 " : "") + suits + " \u00b7 " +
         (nb && nb.payments === false && !n.admin_no_payment ? "Request, no payment" : n.admin_no_payment ? "No payment (admin)" : n.payment_status === "paid" ? "Paid" : n.payment_status === "awaiting_payment" ? "Awaiting payment" : "Not paid");
       item.querySelector(".admin-notif-total").textContent = nb && nb.hidePrices ? "" : "$" + Number(n.total || 0).toFixed(0);
       adminNotificationsList.appendChild(item);
@@ -1058,7 +1108,11 @@ async function loadAdminNotifications() {
 const adminNotifClearAll = document.getElementById("adminNotifClearAll");
 // Clears one notification (id) or all of them, then reloads the list.
 async function clearAdminNotifications(id) {
-  if (!id && shownSuitsDone.length) clearSuitDone(shownSuitsDone);
+  try {
+    if (!id && shownNoticeKeys.length) await callAdminNotices({ action: "clear", keys: shownNoticeKeys });
+  } catch (e) {
+    console.error("Failed to clear notifications:", e);
+  }
   try {
     const { error } = await getSupabase().rpc("admin_clear_notifications", id ? { p_id: id } : {});
     if (error) throw error;
