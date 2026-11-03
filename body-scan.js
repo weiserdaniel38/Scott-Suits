@@ -1152,7 +1152,7 @@
   }
 
   const FRONT_FRAMES = 6;
-  const CAPTURE_GAP_MS = 380; // 6 frames ≈ 2 seconds holding the pose
+  const CAPTURE_GAP_MS = 180; // 6 frames ≈ 1 second holding the pose (2 s felt too long)
   const SPIN_TIMEOUT_MS = 45000;
   function runLive(video) {
     const canvas = sheet && sheet.querySelector(".bs-overlay");
@@ -1202,7 +1202,12 @@
         } : null;
         setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.045);
         // First time they're well placed: say so, then the next step.
-        if (inFrame && !state.spotSaid) {
+        // Only once the whole body has been clearly in the picture for a
+        // moment (Daniel: it said "great spot" before he was in frame).
+        const solid = inFrame && [0, 11, 12, 23, 24, 27, 28].every((i) => (lm[i].visibility == null ? 1 : lm[i].visibility) > 0.7);
+        if (!solid) state.inFrameSince = 0;
+        else if (!state.inFrameSince) state.inFrameSince = ts;
+        if (solid && ts - state.inFrameSince > 700 && !state.spotSaid) {
           state.spotSaid = true;
           if (problem) { setMsg("Good spot. " + problem, true); say(armsUp(lm, true) ? "Great, that's a good spot." : "Great, that's a good spot. Now raise your arms, like the picture.", true); return; }
         }
@@ -1211,7 +1216,7 @@
         if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
         // Capture straight away, no countdown (Daniel: "it needs to capture
         // as fast as MTailor"). The front frames take about half a second.
-        if (ts - state.okSince > 250 && stillness(state.history) < 0.06) state.phase = "frontCapture";
+        if (ts - state.okSince > 250 && stillness(state.history) < 0.06) { state.phase = "frontCapture"; state.captureStart = ts; }
         return;
       }
 
@@ -1228,7 +1233,7 @@
         const f = G.measureFrontFrame(lm, d.mask);
         if (!f.error) { state.fronts.push(f); state.lastFrontAt = ts; state.flashAt = performance.now(); cue.tick(); }
         setCapture(state.fronts.length / FRONT_FRAMES);
-        if (state.fronts.length < FRONT_FRAMES) return;
+        if (state.fronts.length < FRONT_FRAMES && !(state.fronts.length >= 3 && ts - state.captureStart > 1600)) return;
         state.base = G.combine(state.fronts);
         if (state.base.error) { state.fronts = []; state.lastFrontAt = 0; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
