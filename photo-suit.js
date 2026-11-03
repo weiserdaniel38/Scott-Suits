@@ -550,7 +550,7 @@
   // First screen: upload a photo, or paste a link to one.
   function showStart() {
     state = null;
-    openSheet(head("Build From a Photo") +
+    openSheet(head("Build From a Photo or Link") +
       '<div class="ps-body ps-start">' +
       "<p>Upload a photo of a suit you love, or paste a link to one (a shop page, an article, a post). We'll build the closest match from our options.</p>" +
       '<button type="button" class="btn-primary wiz-continue ps-upload">Upload Photos</button>' +
@@ -563,6 +563,7 @@
       "</form>" +
       '<p class="ps-link-error" hidden></p>' +
       "</div>");
+    sheet.querySelector(".wiz-sheet-head").classList.add("ps-head-long");
     sheet.querySelector(".ps-upload").onclick = () => pickPhoto();
     const form = sheet.querySelector(".ps-link-form");
     const input = sheet.querySelector("#psLinkInput");
