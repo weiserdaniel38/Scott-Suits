@@ -114,7 +114,11 @@
   }
 
   // ---- photo -> design ----
-  let state = null; // { photo, result, open: "j:collar" | null }
+  let state = null; // { photos: [dataUrl], result, open: "j:collar" | null }
+  const MAX_PHOTOS = 3;
+  const photoStrip = (cls) => (state && state.photos && state.photos.length
+    ? '<div class="ps-photos ' + (cls || "") + '">' + state.photos.map((p, i) => '<img class="ps-photo" src="' + p + '" alt="Your photo ' + (i + 1) + '">').join("") + "</div>"
+    : "");
 
   function buildSelections(result) {
     const jsel = Object.assign({}, CLASSIC_SUIT_PRESET.jacket.fixed);
@@ -228,21 +232,21 @@
   function showLoading() {
     openSheet(head("Build From a Photo") +
       '<div class="ps-body ps-loading">' +
-      '<img class="ps-photo" src="' + state.photo + '" alt="Your photo">' +
+      photoStrip() +
       '<span class="ps-spinner" aria-hidden="true"></span>' +
-      "<b>Studying your photo&hellip;</b>" +
+      "<b>Studying your photo" + (state && state.photos && state.photos.length > 1 ? "s" : "") + "&hellip;</b>" +
       "<p>We're matching the fabric, lapels, pockets and buttons to our options. This takes less than a minute.</p>" +
       "</div>");
   }
   function showError(msg) {
     openSheet(head("Build From a Photo") +
       '<div class="ps-body ps-loading">' +
-      (state && state.photo ? '<img class="ps-photo" src="' + state.photo + '" alt="Your photo">' : "") +
+      photoStrip() +
       "<b>" + esc(msg) + "</b>" +
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary wiz-continue ps-retry">Try Another Photo</button>' +
       '<button type="button" class="ps-link ps-cancel">Design it myself instead</button></div>');
-    sheet.querySelector(".ps-retry").onclick = () => { closeSheet(); pickPhoto(); };
+    sheet.querySelector(".ps-retry").onclick = () => showStart();
     sheet.querySelector(".ps-cancel").onclick = closeSheet;
   }
 
@@ -301,8 +305,11 @@
     const keepOpen = sheet && sheet.querySelector(".ps-body") ? sheet.querySelector(".ps-body").scrollTop : 0;
     openSheet(head("Your Suit") +
       '<div class="ps-body">' +
-      '<div class="ps-top"><img class="ps-photo ps-photo-small" src="' + state.photo + '" alt="Your photo">' +
-      "<p>We matched your photo to our closest options. Tap anything to change it.</p></div>" +
+      '<div class="ps-top">' + photoStrip("ps-photos-small") +
+      "<p>We matched your photo" + (state.photos.length > 1 ? "s" : "") + " to our closest options. Tap anything to change it.</p></div>" +
+      (state.photos.length < MAX_PHOTOS
+        ? '<button type="button" class="ps-add-photo">+ Add another photo (pants, back or a close-up)</button>'
+        : "") +
       '<div class="ps-type" role="group" aria-label="What are we building?">' +
       '<button type="button" data-type="full" class="' + (withPants ? "selected" : "") + '">Full Suit</button>' +
       '<button type="button" data-type="jacketOnly" class="' + (withPants ? "" : "selected") + '">Jacket Only</button></div>' +
@@ -323,6 +330,8 @@
       if (top + openItem.offsetHeight > body.scrollTop + body.clientHeight) body.scrollTop = Math.max(0, Math.min(top - 8, top + openItem.offsetHeight - body.clientHeight + 8));
     }
 
+    const addBtn = sheet.querySelector(".ps-add-photo");
+    if (addBtn) addBtn.onclick = () => pickPhoto(true);
     sheet.querySelectorAll(".ps-type button").forEach((b) => {
       b.onclick = () => {
         const t = b.getAttribute("data-type");
@@ -412,16 +421,24 @@
     });
   }
 
-  async function run(file) {
-    let photo;
-    try {
-      photo = await readPhoto(file);
-    } catch (e) {
-      state = null;
-      showError("Sorry, that photo couldn't be opened. Please try a JPG or PNG.");
-      return;
+  // file: an uploaded photo; link: a pasted web address (the server fetches
+  // it and sends the photo back).
+  // files: uploaded photos; link: a pasted web address (the server fetches
+  // it and sends the photo back); keep: add to the photos already read (the
+  // whole suit is read again from all of them).
+  async function run(files, link, keep) {
+    const photos = keep && state && state.photos ? state.photos.slice() : [];
+    for (const file of files || []) {
+      if (photos.length >= MAX_PHOTOS) break;
+      try {
+        photos.push(await readPhoto(file));
+      } catch (e) {
+        state = { photos, result: null, open: null };
+        showError("Sorry, that photo couldn't be opened. Please try a JPG or PNG.");
+        return;
+      }
     }
-    state = { photo, result: null, open: null };
+    state = { photos, result: null, open: null };
     showLoading();
     let data = null;
     let status = 0;
@@ -430,7 +447,8 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image: photo,
+          images: photos,
+          imageUrl: link || undefined,
           jacketSteps: stepsPayload(JACKET_CATALOG, JACKET_PHOTO_STEPS),
           pantsSteps: stepsPayload(PANTS_CATALOG, PANTS_PHOTO_STEPS),
         }),
@@ -441,6 +459,8 @@
       data = null;
     }
     if (!sheet) return; // closed while waiting
+    if (data && data.photo) state.photos.push(data.photo);
+    if (data && data.error === "link") { showError(data.message || "We couldn't open that link. You can save the photo and upload it instead."); return; }
     if (status === 429) { showError("You've uploaded a lot of photos in a short time. Please try again in a little while."); return; }
     const result = data && data.result;
     if (data && data.isSuit === false) { showError(data.message || "We couldn't find a suit in that photo. Please try another picture."); return; }
@@ -451,18 +471,57 @@
     showSummary();
   }
 
-  function pickPhoto() {
+  function pickPhoto(keep) {
+    const room = MAX_PHOTOS - (keep && state && state.photos ? state.photos.length : 0);
+    if (room <= 0) return;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
+    input.multiple = room > 1;
     input.onchange = () => {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      if (!/^image\//.test(file.type)) { alert("Please choose an image file (JPG or PNG)."); return; }
-      if (file.size > 25 * 1024 * 1024) { alert("That photo is too large — please choose one under 25 MB."); return; }
-      run(file);
+      const files = Array.from(input.files || []).slice(0, room);
+      if (!files.length) return;
+      if (files.some((f) => !/^image\//.test(f.type))) { alert("Please choose image files (JPG or PNG)."); return; }
+      if (files.some((f) => f.size > 25 * 1024 * 1024)) { alert("That photo is too large \u2014 please choose one under 25 MB."); return; }
+      run(files, null, keep);
     };
     input.click();
+  }
+
+  // First screen: upload a photo, or paste a link to one.
+  function showStart() {
+    state = null;
+    openSheet(head("Build From a Photo") +
+      '<div class="ps-body ps-start">' +
+      "<p>Upload a photo of a suit you love, or paste a link to one (a shop page, an article, a post). We'll build the closest match from our options.</p>" +
+      '<button type="button" class="btn-primary wiz-continue ps-upload">Upload Photos</button>' +
+      '<p class="ps-hint">Up to 3 photos of the same suit, for example the jacket, the pants and the back.</p>' +
+      '<div class="ps-or"><span>or paste a link</span></div>' +
+      '<form class="ps-link-form" novalidate>' +
+      '<label for="psLinkInput" class="ps-sr">Link to a photo of a suit</label>' +
+      '<input id="psLinkInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…">' +
+      '<button type="submit" class="ps-link-go">Use Link</button>' +
+      "</form>" +
+      '<p class="ps-link-error" hidden></p>' +
+      "</div>");
+    sheet.querySelector(".ps-upload").onclick = () => { closeSheet(); pickPhoto(); };
+    const form = sheet.querySelector(".ps-link-form");
+    const input = sheet.querySelector("#psLinkInput");
+    const err = sheet.querySelector(".ps-link-error");
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      let v = String(input.value || "").trim();
+      const found = v.match(/https?:\/\/\S+/i);
+      if (found) v = found[0];
+      else if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v)) v = "https://" + v;
+      if (!/^https?:\/\/\S+\.\S+/i.test(v)) {
+        err.textContent = "Please paste the full link to the photo or page.";
+        err.hidden = false;
+        input.focus();
+        return;
+      }
+      run(null, v);
+    };
   }
 
   entryBtn.hidden = false;
@@ -472,12 +531,12 @@
       openEditSuitConfirm(null, {
         title: "Start from a photo?",
         text: "This replaces the suit you're designing now with one built from your photo. Suits already in your cart stay as they are.",
-        confirm: "Upload a Photo",
+        confirm: "Continue",
         cancel: "Keep My Design",
-        onConfirm: pickPhoto,
+        onConfirm: showStart,
       });
       return;
     }
-    pickPhoto();
+    showStart();
   });
 })();
