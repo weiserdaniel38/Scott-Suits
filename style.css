@@ -2389,3 +2389,15 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-sheet.bs-full .measure-input-wrap:focus-within{border-color:#c9a467!important;}
 .bs-sheet.bs-full .measure-input-wrap input{color:#F2EDE3!important;background:transparent!important;-webkit-text-fill-color:#F2EDE3;}
 .bs-sheet.bs-full .measure-input-wrap input::placeholder{color:rgba(242,237,227,0.35);-webkit-text-fill-color:rgba(242,237,227,0.35);}
+/* Body scan start screen: compact so it fits a phone screen (Daniel's
+   iPhone screenshot 2026-11-03). */
+.bs-sheet.bs-full .bs-pose-img{max-height:min(170px,24dvh);}
+.bs-intro .bs-poses{margin:0 0 8px;}
+.bs-intro .bs-tips{list-style:none;padding-left:0;font-size:14px;line-height:1.4;margin:0 0 12px;}
+.bs-intro .bs-tips li{margin-bottom:4px;padding-left:14px;position:relative;}
+.bs-intro .bs-tips li::before{content:"";position:absolute;left:2px;top:.55em;width:5px;height:5px;border-radius:50%;background:var(--brass);}
+.bs-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.bs-row2 .bs-field{margin:0;}
+.bs-row2 .bs-height{gap:6px;}
+.bs-row2 .bs-who button{padding:10px 6px;font-size:13px;}
+.bs-intro .bs-small{margin:10px 0 0;font-size:12px;}

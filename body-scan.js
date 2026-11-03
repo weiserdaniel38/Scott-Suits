@@ -672,20 +672,17 @@
     openSheet(head("Scan My Body") +
       '<div class="ps-body bs-intro">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      '<p class="bs-lead">Raise your arms like a goalpost, then turn around once, slowly. Your phone measures you from every side. Takes under a minute.</p>' +
       '<div class="bs-poses" aria-hidden="true">' + poseSvg("front") + poseSvg("spin") + "</div>" +
-      '<ol class="bs-tips">' +
-      "<li><b>Shirtless is most accurate</b> (like a tailor's tape on skin). Otherwise a tight T-shirt. Snug shorts or leggings, nothing baggy.</li>" +
-      "<li><b>Barefoot or socks,</b> hair flat, nothing in your pockets.</li>" +
-      "<li><b>Plain wall, good light,</b> nobody else in the picture.</li>" +
-      "<li><b>Lean the phone at waist height</b> (on a chair or shelf), then step back about 8 feet. Or have a friend hold it.</li>" +
-      "</ol>" +
-      '<div class="bs-field"><label>Your height <span>(the scan uses it as its ruler, so be exact)</span></label>' +
+      '<ul class="bs-tips">' +
+      "<li>Shirtless, barefoot</li>" +
+      "<li>Plain wall, good light</li>" +
+      "<li>Phone at waist height, 8 ft away</li>" +
+      "</ul>" +
+      '<div class="bs-row2"><div class="bs-field"><label>Your height</label>' +
       '<div class="bs-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
       '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + inch + '" inputmode="decimal"><span class="unit">in</span></div></div></div>' +
-      '<div class="bs-field"><label>Who\'s holding the phone?</label>' +
-      '<div class="ps-type bs-who"><button type="button" data-who="self" class="selected">Nobody, it\'s leaning</button><button type="button" data-who="friend">A friend</button></div></div>' +
-      '<p class="bs-small">Nothing is recorded or uploaded: your phone measures as you turn and keeps only the numbers. Our tailor reviews every scan before your suit is cut.</p>' +
+      '<div class="bs-field"><label>Phone held by</label>' +
+      '<div class="ps-type bs-who"><button type="button" data-who="self" class="selected">Nobody</button><button type="button" data-who="friend">A friend</button></div></div></div>' +
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary bs-start">Start the Scan</button>' +
       '<label class="btn-ghost bs-upload">Use a video I already took<input type="file" accept="video/*" hidden></label></div>');
@@ -706,7 +703,7 @@
       state = { heightCm: hcm, who, voice: true };
       tone(1, 10); // wakes the sound up inside the tap (iPhone)
       // iPhone only lets a page speak after a tap: say something now.
-      say(who === "self" ? "Lean your phone at waist height, then step back until you're fully in the picture." : "Point the camera at the person, at their waist height.", true);
+      say(who === "self" ? "Lean the phone at waist height. Step back." : "Hold the phone at waist height.", true);
       startCamera();
     };
     const fileInput = sheet.querySelector(".bs-upload input");
@@ -727,7 +724,7 @@
   function poseSvg(kind) {
     const src = kind === "front" ? "./assets/scan-figure-tpose.webp" : "./assets/scan-figure-turn.webp";
     return '<figure><img class="bs-pose-img" src="' + src + '" alt="" width="200" height="236">' + "<figcaption>" +
-      (kind === "front" ? "1. Face the phone: elbows out at shoulder height, forearms straight up, fists closed, feet a little apart" : "2. Keep your arms up and turn around once, slowly") + "</figcaption></figure>";
+      (kind === "front" ? "1. Arms up" : "2. Turn around slowly") + "</figcaption></figure>";
   }
 
   // ---- the pose model (loaded only when the scan starts) ----
@@ -804,7 +801,7 @@
         video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 1280 } },
       });
     } catch (e) {
-      showIntro("We couldn't open the camera. Allow camera access for this site in your phone's settings, or use a video you already took.");
+      showIntro("Camera blocked. Allow camera access in Settings.");
       return;
     }
     if (!sheet) { stopCamera(); return; }
@@ -820,7 +817,7 @@
     video.removeAttribute("autoplay");
     video.src = fileUrl;
     video.onended = () => {
-      if (state && state.phase !== "done") showIntro("The video ended before a full turn was seen. Take a video standing with your arms raised like a goalpost (elbows out at shoulder height, forearms up), then turning around once, slowly, with your whole body in the picture.");
+      if (state && state.phase !== "done") showIntro("The video ended too soon. Film one full turn, arms up.");
     };
     begin(video);
   }
@@ -845,18 +842,18 @@
   // Is the person standing the way the scan needs? Returns a message to
   // show (and say), or "" when everything is right.
   function inFrameProblem(lm) {
-    if (!lm) return "Step into the picture so we can see all of you.";
+    if (!lm) return "Step into the picture.";
     const vis = (i) => (lm[i].visibility == null ? 1 : lm[i].visibility);
     const nose = lm[0];
     const sh = { x: (lm[11].x + lm[12].x) / 2, y: (lm[11].y + lm[12].y) / 2 };
     const feetY = Math.max(lm[27].y, lm[28].y, lm[29].y, lm[30].y, lm[31].y, lm[32].y);
     const headTop = nose.y - (sh.y - nose.y) * 0.9;
-    if (headTop < 0.02) return "Step back, or tilt the phone, so your head is in the picture.";
-    if (feetY > 0.975 || vis(27) < 0.4 || vis(28) < 0.4) return "Step back until your feet are in the picture.";
+    if (headTop < 0.02) return "Step back. Show your head.";
+    if (feetY > 0.975 || vis(27) < 0.4 || vis(28) < 0.4) return "Step back. Show your feet.";
     const bodyH = feetY - headTop;
-    if (bodyH < 0.5) return "Come a little closer to the phone.";
+    if (bodyH < 0.5) return "Come closer.";
     if (bodyH > 0.94) return "Step back a little.";
-    if (sh.x < 0.25 || sh.x > 0.75) return "Move to the middle of the picture.";
+    if (sh.x < 0.25 || sh.x > 0.75) return "Move to the middle.";
     return "";
   }
   // The "goalpost" pose: upper arms out at shoulder height, elbows bent,
@@ -883,9 +880,9 @@
     const p = inFrameProblem(lm);
     if (p) return p;
     const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
-    if (Math.abs(lm[11].x - lm[12].x) < T * 0.55) return "Face the phone straight on.";
-    if (!armsUp(lm, true)) return "Raise your arms like a goalpost: elbows out at shoulder height, forearms straight up, fists closed.";
-    if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.9) return "Stand with your feet a little apart.";
+    if (Math.abs(lm[11].x - lm[12].x) < T * 0.55) return "Face the phone.";
+    if (!armsUp(lm, true)) return "Arms up, like the picture.";
+    if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.9) return "Feet a little apart.";
     return "";
   }
   function stillness(history) {
@@ -927,8 +924,8 @@
     let counting = false;
     const setMsg = (text, ok) => { msgEl.textContent = text; msgEl.classList.toggle("bs-ok", !!ok); };
     stepEl.textContent = "Step 1 of 2: arms up";
-    setMsg("Face the phone. Raise your elbows out to shoulder height, forearms straight up, fists closed.");
-    say("Face the phone. Raise your elbows out to shoulder height, with your forearms straight up and your fists closed.", true);
+    setMsg("Face the phone. Arms up.");
+    say("Face the phone. Arms up.", true);
     const tick = () => {
       if (!sheet || !state || state.phase === "done") return;
       rafId = requestAnimationFrame(tick);
@@ -948,7 +945,7 @@
         const problem = frontProblem(lm);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
         if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
-        setMsg("Perfect. Hold still.", true);
+        setMsg("Hold still.", true);
         if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
         if (ts - state.okSince > 900 && stillness(state.history) < 0.012) {
           if (state.uploaded) { state.phase = "frontCapture"; return; }
@@ -973,15 +970,15 @@
         state.lastAngleTs = ts;
         stepEl.textContent = "Step 2 of 2: turn around";
         ring.hidden = false;
-        setMsg("Now keep your arms up and turn slowly to your left, all the way around.", true);
-        say("Got it. Now keep your arms up and turn slowly to your left, all the way around.", true);
+        setMsg("Now turn slowly, all the way around.", true);
+        say("Now turn slowly, all the way around.", true);
         return;
       }
 
       if (state.phase === "spin") {
         const p = inFrameProblem(lm);
         if (p) { setMsg(p); say(p); }
-        else if (!armsUp(lm)) { setMsg("Keep your arms up: elbows at shoulder height, forearms straight up."); say("Keep your arms up."); }
+        else if (!armsUp(lm)) { setMsg("Keep your arms up."); say("Arms up."); }
         if (d && d.mask && !p) {
           const f = G.measureSideFrame(lm, d.mask, state.base.sideFracs);
           if (!f.error) {
@@ -1000,13 +997,13 @@
           if (pct >= 25 && said < 25) { state.saidPct = 25; say("Keep turning, slowly.", true); }
           else if (pct >= 50 && said < 50) { state.saidPct = 50; say("Halfway.", true); }
           else if (pct >= 75 && said < 75) { state.saidPct = 75; say("Almost there.", true); }
-          setMsg("Keep turning slowly… " + pct + "%", true);
+          setMsg("Keep turning… " + pct + "%", true);
         }
         if (state.theta >= 345) { finishSpin(); return; }
         if (ts - state.spinStart > SPIN_TIMEOUT_MS || (ts - state.lastAngleTs > 12000 && state.spin.length > 20)) {
           state.phase = "done";
           stopCamera();
-          showIntro("We didn't see a full turn. Keep your whole body in the picture and turn around once, slowly, with your arms up.");
+          showIntro("We didn't see a full turn. Try again, slowly.");
         }
       }
     };
@@ -1052,11 +1049,11 @@
     state.phase = "done";
     stopCamera();
     cue.done();
-    say("All done. Here are your measurements.", true);
+    say("Done.", true);
     const thetas = G.spinAngles(state.spin, state.frontSh2d);
     const chestCover = G.spinGirth(state.spin, thetas, "chest", state.heightCm);
     if (!isFinite(chestCover.value)) {
-      showIntro("That turn was a little quick for us to see every side. Please try again and turn more slowly.");
+      showIntro("Too fast. Try again, slower.");
       return;
     }
     // Side-on frames give the leg depths (thigh, calf).
