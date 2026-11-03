@@ -2455,10 +2455,11 @@ function adminFabricList(o) {
     suitBox.className = "admin-suit";
     const head = document.createElement("div");
     head.className = "admin-suit-head";
-    head.innerHTML = '<b></b><span class="admin-factory-state"></span>';
+    head.innerHTML = '<b></b><span class="admin-factory-state"></span><span class="admin-suit-due" hidden></span>';
     head.querySelector("b").textContent = (many ? "Suit " + (s.suit_number || 1) + " \u00b7 " : "") + adminSuitTypeLabel(s.suit_type);
     const stateEl = head.querySelector(".admin-factory-state");
-    if (s.factory) stateEl.textContent = adminFactorySuitState(s.factory);
+    if (s.factory) stateEl.textContent = adminFactorySuitState(s.factory, true);
+    adminShowSuitDue(head.querySelector(".admin-suit-due"), s.factory);
     suitBox.appendChild(head);
     const body = document.createElement("div");
     body.className = "admin-suit-body";
@@ -2647,11 +2648,34 @@ function adminFactoryPanel(o) {
   return panel;
 }
 
-function adminFactorySuitState(suit) {
+// The factory's expected finish date (its "Deal Date", saved from the
+// hourly status check as factory_delivery_date), shown as its own badge on
+// each suit card: "Factory finish date: Wed, Nov 4" while it's being made,
+// "Finished at the factory" once it is.
+function adminSuitDueText(f) {
+  if (!f || !f.factory_order_no) return "";
+  if (FACTORY_FINISHED.indexOf(f.factory_status) !== -1) return "Finished at the factory";
+  const d = f.factory_delivery_date;
+  if (!d) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  const nice = m
+    ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: +m[1] === new Date().getFullYear() ? undefined : "numeric" })
+    : d;
+  return "Factory finish date: " + nice;
+}
+function adminShowSuitDue(el, f) {
+  if (!el) return;
+  const t = adminSuitDueText(f);
+  el.textContent = t;
+  el.hidden = !t;
+  el.classList.toggle("is-done", !!f && FACTORY_FINISHED.indexOf(f.factory_status) !== -1);
+}
+
+function adminFactorySuitState(suit, noDue) {
   if (!suit.factory_order_no) return suit.factory_error ? "Not saved: " + suit.factory_error : "Not sent yet";
   return (
     "Factory order " + suit.factory_order_no + " \u00b7 " + (suit.factory_status || "Draft") +
-    (suit.factory_delivery_date ? " \u00b7 due " + suit.factory_delivery_date : "") +
+    (suit.factory_delivery_date && !noDue ? " \u00b7 due " + suit.factory_delivery_date : "") +
     (suit.factory_waybill ? " \u00b7 waybill " + suit.factory_waybill : "") +
     (suit.factory_error ? " \u00b7 " + suit.factory_error : "")
   );
@@ -2678,7 +2702,8 @@ function adminFactorySuit(suit, count, stateEl) {
   const statusBtn = box.querySelector(".fac-status");
   const buttons = box.querySelectorAll("button");
   const showState = () => {
-    state.textContent = adminFactorySuitState(suit);
+    state.textContent = adminFactorySuitState(suit, !!stateEl);
+    if (stateEl) adminShowSuitDue(stateEl.parentNode.querySelector(".admin-suit-due"), suit);
     statusBtn.hidden = !suit.factory_order_no;
     draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
   };
