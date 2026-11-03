@@ -214,6 +214,21 @@
         if (!e.target.closest || !e.target.closest(".ps-body")) e.preventDefault();
       }, { passive: false });
       sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSheet(); });
+      // iPhone: the keyboard (typing a link) and Safari's bottom bar sit on
+      // top of the page without resizing it, which hid the link box and the
+      // Use Link button. Lift the sheet above whatever covers the bottom.
+      if (window.visualViewport) {
+        const vv = window.visualViewport;
+        const lift = () => {
+          if (!sheet) return;
+          sheet.style.height = Math.round(vv.height) + "px";
+          sheet.style.top = Math.round(vv.offsetTop) + "px";
+        };
+        vv.addEventListener("resize", lift);
+        vv.addEventListener("scroll", lift);
+        sheet._unlift = () => { vv.removeEventListener("resize", lift); vv.removeEventListener("scroll", lift); };
+        lift();
+      }
     }
     sheet.innerHTML = '<div class="wiz-sheet-card ps-card" role="dialog" aria-modal="true" aria-label="Your suit from a photo">' + html + "</div>";
     const close = sheet.querySelector(".wiz-close");
@@ -221,6 +236,7 @@
   }
   function closeSheet() {
     if (!sheet) return;
+    if (sheet._unlift) sheet._unlift();
     sheet.remove();
     sheet = null;
     document.body.classList.remove("wiz-lock");
@@ -234,17 +250,18 @@
       '<div class="ps-body ps-loading">' +
       photoStrip() +
       '<span class="ps-spinner" aria-hidden="true"></span>' +
-      "<b>Studying your photo" + (state && state.photos && state.photos.length > 1 ? "s" : "") + "&hellip;</b>" +
+      "<b>" + (state && state.link && !state.photos.length ? "Studying your link" : "Studying your photo" + (state && state.photos && state.photos.length > 1 ? "s" : "")) + "&hellip;</b>" +
       "<p>We're matching the fabric, lapels, pockets and buttons to our options. This takes less than a minute.</p>" +
       "</div>");
   }
   function showError(msg) {
+    const fromLink = !!(state && state.link);
     openSheet(head("Build From a Photo") +
       '<div class="ps-body ps-loading">' +
       photoStrip() +
       "<b>" + esc(msg) + "</b>" +
       "</div>" +
-      '<div class="ps-actions"><button type="button" class="btn-primary wiz-continue ps-retry">Try Another Photo</button>' +
+      '<div class="ps-actions"><button type="button" class="btn-primary wiz-continue ps-retry">' + (fromLink ? "Try Another Link" : "Try Another Photo") + '</button>' +
       '<button type="button" class="ps-link ps-cancel">Design it myself instead</button></div>');
     sheet.querySelector(".ps-retry").onclick = () => showStart();
     sheet.querySelector(".ps-cancel").onclick = closeSheet;
@@ -305,7 +322,7 @@
     const keepOpen = sheet && sheet.querySelector(".ps-body") ? sheet.querySelector(".ps-body").scrollTop : 0;
     openSheet(head("Your Suit") +
       '<div class="ps-body">' +
-      '<div class="ps-top">' + photoStrip("ps-photos-small") +
+      '<div class="ps-top' + (state.photos.length > 2 ? " ps-top-many" : "") + '">' + photoStrip("ps-photos-small") +
       "<p>We matched your photo" + (state.photos.length > 1 ? "s" : "") + " to our closest options. Tap anything to change it.</p></div>" +
       (state.photos.length < MAX_PHOTOS
         ? '<button type="button" class="ps-add-photo">+ Add another photo (pants, back or a close-up)</button>'
@@ -438,7 +455,7 @@
         return;
       }
     }
-    state = { photos, result: null, open: null };
+    state = { photos, result: null, open: null, link: !!link };
     showLoading();
     let data = null;
     let status = 0;
@@ -466,13 +483,14 @@
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
     if (!sheet) return; // closed while waiting
-    if (data && data.photo) state.photos.push(data.photo);
+    if (data && Array.isArray(data.photos)) state.photos.push(...data.photos.filter((p) => typeof p === "string" && p.startsWith("data:image/")));
     if (data && data.error === "link") { showError(data.message || "We couldn't open that link. You can save the photo and upload it instead."); return; }
     if (status === 429) { showError("You've uploaded a lot of photos in a short time. Please try again in a little while."); return; }
     const result = data && data.result;
-    if (data && data.isSuit === false) { showError(data.message || "We couldn't find a suit in that photo. Please try another picture."); return; }
+    const notSuit = link ? "We couldn't find a suit at that link. Please try another link." : "We couldn't find a suit in that photo. Please try another picture of a suit.";
+    if (data && data.isSuit === false) { showError(link ? notSuit : (data.message || notSuit)); return; }
     if (!result) { showError("Sorry, something went wrong reading your photo. Please try again."); return; }
-    if (!result.isSuit) { showError(result.message || "We couldn't find a suit in that photo. Please try another picture of a suit."); return; }
+    if (!result.isSuit) { showError(link ? notSuit : (result.message || notSuit)); return; }
     state.result = result;
     applyResult(result, "full");
     showSummary();
@@ -532,6 +550,7 @@
     sheet.querySelector(".ps-upload").onclick = () => pickPhoto();
     const form = sheet.querySelector(".ps-link-form");
     const input = sheet.querySelector("#psLinkInput");
+    input.addEventListener("focus", () => setTimeout(() => { try { sheet && sheet.querySelector(".ps-link-go").scrollIntoView({ block: "nearest" }); } catch (e) {} }, 350));
     const err = sheet.querySelector(".ps-link-error");
     form.onsubmit = (e) => {
       e.preventDefault();

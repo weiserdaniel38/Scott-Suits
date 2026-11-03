@@ -2258,3 +2258,11 @@ body.order-done-view > .process{display:none !important;}
 .ps-add-photo{align-self:flex-start;margin:0 0 10px;padding:6px 0;background:none;border:0;font:600 13.5px 'Inter',sans-serif;color:var(--brass);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
 .ps-start .ps-hint{margin:-4px 0 0;font-size:12.5px;color:var(--ivory-dim);text-align:center;}
 .admin-notif-done.admin-notif-new{border-left-color:#2e7d32;background:rgba(46,125,50,0.06);}
+/* Build From a Photo: the sheet is sized to the visible screen (photo-suit.js),
+   so the card must fit inside it when the iPhone keyboard is open. */
+.ps-sheet .wiz-sheet-card{max-height:min(88dvh,calc(100% - 12px));}
+/* Three or more photos (e.g. a shop link's gallery): photos in a row, the
+   sentence underneath, so neither gets squeezed. */
+.ps-top-many{flex-direction:column;align-items:stretch;gap:10px;}
+.ps-top-many .ps-photos-small{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.ps-top-many .ps-photos-small .ps-photo{flex:0 0 auto;}
