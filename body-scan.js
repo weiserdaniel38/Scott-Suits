@@ -1216,11 +1216,9 @@
         if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
         setMsg("Hold still.", true);
         if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
-        if (ts - state.okSince > 400 && stillness(state.history) < 0.045) {
-          if (state.uploaded) { state.phase = "frontCapture"; return; }
-          counting = true;
-          countdown(countEl, () => { counting = false; state.phase = "frontCapture"; });
-        }
+        // Capture straight away, no countdown (Daniel: "it needs to capture
+        // as fast as MTailor"). The front frames take about half a second.
+        if (ts - state.okSince > 250 && stillness(state.history) < 0.06) state.phase = "frontCapture";
         return;
       }
 
