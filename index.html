@@ -121,7 +121,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261103photolink">
+<link rel="stylesheet" href="./style.css?v=20261103done">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261102notimer"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -888,10 +888,11 @@
         <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
       </details>
 
-      <!-- Shop admin only: one line per order placed, newest first. -->
+      <!-- Shop admin only: one line per order placed, newest first, plus suits
+           the factory has finished (main.js finishedSuits). -->
       <details class="account-collapse" id="adminNotificationsSection" hidden>
         <summary><h3>Notifications <span class="admin-notif-count" id="adminNotifCount" hidden></span></h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
-        <p class="account-section-note">Only you see this (shop admin). Every order placed shows up here.</p>
+        <p class="account-section-note">Only you see this (shop admin). Every order placed, and every suit the factory finishes, shows up here.</p>
         <button type="button" class="btn-ghost admin-notif-clear-all" id="adminNotifClearAll" hidden>Clear all</button>
         <div id="adminNotificationsList" class="brand-keep"></div>
       </details>
@@ -1057,7 +1058,7 @@
 <script src="./catalog.js?v=20261102price150"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261102photo2"></script>
+<script src="./main.js?v=20261103done"></script>
 <script src="./photo-suit.js?v=20261103photolink"></script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261101redrawload"></script> -->
