@@ -943,6 +943,8 @@ function fabricWaitItem(w) {
 // factory check keeps up to date (supabase/sql/30, kute-factory). Each one
 // shows as a "suit finished" notification until cleared on this device.
 const FACTORY_FINISHED = ["Stocked", "On Delivery", "Signed", "Delivered"];
+// Factory statuses that are still an unsubmitted draft (Submit to factory shows).
+const FACTORY_DRAFT_STATUSES = ["Draft", "Saving", "Stay Payments"];
 const SUIT_DONE_CLEARED_KEY = "scottSuitsFinishedCleared";
 function suitDoneCleared() {
   try { return JSON.parse(localStorage.getItem(SUIT_DONE_CLEARED_KEY) || "[]"); } catch (e) { return []; }
@@ -2619,8 +2621,9 @@ function adminOrderRow(o) {
 // come from the order (the customer enters them with their measurements).
 // Check shows the factory order the suit would make (codes, measurements,
 // anything to fix by hand); Save draft saves it as a DRAFT on the factory site through the
-// kute-factory edge function, which never submits it. The admin checks and
-// submits it there. Factory status reads the factory's progress back and
+// kute-factory edge function. Submit to factory (shown while it's a draft)
+// submits that same draft for production after a confirm, so it can be done
+// from a phone (Daniel, 2026-11-03); it never makes a second order. Factory status reads the factory's progress back and
 // moves the order's shipping step forward to match (no message is sent).
 const KUTE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/kute-factory" : "";
 
@@ -2692,6 +2695,7 @@ function adminFactorySuit(suit, count, stateEl) {
     '<button type="button" class="admin-ship-factory fac-check">Check</button>' +
     '<button type="button" class="btn-primary fac-draft">Save draft at factory</button>' +
     '<button type="button" class="admin-ship-factory fac-status">Factory status</button>' +
+    '<button type="button" class="btn-primary fac-submit" hidden>Submit to factory</button>' +
     "</div>" +
     '<pre class="admin-factory-out" hidden></pre>';
   box.querySelector("b").textContent = (count > 1 ? "Suit " + suit.suit_number + " \u00b7 " : "") + (suit.suit_type === "jacket_only" ? "Jacket only" : suit.suit_type === "pants_only" ? "Pants only" : "Full suit");
@@ -2700,11 +2704,13 @@ function adminFactorySuit(suit, count, stateEl) {
   const out = box.querySelector(".admin-factory-out");
   const draftBtn = box.querySelector(".fac-draft");
   const statusBtn = box.querySelector(".fac-status");
+  const submitBtn = box.querySelector(".fac-submit");
   const buttons = box.querySelectorAll("button");
   const showState = () => {
     state.textContent = adminFactorySuitState(suit, !!stateEl);
     if (stateEl) adminShowSuitDue(stateEl.parentNode.querySelector(".admin-suit-due"), suit);
     statusBtn.hidden = !suit.factory_order_no;
+    submitBtn.hidden = !suit.factory_order_no || FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
     draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
   };
   showState();
@@ -2749,11 +2755,36 @@ function adminFactorySuit(suit, count, stateEl) {
       showState();
       return (
         (r.ok
-          ? "Saved as a draft: factory order " + r.orderNo + ". Check it on the factory site and submit it there.\n\n"
+          ? "Saved as a draft: factory order " + r.orderNo + ". Tap Submit to factory when it\u2019s ready.\n\n"
           : "The factory didn\u2019t take it: " + r.error + "\n\n") + lines("Check on the factory site:", r.warnings)
       );
     })
   );
+  submitBtn.addEventListener("click", () => {
+    if (!window.confirm(
+      "Submit factory order " + suit.factory_order_no + " for production?\n\n" +
+      "It is sent exactly as it was last saved here. Once submitted it can\u2019t be changed or cancelled from this page."
+    )) return;
+    run("Submitting to the factory...", async () => {
+      const r = await callKuteFn({ action: "factory_submit", id: suit.id });
+      if (r.blocking) return lines("Not submitted. Fix first:", r.blocking) + lines("Also check:", r.warnings);
+      if (!r.ok) {
+        suit.factory_error = r.error || null;
+        showState();
+        return "Not submitted: " + r.error;
+      }
+      suit.factory_error = null;
+      if (r.status) suit.factory_status = r.status;
+      else suit.factory_status = "Submitted";
+      if (r.deliveryDate) suit.factory_delivery_date = r.deliveryDate;
+      showState();
+      return (
+        "Submitted: factory order " + r.orderNo + (r.status ? " is now " + r.status : "") + "." +
+        (r.status === "Stay Payments" ? "\nThe factory is waiting for payment on its site." : "") + "\n\n" +
+        lines("Check on the factory site:", r.warnings)
+      );
+    });
+  });
   statusBtn.addEventListener("click", () =>
     run("Asking the factory...", async () => {
       const r = await callKuteFn({ action: "factory_status", id: suit.id });

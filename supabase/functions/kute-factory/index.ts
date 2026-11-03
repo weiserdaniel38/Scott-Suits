@@ -21,6 +21,10 @@
 //       on the factory site (submit is always false; the admin submits it
 //       there) and keeps the factory's order number on the row. Sending
 //       again updates the same draft.
+//   { action: "factory_submit", id }  SUBMITS that suit's own saved draft
+//       for production (Daniel, 2026-11-03: submit from his phone). Only
+//       its own draft (same order number, still a draft at the factory) is
+//       submitted; it never makes a new order. Admin sign-in only.
 //   { action: "factory_status", id }  the suit's factory status; moves the
 //       order's shipping step forward to match and, when it moves, emails
 //       (and texts) the customer through send-shipping-update
@@ -46,7 +50,8 @@
 // fabric, archive, factory_preview, factory_probe). They change nothing
 // here; factory_probe only saves a test DRAFT at the factory (never
 // submitted) to find option conflicts (Daniel, 2026-10-25).
-// Nothing here submits an order: factory_draft only saves drafts.
+// Only factory_submit submits an order, and only the admin's own sign-in
+// (never the lookup or cron tokens) can run it.
 //
 // Signing (the factory's "Signature Authentication"): each request carries
 // X-OPENAPI-CLIENT-ID, -TIMESTAMP (ms), -NONCE and -SIGNATURE, where the
@@ -286,6 +291,45 @@ async function saveDraft(input: Record<string, unknown>) {
   }
   await supabase.from("orders").update(update).eq("id", row.id);
   return { ok, orderNo: d.orderNo || row.factory_order_no || null, deliveryDate: d.deliveryDate || null, error: err, warnings };
+}
+
+// Submit the suit's own saved draft for production (the factory's "edit,
+// save and submit": saveOrder with its orderNo and submit true). Never
+// makes a new order: no draft number, a number the factory no longer has
+// as a draft, or any refusal stops here (Daniel: never a duplicate suit,
+// 2026-10-26).
+const DRAFT_STATUSES = [10035, 10039, 10045]; // Saving, Stay Payments, Draft
+async function submitDraft(input: Record<string, unknown>) {
+  const { row, body, warnings, blocking } = await factoryOrder(input);
+  const orderNo = String(row.factory_order_no || "");
+  if (!orderNo) return { ok: false, error: "Save it as a draft at the factory first." };
+  if (blocking.length) return { ok: false, blocking, warnings };
+  const st = await kute("GET", "/order/status/" + encodeURIComponent(orderNo));
+  const sd = ((st.data || {}) as Record<string, any>).data || {};
+  if (st.httpStatus !== 200 || !sd.status) {
+    return { ok: false, orderNo, error: "Couldn't confirm the draft " + orderNo + " at the factory, so nothing was submitted." };
+  }
+  if (!DRAFT_STATUSES.includes(Number(sd.status))) {
+    return { ok: false, orderNo, error: "Order " + orderNo + " is already " + (sd.statusName || sd.status) + " at the factory, so it wasn't submitted again." };
+  }
+  body.orderNo = orderNo;
+  body.submit = true;
+  const r = await kute("POST", "/order/saveOrder", {}, body);
+  const res = (r.data || {}) as Record<string, any>;
+  const d = res.data || {};
+  const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo && !d.errorMessage;
+  const err = ok ? null : (d.errorMessage || res.msg || res.message || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300));
+  if (ok && String(d.orderNo) !== orderNo) {
+    // Shouldn't happen (it edits the draft by number); say so loudly.
+    const msg = "The factory answered with order " + d.orderNo + " instead of " + orderNo + ". Check the factory site for a duplicate right away.";
+    await supabase.from("orders").update({ factory_error: msg }).eq("id", row.id);
+    return { ok: false, orderNo, error: msg, warnings };
+  }
+  await supabase.from("orders").update({ factory_error: err, factory_sent_at: new Date().toISOString() }).eq("id", row.id);
+  if (!ok) return { ok: false, orderNo, error: err, warnings };
+  // Read the new status back (moves the customer's step and emails them).
+  const after = await factoryStatus(String(row.id)).catch((e) => ({ ok: false, error: String(e) }));
+  return { ok: true, orderNo, status: (after as any).status || null, deliveryDate: (after as any).deliveryDate || d.deliveryDate || null, notified: (after as any).notified || null, warnings };
 }
 
 // A throwaway DRAFT at the factory to find option conflicts: the suit row
@@ -536,6 +580,10 @@ Deno.serve(async (req) => {
         return json(await probeDraft(input));
       case "factory_draft":
         return json(await saveDraft(input));
+      case "factory_submit":
+        // Admin sign-in only: never the read-only lookup or cron tokens.
+        if (byCron || byLookup) return json({ error: "not allowed" }, 403);
+        return json(await submitDraft(input));
       case "factory_status":
         return json(await factoryStatus(str(input.id)));
       case "factory_status_all":
