@@ -617,19 +617,64 @@
 
   // ---- voice cues (the phone is often across the room) ----
   let lastSpoken = "", lastSpokenAt = 0;
+  // The voice. Recorded clips of a natural male voice (assets/voice/*.mp3)
+  // when VOICE_CLIPS is on; otherwise the phone's own voice, picking a
+  // male one (Daniel: "I want it to be male and sound natural").
+  const VOICE_CLIPS = false;
+  const CLIP_FOR = {
+    "Lean the phone at waist height. Step back.": "lean", "Hold the phone at waist height.": "hold",
+    "Face the phone. Arms up.": "face", "Perfect. Hold still.": "perfect", "3": "3", "2": "2", "1": "1",
+    "Now turn slowly, all the way around.": "turn", "Keep turning, slowly.": "keep", "Halfway.": "half",
+    "Almost there.": "almost", "Done.": "done", "Arms up.": "armsup", "Arms up, like the picture.": "armspic",
+    "Step into the picture.": "enter", "Step back. Show your head.": "head", "Step back. Show your feet.": "feet",
+    "Come closer.": "closer", "Step back a little.": "back", "Move to the middle.": "middle",
+    "Face the phone.": "facephone", "Feet a little apart.": "apart",
+  };
+  let clipAudio = null;
+  // Best male English voice on this phone: enhanced/premium/natural ones
+  // first, then known male voice names. Robotic novelty voices are skipped.
+  const MALE = /\b(aaron|arthur|daniel|gordon|alex|evan|nathan|tom|reed|oliver|rishi|lee|guy|andrew|christopher|eric|brian|davis|roger|ryan|thomas|male)\b/i;
+  const ROBOT = /\b(fred|albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|grandpa|rocko|eddy|reed \(|sandy|shelley|flo)\b/i;
+  let maleVoice;
+  function pickVoice() {
+    if (maleVoice !== undefined) return maleVoice;
+    const vs = (window.speechSynthesis.getVoices() || []).filter((v) => /^en/i.test(v.lang) && !ROBOT.test(v.name));
+    if (!vs.length) return null; // voices not loaded yet; try again next time
+    const score = (v) => (MALE.test(v.name) ? 10 : 0) + (/premium|enhanced|natural|neural/i.test(v.name) ? 5 : 0) + (/en-US/i.test(v.lang) ? 1 : 0);
+    const best = vs.slice().sort((a, b) => score(b) - score(a))[0];
+    maleVoice = best && MALE.test(best.name) ? best : null;
+    return maleVoice;
+  }
   function say(text, force) {
-    if (!state || !state.voice || !window.speechSynthesis) return;
+    if (!state || !state.voice) return;
     const now = Date.now();
     if (!force && (text === lastSpoken || now - lastSpokenAt < 2600)) return;
     lastSpoken = text;
     lastSpokenAt = now;
+    const clip = VOICE_CLIPS && CLIP_FOR[text];
+    if (clip) {
+      try {
+        // One audio element, first played inside the Start tap, so iPhone
+        // lets it keep playing later.
+        clipAudio = clipAudio || new Audio();
+        clipAudio.pause();
+        clipAudio.src = "./assets/voice/" + clip + ".mp3";
+        clipAudio.play().catch(() => {});
+        return;
+      } catch (e) {}
+    }
+    if (!window.speechSynthesis) return;
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.02;
+      const v = pickVoice();
+      if (v) { u.voice = v; u.lang = v.lang; }
+      u.rate = 0.98;
+      u.pitch = v ? 1 : 0.85; // no male voice found: lower the default one
       window.speechSynthesis.speak(u);
     } catch (e) {}
   }
+
 
   // Small sounds and buzzes at each moment (Android buzzes; iPhone
   // browsers don't allow vibration, so the sound carries it there).
