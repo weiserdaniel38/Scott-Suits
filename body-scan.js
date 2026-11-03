@@ -769,10 +769,8 @@
   // A few tips per card, so it's fewer taps on Next (Daniel 2026-11-03:
   // "don't have to keep pressing next, compile a few in one card").
   const PAGES = [
-    { title: "Get ready", tips: [
-      ["shorts", "Wear shorts. No shirt.", "Or a tight T-shirt."],
-      ["wall", "Good light. Nobody else in the picture.", "A plain wall is best."],
-    ] },
+    // Clothing card with ticks and crosses (copied from MTailor's).
+    { title: "What to wear", clothes: true, sub: "Good light, nobody else in the picture. A plain wall is best." },
     { icon: "height", title: "How tall are you?", height: true },
     { title: "Set up your phone", tips: [
       ["floor", "Lean your phone on the floor, against a wall.", "Screen facing you."],
@@ -781,6 +779,26 @@
     { figs: true, title: "Arms up, then turn around slowly.", last: true },
   ];
   const HEIGHT_PAGE = 1;
+  // Upper body and lower body, each with two good choices and one to avoid.
+  const CLOTHES = [
+    ["Upper body", [
+      ["Shirtless", true, '<path d="M20 14c4 3 8 4 12 4s8-1 12-4l8 6-4 8-4-2v26H20V26l-4 2-4-8z"/><path d="M26 30c2 2 4 2 6 0M32 30c2 2 4 2 6 0M32 22v14"/>'],
+      ["Tight shirt", true, '<path d="M24 12l-12 7 4 9 6-3v27h20V25l6 3 4-9-12-7c-1 4-4 6-8 6s-7-2-8-6z"/>'],
+      ["Loose clothes", false, '<path d="M22 12L6 20l5 11 7-3v28h28V28l7 3 5-11-16-8c-1 4-5 7-10 7s-9-3-10-7z"/>'],
+    ]],
+    ["Lower body", [
+      ["Spandex", true, '<path d="M18 14h28l-2 34h-9l-3-22-3 22h-9z"/><path d="M18 20h28"/>'],
+      ["Boxers or briefs", true, '<path d="M16 18h32l-3 18H35l-3-8-3 8H19z"/><path d="M16 23h32"/>'],
+      ["Other pants or shorts", false, '<path d="M18 10h28l3 46H37l-5-34-5 34H15z"/><path d="M18 16h28"/>'],
+    ]],
+  ];
+  function clothesGrid() {
+    return '<div class="bs-clothes">' + CLOTHES.map(([part, items]) =>
+      '<div class="bs-clothes-part">' + esc(part) + "</div>" +
+      '<div class="bs-clothes-row">' + items.map(([label, ok, path]) =>
+        '<div class="bs-cl"><span class="bs-cl-ic"><svg viewBox="0 0 64 64">' + path + "</svg><b class=\"" + (ok ? "ok" : "no") + "\">" + (ok ? "&#10003;" : "&#10005;") + "</b></span>" + esc(label) + "</div>").join("") + "</div>").join("") +
+      "</div>";
+  }
   function showIntro(msg, page) {
     preloadModel();
     if (page == null) page = msg ? PAGES.length - 1 : 0;
@@ -793,7 +811,8 @@
     openSheet(head("Scan My Body") +
       '<div class="ps-body bs-intro bs-page">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      (pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
+      (pg.clothes ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" + clothesGrid() :
+      pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
         '<div class="bs-tips">' + pg.tips.map((t) => '<div class="bs-tip"><span class="bs-icon">' + ICON[t[0]] + '</span><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>"
       : (pg.figs ? '<div class="bs-page-art bs-figs">' + poseSvg("front") + poseSvg("turn") + "</div>"
         : '<div class="bs-page-art"><span class="bs-icon">' + ICON[pg.icon] + "</span></div>") +
@@ -854,15 +873,7 @@
         clipAudio.play().then(() => { clipAudio.pause(); clipAudio.muted = false; }).catch(() => { clipAudio.muted = false; });
       } catch (e) {}
       tone(660, 60);
-      // Camera access first (Daniel: "allow camera access before phone
-      // tilting"), then the tilt check (like MTailor). Both are asked for
-      // right here inside the tap, which iPhone requires.
-      const cam = openCam();
-      const ask = window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission;
-      const motion = typeof ask === "function" ? ask.call(DeviceOrientationEvent).catch(() => "denied")
-        : Promise.resolve(window.DeviceOrientationEvent ? "granted" : "none");
-      cam.then(() => motion).then((r) => (r === "granted" ? showLevel() : startCamera()))
-        .catch(() => showIntro("Camera blocked. Allow camera access in Settings."));
+      showCameraTime();
     };
     const fileInput = sheet.querySelector(".bs-upload input");
     fileInput.onclick = (e) => {
@@ -881,6 +892,31 @@
   // When they line up the phone leans back at the right angle, the voice
   // says "Perfect." and the camera opens by itself (copied from MTailor).
   // The angle is kept (state.tiltDeg) to correct the perspective later.
+  // "Camera Time" (MTailor): say why before the iPhone asks for the camera.
+  // Continue asks for the camera, then motion (both inside this tap, which
+  // iPhone requires), shows a "Thanks!" tick, then the tilt check.
+  function showCameraTime() {
+    openSheet(head("Get Measured") +
+      '<div class="ps-body bs-intro bs-page bs-camtime">' +
+      '<div class="bs-page-art"><span class="bs-icon"><svg viewBox="0 0 64 64"><path d="M8 20h12l4-6h16l4 6h12v32H8z"/><circle cx="32" cy="35" r="10"/></svg></span></div>' +
+      '<h3 class="bs-page-title">Camera Time</h3>' +
+      '<p class="bs-page-sub">Before we start your body scan we\'ll need access to your camera.</p>' +
+      '<p class="bs-thanks" hidden><span class="bs-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Thanks!</p>' +
+      "</div>" +
+      '<div class="ps-actions"><button type="button" class="btn-primary bs-cam-go">Continue</button></div>');
+    sheet.querySelector(".bs-cam-go").onclick = () => {
+      const cam = openCam();
+      const ask = window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission;
+      const motion = typeof ask === "function" ? ask.call(DeviceOrientationEvent).catch(() => "denied")
+        : Promise.resolve(window.DeviceOrientationEvent ? "granted" : "none");
+      cam.then(() => motion).then((r) => {
+        if (!sheet) return;
+        const t = sheet.querySelector(".bs-thanks");
+        if (t) { t.hidden = false; sheet.querySelector(".bs-cam-go").disabled = true; }
+        setTimeout(() => { if (!sheet) return; if (r === "granted") showLevel(); else startCamera(); }, 900);
+      }).catch(() => showIntro("Camera blocked. Allow camera access in Settings."));
+    };
+  }
   const TILT_TARGET = 78, TILT_OK = 3;
   function showLevel() {
     openSheet('<div class="bs-level">' +
@@ -1255,6 +1291,8 @@
       if (!ok && !now && msgShown && t - msgWantAt < 700) return false;
       msgShown = text;
       msgEl.textContent = text;
+      // Clean screen: only urgent messages (a failed capture) show.
+      msgEl.classList.toggle("bs-msg-alert", !!now);
       msgEl.classList.toggle("bs-ok", !!ok);
       msgEl.classList.remove("bs-msg-in"); void msgEl.offsetWidth; msgEl.classList.add("bs-msg-in");
       return true;
@@ -1263,6 +1301,11 @@
     // figure only shows once they're in a good spot.
     stepEl.textContent = "Step 1 of 2: get in the picture";
     if (bigPose) bigPose.classList.add("bs-gone");
+    // MTailor: no text on the camera screen, the voice says it all; and
+    // while you set up, the camera sits in a framed box that goes full
+    // screen once you're standing in place.
+    const camEl = sheet.querySelector(".bs-cam");
+    if (camEl && !state.uploaded) camEl.classList.add("bs-clean", "bs-boxed");
     setMsg("Step into the picture.", false, true);
     say("Step into the picture.", true);
     const tick = () => {
@@ -1309,6 +1352,7 @@
           setMsg("Hold there…", true);
           if (ts - state.inFrameSince < 700) return;
           state.spotSaid = true;
+          if (camEl) camEl.classList.remove("bs-boxed");
           stepEl.textContent = "Step 1 of 2: arms up";
           if (bigPose) bigPose.classList.remove("bs-gone");
           setMsg("Good spot. Now arms up, like the picture.", true);
@@ -1743,13 +1787,11 @@
   // Every answer must be Yes before the numbers show; a No means scan again.
   function showReview(result) {
     const h = state.heightCm, ft = Math.floor(h / 2.54 / 12), inch = Math.round((h / 2.54 - ft * 12) * 2) / 2;
+    // MTailor's three questions, shown one at a time.
     const qs = [
-      "Shirtless or a tight shirt?",
-      "Barefoot?",
-      "Nobody else in the picture?",
-      state.who === "friend" ? "Phone held steady?" : "Phone didn't move?",
-      "Arms up the whole turn?",
-      "Height is " + ft + " ft " + inch + " in?",
+      "Are your hands in fists?",
+      "For the whole video, is your entire body on screen with nothing blocking you?",
+      "Did you turn all the way around? (Don't worry how fast you turned.)",
     ];
     openSheet(head("Quick Check") +
       '<div class="ps-body bs-review">' +
@@ -1762,6 +1804,8 @@
       '<button type="button" class="btn-ghost bs-redo">Scan again</button></div>');
     const answers = qs.map(() => null);
     const update = () => {
+      // Each question lights up once the one before it is answered.
+      sheet.querySelectorAll(".bs-q").forEach((q, i) => q.classList.toggle("bs-q-wait", i > 0 && answers[i - 1] === null));
       const anyNo = answers.indexOf("no") !== -1;
       sheet.querySelector(".bs-see").disabled = anyNo || answers.indexOf(null) !== -1;
       sheet.querySelector(".bs-redo-msg").hidden = !anyNo;
@@ -1775,6 +1819,7 @@
         update();
       }));
     });
+    update();
     sheet.querySelector(".bs-see").onclick = () => showResults(result);
     sheet.querySelector(".bs-redo").onclick = () => showIntro();
   }

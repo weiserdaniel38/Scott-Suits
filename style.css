@@ -2488,3 +2488,30 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-figs figcaption{color:var(--ivory-dim);font-size:14px;margin-top:6px;}
 .bs-sheet .bs-video{filter:brightness(.62);} /* dim the camera so the dots stand out (MTailor) */
 .bs-results .bs-share{display:block;margin:18px auto 4px;}
+/* Body scan, MTailor match (2026-11-03): clothing card, Camera Time, clean framed camera, light pose figure, one-at-a-time review */
+.bs-clothes{max-width:380px;margin:14px auto 6px;}
+.bs-clothes-part{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ivory-dim);margin:14px 0 8px;text-align:center;}
+.bs-clothes-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.bs-cl{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;line-height:1.25;text-align:center;}
+.bs-cl-ic{position:relative;width:72px;height:72px;}
+.bs-cl-ic svg{width:72px;height:72px;fill:none;stroke:#d2b07a;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
+.bs-cl-ic b{position:absolute;right:-4px;top:-2px;width:20px;height:20px;border-radius:50%;font-size:12px;line-height:20px;text-align:center;color:#111;}
+.bs-cl-ic b.ok{background:#e2c48d;}
+.bs-cl-ic b.no{background:#c0564a;color:#fff;}
+.bs-camtime .bs-thanks{display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;margin-top:14px;animation:bs-rise .3s ease both;}
+.bs-camtime .bs-thanks[hidden]{display:none;}
+.bs-camtime .bs-thanks .bs-done-check{width:34px;height:34px;}
+.bs-camtime .bs-thanks .bs-done-check svg{width:20px;height:20px;}
+/* Clean camera: only dots, figure and voice (urgent messages still show). */
+.bs-cam.bs-clean .bs-checks,.bs-cam.bs-clean .bs-capture,.bs-cam.bs-clean .bs-ring,.bs-cam.bs-clean .bs-cam-bottom,.bs-cam.bs-clean .bs-step{display:none!important;}
+.bs-cam.bs-clean .bs-cam-msg:not(.bs-msg-alert){opacity:0;pointer-events:none;}
+/* Framed box while setting up, full screen once in place. */
+.bs-cam .bs-video,.bs-cam .bs-overlay{transition:top .6s ease,left .6s ease,width .6s ease,height .6s ease,border-radius .6s ease,box-shadow .6s ease;}
+.bs-cam.bs-boxed{background:#1d1a15;}
+.bs-cam.bs-boxed .bs-video,.bs-cam.bs-boxed .bs-overlay{inset:auto;top:calc(64px + env(safe-area-inset-top,0px));left:9%;width:82%;height:calc(100% - 92px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-radius:18px;}
+.bs-cam.bs-boxed .bs-video{box-shadow:0 0 0 6px #b08d57,0 0 40px rgba(176,141,87,.35);}
+/* Light see-through pose figure (MTailor), gold once matched. */
+.bs-bigpose i{background:#ececec;opacity:.62;}
+.bs-bigpose.bs-match i{background:#d9b77a;opacity:.6;}
+.bs-review .bs-q{transition:opacity .3s;}
+.bs-review .bs-q.bs-q-wait{opacity:.3;pointer-events:none;}
