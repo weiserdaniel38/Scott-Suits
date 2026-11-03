@@ -16,6 +16,13 @@
 // instead (SUIT_PHOTO_OPENAI_MODEL, default gpt-5.2, the cuff checker's
 // model), with the same JSON schema.
 // Optional: SUIT_PHOTO_MODEL (default claude-opus-5-5).
+// The customer can also paste a link instead of uploading: a direct image
+// link, or a web page (shop listing, article, Instagram post) whose preview
+// image (og:image) is used. The function fetches it (public http(s) hosts
+// only, no private or local addresses), shrinks it to a JPEG and sends that
+// back as `photo` so the site can show it.
+// Up to 3 photos can be sent together (e.g. jacket front, trousers, back);
+// they are read as one suit.
 // Deploy with verify_jwt false (the site calls it like generate-suit-image).
 // POST {"ping":true} -> {"ok":true,"ready":true}.
 
@@ -119,23 +126,122 @@ const SYSTEM =
   "You are a master tailor at a custom suit shop. A customer uploaded a photo of a suit they want copied. " +
   "For every design step you are given the shop's exact option names; choose the one that best matches what the photo shows. " +
   "Choose \"Not visible\" only when the detail truly cannot be judged (e.g. back vents on a front-only photo, trousers cropped out). " +
+  "On a front photo of a jacket the chest pocket, lower pockets, lapel buttonhole and front buttons ARE visible: look closely at the chest and hips and always answer them. " +
   "Rules: count the front buttons carefully, and on a double breasted jacket count all buttons and how many fasten. " +
   "A double breasted jacket never has a notch lapel. Lapel width: Thin is a slim modern lapel, Standard is classic, Wide and Extra Wide are broad 1970s / statement lapels. " +
   "Lower pockets: say whether they have flaps, whether they are slanted, and whether there is a small ticket pocket above the right one. " +
   "Sleeve buttons: count them and say whether they touch/overlap (kissing) or are spaced. " +
   "For colours give what the cloth would look like in neutral daylight; dark navy and black are easy to confuse, look for blue undertones.";
 
-async function readWithClaude(key: string, mediaType: string, data: string, schema: unknown, question: string) {
+// ---- photo from a link ----
+function blockedHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!h || h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal") || h.endsWith(".supabase.internal")) return true;
+  if (/^\d+$/.test(h)) return true; // integer IPs
+  const v4 = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h);
+  if (v4) {
+    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  }
+  if (h.includes(":")) return true; // IPv6 literals: not needed for real photo links
+  if (!h.includes(".")) return true; // single-label (internal) names
+  return false;
+}
+function checkUrl(raw: string): URL {
+  const u = new URL(raw);
+  if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error("bad_url");
+  if (u.username || u.password || (u.port && u.port !== "80" && u.port !== "443")) throw new Error("bad_url");
+  if (blockedHost(u.hostname)) throw new Error("bad_url");
+  return u;
+}
+const UA = "Mozilla/5.0 (compatible; ScottSuitsPhotoBot/1.0; +https://scottssuits.com)";
+async function fetchChecked(raw: string): Promise<Response> {
+  let url = checkUrl(raw).toString();
+  for (let hop = 0; hop < 5; hop++) {
+    const res = await fetch(url, { redirect: "manual", headers: { "user-agent": UA, accept: "image/*,text/html;q=0.9,*/*;q=0.5" }, signal: AbortSignal.timeout(12000) });
+    if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+      url = checkUrl(new URL(res.headers.get("location")!, url).toString()).toString();
+      await res.body?.cancel();
+      continue;
+    }
+    if (!res.ok) throw new Error("fetch_" + res.status);
+    return Object.assign(res, { finalUrl: url });
+  }
+  throw new Error("too_many_redirects");
+}
+async function readCapped(res: Response, cap: number): Promise<Uint8Array> {
+  const reader = res.body!.getReader();
+  const parts: Uint8Array[] = [];
+  let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.length;
+    if (n > cap) { await reader.cancel(); throw new Error("too_large"); }
+    parts.push(value);
+  }
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+function pageImage(html: string, base: string): string | null {
+  const metas = [
+    /<meta[^>]+(?:property|name)=["'](?:og:image:secure_url|og:image|twitter:image(?::src)?)["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image:secure_url|og:image|twitter:image(?::src)?)["']/i,
+    /<link[^>]+rel=["']image_src["'][^>]*href=["']([^"']+)["']/i,
+  ];
+  for (const re of metas) {
+    const m = re.exec(html);
+    if (m) return new URL(m[1].replace(/&amp;/g, "&"), base).toString();
+  }
+  return null;
+}
+function toBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+// Returns a data:image/jpeg URL (or the original bytes if they can't be
+// re-encoded but are already a small JPG/PNG/WebP/GIF).
+async function photoFromLink(link: string): Promise<string> {
+  let res = await fetchChecked(link) as Response & { finalUrl: string };
+  let type = (res.headers.get("content-type") || "").toLowerCase();
+  if (type.includes("text/html") || type.includes("xhtml")) {
+    const html = new TextDecoder().decode(await readCapped(res, 2_000_000));
+    const img = pageImage(html, res.finalUrl);
+    if (!img) throw new Error("no_image_on_page");
+    res = await fetchChecked(img) as Response & { finalUrl: string };
+    type = (res.headers.get("content-type") || "").toLowerCase();
+  }
+  if (!type.startsWith("image/") && !type.includes("octet-stream")) { await res.body?.cancel(); throw new Error("not_image"); }
+  const bytes = await readCapped(res, 15_000_000);
+  try {
+    const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
+    const im = await Image.decode(bytes);
+    const scale = Math.min(1, 1568 / Math.max(im.width, im.height));
+    if (scale < 1) im.resize(Math.round(im.width * scale), Math.round(im.height * scale));
+    return "data:image/jpeg;base64," + toBase64(await im.encodeJPEG(86));
+  } catch (e) {
+    const m = /^image\/(jpeg|png|webp|gif)/.exec(type);
+    if (m && bytes.length <= 3_700_000) return "data:image/" + m[1] + ";base64," + toBase64(bytes);
+    console.warn("Could not re-encode linked photo", e);
+    throw new Error("unreadable");
+  }
+}
+
+type Pic = { mediaType: string; data: string; url: string };
+async function readWithClaude(key: string, pics: Pic[], schema: unknown, question: string) {
   const client = new Anthropic({ apiKey: key });
   const response = await client.messages.create({
     model: env("SUIT_PHOTO_MODEL", "claude-opus-5-5"),
     max_tokens: 8000,
-    output_config: { effort: "low", format: { type: "json_schema", schema } },
+    output_config: { effort: env("SUIT_PHOTO_EFFORT", "medium"), format: { type: "json_schema", schema } },
     system: SYSTEM,
     messages: [{
       role: "user",
       content: [
-        { type: "image", source: { type: "base64", media_type: mediaType, data } },
+        ...pics.map((p) => ({ type: "image", source: { type: "base64", media_type: p.mediaType, data: p.data } })),
         { type: "text", text: question },
       ],
     }],
@@ -145,7 +251,7 @@ async function readWithClaude(key: string, mediaType: string, data: string, sche
   return JSON.parse(text);
 }
 
-async function readWithOpenAI(key: string, dataUrl: string, schema: unknown, question: string) {
+async function readWithOpenAI(key: string, pics: Pic[], schema: unknown, question: string) {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: "Bearer " + key },
@@ -154,7 +260,7 @@ async function readWithOpenAI(key: string, dataUrl: string, schema: unknown, que
       response_format: { type: "json_schema", json_schema: { name: "suit_match", strict: true, schema } },
       messages: [
         { role: "system", content: SYSTEM },
-        { role: "user", content: [{ type: "text", text: question }, { type: "image_url", image_url: { url: dataUrl, detail: "high" } }] },
+        { role: "user", content: [{ type: "text", text: question }, ...pics.map((p) => ({ type: "image_url", image_url: { url: p.url, detail: "high" } }))] },
       ],
     }),
   });
@@ -177,9 +283,32 @@ Deno.serve(async (req) => {
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
   if (limited(ip)) return json({ error: "limit" }, 429);
 
-  const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.image || ""));
-  if (!m) return json({ error: "Please upload a JPG or PNG photo." }, 400);
-  if (m[2].length > 6_000_000) return json({ error: "That photo is too large." }, 413);
+  const images: string[] = (Array.isArray(body.images) ? body.images : body.image ? [body.image] : []).slice(0, 3).map((x: unknown) => String(x || "")).filter(Boolean);
+  let linked = "";
+  if (body.imageUrl && images.length < 3) {
+    try {
+      linked = await photoFromLink(String(body.imageUrl).trim().slice(0, 2000));
+      images.push(linked);
+    } catch (e) {
+      console.warn("Photo link failed:", String(e));
+      const why = String((e as Error)?.message || "");
+      return json({
+        error: "link",
+        message: why === "bad_url" ? "That doesn't look like a web link. Please paste the full address, starting with https://."
+          : why === "no_image_on_page" ? "We couldn't find a photo on that page. Try opening the photo itself and copying its address, or save it and upload it."
+          : why === "too_large" ? "That photo is too large. Please save it and upload it instead."
+          : "We couldn't open that link. Some sites block this; you can save the photo and upload it instead.",
+      }, 400);
+    }
+  }
+  if (!images.length) return json({ error: "Please upload a JPG or PNG photo." }, 400);
+  const pics: Pic[] = [];
+  for (const url of images) {
+    const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(url);
+    if (!m) return json({ error: "Please upload a JPG or PNG photo." }, 400);
+    if (m[2].length > 6_000_000) return json({ error: "That photo is too large." }, 413);
+    pics.push({ mediaType: m[1], data: m[2], url });
+  }
   const jacket = cleanSteps(body.jacketSteps);
   const pants = cleanSteps(body.pantsSteps);
   if (!jacket.length) return json({ error: "Bad request" }, 400);
@@ -188,13 +317,14 @@ Deno.serve(async (req) => {
     title + "\n" + steps.map((s) => "- " + s.key + " (" + s.label + "): " + s.options.map((o) => '"' + o + '"').join(", ")).join("\n");
 
   const schema = buildSchema(jacket, pants);
-  const question = "Match this suit to our options.\n\n" + stepText("JACKET STEPS", jacket) + "\n\n" + stepText("TROUSER STEPS", pants);
+  const question = (pics.length > 1 ? "These " + pics.length + " photos show the same suit from different angles or details (e.g. the jacket, the trousers, the back). Combine what they show. " : "") +
+    "Match this suit to our options.\n\n" + stepText("JACKET STEPS", jacket) + "\n\n" + stepText("TROUSER STEPS", pants);
   try {
     const out = key
-      ? await readWithClaude(key, m[1], m[2], schema, question)
-      : await readWithOpenAI(openaiKey, body.image, schema, question);
-    if (!out) return json({ isSuit: false, message: "Sorry, we couldn't read that photo. Please try another picture of a suit." });
-    return json({ ok: true, result: out });
+      ? await readWithClaude(key, pics, schema, question)
+      : await readWithOpenAI(openaiKey, pics, schema, question);
+    if (!out) return json({ photo: linked || undefined, isSuit: false, message: "Sorry, we couldn't read that photo. Please try another picture of a suit." });
+    return json({ ok: true, result: out, photo: linked || undefined });
   } catch (err) {
     console.error("suit-from-photo failed:", err);
     return json({ error: "failed" }, 502);
