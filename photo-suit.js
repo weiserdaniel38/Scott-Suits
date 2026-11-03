@@ -116,7 +116,21 @@
   // ---- photo -> design ----
   let state = null; // { photos: [dataUrl], result, open: "j:collar" | null }
   const MAX_PHOTOS = 3;
-  const photoStrip = (cls) => (state && state.photos && state.photos.length
+  // A pasted page link shows as a preview card of the website (main picture,
+  // site name, page title); uploaded photos show as a row of thumbnails.
+  const siteCard = () => {
+    const pg = state.page;
+    let host = "";
+    try { host = new URL(pg.url).hostname.replace(/^www\./, ""); } catch (e) {}
+    return '<div class="ps-site">' +
+      (state.photos && state.photos[0] ? '<img class="ps-site-img" src="' + state.photos[0] + '" alt="">' : "") +
+      '<div class="ps-site-text"><span class="ps-site-name">' + esc(pg.site || host) + "</span>" +
+      (pg.title ? "<b>" + esc(pg.title) + "</b>" : "") +
+      (host && host !== String(pg.site || "").toLowerCase() ? "<small>" + esc(host) + "</small>" : "") + "</div></div>";
+  };
+  const photoStrip = (cls) => (state && state.page
+    ? siteCard()
+    : state && state.photos && state.photos.length
     ? '<div class="ps-photos ' + (cls || "") + '">' + state.photos.map((p, i) => '<img class="ps-photo" src="' + p + '" alt="Your photo ' + (i + 1) + '">').join("") + "</div>"
     : "");
 
@@ -322,8 +336,8 @@
     const keepOpen = sheet && sheet.querySelector(".ps-body") ? sheet.querySelector(".ps-body").scrollTop : 0;
     openSheet(head("Your Suit") +
       '<div class="ps-body">' +
-      '<div class="ps-top' + (state.photos.length > 2 ? " ps-top-many" : "") + '">' + photoStrip("ps-photos-small") +
-      "<p>We matched your photo" + (state.photos.length > 1 ? "s" : "") + " to our closest options. Tap anything to change it.</p></div>" +
+      '<div class="ps-top' + (state.photos.length > 2 || state.page ? " ps-top-many" : "") + '">' + photoStrip("ps-photos-small") +
+      "<p>We matched " + (state.page ? "this page's suit" : "your photo" + (state.photos.length > 1 ? "s" : "")) + " to our closest options. Tap anything to change it.</p></div>" +
       (state.photos.length < MAX_PHOTOS
         ? '<button type="button" class="ps-add-photo">+ Add another photo (pants, back or a close-up)</button>'
         : "") +
@@ -445,6 +459,7 @@
   // whole suit is read again from all of them).
   async function run(files, link, keep) {
     const photos = keep && state && state.photos ? state.photos.slice() : [];
+    const keptPage = keep && state && state.page ? state.page : null;
     for (const file of files || []) {
       if (photos.length >= MAX_PHOTOS) break;
       try {
@@ -455,7 +470,7 @@
         return;
       }
     }
-    state = { photos, result: null, open: null, link: !!link };
+    state = { photos, result: null, open: null, link: !!link, page: keptPage };
     showLoading();
     let data = null;
     let status = 0;
@@ -483,6 +498,7 @@
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
     if (!sheet) return; // closed while waiting
+    if (data && data.page && typeof data.page === "object") state.page = { site: String(data.page.site || ""), title: String(data.page.title || ""), url: String(data.page.url || "") };
     if (data && Array.isArray(data.photos)) state.photos.push(...data.photos.filter((p) => typeof p === "string" && p.startsWith("data:image/")));
     if (data && data.error === "link") { showError(data.message || "We couldn't open that link. You can save the photo and upload it instead."); return; }
     if (status === 429) { showError("You've uploaded a lot of photos in a short time. Please try again in a little while."); return; }
