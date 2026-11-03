@@ -1517,6 +1517,7 @@ function resetDesignerForNewSuit() {
   jacketDesigner.resetSelections();
   pantsDesigner.resetSelections();
   measureStash = {};
+  clearBodyScan();
   applySuitType("full");
   setMeasureMode("finished");
   MEASUREMENTS.forEach((m) => {
@@ -6530,8 +6531,45 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
     if (m.id === "height" && val !== undefined) shown = Math.floor(val / 12) + " ft " + Math.round((val % 12) * 10) / 10 + " in (" + val + " in)";
     lines.push(label + " " + shown);
   });
+  if (mode === "body" && extras && extras.bodyScan) bodyScanSummaryLines(extras.bodyScan, measurements).forEach((l) => lines.push(l));
 
   return lines.join("\n");
+}
+
+// Forgets the phone body scan (a new suit, or the form cleared).
+function clearBodyScan() {
+  window.__bodyScan = null;
+  const note = document.getElementById("bodyScanDone");
+  if (note) note.hidden = true;
+}
+// The phone body scan, for the tailor: what the scan measured (with its
+// margin), whether the customer changed it, and the optional factory body
+// positions the form doesn't ask for (enter those by hand at the factory).
+const BODY_SCAN_EXTRA_LABELS = {
+  stomach_high: "Highest Point of Stomach",
+  front_shoulder: "Front Shoulder",
+  back_width: "Back Width",
+  front_chest_width: "Front Chest Width",
+  calf: "Calf Girth",
+};
+function bodyScanSummaryLines(scan, measurements) {
+  const lines = ["", "PHONE BODY SCAN (please review before sending to the factory)"];
+  lines.push("Scanned " + String(scan.at || "").slice(0, 10) + " from " + (scan.source || "photos") + ", height used " + scan.heightCm + " cm");
+  MEASUREMENTS.filter((m) => m.mode === "body").forEach((m) => {
+    const v = scan.scanned ? scan.scanned[m.id] : undefined;
+    if (v === undefined || v === null || !isFinite(v)) return;
+    const now = measurements[m.id];
+    const pm = scan.pm && scan.pm[m.id] ? " +/-" + scan.pm[m.id] : "";
+    lines.push(m.label + ": scan " + v + " cm" + pm + (now !== undefined && Math.abs(Number(now) - v) >= 0.5 ? " (customer changed to " + now + ")" : ""));
+  });
+  const ex = scan.extras || {};
+  const exIds = Object.keys(BODY_SCAN_EXTRA_LABELS).filter((k) => ex[k] !== undefined);
+  if (exIds.length) {
+    lines.push("Extra body measurements (optional on the factory site):");
+    exIds.forEach((k) => lines.push(BODY_SCAN_EXTRA_LABELS[k] + ": " + ex[k] + " cm"));
+  }
+  if (scan.flags && scan.flags.length) lines.push("Scan warnings: " + scan.flags.map((f) => (f === "arms" ? "arms close to the body (chest may read big)" : f === "legs" ? "no gap between the legs (thigh/rise rough)" : f)).join("; "));
+  return lines;
 }
 
 // Rebuilds the measurement grid to match whichever fields the current suit
@@ -6973,6 +7011,7 @@ if (addAnotherSuitBtn) {
     // (see samePreviousMeasurementsBanner / updateSamePreviousMeasurementsBanner)
     // instead of retyping everything.
     measureStash = {};
+    clearBodyScan();
     MEASUREMENTS.forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       if (el) el.value = "";
@@ -7934,6 +7973,7 @@ const resetMeasurementsBtn = document.getElementById("resetMeasurementsBtn");
 if (resetMeasurementsBtn) {
   resetMeasurementsBtn.addEventListener("click", () => {
     measureStash = {};
+    clearBodyScan();
     activeMeasurements().forEach((m) => {
       const el = document.getElementById("m_" + m.id);
       if (el) el.value = "";
@@ -8113,6 +8153,7 @@ function loadCartItemIntoDesigner(index) {
     const el = document.getElementById("m_" + m.id);
     if (el && item.measurements && item.measurements[m.id] !== undefined) el.value = item.measurements[m.id];
   });
+  window.__bodyScan = item.bodyScan || null;
   designPreview = null;
   pendingCommitIndex = index;
   editingCartIndex = index;
@@ -8258,6 +8299,9 @@ function commitCurrentSuitToCart() {
     texts: { jacket: hasJacketStep() ? jacketDesigner.getTexts() : {}, pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getTexts() },
     // A "Generate My Suit" picture of exactly this design, if one was drawn.
     previewId: currentDesignPreviewId() || editedSuitPreviewId(),
+    // The phone body scan behind these body measurements (body-scan.js),
+    // for the tailor's review; written into the order text.
+    bodyScan: measureMode === "body" && window.__bodyScan ? window.__bodyScan : null,
   };
   if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
     // A suit of an order the admin is editing stays tied to its order row.
@@ -8697,11 +8741,11 @@ function monoText(item, part) {
 function buildAllSuitsOrderSummaryText(customerName) {
   if (cartItems.length === 1) {
     const item = cartItems[0];
-    return buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+    return buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan });
   }
   return cartItems
     .map((item, i) => {
-      const text = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+      const text = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan });
       return "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + text;
     })
     .join("\n\n" + "=".repeat(40) + "\n\n");
@@ -8751,7 +8795,7 @@ function suitSpecRow(item, i, count, customerName, liningPhotoUrl) {
   // only for the notification email (finalizeOrder), in their own separate block,
   // so the shop still has a fast way to reach the customer without it
   // cluttering the spec sheet.
-  const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrl, jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants") });
+  const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrl, jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan });
   row.client_form_text = count === 1 ? suitText : "SUIT " + (i + 1) + " OF " + count + "\n" + suitText;
   // Plain-English, personal-data-free description of the suit -- read by
   // the AI that writes the "finished suit" image prompt once the shop marks
@@ -9584,6 +9628,7 @@ function saveDraft() {
       jacketTexts: jacketDesigner.getTexts(),
       pantsTexts: pantsDesigner.getTexts(),
       measurements: measurements,
+      bodyScan: window.__bodyScan || null,
       customerName: customerNameInput.value,
       customerPhone: customerPhoneInput.value,
       customerEmail: customerEmailInput.value,
@@ -9688,6 +9733,7 @@ function restoreDraft() {
     };
   }
 
+  if (draft.bodyScan) window.__bodyScan = draft.bodyScan;
   if (draft.measurements) {
     applyMeasureExtras(draft.measurements);
     activeMeasurements().forEach((m) => {
@@ -9895,6 +9941,7 @@ function clearDesignerAndForm() {
   // its full (jacket + pants) field set before the clearing loop below, and
   // resets the progress bar / prices / button wording along with it.
   measureStash = {};
+  clearBodyScan();
   applySuitType("full");
   setMeasureMode("finished");
 
