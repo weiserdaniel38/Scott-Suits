@@ -7,7 +7,7 @@ const top = 50, floor = 1050; // 1000 px tall -> 0.18 cm per px
 const cmPx = 1000 / HEIGHT_CM;
 
 // Landmarks in pixels for a figure centred at x=300.
-function landmarks(side) {
+function landmarks(side, goal) {
   const cx = 300;
   const p = (x, y, v) => ({ x: x / W, y: y / H, visibility: v == null ? 0.99 : v });
   const L = [];
@@ -26,6 +26,11 @@ function landmarks(side) {
   L[31] = p(cx - legOut - 10, top + 0.99 * 1000); L[32] = p(cx + legOut + 10, top + 0.99 * 1000);
   // Arms: out 45 degrees in front, straight down at the side.
   const armLen = 140;
+  if (goal && !side) { // goalpost: upper arms level, forearms straight up
+    L[13] = p(cx - sw - armLen, shY); L[14] = p(cx + sw + armLen, shY);
+    L[15] = p(cx - sw - armLen, shY - armLen); L[16] = p(cx + sw + armLen, shY - armLen);
+    return L;
+  }
   const ex = side ? 0 : armLen * Math.SQRT1_2, ey = side ? armLen : armLen * Math.SQRT1_2;
   L[13] = p(cx - sw - ex, shY + ey); L[14] = p(cx + sw + ex, shY + ey);
   L[15] = p(cx - sw - 2 * ex, shY + 2 * ey); L[16] = p(cx + sw + 2 * ex, shY + 2 * ey);
@@ -33,7 +38,7 @@ function landmarks(side) {
 }
 
 // Draws the person: torso half-width by height, head, arms, legs.
-function draw(side) {
+function draw(side, goal) {
   const data = new Float32Array(W * H);
   const fill = (x0, x1, y) => { for (let x = Math.max(0, Math.round(x0)); x <= Math.min(W - 1, Math.round(x1)); x++) data[y * W + x] = 1; };
   const cx = 300;
@@ -61,8 +66,9 @@ function draw(side) {
   }
   // Arms, 10 cm thick
   if (!side) {
-    const L = landmarks(false);
-    [[11, 13, 15], [12, 14, 16]].forEach(([s, e, w]) => {
+    const L = landmarks(false, goal);
+    const segs = goal ? [[11, 13], [13, 15], [12, 14], [14, 16]] : [[11, 15], [12, 16]];
+    segs.forEach(([s, w]) => {
       const a = { x: L[s].x * W, y: L[s].y * H }, b = { x: L[w].x * W, y: L[w].y * H };
       const r = 5 * cmPx;
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -122,6 +128,21 @@ console.log(JSON.stringify(res, null, 1));
   near("spin chest (rounded rectangle)", g.value, Math.round(truePerim * 10) / 10, 1.5);
   // Same shape read as an ellipse from front + side only, for comparison.
   console.log("     (front+side ellipse would say " + (Math.round(G.ellipsePerimeter(34, 25) * 10) / 10) + ", true " + (Math.round(truePerim * 10) / 10) + ", margin " + (Math.round(g.pm * 10) / 10) + ")");
+}
+// Goalpost pose (what the live scan asks for): same body, arms up.
+{
+  const fg = G.measureFrontFrame(landmarks(false, true), draw(false, true));
+  const bg = G.combine([fg, fg]);
+  const sg = G.measureSideFrame(landmarks(true), draw(true), bg.sideFracs);
+  const rg = G.finish(bg, [sg], HEIGHT_CM);
+  near("goalpost height px", fg.Hpx, 1000, 3);
+  near("goalpost chest", rg.values.body_chest, ell(34, 25, K.chest), 1.5);
+  near("goalpost waist", rg.values.body_waist, ell(31, 25, K.waist), 1.5);
+  near("goalpost seat", rg.values.body_seat, ell(36, 27, K.seat), 1.5);
+  near("goalpost neck", rg.values.body_neck, ell(13, 12, K.neck), 1.5);
+  near("goalpost bicep", rg.values.body_bicep, Math.PI * 10 * 0.97, 2);
+  near("goalpost arm", rg.values.body_sleeve, (280 / cmPx) + 4, 1);
+  if (rg.flags.length) { fails++; console.log("FAIL goalpost flags " + rg.flags); }
 }
 if (!(res.values.body_u_rise > 40 && res.values.body_u_rise < 100)) { fails++; console.log("FAIL u-rise " + res.values.body_u_rise); }
 if (res.flags.length) { fails++; console.log("FAIL flags " + res.flags); }
