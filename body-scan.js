@@ -642,7 +642,7 @@
     "Come closer.": "closer", "Step back a little.": "back", "Move to the middle.": "middle",
     "Face the phone.": "facephone", "Feet a little apart.": "apart",
     "Great, that's a good spot.": "spot", "Great, that's a good spot. Now raise your arms, like the picture.": "spotarms",
-    "Got it. Now turn slowly, all the way around.": "gotit",
+    "Got it. Now turn slowly, all the way around.": "gotit", "Perfect.": "perfectonly",
   };
   let clipAudio = null;
   // Fetch every clip once when the scan starts, so each line plays at once.
@@ -678,6 +678,7 @@
         // lets it keep playing later.
         clipAudio = clipAudio || new Audio();
         clipAudio.pause();
+        clipAudio.muted = false;
         clipAudio.src = "./assets/voice/" + clip + ".mp3?v=" + VOICE_V;
         clipAudio.play().catch(() => {});
         return;
@@ -802,8 +803,22 @@
       tone(1, 10); // wakes the sound up inside the tap (iPhone)
       preloadVoice();
       // iPhone only lets a page speak after a tap: say something now.
-      say(who === "self" ? "Lean the phone on the floor. Step back." : "Hold the phone at waist height.", true);
-      startCamera();
+      if (who !== "self") { say("Hold the phone at waist height.", true); startCamera(); return; }
+      // Unlock the voice inside this tap (iPhone), silently.
+      try {
+        clipAudio = clipAudio || new Audio();
+        clipAudio.muted = true;
+        clipAudio.src = "./assets/voice/perfectonly.mp3?v=" + VOICE_V;
+        clipAudio.play().then(() => { clipAudio.pause(); clipAudio.muted = false; }).catch(() => { clipAudio.muted = false; });
+      } catch (e) {}
+      tone(660, 60);
+      // Tilt check first (like MTailor). iPhone asks for motion access, and
+      // only inside a tap.
+      const ask = window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission;
+      if (typeof ask === "function") {
+        ask.call(DeviceOrientationEvent).then((r) => (r === "granted" ? showLevel() : startCamera())).catch(() => startCamera());
+      } else if (window.DeviceOrientationEvent) showLevel();
+      else startCamera();
     };
     const fileInput = sheet.querySelector(".bs-upload input");
     fileInput.onclick = (e) => {
@@ -815,6 +830,55 @@
       state = { heightCm: readHeight(), who: "friend", voice: false, uploaded: true };
       startVideoFile(f);
     };
+  }
+
+  // ---- tilt check (phone leaning on the floor) ----
+  // Two circles: a fixed ring and a dot that moves with the phone's tilt.
+  // When they line up the phone leans back at the right angle, the voice
+  // says "Perfect." and the camera opens by itself (copied from MTailor).
+  // The angle is kept (state.tiltDeg) to correct the perspective later.
+  const TILT_TARGET = 78, TILT_OK = 3;
+  function showLevel() {
+    openSheet('<div class="bs-level">' +
+      '<div class="bs-cam-top"><span class="bs-step">Phone angle</span><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
+      '<h3 class="bs-page-title">Lean your phone on the floor, screen facing you.</h3>' +
+      '<p class="bs-page-sub">When the circles line up, you\'ve got the right angle.</p>' +
+      '<p class="bs-level-ok" aria-live="polite"></p>' +
+      '<div class="bs-level-track" aria-hidden="true"><span class="bs-level-ring"></span><span class="bs-level-dot"></span></div>' +
+      '<button type="button" class="btn-ghost bs-level-skip">Skip</button>' +
+      "</div>", true);
+    const dot = sheet.querySelector(".bs-level-dot"), okEl = sheet.querySelector(".bs-level-ok");
+    let okSince = 0, done = false, got = false, samples = [];
+    const finish = (skip) => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("deviceorientation", onTilt);
+      if (!skip && samples.length) state.tiltDeg = G.median(samples);
+      if (skip) { startCamera(); return; }
+      okEl.textContent = "Perfect.";
+      sheet.querySelector(".bs-level").classList.add("bs-level-done");
+      say("Perfect.", true);
+      cue.tick();
+      const st = state;
+      setTimeout(() => { if (sheet && state === st && !st.preview) startCamera(); }, 1100);
+    };
+    const onTilt = (e) => {
+      if (!sheet || e.beta == null) return;
+      got = true;
+      const diff = e.beta - TILT_TARGET;
+      const px = Math.max(-1, Math.min(1, diff / 25)) * 20; // vh, stays on the track
+      dot.style.transform = "translate(-50%, calc(-50% + " + (-px).toFixed(1) + "vh))";
+      const ok = Math.abs(diff) < TILT_OK && Math.abs(e.gamma || 0) < 12;
+      dot.classList.toggle("on", ok);
+      if (!ok) { okSince = 0; samples = []; return; }
+      samples.push(e.beta);
+      okSince = okSince || performance.now();
+      if (performance.now() - okSince > 700) finish(false);
+    };
+    window.addEventListener("deviceorientation", onTilt);
+    sheet.querySelector(".bs-level-skip").onclick = () => finish(true);
+    // No tilt sensor (a computer): go straight to the camera.
+    setTimeout(() => { if (!got && !done && sheet && !state.preview) finish(true); }, 2000);
   }
 
   // The two figures on the start screen (Daniel's ChatGPT drawings, gold
@@ -855,7 +919,36 @@
 
   // ---- step 2: the camera (or a video file) ----
   let stream = null, rafId = 0, fileUrl = null;
+  // Record the scan (small, low quality) so the person can watch it back on
+  // the review screen, like MTailor. Stays on the phone; never uploaded.
+  let recorder = null, recChunks = [];
+  function startRecording(s) {
+    recChunks = [];
+    recorder = null;
+    if (!window.MediaRecorder) return;
+    try {
+      const types = ["video/mp4", "video/webm;codecs=vp8", "video/webm"];
+      const type = types.find((t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+      recorder = new MediaRecorder(s, Object.assign({ videoBitsPerSecond: 700000 }, type ? { mimeType: type } : {}));
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
+      recorder.start(1000);
+    } catch (e) { recorder = null; }
+  }
+  function stopRecording() {
+    return new Promise((res) => {
+      const r = recorder;
+      recorder = null;
+      if (!r || r.state === "inactive") { res(null); return; }
+      const t = setTimeout(() => res(null), 3000);
+      r.onstop = () => {
+        clearTimeout(t);
+        res(recChunks.length ? URL.createObjectURL(new Blob(recChunks, { type: r.mimeType || "video/mp4" })) : null);
+      };
+      try { r.stop(); } catch (e) { clearTimeout(t); res(null); }
+    });
+  }
   function stopCamera() {
+    if (recorder) { try { recorder.ondataavailable = null; recorder.stop(); } catch (e) {} recorder = null; }
     if (rafId) cancelAnimationFrame(rafId);
     rafId = 0;
     if (stream) stream.getTracks().forEach((t) => t.stop());
@@ -869,6 +962,8 @@
       '<video class="bs-video" playsinline muted autoplay></video>' +
       '<canvas class="bs-overlay"></canvas>' +
       '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
+      // Big see-through pose figure until the person matches it (MTailor).
+      '<img class="bs-bigpose" src="./assets/scan-figure-tpose.webp" alt="" aria-hidden="true">' +
       // Live "you're lined up" graphics: frame corners that turn gold when
       // the whole body is in the picture, three checks that light up one by
       // one, and a capture bar while the front frames are taken.
@@ -913,6 +1008,7 @@
     video.classList.toggle("bs-mirror", state.who === "self");
     sheet.querySelector(".bs-overlay").classList.toggle("bs-mirror", state.who === "self");
     try { await video.play(); } catch (e) {}
+    startRecording(stream);
     begin(video);
   }
   async function startVideoFile(file) {
@@ -1023,6 +1119,7 @@
     const countEl = sheet.querySelector(".bs-count");
     const ring = sheet.querySelector(".bs-ring");
     const ghost = null;
+    const bigPose = sheet.querySelector(".bs-bigpose");
     const scanline = sheet.querySelector(".bs-scanline");
     let lastTs = -1;
     let counting = false;
@@ -1049,6 +1146,7 @@
         const problem = frontProblem(lm);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
         const inFrame = !!lm && !inFrameProblem(lm);
+        if (bigPose) bigPose.classList.toggle("bs-gone", !problem);
         setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.03);
         // First time they're well placed: say so, then the next step.
         if (inFrame && !state.spotSaid) {
@@ -1078,6 +1176,7 @@
         if (state.base.error) { state.fronts = []; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
         state.phase = "spin";
+        if (bigPose) bigPose.classList.add("bs-gone");
         setCapture(null);
         setChecks(null);
         scanline.hidden = false;
@@ -1148,82 +1247,47 @@
     };
     step();
   }
-  // Live scan effects ON the body (Daniel: no outlines; "real-time graphics
-  // flashing over my body to make it look like it was captured"). Inside
-  // the person's outline only: a light gold tint, fine contour lines that
-  // drift like a 3D scan, a bright band sweeping up and down, twinkling
-  // points on the joints, and a flash each time a frame is captured.
-  // Before the pose is right the effect is soft white; once it is right it
-  // turns gold.
-  let fxCanvas = null, fxCtx = null, fxImg = null;
-  const FX_STEP = 2; // mask sampled every 2 px (fast enough every frame)
-  const FX_JOINTS = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+  // Live scan effect ON the body (Daniel: no outlines, "real-time graphics
+  // flashing over my body"; copied from MTailor's recording): a grid of
+  // glowing dots fills the person's shape every frame, white on the face,
+  // gold on the body. The dots twinkle, a brighter band sweeps up and down,
+  // and every captured frame flashes them all. Before the pose is right the
+  // dots are soft white; once it is right they turn gold.
   function drawGuide(ctx, canvas, lm, mask) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!lm || !mask) return;
     const W = canvas.width, H = canvas.height;
-    const w = Math.max(1, Math.floor(mask.width / FX_STEP)), h = Math.max(1, Math.floor(mask.height / FX_STEP));
-    if (!fxCanvas || fxCanvas.width !== w || fxCanvas.height !== h) {
-      fxCanvas = document.createElement("canvas");
-      fxCanvas.width = w; fxCanvas.height = h;
-      fxCtx = fxCanvas.getContext("2d");
-      fxImg = fxCtx.createImageData(w, h);
-    }
-    const px = fxImg.data, m = mask.data, mw = mask.width;
-    for (let y = 0, j = 0; y < h; y++) {
-      const row = y * FX_STEP * mw;
-      for (let x = 0; x < w; x++, j += 4) {
-        px[j] = px[j + 1] = px[j + 2] = 255;
-        px[j + 3] = m[row + x * FX_STEP] > 0.5 ? 255 : 0;
-      }
-    }
-    fxCtx.globalCompositeOperation = "copy";
-    fxCtx.putImageData(fxImg, 0, 0);
-    // Paint the effect only where the person is.
-    fxCtx.globalCompositeOperation = "source-in";
+    const m = mask.data, mw = mask.width, mh = mask.height;
+    const gap = W / 30, r0 = gap * 0.2;
     const t = performance.now() / 1000;
     const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
-    const col = ok ? "226,196,141" : "235,240,255";
-    fxCtx.fillStyle = "rgba(" + col + ",0.16)";
-    fxCtx.fillRect(0, 0, w, h);
-    // Contour lines drifting downward.
-    const gap = Math.max(6, Math.round(h / 70));
-    const off = (t * gap * 1.5) % gap;
-    fxCtx.fillStyle = "rgba(" + col + ",0.55)";
-    for (let y = off; y < h; y += gap) fxCtx.fillRect(0, y, w, 1);
-    // Bright band sweeping up and down the body.
-    const by = (0.5 + 0.5 * Math.sin(t * 1.6)) * h;
-    const band = fxCtx.createLinearGradient(0, by - h * 0.08, 0, by + h * 0.08);
-    band.addColorStop(0, "rgba(" + col + ",0)");
-    band.addColorStop(0.5, "rgba(255,248,230,0.85)");
-    band.addColorStop(1, "rgba(" + col + ",0)");
-    fxCtx.fillStyle = band;
-    fxCtx.fillRect(0, by - h * 0.08, w, h * 0.16);
-    // Flash when a frame was just captured.
+    const body = ok ? [226, 196, 141] : [215, 222, 235];
     const since = state && state.flashAt ? performance.now() - state.flashAt : 1e9;
-    if (since < 220) {
-      fxCtx.fillStyle = "rgba(255,250,235," + (0.75 * (1 - since / 220)).toFixed(3) + ")";
-      fxCtx.fillRect(0, 0, w, h);
-    }
+    const flash = since < 260 ? 1 - since / 260 : 0;
+    const by = (0.5 + 0.5 * Math.sin(t * 1.4)) * H; // sweeping band
+    // Face: around the nose, out to the ears.
+    const nose = lm[0], earL = lm[7], earR = lm[8];
+    const fr = earL && earR ? Math.max(Math.abs(earL.x - earR.x) * W * 0.85, gap * 1.5) : gap * 2;
+    const fx = nose.x * W, fy = nose.y * H;
     ctx.save();
-    ctx.shadowColor = "rgba(" + col + ",0.85)";
-    ctx.shadowBlur = Math.max(10, W / 50);
-    ctx.drawImage(fxCanvas, 0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+    for (let gy = 0, y = gap / 2; y < H; y += gap, gy++) {
+      const my = Math.min(mh - 1, Math.floor((y / H) * mh)) * mw;
+      for (let gx = 0, x = gap / 2; x < W; x += gap, gx++) {
+        if (m[my + Math.min(mw - 1, Math.floor((x / W) * mw))] <= 0.5) continue;
+        const face = Math.hypot(x - fx, y - fy) < fr;
+        const tw = 0.55 + 0.45 * Math.sin(t * 2.2 + gx * 1.7 + gy * 2.3);
+        const band = Math.max(0, 1 - Math.abs(y - by) / (H * 0.07));
+        const a = Math.min(1, 0.35 + 0.45 * tw + 0.5 * band + flash);
+        const r = r0 * (0.75 + 0.35 * tw + 0.5 * band + 0.6 * flash);
+        const c = face || flash > 0.5 ? [255, 255, 255] : body;
+        ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * 0.22).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, 6.283); ctx.fill(); // glow
+        ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
+      }
+    }
     ctx.restore();
-    // Twinkling tracking points on the joints.
-    FX_JOINTS.forEach((i, k) => {
-      const p = lm[i];
-      if (!p || (p.visibility != null && p.visibility < 0.5)) return;
-      const a = 0.45 + 0.55 * Math.abs(Math.sin(t * 3 + k));
-      const r = Math.max(3, W / 160) * (0.8 + 0.4 * a);
-      ctx.beginPath();
-      ctx.arc(p.x * W, p.y * H, r, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,244,215," + a.toFixed(2) + ")";
-      ctx.shadowColor = "rgba(" + col + ",0.9)";
-      ctx.shadowBlur = r * 4;
-      ctx.fill();
-    });
-    ctx.shadowBlur = 0;
   }
   // The outline figures are gone from the camera (Daniel); kept as no-op.
   function setGhost() {}
@@ -1265,9 +1329,27 @@
   }
   function finishScan() {
     state.phase = "done";
-    stopCamera();
+    const rec = stopRecording();
     say("Done.", true);
-    showReview(state.result);
+    rec.then((url) => {
+      stopCamera();
+      if (!state) return;
+      if (state.replay) URL.revokeObjectURL(state.replay);
+      state.replay = url;
+      showGreatJob();
+    });
+  }
+  // "Great job!" then the review (MTailor's order).
+  function showGreatJob() {
+    openSheet('<div class="ps-body bs-intro bs-page bs-great">' +
+      '<div class="bs-page-art"><span class="bs-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>' +
+      '<h3 class="bs-page-title">Great job!</h3>' +
+      '<p class="bs-page-sub">Last step: check your scan.</p>' +
+      "</div>" +
+      '<div class="ps-actions"><button type="button" class="btn-primary bs-go-review">Check My Scan</button>' +
+      '<button type="button" class="btn-ghost bs-redo">Scan again</button></div>');
+    sheet.querySelector(".bs-go-review").onclick = () => showReview(state.result);
+    sheet.querySelector(".bs-redo").onclick = () => showIntro();
   }
 
   // ---- step 3b: check each requirement (like MTailor) ----
@@ -1284,6 +1366,7 @@
     ];
     openSheet(head("Quick Check") +
       '<div class="ps-body bs-review">' +
+      (state.replay ? '<video class="bs-replay' + (state.who === "self" ? " bs-mirror" : "") + '" src="' + state.replay + '" autoplay muted loop playsinline></video>' : "") +
       qs.map((q, i) => '<div class="bs-q" data-i="' + i + '"><span>' + esc(q) + "</span>" +
         '<div class="ps-type bs-yn"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div></div>').join("") +
       '<p class="bs-alert bs-redo-msg" hidden>Fix that, then scan again.</p>' +
@@ -1400,7 +1483,7 @@
     const c = sheet.querySelector(".bs-overlay");
     c.width = W; c.height = H;
     drawGuide(c.getContext("2d"), c, lm, mask);
-    setGhost(sheet.querySelector(".bs-ghost"), lm, phase);
+    sheet.querySelector(".bs-bigpose").classList.toggle("bs-gone", !!lm && (phase !== "front" || pct !== 1));
     if (phase === "spin") setChecks(null); else setChecks(!!lm, !!lm && pct !== 1, !!lm && pct !== 1 && pct !== 2);
     setCapture(phase === "capture" ? 0.6 : null);
     sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: arms up";
@@ -1415,6 +1498,15 @@
   };
   // For previews and testing: show the results screen with given numbers.
   window.__bodyScanPreview = (result) => showResults(result);
+  window.__bodyScanPreviewLevel = (beta) => {
+    state = { heightCm: 178, who: "self", voice: false, preview: true };
+    showLevel();
+    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta, gamma: 0 }));
+  };
+  window.__bodyScanPreviewGreat = (result) => {
+    state = { heightCm: 178, who: "self", result, voice: false };
+    showGreatJob();
+  };
   window.__bodyScanPreviewReview = (result) => {
     state = { heightCm: 178, who: "self", result };
     showReview(result);
