@@ -121,7 +121,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261103bodyscan">
+<link rel="stylesheet" href="./style.css?v=20261103spin">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261102notimer"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -511,6 +511,17 @@
       <span>Signed in as <span id="savedMeasurementsEmail"></span></span>
       <span class="size-estimate-toggle-cta">Use my saved measurements</span>
     </button>
+  </div>
+
+  <!-- Phone body scan (body-scan.js): stand in a T, turn around once, and
+       the phone measures the body measurements below. Hidden for now: only
+       shown (and its script only loaded) with ?bodyscan=1 in the address. -->
+  <div class="size-estimate body-scan-box" id="bodyScanBox" hidden>
+    <button type="button" class="size-estimate-toggle body-scan-toggle" id="bodyScanBtn">
+      <span>No tape measure? <span class="body-scan-new">New</span></span>
+      <span class="size-estimate-toggle-cta">Scan my body with my phone</span>
+    </button>
+    <p class="body-scan-done" id="bodyScanDone" hidden>Your scan filled in the body measurements below. Please look them over; our tailor reviews every scan before your suit is cut.</p>
   </div>
 
   <!-- Partner tailors near the customer's address or ZIP, closest first. The list
@@ -1060,6 +1071,8 @@
 <script src="./fabric-drape.js?v=20261030matte"></script>
 <script src="./main.js?v=20261103bodyscan"></script>
 <script src="./photo-suit.js?v=20261103photoorlink"></script>
+<!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
+<script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261103spin"; document.body.appendChild(bsS); }</script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
 <script src="./jacket-studio.js?v=20261101redrawload"></script> -->
 

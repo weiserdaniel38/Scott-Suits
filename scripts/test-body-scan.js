@@ -98,6 +98,31 @@ near("bicep", res.values.body_bicep, Math.PI * 10 * 0.97, 2);
 near("arm", res.values.body_sleeve, (280 / cmPx) + 4, 1);
 near("shoulder", res.values.body_shoulder, 44 * 0.97, 1);
 console.log(JSON.stringify(res, null, 1));
+
+// Turn-around scan: a chest-like rounded rectangle (34 x 25 cm, corners
+// 8 cm) turning once at an uneven speed, with noisy shoulder readings.
+{
+  const a = 34 - 16, b = 25 - 16, r = 8;
+  const truePerim = 2 * a + 2 * b + 2 * Math.PI * r;
+  const frontSh = 0.2;
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5);
+  const frames = [], trueT = [];
+  for (let i = 0; i <= 90; i++) {
+    const u = i / 90;
+    const t = 360 * (u + 0.08 * Math.sin(u * Math.PI * 2)); // speeds up and slows down
+    const ph = (t * Math.PI) / 180;
+    const wCm = Math.abs(a * Math.cos(ph)) + Math.abs(b * Math.sin(ph)) + 2 * r;
+    frames.push({ Hpx: 1000, depth: { chest: wCm * cmPx * (1 + rnd() * 0.02) }, sh2d: frontSh * Math.abs(Math.cos(ph)) + rnd() * 0.01 });
+    trueT.push(t);
+  }
+  const th = G.spinAngles(frames, frontSh);
+  near("spin end angle", th[th.length - 1], 360, 20);
+  const g = G.spinGirth(frames, th, "chest", HEIGHT_CM);
+  near("spin chest (rounded rectangle)", g.value, Math.round(truePerim * 10) / 10, 1.5);
+  // Same shape read as an ellipse from front + side only, for comparison.
+  console.log("     (front+side ellipse would say " + (Math.round(G.ellipsePerimeter(34, 25) * 10) / 10) + ", true " + (Math.round(truePerim * 10) / 10) + ", margin " + (Math.round(g.pm * 10) / 10) + ")");
+}
 if (!(res.values.body_u_rise > 40 && res.values.body_u_rise < 100)) { fails++; console.log("FAIL u-rise " + res.values.body_u_rise); }
 if (res.flags.length) { fails++; console.log("FAIL flags " + res.flags); }
 process.exit(fails ? 1 : 0);
