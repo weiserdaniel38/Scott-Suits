@@ -1308,6 +1308,25 @@
     if (frac !== null) c.querySelector("i").style.width = Math.round(frac * 100) + "%";
   }
 
+  // frame / pose / still: true, false, or null (hide all checks).
+  function setChecks(frame, pose, still) {
+    if (!sheet) return;
+    const box = sheet.querySelector(".bs-checks"), fr = sheet.querySelector(".bs-frame"), gh = sheet.querySelector(".bs-ghost");
+    if (!box) return;
+    box.hidden = frame === null;
+    const on = { frame: !!frame, pose: !!(frame && pose), still: !!(frame && pose && still) };
+    box.querySelectorAll("span").forEach((el) => el.classList.toggle("on", on[el.dataset.k]));
+    fr.classList.toggle("bs-ok", !!frame);
+    fr.classList.toggle("bs-hide", frame === null);
+    gh.classList.toggle("bs-ghost-lock", on.pose);
+  }
+  function setCapture(frac) {
+    const c = sheet && sheet.querySelector(".bs-capture");
+    if (!c) return;
+    c.hidden = frac === null;
+    if (frac !== null) c.querySelector("i").style.width = Math.round(frac * 100) + "%";
+  }
+
   // ---- step 3: the numbers ----
   // The numbers from the turn (null if the turn was too quick to use).
   function spinResult() {
