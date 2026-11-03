@@ -569,6 +569,27 @@
     ["front_chest_width", "Front Chest Width"],
     ["calf", "Calf"],
   ];
+  // Finished suit sizes from the body numbers: body + standard Regular-fit
+  // room (cm). Daniel 2026-11-03: friends with finished sizes that fit them
+  // will scan, so these allowances can be checked and tuned (estimates).
+  const FINISHED_FROM_BODY = [
+    ["shoulder", "body_shoulder", 1.5, "jacket", "Jacket Shoulder"],
+    ["sleeve_length", "body_sleeve", 1.5, "jacket", "Sleeve Length"],
+    ["chest", "body_chest", 10, "jacket", "Jacket Chest"],
+    ["stomach", "body_stomach", 8, "jacket", "Jacket Stomach"],
+    ["back_jacket", "body_back_length", 0, "jacket", "Jacket Length"],
+    ["bicep", "body_bicep", 7, "jacket", "Jacket Bicep"],
+    ["waist", "body_waist", 2, "pants", "Pants Waist"],
+    ["hips", "body_seat", 6, "pants", "Pants Hips"],
+    ["leg_length", "body_outseam", 0, "pants", "Pants Length"],
+    ["crotch", "body_u_rise", 3, "pants", "Full Crotch"],
+    ["thigh", "body_thigh", 8, "pants", "Pants Thigh"],
+  ];
+  function finishedFrom(values) {
+    const out = {};
+    FINISHED_FROM_BODY.forEach(([id, from, add]) => { const v = values[from]; if (isFinite(v)) out[id] = Math.round((v + add) * 2) / 2; });
+    return out;
+  }
   // Style choices, not body sizes: flagged so the customer knows.
   const STYLE_IDS = { body_back_length: "Classic length, half your nape-to-floor height", body_front_waist_h: "Trousers sitting just below the navel", body_back_waist_h: "Trousers sitting just below the navel", body_outseam: "To the top of the shoe heel" };
 
@@ -1776,6 +1797,8 @@
     const jacketRows = SITE_ROWS.filter((r) => r[1] === "jacket").map((r) => row(r[0], mDef(r[0]).label, result.values[r[0]], result.pm[r[0]], STYLE_IDS[r[0]])).join("");
     const pantsRows = SITE_ROWS.filter((r) => r[1] === "pants").map((r) => row(r[0], mDef(r[0]).label, result.values[r[0]], result.pm[r[0]], STYLE_IDS[r[0]])).join("");
     const extraRows = EXTRA_ROWS.map((r) => row("x_" + r[0], r[1], result.extras[r[0]], result.extraPm[r[0]], "")).join("");
+    const fin = finishedFrom(result.values);
+    const finRows = FINISHED_FROM_BODY.map(([id, from, , , label]) => row("f_" + id, label, fin[id], result.pm[from] || 2, "")).join("");
     openSheet(head("Your Measurements") +
       '<div class="ps-body bs-results">' +
       '<div class="bs-done-badge"><span class="bs-done-check" aria-hidden="true"></span>Scan complete</div>' +
@@ -1784,6 +1807,9 @@
       '<div class="ps-group">Jacket</div>' + jacketRows +
       '<div class="ps-group">Pants</div>' + pantsRows +
       '<details class="bs-extra"><summary>Extra measurements for our tailor</summary>' + extraRows + "</details>" +
+      '<details class="bs-extra bs-finished"><summary>Finished suit sizes (estimate)</summary>' +
+        '<p class="bs-small">Your body numbers plus the room a Regular-fit suit needs.</p>' + finRows + "</details>" +
+      '<button type="button" class="btn-ghost bs-share">Share my numbers</button>' +
       '<p class="bs-small">Our tailor checks every scan.</p>' +
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary bs-use">Use These Measurements</button>' +
@@ -1791,6 +1817,21 @@
     sheet.querySelectorAll(".bs-row").forEach((r, i) => (r.style.animationDelay = 120 + i * 45 + "ms"));
     sheet.querySelector(".bs-again").onclick = () => showIntro();
     sheet.querySelector(".bs-use").onclick = () => useResults();
+    // Send the numbers by text or email (Daniel: friends scan, then send
+    // them so the finished estimates can be checked against suits that fit).
+    sheet.querySelector(".bs-share").onclick = () => {
+      const lines = ["My Scott's Suits body scan", "Height: " + Math.round(state.heightCm) + " cm"];
+      const val = (id) => { const el = sheet.querySelector('.bs-row input[data-id="' + id + '"]'); const v = el ? parseFloat(el.value) : NaN; return isFinite(v) ? v : null; };
+      lines.push("", "Body:");
+      SITE_ROWS.forEach(([id]) => { const v = val(id), d = mDef(id); if (v !== null && d) lines.push(d.label + ": " + v + " cm"); });
+      EXTRA_ROWS.forEach(([id, label]) => { const v = val("x_" + id); if (v !== null) lines.push(label + ": " + v + " cm"); });
+      lines.push("", "Finished suit sizes (estimate):");
+      FINISHED_FROM_BODY.forEach(([id, , , , label]) => { const v = val("f_" + id); if (v !== null) lines.push(label + ": " + v + " cm"); });
+      const text = lines.join("\n");
+      const btn = sheet.querySelector(".bs-share");
+      if (navigator.share) navigator.share({ title: "My body scan", text }).catch(() => {});
+      else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => { btn.textContent = "Copied"; }).catch(() => {});
+    };
   }
 
   function useResults() {
@@ -1813,6 +1854,8 @@
     });
     const extras = {};
     EXTRA_ROWS.forEach(([id]) => { if (edited["x_" + id] !== undefined) extras[id] = edited["x_" + id]; });
+    const finished = {};
+    FINISHED_FROM_BODY.forEach(([id]) => { if (edited["f_" + id] !== undefined) finished[id] = edited["f_" + id]; });
     window.__bodyScan = {
       at: new Date().toISOString(),
       heightCm: Math.round(state.heightCm * 10) / 10,
@@ -1821,6 +1864,7 @@
       pm: res.pm,
       extras,
       extraPm: res.extraPm,
+      finished,
       flags: res.flags,
     };
     if (typeof saveDraft === "function") saveDraft();

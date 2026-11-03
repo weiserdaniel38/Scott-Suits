@@ -2487,3 +2487,4 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-figs .bs-pose-img{max-height:min(220px,28dvh);width:auto;}
 .bs-figs figcaption{color:var(--ivory-dim);font-size:14px;margin-top:6px;}
 .bs-sheet .bs-video{filter:brightness(.62);} /* dim the camera so the dots stand out (MTailor) */
+.bs-results .bs-share{display:block;margin:18px auto 4px;}
