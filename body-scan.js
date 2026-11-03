@@ -671,6 +671,9 @@
     // The same instruction repeats every 4 s until it's fixed (Daniel: "have
     // the voice tell me what it needs me to do").
     if (!force && (now - lastSpokenAt < 2600 || (text === lastSpoken && now - lastSpokenAt < 4000))) return;
+    // Never cut a line off mid-sentence for a routine reminder (Daniel: make
+    // it smooth like MTailor).
+    if (!force && clipAudio && !clipAudio.paused && !clipAudio.ended) return;
     lastSpoken = text;
     lastSpokenAt = now;
     const clip = VOICE_CLIPS && CLIP_FOR[text];
@@ -1002,6 +1005,7 @@
     try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
   }
   function camScreen() {
+    dots = null;
     openSheet(
       '<div class="bs-cam">' +
       '<video class="bs-video" playsinline muted autoplay></video>' +
@@ -1203,7 +1207,24 @@
     const scanline = sheet.querySelector(".bs-scanline");
     let lastTs = -1;
     let counting = false;
-    const setMsg = (text, ok) => { if (state.failUntil && performance.now() < state.failUntil) return; msgEl.textContent = text; msgEl.classList.toggle("bs-ok", !!ok); };
+    // Steady messages (Daniel: MTailor is "much less glitchy"): a new
+    // problem message only shows once it has held for 0.7 s, so the text
+    // doesn't flicker frame to frame. Good-news messages (ok) and urgent
+    // ones (now) show at once. Returns true when that text is on screen,
+    // so the voice only says what the screen says.
+    let msgShown = "", msgWant = "", msgWantAt = 0;
+    const setMsg = (text, ok, now) => {
+      if (state.failUntil && performance.now() < state.failUntil) return false;
+      const t = performance.now();
+      if (text === msgShown) { msgEl.classList.toggle("bs-ok", !!ok); return true; }
+      if (text !== msgWant) { msgWant = text; msgWantAt = t; }
+      if (!ok && !now && msgShown && t - msgWantAt < 700) return false;
+      msgShown = text;
+      msgEl.textContent = text;
+      msgEl.classList.toggle("bs-ok", !!ok);
+      msgEl.classList.remove("bs-msg-in"); void msgEl.offsetWidth; msgEl.classList.add("bs-msg-in");
+      return true;
+    };
     stepEl.textContent = "Step 1 of 2: arms up";
     setMsg("Face the phone. Arms up.");
     say("Face the phone. Arms up.", true);
@@ -1216,8 +1237,15 @@
       const ts = state.uploaded ? video.currentTime * 1000 + 2 : performance.now();
       if (ts <= lastTs) return;
       lastTs = ts;
+      // Slow phones (iPhone runs the main-chip scanner): run the scanner
+      // every other moment and keep the dots animating smoothly in between,
+      // instead of the whole screen stuttering.
+      if (!state.uploaded && state.detectMs > 35 && ts - (state.detectAt || 0) < state.detectMs * 1.6) { drawGuide(ctx, canvas); return; }
       let d = null;
+      const t0 = performance.now();
       try { d = detect(video, ts, true); } catch (e) { return; }
+      state.detectMs = (state.detectMs || 0) * 0.7 + (performance.now() - t0) * 0.3;
+      state.detectAt = ts;
       const lm = d ? d.lm : null;
       drawGuide(ctx, canvas, lm, d && d.mask);
       setGhost(ghost, lm, state.phase);
@@ -1258,7 +1286,7 @@
         // lasted 0.6 s, and "Perfect" is said at most once every 6 s.
         if (problem) {
           state.problemSince = state.problemSince || ts;
-          if (!state.okSince || ts - state.problemSince > 600) { state.okSince = 0; setMsg(problem); say(problem); return; }
+          if (!state.okSince || ts - state.problemSince > 600) { state.okSince = 0; if (setMsg(problem)) say(problem); return; }
         } else state.problemSince = 0;
         setMsg("Hold still.", true);
         if (!state.okSince) {
@@ -1310,7 +1338,7 @@
           switchToCpu();
         }
         if (capFor > 6000 && !state.fronts.length) {
-          setMsg("Couldn't capture (" + (state.capWhy || "unknown") + "). Try again.");
+          setMsg("Couldn't capture (" + (state.capWhy || "unknown") + "). Try again.", false, true);
           state.failUntil = performance.now() + 5000; // keep the reason on screen
           stepEl.textContent = "Step 1 of 2 · retry (" + (state.capWhy || "unknown") + ")";
           say("Step into the picture.", true);
@@ -1321,6 +1349,11 @@
         state.base = G.combine(state.fronts);
         if (state.base.error) { state.fronts = []; state.lastFrontAt = 0; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
+        // "You're being measured" moment: a gold sweep runs down the body
+        // and measurement lines draw across shoulders, chest, waist, hips
+        // and legs (drawn in drawGuide).
+        state.fxAt = performance.now();
+        state.fxLm = lm;
         state.phase = "spin";
         state.parts = null;
         if (bigPose) bigPose.classList.add("bs-gone");
@@ -1339,8 +1372,8 @@
 
       if (state.phase === "spin") {
         const p = inFrameProblem(lm);
-        if (p) { setMsg(p); say(p); }
-        else if (!armsUp(lm)) { setMsg("Keep your arms up."); say("Arms up."); }
+        if (p) { if (setMsg(p)) say(p); }
+        else if (!armsUp(lm)) { if (setMsg("Keep your arms up.")) say("Arms up."); }
         if (d && d.mask && !p) {
           const f = G.measureSideFrame(lm, d.mask, state.base.sideFracs);
           if (!f.error) {
@@ -1352,6 +1385,9 @@
           }
         }
         const pct = Math.min(100, Math.round((state.theta / 360) * 100));
+        // A soft tick every 10% of the turn, so it feels like being measured.
+        const tenth = Math.floor(pct / 10);
+        if (tenth > (state.tickTenth || 0)) { state.tickTenth = tenth; tone(1320, 45); }
         ring.querySelector(".bs-ring-fg").setAttribute("stroke-dasharray", pct + " 100");
         ring.querySelector("span").textContent = pct + "%";
         if (!p && armsUp(lm)) {
@@ -1400,12 +1436,31 @@
   // gold on the body. The dots twinkle, a brighter band sweeps up and down,
   // and every captured frame flashes them all. Before the pose is right the
   // dots are soft white; once it is right they turn gold.
+  // Smooth dots (Daniel: MTailor is "much less glitchy"): each dot eases
+  // towards the latest outline instead of jumping, so they fade in and out
+  // and glide as the person moves. drawGuide(ctx, canvas) with no lm just
+  // keeps animating the last outline between scanner runs.
+  let dots = null;
   function drawGuide(ctx, canvas, lm, mask) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!lm || !mask) return;
     const W = canvas.width, H = canvas.height;
-    const m = mask.data, mw = mask.width, mh = mask.height;
     const gap = W / 28, r0 = gap * 0.24;
+    const cols = Math.ceil(W / gap), rows = Math.ceil(H / gap);
+    let fresh = false;
+    if (!dots || dots.cols !== cols || dots.rows !== rows) { dots = { cols, rows, cur: new Float32Array(cols * rows), tgt: new Float32Array(cols * rows), lm: null }; fresh = true; }
+    if (lm !== undefined) {
+      if (lm && mask) {
+        const m = mask.data, mw = mask.width, mh = mask.height;
+        for (let gy = 0; gy < rows; gy++) {
+          const my = Math.min(mh - 1, Math.floor((((gy + 0.5) * gap) / H) * mh)) * mw;
+          for (let gx = 0; gx < cols; gx++) dots.tgt[gy * cols + gx] = m[my + Math.min(mw - 1, Math.floor((((gx + 0.5) * gap) / W) * mw))] > 0.5 ? 1 : 0;
+        }
+        dots.lm = lm;
+        if (fresh) dots.cur.set(dots.tgt);
+      } else dots.tgt.fill(0);
+    }
+    ctx.clearRect(0, 0, W, H);
+    const L = dots.lm;
+    if (!L) return;
     const t = performance.now() / 1000;
     const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
     const body = ok ? [226, 196, 141] : [215, 222, 235];
@@ -1413,33 +1468,34 @@
     const flash = since < 260 ? 1 - since / 260 : 0;
     const by = (0.5 + 0.5 * Math.sin(t * 1.4)) * H; // sweeping band
     // Face: around the nose, out to the ears.
-    const nose = lm[0], earL = lm[7], earR = lm[8];
+    const nose = L[0], earL = L[7], earR = L[8];
     const fr = earL && earR ? Math.max(Math.abs(earL.x - earR.x) * W * 0.85, gap * 1.5) : gap * 2;
     const fx = nose.x * W, fy = nose.y * H;
     const parts = state && (state.phase === "front" || state.phase === "frontCapture") ? state.parts : null;
-    const shY = ((lm[11].y + lm[12].y) / 2) * H, hipY = ((lm[23].y + lm[24].y) / 2) * H;
-    const shL = Math.min(lm[11].x, lm[12].x) * W, shR = Math.max(lm[11].x, lm[12].x) * W;
+    const shY = ((L[11].y + L[12].y) / 2) * H, hipY = ((L[23].y + L[24].y) / 2) * H;
+    const shL = Math.min(L[11].x, L[12].x) * W, shR = Math.max(L[11].x, L[12].x) * W;
     const blink = 0.5 + 0.5 * Math.sin(t * 9);
     const WHITE = [255, 255, 255];
     ctx.save();
-    for (let gy = 0, y = gap / 2; y < H; y += gap, gy++) {
-      const my = Math.min(mh - 1, Math.floor((y / H) * mh)) * mw;
-      for (let gx = 0, x = gap / 2; x < W; x += gap, gx++) {
-        if (m[my + Math.min(mw - 1, Math.floor((x / W) * mw))] <= 0.5) continue;
+    for (let gy = 0; gy < rows; gy++) {
+      const y = (gy + 0.5) * gap;
+      for (let gx = 0; gx < cols; gx++) {
+        const i = gy * cols + gx;
+        const v = (dots.cur[i] += (dots.tgt[i] - dots.cur[i]) * 0.3);
+        if (v < 0.04) continue;
+        const x = (gx + 0.5) * gap;
         const face = Math.hypot(x - fx, y - fy) < fr;
         const tw = 0.55 + 0.45 * Math.sin(t * 2.2 + gx * 1.7 + gy * 2.3);
         const band = Math.max(0, 1 - Math.abs(y - by) / (H * 0.07));
-        let a = Math.min(1, 0.35 + 0.45 * tw + 0.5 * band + flash);
-        const r = r0 * (0.75 + 0.35 * tw + 0.5 * band + 0.6 * flash);
+        let a = Math.min(1, 0.35 + 0.45 * tw + 0.5 * band + flash) * v;
+        const r = r0 * (0.75 + 0.35 * tw + 0.5 * band + 0.6 * flash) * (0.6 + 0.4 * v);
         let c = face || flash > 0.5 ? WHITE : body;
-        let aa = 1;
         if (parts && !face) {
           // Arm dots: above the shoulders or out past them. Leg dots: below the hips.
           const part = !parts.frame ? "frame" : (y < shY + gap || x < shL - gap || x > shR + gap) ? "arms" : y > hipY ? "legs" : "body";
           if (parts[part]) c = [226, 196, 141];
-          else { c = WHITE; aa = 0.35 + 0.65 * blink; }
+          else { c = WHITE; a *= 0.35 + 0.65 * blink; }
         }
-        a *= aa;
         ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * 0.22).toFixed(3) + ")";
         ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, 6.283); ctx.fill(); // glow
         ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
@@ -1447,18 +1503,82 @@
       }
     }
     ctx.restore();
+    if (state && state.fxAt) drawMeasureFx(ctx, W, H, gap);
+  }
+  // The "being measured" moment after the front capture: a gold line sweeps
+  // from head to feet, and as it passes each level a measurement line draws
+  // out across the body (shoulders, chest, waist, hips, thighs), then they
+  // all fade. About 2 seconds.
+  const FX_MS = 2200;
+  function drawMeasureFx(ctx, W, H, gap) {
+    const e = performance.now() - state.fxAt;
+    if (e > FX_MS) { state.fxAt = 0; return; }
+    const L = state.fxLm;
+    if (!L) return;
+    const P = (i) => ({ x: L[i].x * W, y: L[i].y * H });
+    const sh = { x: (P(11).x + P(12).x) / 2, y: (P(11).y + P(12).y) / 2 };
+    const hp = { x: (P(23).x + P(24).x) / 2, y: (P(23).y + P(24).y) / 2 };
+    const T = hp.y - sh.y;
+    const shW = Math.abs(P(11).x - P(12).x), hipW = Math.abs(P(23).x - P(24).x);
+    const top = P(0).y - T * 0.45, feet = Math.max(P(27).y, P(28).y) + T * 0.08;
+    const knee = (P(25).y + P(26).y) / 2;
+    const levels = [
+      { y: sh.y, half: shW * 0.62 },
+      { y: sh.y + T * 0.3, half: shW * 0.55 },
+      { y: sh.y + T * 0.72, half: Math.max(hipW, shW * 0.4) * 0.95 },
+      { y: hp.y + T * 0.08, half: Math.max(hipW, shW * 0.4) * 1.15 },
+      { y: hp.y + (knee - hp.y) * 0.35, half: Math.max(hipW, shW * 0.4) * 1.05 },
+    ];
+    const sweep = Math.min(1, e / (FX_MS * 0.6));
+    const sy = top + (feet - top) * sweep;
+    const fade = e > FX_MS * 0.75 ? 1 - (e - FX_MS * 0.75) / (FX_MS * 0.25) : 1;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, fade);
+    ctx.lineCap = "round";
+    // The sweeping line.
+    if (sweep < 1) {
+      const g = ctx.createLinearGradient(0, 0, W, 0);
+      g.addColorStop(0, "rgba(255,226,170,0)"); g.addColorStop(0.5, "rgba(255,226,170,0.95)"); g.addColorStop(1, "rgba(255,226,170,0)");
+      ctx.shadowColor = "rgba(201,164,103,0.9)"; ctx.shadowBlur = gap;
+      ctx.fillStyle = g; ctx.fillRect(0, sy - gap * 0.12, W, gap * 0.24);
+      ctx.shadowBlur = 0;
+    }
+    // Measurement lines, each drawing out from the middle once the sweep passes.
+    levels.forEach((lv) => {
+      const passed = (sy - lv.y) / (gap * 6);
+      if (passed <= 0) return;
+      const k = Math.min(1, passed);
+      const cx = sh.x + (hp.x - sh.x) * Math.max(0, Math.min(1, (lv.y - sh.y) / (T || 1)));
+      const half = lv.half * (1 - Math.pow(1 - k, 3));
+      ctx.strokeStyle = "rgba(255,226,170,0.95)";
+      ctx.lineWidth = gap * 0.13;
+      ctx.beginPath(); ctx.moveTo(cx - half, lv.y); ctx.lineTo(cx + half, lv.y); ctx.stroke();
+      ctx.fillStyle = "rgba(255,240,210,1)";
+      [cx - half, cx + half].forEach((x) => { ctx.beginPath(); ctx.arc(x, lv.y, gap * 0.22, 0, 6.283); ctx.fill(); });
+    });
+    ctx.restore();
   }
   // The outline figures are gone from the camera (Daniel); kept as no-op.
   function setGhost() {}
 
   // frame / pose / still: true, false, or null (hide all checks).
+  const chipOff = {};
   function setChecks(frame, pose, still) {
     if (!sheet) return;
     const box = sheet.querySelector(".bs-checks");
     if (!box) return;
     box.hidden = frame === null;
     const on = { frame: !!frame, pose: !!(frame && pose), still: !!(frame && pose && still) };
-    box.querySelectorAll("span").forEach((el) => el.classList.toggle("on", on[el.dataset.k]));
+    // A check lights at once but only goes out after 0.5 s, so the chips
+    // don't flicker (Daniel: smooth like MTailor).
+    const now = performance.now();
+    box.querySelectorAll("span").forEach((el) => {
+      const k = el.dataset.k;
+      if (on[k] || frame === null) { chipOff[k] = 0; el.classList.toggle("on", !!on[k]); return; }
+      if (!el.classList.contains("on")) return;
+      chipOff[k] = chipOff[k] || now;
+      if (now - chipOff[k] > 500) { el.classList.remove("on"); chipOff[k] = 0; }
+    });
   }
   function setCapture(frac) {
     const c = sheet && sheet.querySelector(".bs-capture");
@@ -1495,8 +1615,22 @@
       if (!state) return;
       if (state.replay) URL.revokeObjectURL(state.replay);
       state.replay = url;
-      showGreatJob();
+      showMeasuring(showGreatJob);
     });
+  }
+  // "Measuring you…": the gold figure with a scan line, and each part
+  // ticked off one by one, so it feels like a real fitting (Daniel: make
+  // it feel like "I'm actually getting measured").
+  const MEAS_PARTS = ["Shoulders", "Chest", "Waist", "Hips", "Arms", "Legs"];
+  function showMeasuring(next) {
+    const gap = 420, first = 450;
+    openSheet('<div class="ps-body bs-measuring">' +
+      '<div class="bs-meas-fig" aria-hidden="true"><i></i><span class="bs-meas-line"></span></div>' +
+      '<h3 class="bs-page-title">Measuring you&hellip;</h3>' +
+      '<ul class="bs-meas-list">' + MEAS_PARTS.map((t, i) => '<li style="animation-delay:' + (first + i * gap) / 1000 + 's"><b></b>' + t + "</li>").join("") + "</ul>" +
+      "</div>");
+    MEAS_PARTS.forEach((_, i) => tone(990, 70, first + i * gap));
+    setTimeout(() => { if (sheet && state && next) next(); }, first + MEAS_PARTS.length * gap + 800);
   }
   // "Great job!" then the review (MTailor's order).
   function showGreatJob() {
@@ -1669,6 +1803,17 @@
   window.__bodyScanPreviewGreat = (result) => {
     state = { heightCm: 178, who: "self", result, voice: false };
     showGreatJob();
+  };
+  window.__bodyScanPreviewFx = (ms) => {
+    const c = sheet && sheet.querySelector(".bs-overlay");
+    if (!c || !dots || !dots.lm) return;
+    state.fxLm = dots.lm;
+    state.fxAt = performance.now() - ms;
+    drawGuide(c.getContext("2d"), c);
+  };
+  window.__bodyScanPreviewMeasuring = () => {
+    state = { heightCm: 178, who: "self", voice: false };
+    showMeasuring(null);
   };
   window.__bodyScanPreviewReview = (result) => {
     state = { heightCm: 178, who: "self", result };
