@@ -2401,3 +2401,11 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-row2 .bs-height{gap:6px;}
 .bs-row2 .bs-who button{padding:10px 6px;font-size:13px;}
 .bs-intro .bs-small{margin:10px 0 0;font-size:12px;}
+/* Body scan: yes/no check of each requirement after the scan. */
+.bs-review .bs-q{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px;}
+.bs-review .bs-q span{flex:1 1 auto;}
+.bs-review .bs-yn{flex:0 0 140px;margin:0;}
+.bs-review .bs-yn button{padding:8px 6px;font-size:13px;}
+.bs-sheet.bs-full .bs-q-no .bs-yn button.selected{background:#b4483c;color:#fff;}
+.bs-review .bs-redo-msg{margin-top:14px;}
+.bs-sheet .btn-primary:disabled{opacity:.4;cursor:default;}
