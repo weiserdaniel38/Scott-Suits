@@ -907,6 +907,7 @@
     vision = { mod, fileset };
     return vision;
   }
+  const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   async function loadModel() {
     if (model) return model;
     const v = await loadVision();
@@ -921,7 +922,10 @@
     });
     let m;
     try {
-      m = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("GPU"));
+      // iPhones/iPads: the graphics-chip mode gives a blank body outline
+      // there (Daniel's test 2026-11-03: no gold dots, "measure height"),
+      // so use the main-chip mode from the start.
+      m = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts(IS_IOS ? "CPU" : "GPU"));
     } catch (e) {
       m = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("CPU"));
     }
@@ -1150,6 +1154,12 @@
     return maxMove;
   }
 
+  // True when at least 1% of the outline is body.
+  function maskHasBody(d) {
+    let n = 0, k = 0;
+    for (let i = 0; i < d.length; i += 7) { k++; if (d[i] > 0.5) n++; }
+    return n > k * 0.01;
+  }
   // One video frame through the model: landmarks always, the outline
   // (mask) copied out only while measuring.
   function detect(video, ts, wantMask) {
@@ -1159,7 +1169,20 @@
       if (!lm) return;
       out = { lm: lm.map((p) => ({ x: p.x, y: p.y, visibility: p.visibility })) };
       const mk = res.segmentationMasks && res.segmentationMasks[0];
-      if (wantMask && mk) out.mask = { data: new Float32Array(mk.getAsFloat32Array()), width: mk.width, height: mk.height };
+      if (wantMask && mk) {
+        // Some phones hand back an empty outline: then there's no outline.
+        let data = null;
+        try { data = new Float32Array(mk.getAsFloat32Array()); } catch (e) {}
+        if (!data || !maskHasBody(data)) {
+          try {
+            const u = mk.getAsUint8Array();
+            const f = new Float32Array(u.length);
+            for (let i = 0; i < u.length; i++) f[i] = u[i] / 255;
+            data = maskHasBody(f) ? f : null;
+          } catch (e) { data = null; }
+        }
+        if (data) out.mask = { data, width: mk.width, height: mk.height };
+      }
     });
     return out;
   }
@@ -1214,6 +1237,12 @@
           body: inFrame && facingPhone(lm),
         } : null;
         setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.045);
+        // In the picture but no body outline for a second: switch the
+        // scanner to its main-chip mode now, before capturing.
+        if (inFrame && !d.mask) {
+          state.noMaskSince = state.noMaskSince || ts;
+          if (ts - state.noMaskSince > 1000 && !state.triedCpu) { state.triedCpu = true; switchToCpu(); }
+        } else state.noMaskSince = 0;
         // First time they're well placed: say so, then the next step.
         // Only once the whole body has been clearly in the picture for a
         // moment (Daniel: it said "great spot" before he was in frame).
@@ -1256,7 +1285,17 @@
         // outline, and after 6 s say what went wrong and start over.
         const capFor = ts - (state.captureStart || ts);
         let why = "";
-        if (!lm) why = "no person";
+        if (!lm) {
+          why = "no person";
+          // They left the picture: back to the pose check.
+          state.lostSince = state.lostSince || ts;
+          if (ts - state.lostSince > 800 && !state.fronts.length) {
+            state.phase = "front"; state.okSince = 0; state.lastFrontAt = 0; state.lostSince = 0;
+            if (bigPose) bigPose.classList.remove("bs-match");
+            return;
+          }
+        } else state.lostSince = 0;
+        if (!lm) { /* handled above */ }
         else if (!d.mask) why = "no outline";
         else if (!(state.lastFrontAt && ts - state.lastFrontAt < CAPTURE_GAP_MS)) {
           let f;
