@@ -935,6 +935,19 @@
     model = m;
     return model;
   }
+  // Some phones give no body outline from the fast (graphics chip) mode;
+  // the slower main-chip mode does.
+  async function switchToCpu() {
+    try {
+      const v = await loadVision();
+      const m = await v.mod.PoseLandmarker.createFromOptions(v.fileset, {
+        baseOptions: { modelAssetPath: MODEL, delegate: "CPU" },
+        runningMode: "VIDEO", numPoses: 1, outputSegmentationMasks: true,
+        minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+      });
+      model = m;
+    } catch (e) {}
+  }
   // Start loading the scanner as soon as the scan sheet opens, so it's
   // ready by the time the person taps Start (Daniel: "It's not capturing
   // me fast on the first go").
@@ -1228,12 +1241,35 @@
         state.parts = { frame: true, arms: true, legs: true, body: true };
         setMsg("Capturing… hold still.", true);
         setCapture(state.fronts.length / FRONT_FRAMES);
-        if (!d || !d.mask || !lm || inFrameProblem(lm)) return;
-        if (state.lastFrontAt && ts - state.lastFrontAt < CAPTURE_GAP_MS) return;
-        const f = G.measureFrontFrame(lm, d.mask);
-        if (!f.error) { state.fronts.push(f); state.lastFrontAt = ts; state.flashAt = performance.now(); cue.tick(); }
+        // Never get stuck here (Daniel waited and it never moved on): note
+        // why frames are skipped, move on with what we have after 2.5 s,
+        // switch the scanner to its slower mode if the camera gives no body
+        // outline, and after 6 s say what went wrong and start over.
+        const capFor = ts - (state.captureStart || ts);
+        let why = "";
+        if (!lm) why = "no person";
+        else if (!d.mask) why = "no outline";
+        else if (inFrameProblem(lm)) why = inFrameProblem(lm);
+        else if (!(state.lastFrontAt && ts - state.lastFrontAt < CAPTURE_GAP_MS)) {
+          let f;
+          try { f = G.measureFrontFrame(lm, d.mask); } catch (e) { f = { error: "math " + (e && e.message) }; }
+          if (!f.error) { state.fronts.push(f); state.lastFrontAt = ts; state.flashAt = performance.now(); cue.tick(); }
+          else why = "measure " + f.error;
+        }
+        if (why) state.capWhy = why;
         setCapture(state.fronts.length / FRONT_FRAMES);
-        if (state.fronts.length < FRONT_FRAMES && !(state.fronts.length >= 3 && ts - state.captureStart > 1600)) return;
+        if (state.capWhy === "no outline" && capFor > 1500 && !state.triedCpu && !state.fronts.length) {
+          state.triedCpu = true;
+          switchToCpu();
+        }
+        if (capFor > 6000 && !state.fronts.length) {
+          setMsg("Couldn't capture. Try again.");
+          stepEl.textContent = "Step 1 of 2 · retry (" + (state.capWhy || "unknown") + ")";
+          say("Step into the picture.", true);
+          state.phase = "front"; state.okSince = 0; state.lastFrontAt = 0;
+          return;
+        }
+        if (state.fronts.length < FRONT_FRAMES && !(state.fronts.length >= 3 && capFor > 1600) && !(state.fronts.length >= 1 && capFor > 2500)) return;
         state.base = G.combine(state.fronts);
         if (state.base.error) { state.fronts = []; state.lastFrontAt = 0; state.phase = "front"; return; }
         state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
