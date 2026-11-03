@@ -1,32 +1,40 @@
 // ---------------------------------------------------------------------
 // Phone Body Scan (Daniel, 2026-11-03)
 //
-// "Scan My Body" on the Measurements step: the phone camera takes a front
-// photo (arms out a little, feet apart) and a side photo of the customer,
-// and works out their BODY measurements (the factory's body list, the
-// optional positions too), using their height for the scale.
+// "Scan my body with my phone" on the Measurements step. The customer
+// stands in a T facing the phone, then keeps the T and turns around once,
+// slowly (like MTailor). The phone measures every frame as they turn and
+// works out their BODY measurements (the factory's body list, the optional
+// positions too), using their height for the scale.
 //
-// How it works, all on the customer's own phone (no photo is uploaded):
-//   1. Google's MediaPipe Pose Landmarker (loaded from the jsDelivr / Google
-//      model CDN only when the scan opens) finds 33 body points and an
-//      outline of the person in each photo. A light model checks the pose
-//      live and takes the photos by itself; a heavy model measures them.
+// HIDDEN FOR NOW (Daniel: "don't add yet"): index.html only loads this
+// file, and shows the card, when the page address has ?bodyscan=1.
+//
+// How it works, all on the customer's own phone (nothing is recorded or
+// uploaded; only numbers are kept):
+//   1. Google's MediaPipe Pose Landmarker ("full" model, loaded from the
+//      jsDelivr / Google model CDN only when the scan opens) finds 33 body
+//      points and an outline of the person in each video frame.
 //   2. Height in pixels (top of the head to the floor) against the height
-//      the customer typed gives centimeters per pixel.
-//   3. Lengths (arm, outseam, nape to waist, ...) come from the body points.
-//      Girths (chest, stomach, seat, thigh, neck, calf) come from the width
-//      of the outline in the front photo and the depth in the side photo,
-//      treated as an ellipse and corrected per body part (BODY_SHAPE_K).
-//      Several frames of each pose are measured and the median is kept.
-//   4. The customer checks the numbers; our tailor reviews every scanned
+//      the customer typed gives centimeters per pixel, frame by frame.
+//   3. The T-pose frames give the lengths (arm, outseam, nape to waist,
+//      ...) and the leg and arm widths.
+//   4. While turning, each frame gives the body's width at the chest,
+//      stomach, waist, seat and neck, and the turn angle (from how far
+//      apart the shoulders look). Girth = pi x the average width over the
+//      turn (Cauchy's formula: true for any convex outline, which is what
+//      a tape measure follows), so no shape guess is needed. Thigh and calf
+//      still use front width x side depth as an ellipse (legs overlap when
+//      turning).
+//   5. The customer checks the numbers; our tailor reviews every scanned
 //      order before it goes to the factory (the scan is written into the
 //      order text, extra optional factory positions included).
 //
-// Honest accuracy: published phone-scan studies land around 1-3 cm on
-// girths and 1-2 cm on lengths in good conditions (fitted clothes, plain
-// background, whole body in frame). The correction factors here are first
-// guesses from standard body proportions and should be tuned against real
-// tape measurements (see BODY_SHAPE_K and the LENGTH_* constants).
+// Accuracy: the turn-around girths need no shape guess; the lengths and
+// leg girths still use first-guess corrections from standard body
+// proportions (BODY_SHAPE_K, ARM_SHOULDER_POINT_CM, NAPE_ABOVE_SHOULDER,
+// SHOULDER_JOINT_TO_POINTS_CM) that should be tuned against real tape
+// measurements of scanned people.
 //
 // The geometry (BodyScanGeometry) is plain math with no DOM, so it can be
 // tested in Node (scripts/test-body-scan.js).
@@ -52,6 +60,12 @@
     seat: [0.92, 1.2],
     highStomach: [0.5, 1.0],
   };
+
+  // Tailor's shoulder (point to point over the back) is about this much
+  // more than the distance between the shoulder joints the model finds.
+  const SHOULDER_JOINT_TO_POINTS_CM = 9;
+  // A spin is split into this many 15-degree slices of half a turn.
+  const SPIN_BINS = 12;
 
   function ellipsePerimeter(width, depth) {
     const a = width / 2, b = depth / 2;
@@ -259,6 +273,8 @@
     out.bicepW = median(bic);
     const armLen = (s, e, wr) => Math.hypot(P[e].x - P[s].x, P[e].y - P[s].y) + Math.hypot(P[wr].x - P[e].x, P[wr].y - P[e].y);
     out.armPx = median([armLen(11, 13, 15), armLen(12, 14, 16)]);
+    out.shoulderJointPx = shoulderDist;
+    out.sh2d = shoulderDist / Hpx;
     return out;
   }
 
@@ -288,7 +304,9 @@
       return lerp(knee.x, ankle.x, (y - knee.y) / (ankle.y - knee.y || 1));
     };
     const depthAt = (f) => m.widthAt(yOf(f), cx(yOf(f)), 0.03);
-    const out = { top, floor, Hpx, depth: {} };
+    // How far apart the shoulders look (share of height): widest facing
+    // the camera, near zero side-on. Gives the turn angle in a spin.
+    const out = { top, floor, Hpx, depth: {}, sh2d: Math.hypot(P[11].x - P[12].x, P[11].y - P[12].y) / Hpx };
     Object.keys(fracs).forEach((k) => {
       const f = fracs[k];
       if (Array.isArray(f)) {
@@ -341,7 +359,11 @@
   }
 
   // Final numbers from front frames and measured side frames.
-  function finish(front, sidesMeasured, heightCm) {
+  // opts.spin: { thetas, frames } from a turn-around video: the girths
+  // then come from every angle (spinGirth) instead of an ellipse, and the
+  // shoulder from the joints (arms out in a T hide the shoulder caps).
+  function finish(front, sidesMeasured, heightCm, opts) {
+    opts = opts || {};
     const fronts = front.fronts;
     const depth = (k) => median(sidesMeasured.map((s) => (s.depth[k] / s.Hpx) * heightCm));
     const depthAll = (k) => sidesMeasured.map((s) => (s.depth[k] / s.Hpx) * heightCm);
@@ -360,11 +382,20 @@
     girth("body_seat", "seatW", "seat", "seat", 3);
     girth("body_thigh", "thighW", "thigh", "thigh", 2.5);
     girth("body_neck", "neckW", "neck", "neck", 2);
+    if (opts.spin) {
+      const sp = opts.spin;
+      [["body_chest", "chest", 2.5], ["body_stomach", "stomach", 2.5], ["body_waist", "waist", 2.5], ["body_seat", "seat", 2.5], ["body_neck", "neck", 1.5]].forEach(([id, k, base]) => {
+        const g = spinGirth(sp.frames, sp.thetas, k, heightCm);
+        if (isFinite(g.value)) { values[id] = g.value; pm[id] = Math.max(base, g.pm); }
+      });
+    }
     // Upper arm: round enough that the front width alone does.
     const bic = fronts.map((f) => Math.PI * cm(f, "bicepW") * 0.97);
     values.body_bicep = median(bic);
     pm.body_bicep = Math.max(2, spread(bic) * 2);
-    const shoulders = fronts.map((f) => cm(f, "shoulderW") * 0.97);
+    const shoulders = opts.spin
+      ? fronts.map((f) => cm(f, "shoulderJointPx") + SHOULDER_JOINT_TO_POINTS_CM)
+      : fronts.map((f) => cm(f, "shoulderW") * 0.97);
     values.body_shoulder = median(shoulders);
     pm.body_shoulder = Math.max(2, spread(shoulders) * 2);
     const arms = fronts.map((f) => cm(f, "armPx") + ARM_SHOULDER_POINT_CM);
@@ -412,7 +443,8 @@
         const row = f.highStomach.find((r) => Math.abs(r.t - t) < 1e-6);
         return row ? (row.w / f.Hpx) * heightCm : NaN;
       }));
-      const g = ellipsePerimeter(w, d) * BODY_SHAPE_K.stomach;
+      let g = ellipsePerimeter(w, d) * BODY_SHAPE_K.stomach;
+      if (opts.spin) { const sg = spinGirth(opts.spin.frames, opts.spin.thetas, k, heightCm).value; if (isFinite(sg)) g = sg; }
       if (isFinite(g)) hs = Math.max(hs, g);
     }
     extras.stomach_high = isFinite(hs) ? hs : NaN;
@@ -426,7 +458,67 @@
     return { values, pm, extras, extraPm, flags: Object.keys(front.flags) };
   }
 
-  const api = { ellipsePerimeter, median, maskTools, measureFrontFrame, measureSideFrame, combine, finish, BODY_SHAPE_K };
+  // Turn angle (degrees, counting up from 0 facing the camera to 360 back
+  // at the front) for each spin frame, from how far apart the shoulders
+  // look compared with facing the camera (cos of the angle). The person
+  // turns one way, so the angle only goes up: each frame takes the
+  // reading of its cosine closest to the last angle without going back.
+  function spinAngles(frames, frontSh2d) {
+    const out = [];
+    let prev = 0;
+    frames.forEach((f) => {
+      const r = Math.max(0, Math.min(1, f.sh2d / frontSh2d));
+      const a = (Math.acos(r) * 180) / Math.PI;
+      const cands = [];
+      for (let k = 0; k <= 2; k++) cands.push(k * 180 + a, k * 180 + 180 - a);
+      // Closest reading to the last angle; noise near facing front or
+      // back can read a little behind, and no real turn jumps 45 degrees
+      // between frames.
+      let best = null;
+      cands.forEach((c) => {
+        if (c < prev - 30 || c > prev + 45) return;
+        if (best === null || Math.abs(c - prev) < Math.abs(best - prev)) best = c;
+      });
+      const t = best === null ? prev : Math.max(prev, best);
+      out.push(t);
+      prev = t;
+    });
+    return out;
+  }
+  // Girth from widths seen all the way round. For any convex shape the
+  // perimeter is pi times its average width over half a turn (Cauchy's
+  // formula), and a tape measure goes round the convex outline, so no
+  // shape guess is needed. Widths are averaged in 15-degree slices first,
+  // so turning faster in one part of the circle doesn't skew it.
+  function spinGirth(frames, thetas, key, heightCm) {
+    const bins = [];
+    for (let i = 0; i < SPIN_BINS; i++) bins.push([]);
+    frames.forEach((f, i) => {
+      const w = (f.depth[key] / f.Hpx) * heightCm;
+      if (!isFinite(w) || w <= 0) return;
+      const t = ((thetas[i] % 180) + 180) % 180;
+      bins[Math.min(SPIN_BINS - 1, Math.floor(t / (180 / SPIN_BINS)))].push(w);
+    });
+    const means = bins.map((b) => (b.length ? median(b) : NaN));
+    const filled = means.filter((v) => isFinite(v)).length;
+    if (filled < SPIN_BINS - 3) return { value: NaN, pm: NaN, filled };
+    // Fill an empty slice from its neighbours (round the circle).
+    const full = means.map((v, i) => {
+      if (isFinite(v)) return v;
+      let a = 1, b = 1;
+      while (!isFinite(means[(i - a + SPIN_BINS) % SPIN_BINS])) a++;
+      while (!isFinite(means[(i + b) % SPIN_BINS])) b++;
+      const va = means[(i - a + SPIN_BINS) % SPIN_BINS], vb = means[(i + b) % SPIN_BINS];
+      return va + ((vb - va) * a) / (a + b);
+    });
+    const avgW = full.reduce((x, y) => x + y, 0) / SPIN_BINS;
+    // Margin: frame-to-frame scatter within slices, plus empty slices.
+    const scatter = median(bins.filter((b) => b.length > 1).map((b) => spread(b)));
+    const pm = Math.PI * ((isFinite(scatter) ? scatter : 1) / Math.sqrt(3) + (SPIN_BINS - filled) * 0.4);
+    return { value: Math.PI * avgW, pm, filled };
+  }
+
+  const api = { ellipsePerimeter, median, maskTools, measureFrontFrame, measureSideFrame, combine, finish, spinAngles, spinGirth, BODY_SHAPE_K, SPIN_BINS };
   root.BodyScanGeometry = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
@@ -438,13 +530,15 @@
   if (typeof document === "undefined") return;
   const entryBtn = document.getElementById("bodyScanBtn");
   if (!entryBtn || typeof MEASUREMENTS === "undefined") return;
+  const box = document.getElementById("bodyScanBox");
+  if (box) box.hidden = false;
   const G = window.BodyScanGeometry;
 
   const MP_VERSION = "0.10.14";
   const MP_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@" + MP_VERSION;
-  const MODEL_LIVE = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
-  const MODEL_MEASURE = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task";
-  const FRAMES_PER_POSE = 5;
+  // "Full" pose model: quick enough to measure every frame while the
+  // person turns, with the person's outline (segmentation mask).
+  const MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
 
   // Measurement names for the results list, in order.
   const SITE_ROWS = [
@@ -472,8 +566,7 @@
   let state = null;
   let sheet = null;
   let vision = null;
-  let liveModel = null;
-  let measureModelPromise = null;
+  let model = null;
 
   // ---- the sheet (same page lock as the other sheets) ----
   function onKey(e) { if (e.key === "Escape") closeSheet(); }
@@ -501,7 +594,10 @@
         lift();
       }
     }
-    sheet.classList.toggle("bs-full", !!full);
+    // Every scan screen fills the phone (Daniel: "a completely immersive
+    // experience"); the camera screen also drops the padding.
+    sheet.classList.add("bs-full");
+    sheet.classList.toggle("bs-camera", !!full);
     sheet.innerHTML = '<div class="wiz-sheet-card ps-card bs-card" role="dialog" aria-modal="true" aria-label="Body scan">' + html + "</div>";
     sheet.querySelectorAll(".wiz-close").forEach((b) => (b.onclick = closeSheet));
   }
@@ -533,6 +629,32 @@
     } catch (e) {}
   }
 
+  // Small sounds and buzzes at each moment (Android buzzes; iPhone
+  // browsers don't allow vibration, so the sound carries it there).
+  let audio = null;
+  function tone(freq, ms, delay) {
+    if (!state || !state.voice) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audio.currentTime + (delay || 0) / 1000;
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = "sine";
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms / 1000);
+      o.connect(g).connect(audio.destination);
+      o.start(t0);
+      o.stop(t0 + ms / 1000 + 0.05);
+    } catch (e) {}
+  }
+  function buzz(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch (e) {} }
+  const cue = {
+    tick() { tone(880, 120); buzz(30); },
+    go() { tone(660, 160); tone(990, 220, 140); buzz([40, 60, 40]); },
+    done() { tone(523, 180); tone(659, 180, 150); tone(784, 320, 300); buzz([60, 80, 60, 80, 120]); },
+  };
+
   // ---- height from the form (stored in inches) ----
   function formHeightCm() {
     const el = document.getElementById("m_height");
@@ -542,29 +664,29 @@
 
   // ---- step 1: what you need ----
   function showIntro(msg) {
-    const h = formHeightCm();
+    const h = state && isFinite(state.heightCm) ? state.heightCm : formHeightCm();
     const ft = isFinite(h) ? Math.floor(h / 2.54 / 12) : "";
     const inch = isFinite(h) ? Math.round((h / 2.54 - ft * 12) * 2) / 2 : "";
     openSheet(head("Scan My Body") +
       '<div class="ps-body bs-intro">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      '<p class="bs-lead">Your phone takes two photos, from the front and from the side, and works out your body measurements. Takes about 2 minutes.</p>' +
-      '<div class="bs-poses" aria-hidden="true">' + poseSvg("front") + poseSvg("side") + "</div>" +
+      '<p class="bs-lead">Stand in a T, then turn around once, slowly. Your phone measures you from every side. Takes under a minute.</p>' +
+      '<div class="bs-poses" aria-hidden="true">' + poseSvg("front") + poseSvg("spin") + "</div>" +
       '<ol class="bs-tips">' +
       "<li><b>Wear fitted clothes:</b> a snug T-shirt and shorts or leggings. No jacket, no baggy clothes.</li>" +
       "<li><b>Barefoot or socks,</b> hair flat, nothing in your pockets.</li>" +
-      "<li><b>Plain wall, good light,</b> nothing else in the picture.</li>" +
-      "<li><b>Phone at waist height,</b> about 8 to 10 feet away, held by a friend or leaned against something.</li>" +
+      "<li><b>Plain wall, good light,</b> nobody else in the picture.</li>" +
+      "<li><b>Lean the phone at waist height</b> (on a chair or shelf), then step back about 8 feet. Or have a friend hold it.</li>" +
       "</ol>" +
       '<div class="bs-field"><label>Your height <span>(the scan uses it as its ruler, so be exact)</span></label>' +
       '<div class="bs-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
       '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + inch + '" inputmode="decimal"><span class="unit">in</span></div></div></div>' +
-      '<div class="bs-field"><label>Who\'s taking the photos?</label>' +
-      '<div class="ps-type bs-who"><button type="button" data-who="self" class="selected">Just me</button><button type="button" data-who="friend">A friend</button></div></div>' +
-      '<p class="bs-small">Your photos stay on your phone; only the measurements are saved. Our tailor reviews every scan before your suit is cut.</p>' +
+      '<div class="bs-field"><label>Who\'s holding the phone?</label>' +
+      '<div class="ps-type bs-who"><button type="button" data-who="self" class="selected">Nobody, it\'s leaning</button><button type="button" data-who="friend">A friend</button></div></div>' +
+      '<p class="bs-small">Nothing is recorded or uploaded: your phone measures as you turn and keeps only the numbers. Our tailor reviews every scan before your suit is cut.</p>' +
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary bs-start">Start the Scan</button>' +
-      '<button type="button" class="btn-ghost bs-upload">Upload two photos instead</button></div>');
+      '<label class="btn-ghost bs-upload">Use a video I already took<input type="file" accept="video/*" hidden></label></div>');
     let who = "self";
     sheet.querySelectorAll(".bs-who button").forEach((b) => (b.onclick = () => {
       who = b.dataset.who;
@@ -579,30 +701,34 @@
     sheet.querySelector(".bs-start").onclick = () => {
       const hcm = readHeight();
       if (!isFinite(hcm)) { showIntro("Please enter your height first."); return; }
-      state = { heightCm: hcm, who, voice: true, frames: { front: [], side: [] } };
+      state = { heightCm: hcm, who, voice: true };
+      tone(1, 10); // wakes the sound up inside the tap (iPhone)
       // iPhone only lets a page speak after a tap: say something now.
-      say(who === "self" ? "Lean your phone at waist height, then step back until you're fully in the picture." : "Point the camera at the person. Keep the phone at their waist height.", true);
+      say(who === "self" ? "Lean your phone at waist height, then step back until you're fully in the picture." : "Point the camera at the person, at their waist height.", true);
       startCamera();
     };
-    sheet.querySelector(".bs-upload").onclick = () => {
+    const fileInput = sheet.querySelector(".bs-upload input");
+    fileInput.onclick = (e) => {
       const hcm = readHeight();
-      if (!isFinite(hcm)) { showIntro("Please enter your height first."); return; }
-      state = { heightCm: hcm, who, voice: false, frames: { front: [], side: [] } };
-      showUpload();
+      if (!isFinite(hcm)) { e.preventDefault(); showIntro("Please enter your height first."); }
+    };
+    fileInput.onchange = () => {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      state = { heightCm: readHeight(), who: "friend", voice: false, uploaded: true };
+      startVideoFile(f);
     };
   }
 
-  // Little figure drawings for the two poses.
+  // Little figure drawings: the T, and turning around.
   function poseSvg(kind) {
-    const front =
-      '<circle cx="40" cy="14" r="8"/><path d="M40 22v38M40 30l-20 20M40 30l20 20M40 60l-12 34M40 60l12 34"/>';
-    const side =
-      '<circle cx="40" cy="14" r="8"/><path d="M40 22v38M40 30l2 30M40 60l-2 34M40 60l3 34"/>';
-    return '<figure><svg viewBox="0 0 80 100" class="bs-pose-svg">' + (kind === "front" ? front : side) + "</svg><figcaption>" +
-      (kind === "front" ? "1. Face the phone, arms out, feet apart" : "2. Turn to your side, arms down") + "</figcaption></figure>";
+    const t = '<circle cx="40" cy="14" r="8"/><path d="M40 22v38M12 30h56M40 60l-10 34M40 60l10 34"/>';
+    const spin = '<circle cx="40" cy="14" r="8"/><path d="M40 22v38M22 30h36M40 60l-6 34M40 60l6 34"/><path d="M14 78a26 9 0 1 0 52 0" /><path d="M60 72l6 6-8 3"/>';
+    return '<figure><svg viewBox="0 0 80 100" class="bs-pose-svg">' + (kind === "front" ? t : spin) + "</svg><figcaption>" +
+      (kind === "front" ? "1. Face the phone, arms straight out, feet a little apart" : "2. Keep the T and turn around once, slowly") + "</figcaption></figure>";
   }
 
-  // ---- the pose models (loaded only when the scan starts) ----
+  // ---- the pose model (loaded only when the scan starts) ----
   async function loadVision() {
     if (vision) return vision;
     const mod = await import(MP_BASE + "/vision_bundle.mjs");
@@ -610,66 +736,73 @@
     vision = { mod, fileset };
     return vision;
   }
-  async function makeModel(path, mode, masks) {
+  async function loadModel() {
+    if (model) return model;
     const v = await loadVision();
     const opts = (delegate) => ({
-      baseOptions: { modelAssetPath: path, delegate },
-      runningMode: mode,
+      baseOptions: { modelAssetPath: MODEL, delegate },
+      runningMode: "VIDEO",
       numPoses: 1,
-      outputSegmentationMasks: !!masks,
+      outputSegmentationMasks: true,
       minPoseDetectionConfidence: 0.5,
       minPosePresenceConfidence: 0.5,
       minTrackingConfidence: 0.5,
     });
     try {
-      return await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("GPU"));
+      model = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("GPU"));
     } catch (e) {
-      return await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("CPU"));
+      model = await v.mod.PoseLandmarker.createFromOptions(v.fileset, opts("CPU"));
     }
-  }
-  function measureModel() {
-    if (!measureModelPromise) measureModelPromise = makeModel(MODEL_MEASURE, "IMAGE", true).catch((e) => { measureModelPromise = null; throw e; });
-    return measureModelPromise;
+    return model;
   }
 
-  // ---- step 2: the camera ----
-  let stream = null, rafId = 0;
+  // ---- step 2: the camera (or a video file) ----
+  let stream = null, rafId = 0, fileUrl = null;
   function stopCamera() {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = 0;
     if (stream) stream.getTracks().forEach((t) => t.stop());
     stream = null;
+    if (fileUrl) { URL.revokeObjectURL(fileUrl); fileUrl = null; }
     try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
   }
-  async function startCamera() {
+  function camScreen() {
     openSheet(
       '<div class="bs-cam">' +
       '<video class="bs-video" playsinline muted autoplay></video>' +
       '<canvas class="bs-overlay"></canvas>' +
-      '<div class="bs-cam-top"><span class="bs-step">Getting the camera ready&hellip;</span><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
-      '<div class="bs-cam-msg" role="status" aria-live="polite">Loading&hellip;</div>' +
+      '<div class="bs-ghost" aria-hidden="true"><svg viewBox="0 0 100 200"><path d="M50 8a13 13 0 1 1 0 26a13 13 0 1 1 0-26zM38 40h24l4 6h30v10H66v50l6 88H58l-8-66-8 66H28l6-88V56H4V46h30z"/></svg></div>' +
+      '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
+      '<div class="bs-cam-top"><span class="bs-step">Getting ready&hellip;</span><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
+      '<div class="bs-ring" hidden><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="19" class="bs-ring-bg"/><circle cx="22" cy="22" r="19" class="bs-ring-fg" pathLength="100" stroke-dasharray="0 100"/></svg><span>0%</span></div>' +
+      '<div class="bs-cam-msg" role="status" aria-live="polite">Loading the scanner&hellip;</div>' +
       '<div class="bs-count" hidden></div>' +
-      '<div class="bs-cam-bottom"><button type="button" class="bs-voice" aria-pressed="true">Voice on</button><button type="button" class="bs-flip">Switch camera</button></div>' +
+      (state.uploaded ? "" : '<div class="bs-cam-bottom"><button type="button" class="bs-voice" aria-pressed="true">Voice on</button><button type="button" class="bs-flip">Switch camera</button></div>') +
       "</div>", true);
-    const video = sheet.querySelector(".bs-video");
-    sheet.querySelector(".bs-voice").onclick = (e) => {
+    const voice = sheet.querySelector(".bs-voice");
+    if (voice) voice.onclick = () => {
       state.voice = !state.voice;
-      e.target.textContent = state.voice ? "Voice on" : "Voice off";
-      e.target.setAttribute("aria-pressed", state.voice ? "true" : "false");
+      voice.textContent = state.voice ? "Voice on" : "Voice off";
+      voice.setAttribute("aria-pressed", state.voice ? "true" : "false");
       if (!state.voice) try { window.speechSynthesis.cancel(); } catch (x) {}
     };
-    sheet.querySelector(".bs-flip").onclick = () => {
+    const flip = sheet.querySelector(".bs-flip");
+    if (flip) flip.onclick = () => {
       state.who = state.who === "self" ? "friend" : "self";
       stopCamera();
       startCamera();
     };
+    return sheet.querySelector(".bs-video");
+  }
+  async function startCamera() {
+    const video = camScreen();
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 1920 }, height: { ideal: 1920 } },
+        video: { facingMode: state.who === "self" ? "user" : "environment", width: { ideal: 1280 }, height: { ideal: 1280 } },
       });
     } catch (e) {
-      showIntro("We couldn't open the camera. Allow camera access for this site in your phone's settings, or upload two photos instead.");
+      showIntro("We couldn't open the camera. Allow camera access for this site in your phone's settings, or use a video you already took.");
       return;
     }
     if (!sheet) { stopCamera(); return; }
@@ -677,53 +810,65 @@
     video.classList.toggle("bs-mirror", state.who === "self");
     sheet.querySelector(".bs-overlay").classList.toggle("bs-mirror", state.who === "self");
     try { await video.play(); } catch (e) {}
+    begin(video);
+  }
+  async function startVideoFile(file) {
+    const video = camScreen();
+    fileUrl = URL.createObjectURL(file);
+    video.removeAttribute("autoplay");
+    video.src = fileUrl;
+    video.onended = () => {
+      if (state && state.phase !== "done") showIntro("The video ended before a full turn was seen. Take a video standing in a T, then turning around once, slowly, with your whole body in the picture.");
+    };
+    begin(video);
+  }
+  async function begin(video) {
     try {
-      if (!liveModel) liveModel = await makeModel(MODEL_LIVE, "VIDEO", false);
+      await loadModel();
     } catch (e) {
-      showIntro("The scanner didn't load. Check your connection and try again, or upload two photos instead.");
+      showIntro("The scanner didn't load. Check your connection and try again.");
       return;
     }
-    measureModel().catch(() => {}); // start loading the measuring model now
-    state.pose = state.frames.front.length ? "side" : "front";
+    if (!sheet) return;
+    if (state.uploaded) { try { await video.play(); } catch (e) {} }
+    state.phase = "front";
     state.okSince = 0;
     state.history = [];
+    state.fronts = [];
+    state.spin = [];
+    state.theta = 0;
     runLive(video);
   }
 
   // Is the person standing the way the scan needs? Returns a message to
   // show (and say), or "" when everything is right.
-  function poseProblem(lm, pose) {
+  function inFrameProblem(lm) {
     if (!lm) return "Step into the picture so we can see all of you.";
     const vis = (i) => (lm[i].visibility == null ? 1 : lm[i].visibility);
-    const need = [0, 11, 12, 23, 24, 25, 26, 27, 28];
-    const seen = need.filter((i) => vis(i) > 0.5).length;
     const nose = lm[0];
     const sh = { x: (lm[11].x + lm[12].x) / 2, y: (lm[11].y + lm[12].y) / 2 };
-    const hip = { x: (lm[23].x + lm[24].x) / 2, y: (lm[23].y + lm[24].y) / 2 };
-    const T = hip.y - sh.y;
     const feetY = Math.max(lm[27].y, lm[28].y, lm[29].y, lm[30].y, lm[31].y, lm[32].y);
     const headTop = nose.y - (sh.y - nose.y) * 0.9;
     if (headTop < 0.02) return "Step back, or tilt the phone, so your head is in the picture.";
-    if (feetY > 0.975 || seen < need.length) return "Step back until your feet are in the picture.";
+    if (feetY > 0.975 || vis(27) < 0.4 || vis(28) < 0.4) return "Step back until your feet are in the picture.";
     const bodyH = feetY - headTop;
-    if (bodyH < 0.55) return "Come a little closer to the phone.";
+    if (bodyH < 0.5) return "Come a little closer to the phone.";
     if (bodyH > 0.94) return "Step back a little.";
-    const cx = (sh.x + hip.x) / 2;
-    if (cx < 0.3 || cx > 0.7) return "Move to the middle of the picture.";
-    const shoulderW = Math.abs(lm[11].x - lm[12].x);
-    const armAngle = (s, w) => (Math.atan2(Math.abs(lm[w].x - lm[s].x), lm[w].y - lm[s].y) * 180) / Math.PI;
-    if (pose === "front") {
-      if (shoulderW < T * 0.55) return "Face the phone straight on.";
-      const a1 = armAngle(11, 15), a2 = armAngle(12, 16);
-      if (a1 < 28 || a2 < 28) return "Lift your arms out from your sides, like a star.";
-      if (a1 > 65 || a2 > 65) return "Lower your arms a little.";
-      const feet = Math.abs(lm[27].x - lm[28].x);
-      if (feet < Math.abs(lm[23].x - lm[24].x) * 1.1) return "Stand with your feet a little apart.";
-    } else {
-      if (shoulderW > T * 0.32) return "Turn to your side, so your shoulder faces the phone.";
-      const a1 = armAngle(11, 15), a2 = armAngle(12, 16);
-      if (Math.max(a1, a2) > 24) return "Let your arms hang straight down by your sides.";
-    }
+    if (sh.x < 0.25 || sh.x > 0.75) return "Move to the middle of the picture.";
+    return "";
+  }
+  function armsOut(lm) {
+    const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
+    // Wrists at about shoulder height, well away from the body.
+    return Math.abs(lm[15].y - lm[11].y) < T * 0.35 && Math.abs(lm[16].y - lm[12].y) < T * 0.35;
+  }
+  function frontProblem(lm) {
+    const p = inFrameProblem(lm);
+    if (p) return p;
+    const T = (lm[23].y + lm[24].y - lm[11].y - lm[12].y) / 2;
+    if (Math.abs(lm[11].x - lm[12].x) < T * 0.55) return "Face the phone straight on.";
+    if (!armsOut(lm)) return "Hold your arms straight out to the sides, like a T.";
+    if (Math.abs(lm[27].x - lm[28].x) < Math.abs(lm[23].x - lm[24].x) * 0.9) return "Stand with your feet a little apart.";
     return "";
   }
   function stillness(history) {
@@ -735,6 +880,22 @@
     return maxMove;
   }
 
+  // One video frame through the model: landmarks always, the outline
+  // (mask) copied out only while measuring.
+  function detect(video, ts, wantMask) {
+    let out = null;
+    model.detectForVideo(video, ts, (res) => {
+      const lm = res && res.landmarks && res.landmarks[0];
+      if (!lm) return;
+      out = { lm: lm.map((p) => ({ x: p.x, y: p.y, visibility: p.visibility })) };
+      const mk = res.segmentationMasks && res.segmentationMasks[0];
+      if (wantMask && mk) out.mask = { data: new Float32Array(mk.getAsFloat32Array()), width: mk.width, height: mk.height };
+    });
+    return out;
+  }
+
+  const FRONT_FRAMES = 6;
+  const SPIN_TIMEOUT_MS = 45000;
   function runLive(video) {
     const canvas = sheet && sheet.querySelector(".bs-overlay");
     if (!canvas) return;
@@ -742,59 +903,94 @@
     const msgEl = sheet.querySelector(".bs-cam-msg");
     const stepEl = sheet.querySelector(".bs-step");
     const countEl = sheet.querySelector(".bs-count");
+    const ring = sheet.querySelector(".bs-ring");
+    const ghost = sheet.querySelector(".bs-ghost");
+    const scanline = sheet.querySelector(".bs-scanline");
     let lastTs = -1;
     let counting = false;
-    const stepLabel = () => (state.pose === "front" ? "Photo 1 of 2: front" : "Photo 2 of 2: side");
-    stepEl.textContent = stepLabel();
-    say(state.pose === "front" ? "Face the phone. Arms out like a star, feet apart." : "Now turn to your side, arms straight down.", true);
+    const setMsg = (text, ok) => { msgEl.textContent = text; msgEl.classList.toggle("bs-ok", !!ok); };
+    stepEl.textContent = "Step 1 of 2: stand in a T";
+    setMsg("Face the phone with your arms straight out, like a T.");
+    say("Face the phone with your arms straight out, like a T.", true);
     const tick = () => {
-      if (!sheet || !stream) return;
+      if (!sheet || !state || state.phase === "done") return;
       rafId = requestAnimationFrame(tick);
       if (video.readyState < 2 || !video.videoWidth) return;
       if (canvas.width !== video.videoWidth) { canvas.width = video.videoWidth; canvas.height = video.videoHeight; }
-      const ts = performance.now();
+      const ts = state.uploaded ? video.currentTime * 1000 + 1 : performance.now();
       if (ts <= lastTs) return;
       lastTs = ts;
-      let lm = null;
-      try {
-        const res = liveModel.detectForVideo(video, ts);
-        lm = res && res.landmarks && res.landmarks[0] ? res.landmarks[0] : null;
-      } catch (e) { return; }
-      drawGuide(ctx, canvas, lm);
+      let d = null;
+      try { d = detect(video, ts, true); } catch (e) { return; }
+      const lm = d ? d.lm : null;
+      drawGuide(ctx, canvas, lm, d && d.mask);
+      ghost.classList.toggle("bs-ghost-off", !!lm);
       if (counting) return;
-      const problem = poseProblem(lm, state.pose);
-      if (lm) { state.history.push(lm.map((p) => ({ x: p.x, y: p.y }))); if (state.history.length > 15) state.history.shift(); }
-      if (problem) {
-        state.okSince = 0;
-        msgEl.textContent = problem;
-        msgEl.classList.remove("bs-ok");
-        say(problem);
+
+      if (state.phase === "front") {
+        const problem = frontProblem(lm);
+        if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
+        if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
+        setMsg("Perfect. Hold still.", true);
+        if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
+        if (ts - state.okSince > 900 && stillness(state.history) < 0.012) {
+          if (state.uploaded) { state.phase = "frontCapture"; return; }
+          counting = true;
+          countdown(countEl, () => { counting = false; state.phase = "frontCapture"; });
+        }
         return;
       }
-      msgEl.textContent = "Perfect. Hold still.";
-      msgEl.classList.add("bs-ok");
-      if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
-      if (ts - state.okSince > 900 && stillness(state.history) < 0.012) {
-        counting = true;
-        countdown(countEl, () => {
-          captureFrames(video).then((frames) => {
-            state.frames[state.pose] = frames;
-            if (state.pose === "front") {
-              state.pose = "side";
-              state.okSince = 0;
-              state.history = [];
-              counting = false;
-              stepEl.textContent = stepLabel();
-              say("Got it. Now turn to your side, arms straight down.", true);
-              msgEl.textContent = "Got it. Now turn to your side, arms straight down.";
-              msgEl.classList.remove("bs-ok");
-            } else {
-              say("All done. Working out your measurements.", true);
-              stopCamera();
-              analyze();
-            }
-          });
-        });
+
+      if (state.phase === "frontCapture") {
+        if (!d || !d.mask || frontProblem(lm)) return;
+        const f = G.measureFrontFrame(lm, d.mask);
+        if (!f.error) state.fronts.push(f);
+        if (state.fronts.length < FRONT_FRAMES) return;
+        state.base = G.combine(state.fronts);
+        if (state.base.error) { state.fronts = []; state.phase = "front"; return; }
+        state.frontSh2d = G.median(state.fronts.map((x) => x.sh2d));
+        state.phase = "spin";
+        scanline.hidden = false;
+        cue.go();
+        state.spinStart = ts;
+        state.lastAngleTs = ts;
+        stepEl.textContent = "Step 2 of 2: turn around";
+        ring.hidden = false;
+        setMsg("Now keep your arms out and turn slowly to your left, all the way around.", true);
+        say("Got it. Now keep your arms out and turn slowly to your left, all the way around.", true);
+        return;
+      }
+
+      if (state.phase === "spin") {
+        const p = inFrameProblem(lm);
+        if (p) { setMsg(p); say(p); }
+        else if (!armsOut(lm)) { setMsg("Keep your arms out, like a T."); say("Keep your arms out."); }
+        if (d && d.mask && !p) {
+          const f = G.measureSideFrame(lm, d.mask, state.base.sideFracs);
+          if (!f.error) {
+            state.spin.push(f);
+            const th = G.spinAngles(state.spin, state.frontSh2d);
+            const t = th[th.length - 1];
+            if (t > state.theta + 1) state.lastAngleTs = ts;
+            state.theta = t;
+          }
+        }
+        const pct = Math.min(100, Math.round((state.theta / 360) * 100));
+        ring.querySelector(".bs-ring-fg").setAttribute("stroke-dasharray", pct + " 100");
+        ring.querySelector("span").textContent = pct + "%";
+        if (!p && armsOut(lm)) {
+          const said = state.saidPct || 0;
+          if (pct >= 25 && said < 25) { state.saidPct = 25; say("Keep turning, slowly.", true); }
+          else if (pct >= 50 && said < 50) { state.saidPct = 50; say("Halfway.", true); }
+          else if (pct >= 75 && said < 75) { state.saidPct = 75; say("Almost there.", true); }
+          setMsg("Keep turning slowly… " + pct + "%", true);
+        }
+        if (state.theta >= 345) { finishSpin(); return; }
+        if (ts - state.spinStart > SPIN_TIMEOUT_MS || (ts - state.lastAngleTs > 12000 && state.spin.length > 20)) {
+          state.phase = "done";
+          stopCamera();
+          showIntro("We didn't see a full turn. Keep your whole body in the picture and turn around once, slowly, with your arms out.");
+        }
       }
     };
     rafId = requestAnimationFrame(tick);
@@ -806,120 +1002,76 @@
       if (!sheet) return;
       if (n === 0) { el.hidden = true; done(); return; }
       el.textContent = n;
+      el.classList.remove("bs-pop");
+      void el.offsetWidth;
+      el.classList.add("bs-pop");
       say(String(n), true);
+      cue.tick();
       n--;
       setTimeout(step, 900);
     };
     step();
   }
-  // A few frames, a moment apart, for the median.
-  async function captureFrames(video) {
-    const out = [];
-    for (let i = 0; i < FRAMES_PER_POSE; i++) {
-      const c = document.createElement("canvas");
-      c.width = video.videoWidth;
-      c.height = video.videoHeight;
-      c.getContext("2d").drawImage(video, 0, 0);
-      out.push(c);
-      await new Promise((r) => setTimeout(r, 180));
-    }
-    return out;
-  }
-  // Skeleton over the video, gold when the pose is right.
-  function drawGuide(ctx, canvas, lm) {
+  // The person's outline glowing gold over the video, plus a fine
+  // skeleton: white while we wait for the right pose, gold once it's right.
+  let maskCanvas = null, maskImg = null;
+  function drawGuide(ctx, canvas, lm, mask) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!lm) return;
     const W = canvas.width, H = canvas.height;
+    const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
+    if (mask) {
+      if (!maskCanvas || maskCanvas.width !== mask.width || maskCanvas.height !== mask.height) {
+        maskCanvas = document.createElement("canvas");
+        maskCanvas.width = mask.width;
+        maskCanvas.height = mask.height;
+        maskImg = maskCanvas.getContext("2d").createImageData(mask.width, mask.height);
+      }
+      const px = maskImg.data, m = mask.data;
+      const [r, g, b] = ok ? [201, 164, 103] : [235, 228, 216];
+      for (let i = 0, j = 0; i < m.length; i++, j += 4) {
+        px[j] = r; px[j + 1] = g; px[j + 2] = b;
+        px[j + 3] = m[i] > 0.5 ? 70 + Math.round((1 - Math.abs(m[i] - 0.75) * 4) * 60) : 0;
+      }
+      maskCanvas.getContext("2d").putImageData(maskImg, 0, 0);
+      ctx.save();
+      ctx.shadowColor = ok ? "rgba(201,164,103,0.9)" : "rgba(255,255,255,0.6)";
+      ctx.shadowBlur = Math.max(8, W / 60);
+      ctx.drawImage(maskCanvas, 0, 0, W, H);
+      ctx.restore();
+    }
     const lines = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28]];
-    const ok = state && state.okSince;
-    ctx.lineWidth = Math.max(3, W / 220);
-    ctx.strokeStyle = ok ? "rgba(201,164,103,0.95)" : "rgba(255,255,255,0.8)";
+    ctx.lineWidth = Math.max(2, W / 360);
+    ctx.strokeStyle = ok ? "rgba(255,236,200,0.85)" : "rgba(255,255,255,0.7)";
     ctx.beginPath();
-    lines.forEach(([a, b]) => { ctx.moveTo(lm[a].x * W, lm[a].y * H); ctx.lineTo(lm[b].x * W, lm[b].y * H); });
+    lines.forEach(([a, b2]) => { ctx.moveTo(lm[a].x * W, lm[a].y * H); ctx.lineTo(lm[b2].x * W, lm[b2].y * H); });
     ctx.stroke();
-  }
-
-  // ---- upload instead ----
-  function showUpload(msg) {
-    openSheet(head("Upload Two Photos") +
-      '<div class="ps-body bs-intro">' +
-      (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
-      '<p class="bs-lead">Full-length photos, taken from waist height, head to feet in the picture, on a plain background.</p>' +
-      '<div class="bs-uploads">' +
-      '<label class="bs-up"><input type="file" accept="image/*" data-pose="front" hidden>' + poseSvg("front") + '<span class="bs-up-state">Choose photo</span></label>' +
-      '<label class="bs-up"><input type="file" accept="image/*" data-pose="side" hidden>' + poseSvg("side") + '<span class="bs-up-state">Choose photo</span></label>' +
-      "</div></div>" +
-      '<div class="ps-actions"><button type="button" class="btn-primary bs-go" disabled>Measure Me</button></div>');
-    const picked = {};
-    sheet.querySelectorAll(".bs-up input").forEach((input) => {
-      input.onchange = () => {
-        const f = input.files && input.files[0];
-        if (!f) return;
-        const img = new Image();
-        img.onload = () => {
-          const c = document.createElement("canvas");
-          const scale = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight));
-          c.width = Math.round(img.naturalWidth * scale);
-          c.height = Math.round(img.naturalHeight * scale);
-          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-          picked[input.dataset.pose] = c;
-          input.parentNode.classList.add("bs-up-done");
-          input.parentNode.querySelector(".bs-up-state").textContent = "Photo added";
-          sheet.querySelector(".bs-go").disabled = !(picked.front && picked.side);
-        };
-        img.src = URL.createObjectURL(f);
-      };
-    });
-    sheet.querySelector(".bs-go").onclick = () => {
-      state.frames.front = [picked.front];
-      state.frames.side = [picked.side];
-      state.uploaded = true;
-      analyze();
-    };
-  }
-
-  // ---- step 3: measuring ----
-  function showWorking(text) {
-    openSheet(head("Scan My Body") +
-      '<div class="ps-body ps-loading"><span class="ps-spinner" aria-hidden="true"></span><b>' + esc(text) + "</b>" +
-      "<p>Measuring your photos on your phone. This takes about half a minute.</p></div>");
-  }
-  function detectStill(model, canvas) {
-    return new Promise((resolve) => {
-      try {
-        model.detect(canvas, (res) => {
-          const lm = res && res.landmarks && res.landmarks[0];
-          const mk = res && res.segmentationMasks && res.segmentationMasks[0];
-          if (!lm || !mk) { resolve(null); return; }
-          // The mask is only valid inside this callback: copy it out.
-          const data = new Float32Array(mk.getAsFloat32Array());
-          resolve({ lm: lm.map((p) => ({ x: p.x, y: p.y, z: p.z, visibility: p.visibility })), mask: { data, width: mk.width, height: mk.height } });
-        });
-      } catch (e) { resolve(null); }
+    ctx.fillStyle = ctx.strokeStyle;
+    [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach((i) => {
+      ctx.beginPath();
+      ctx.arc(lm[i].x * W, lm[i].y * H, Math.max(3, W / 240), 0, Math.PI * 2);
+      ctx.fill();
     });
   }
-  async function analyze() {
-    showWorking("Working out your measurements…");
-    let model;
-    try { model = await measureModel(); } catch (e) {
-      showIntro("The scanner didn't load. Check your connection and try again.");
+
+  // ---- step 3: the numbers ----
+  function finishSpin() {
+    state.phase = "done";
+    stopCamera();
+    cue.done();
+    say("All done. Here are your measurements.", true);
+    const thetas = G.spinAngles(state.spin, state.frontSh2d);
+    const chestCover = G.spinGirth(state.spin, thetas, "chest", state.heightCm);
+    if (!isFinite(chestCover.value)) {
+      showIntro("That turn was a little quick for us to see every side. Please try again and turn more slowly.");
       return;
     }
-    const frontDet = [];
-    for (const c of state.frames.front) { const d = await detectStill(model, c); if (d) frontDet.push(d); }
-    const sideDet = [];
-    for (const c of state.frames.side) { const d = await detectStill(model, c); if (d) sideDet.push(d); }
-    const fronts = frontDet.map((d) => G.measureFrontFrame(d.lm, d.mask));
-    const base = G.combine(fronts);
-    if (base.error) {
-      const msg = "We couldn't see you clearly in the front photo.";
-      return state.uploaded ? showUpload(msg + " Try a brighter photo with your whole body in it.") : showIntro(msg + " Let's try again.");
-    }
-    const sides = sideDet.map((d) => G.measureSideFrame(d.lm, d.mask, base.sideFracs)).filter((s) => !s.error);
-    if (!sides.length) return state.uploaded ? showUpload("We couldn't see you clearly in the side photo.") : showIntro("We couldn't see you clearly in the side photo. Let's try again.");
-    const result = G.finish(base, sides, state.heightCm);
-    // Drop the photos now: nothing leaves the phone.
-    state.frames = { front: [], side: [] };
+    // Side-on frames give the leg depths (thigh, calf).
+    let sides = state.spin.filter((f) => f.sh2d / state.frontSh2d < 0.35);
+    if (!sides.length) sides = state.spin;
+    const result = G.finish(state.base, sides, state.heightCm, { spin: { frames: state.spin, thetas } });
+    state.spin = [];
+    state.fronts = [];
     showResults(result);
   }
 
@@ -943,6 +1095,7 @@
     const extraRows = EXTRA_ROWS.map((r) => row("x_" + r[0], r[1], result.extras[r[0]], result.extraPm[r[0]], "")).join("");
     openSheet(head("Your Measurements") +
       '<div class="ps-body bs-results">' +
+      '<div class="bs-done-badge"><span class="bs-done-check" aria-hidden="true"></span>Scan complete</div>' +
       '<p class="bs-lead">Here\'s what the scan measured. Check anything that looks off; you can change any number.</p>' +
       warn.map((w) => '<p class="bs-alert">' + esc(w) + "</p>").join("") +
       '<div class="ps-group">Jacket</div>' + jacketRows +
@@ -952,6 +1105,7 @@
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary bs-use">Use These Measurements</button>' +
       '<button type="button" class="btn-ghost bs-again">Scan again</button></div>');
+    sheet.querySelectorAll(".bs-row").forEach((r, i) => (r.style.animationDelay = 120 + i * 45 + "ms"));
     sheet.querySelector(".bs-again").onclick = () => showIntro();
     sheet.querySelector(".bs-use").onclick = () => useResults();
   }
@@ -979,7 +1133,7 @@
     window.__bodyScan = {
       at: new Date().toISOString(),
       heightCm: Math.round(state.heightCm * 10) / 10,
-      source: state.uploaded ? "uploaded photos" : "live camera",
+      source: state.uploaded ? "uploaded turn-around video" : "live turn-around scan",
       scanned: res.values,
       pm: res.pm,
       extras,
@@ -1005,6 +1159,24 @@
     showIntro();
   });
 
+  // For previews: the camera screen with a given pose, outline and turn.
+  window.__bodyScanPreviewCam = (lm, mask, W, H, phase, pct, msg) => {
+    state = { heightCm: 178, who: "friend", voice: false, phase, okSince: phase !== "front" ? 1 : 0 };
+    camScreen();
+    const c = sheet.querySelector(".bs-overlay");
+    c.width = W; c.height = H;
+    drawGuide(c.getContext("2d"), c, lm, mask);
+    sheet.querySelector(".bs-ghost").classList.toggle("bs-ghost-off", !!lm);
+    sheet.querySelector(".bs-step").textContent = phase === "spin" ? "Step 2 of 2: turn around" : "Step 1 of 2: stand in a T";
+    sheet.querySelector(".bs-scanline").hidden = phase !== "spin";
+    const ring = sheet.querySelector(".bs-ring");
+    ring.hidden = phase !== "spin";
+    ring.querySelector(".bs-ring-fg").setAttribute("stroke-dasharray", pct + " 100");
+    ring.querySelector("span").textContent = pct + "%";
+    const m = sheet.querySelector(".bs-cam-msg");
+    m.textContent = msg;
+    m.classList.toggle("bs-ok", phase !== "front");
+  };
   // For previews and testing: show the results screen with given numbers.
   window.__bodyScanPreview = (result) => showResults(result);
 })();

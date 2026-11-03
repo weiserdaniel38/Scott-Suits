@@ -2321,10 +2321,47 @@ body.order-done-view > .process{display:none !important;}
 .bs-row-bad .bs-row-pm{color:var(--oxblood);font-weight:600;}
 .bs-extra{margin-top:14px;}
 .bs-extra summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--brass);padding:6px 0;}
-/* The camera screen fills the phone. */
-.bs-sheet.bs-full{align-items:stretch;padding:0;}
-.bs-sheet.bs-full .bs-card{max-width:none;max-height:none;height:100%;border-radius:0;padding:0;background:#000;}
-@media(min-width:901px){.bs-sheet.bs-full .bs-card{max-width:560px;border-radius:20px;max-height:94dvh;margin:auto;}}
+/* Every scan screen fills the phone, dark and quiet, with the brand's
+   gold as the only colour (Daniel: "a completely immersive experience").
+   The site's colour tokens are redefined inside the scan so its inputs,
+   buttons and text all follow. */
+.bs-sheet.bs-full{align-items:stretch;justify-content:stretch;padding:0;background:#0b0a09;}
+.bs-sheet.bs-full .bs-card{
+  --ivory:#F2EDE3;--ivory-rgb:242,237,227;--ivory-dim:rgba(242,237,227,0.66);--ink:#0f0d0b;--ink-rgb:15,13,11;
+  --surface:#1c1915;--surface-rgb:28,25,21;--line:rgba(242,237,227,0.14);--card-tint:rgba(242,237,227,0.05);
+  max-width:none;width:100%;max-height:none;height:100%;border-radius:0;color:var(--ivory);
+  background:radial-gradient(120% 70% at 50% 0%,rgba(176,141,87,0.22),rgba(176,141,87,0) 60%),#0f0d0b;
+  padding:calc(18px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  animation:bs-fade .35s ease both;}
+.bs-sheet.bs-full .bs-card>*{width:100%;max-width:560px;margin-left:auto;margin-right:auto;}
+.bs-sheet.bs-full .wiz-sheet-head h3{font-size:30px;letter-spacing:.01em;}
+.bs-sheet.bs-full .btn-primary{background:linear-gradient(180deg,#d2b07a,#b08d57);color:#16120d;border:none;box-shadow:0 10px 30px rgba(176,141,87,0.35);}
+.bs-sheet.bs-full .btn-ghost{color:var(--ivory);}
+.bs-sheet.bs-full .ps-type button.selected{background:var(--brass);color:#16120d;}
+.bs-sheet.bs-full .bs-pose-svg{stroke:#d2b07a;filter:drop-shadow(0 0 6px rgba(201,164,103,0.55));animation:bs-breathe 2.8s ease-in-out infinite;}
+.bs-sheet.bs-full .bs-poses figure:nth-child(2) .bs-pose-svg{animation-delay:1.4s;}
+.bs-sheet.bs-camera .bs-card{padding:0;background:#000;}
+.bs-sheet.bs-camera .bs-card>*{max-width:none;}
+@media(min-width:901px){.bs-sheet.bs-camera .bs-card{max-width:560px;margin:auto;border-radius:20px;max-height:94dvh;}}
+@keyframes bs-fade{from{opacity:0}to{opacity:1}}
+@keyframes bs-breathe{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}}
+/* Ghost T-pose: where to stand, until the camera finds the person. */
+.bs-ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity .4s;}
+.bs-ghost svg{height:72%;fill:none;stroke:rgba(242,237,227,0.55);stroke-width:1.2;stroke-dasharray:3 3;animation:bs-breathe 2.4s ease-in-out infinite;}
+.bs-ghost-off{opacity:0;}
+/* The scan line sweeping over the person while they turn. */
+.bs-scanline{position:absolute;left:0;right:0;height:3px;top:10%;background:linear-gradient(90deg,rgba(201,164,103,0),rgba(255,226,170,0.95),rgba(201,164,103,0));box-shadow:0 0 24px 6px rgba(201,164,103,0.45);animation:bs-sweep 2.6s ease-in-out infinite alternate;pointer-events:none;}
+.bs-scanline[hidden]{display:none;}
+@keyframes bs-sweep{from{top:8%}to{top:90%}}
+.bs-count.bs-pop{animation:bs-pop .85s ease-out both;}
+@keyframes bs-pop{0%{transform:scale(1.6);opacity:0}25%{opacity:1}100%{transform:scale(.9);opacity:.2}}
+/* Results come in one by one. */
+.bs-done-badge{display:flex;align-items:center;gap:10px;margin:2px 0 12px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#d2b07a;}
+.bs-done-check{width:22px;height:22px;border-radius:50%;background:#b08d57;box-shadow:0 0 16px rgba(201,164,103,0.7);position:relative;}
+.bs-done-check::after{content:"";position:absolute;left:7px;top:4px;width:6px;height:11px;border:solid #16120d;border-width:0 2.5px 2.5px 0;transform:rotate(45deg);}
+.bs-results .bs-row{animation:bs-rise .45s ease both;}
+@keyframes bs-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.bs-sheet.bs-full .bs-card,.bs-pose-svg,.bs-ghost svg,.bs-scanline,.bs-count.bs-pop,.bs-results .bs-row{animation:none!important;}}
 .bs-cam{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:#000;color:#fff;}
 .bs-video,.bs-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
 .bs-mirror{transform:scaleX(-1);}
@@ -2337,3 +2374,16 @@ body.order-done-view > .process{display:none !important;}
 .bs-count[hidden]{display:none;}
 .bs-cam-bottom{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:12px;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));}
 .bs-cam-bottom button{padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.5);background:rgba(0,0,0,0.4);color:#fff;font:600 13px 'Inter',sans-serif;cursor:pointer;}
+/* Turn-around progress ring */
+.bs-ring{position:absolute;top:calc(56px + env(safe-area-inset-top,0px));right:16px;width:64px;height:64px;}
+.bs-ring[hidden]{display:none;}
+.bs-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+.bs-ring circle{fill:none;stroke-width:4;}
+.bs-ring-bg{stroke:rgba(255,255,255,0.25);}
+.bs-ring-fg{stroke:#C9A467;stroke-linecap:round;transition:stroke-dasharray .2s;}
+.bs-ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 14px 'Inter',sans-serif;color:#fff;}
+label.bs-upload{display:inline-block;text-align:center;}
+.bs-sheet.bs-full .measure-input-wrap{background:rgba(242,237,227,0.06)!important;border:1px solid rgba(242,237,227,0.22)!important;box-shadow:none!important;border-radius:12px;}
+.bs-sheet.bs-full .measure-input-wrap:focus-within{border-color:#c9a467!important;}
+.bs-sheet.bs-full .measure-input-wrap input{color:#F2EDE3!important;background:transparent!important;-webkit-text-fill-color:#F2EDE3;}
+.bs-sheet.bs-full .measure-input-wrap input::placeholder{color:rgba(242,237,227,0.35);-webkit-text-fill-color:rgba(242,237,227,0.35);}
