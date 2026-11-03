@@ -1180,7 +1180,7 @@
     const scanline = sheet.querySelector(".bs-scanline");
     let lastTs = -1;
     let counting = false;
-    const setMsg = (text, ok) => { msgEl.textContent = text; msgEl.classList.toggle("bs-ok", !!ok); };
+    const setMsg = (text, ok) => { if (state.failUntil && performance.now() < state.failUntil) return; msgEl.textContent = text; msgEl.classList.toggle("bs-ok", !!ok); };
     stepEl.textContent = "Step 1 of 2: arms up";
     setMsg("Face the phone. Arms up.");
     say("Face the phone. Arms up.", true);
@@ -1224,12 +1224,21 @@
           state.spotSaid = true;
           if (problem) { setMsg("Good spot. " + problem, true); say(armsUp(lm, true) ? "Great, that's a good spot." : "Great, that's a good spot. Now raise your arms, like the picture.", true); return; }
         }
-        if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
+        // The pose check can flicker for a frame or two (Daniel: stuck in a
+        // "Perfect. Hold still." loop), so a problem only counts once it has
+        // lasted 0.6 s, and "Perfect" is said at most once every 6 s.
+        if (problem) {
+          state.problemSince = state.problemSince || ts;
+          if (!state.okSince || ts - state.problemSince > 600) { state.okSince = 0; setMsg(problem); say(problem); return; }
+        } else state.problemSince = 0;
         setMsg("Hold still.", true);
-        if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
+        if (!state.okSince) {
+          state.okSince = ts;
+          if (!state.perfectAt || ts - state.perfectAt > 6000) { state.perfectAt = ts; say("Perfect. Hold still.", true); }
+        }
         // Capture straight away, no countdown (Daniel: "it needs to capture
-        // as fast as MTailor"). The front frames take about half a second.
-        if (ts - state.okSince > 250 && stillness(state.history) < 0.06) { state.phase = "frontCapture"; state.captureStart = ts; }
+        // as fast as MTailor").
+        if (ts - state.okSince > 250) { state.phase = "frontCapture"; state.captureStart = ts; }
         return;
       }
 
@@ -1249,7 +1258,6 @@
         let why = "";
         if (!lm) why = "no person";
         else if (!d.mask) why = "no outline";
-        else if (inFrameProblem(lm)) why = inFrameProblem(lm);
         else if (!(state.lastFrontAt && ts - state.lastFrontAt < CAPTURE_GAP_MS)) {
           let f;
           try { f = G.measureFrontFrame(lm, d.mask); } catch (e) { f = { error: "math " + (e && e.message) }; }
@@ -1263,7 +1271,8 @@
           switchToCpu();
         }
         if (capFor > 6000 && !state.fronts.length) {
-          setMsg("Couldn't capture. Try again.");
+          setMsg("Couldn't capture (" + (state.capWhy || "unknown") + "). Try again.");
+          state.failUntil = performance.now() + 5000; // keep the reason on screen
           stepEl.textContent = "Step 1 of 2 · retry (" + (state.capWhy || "unknown") + ")";
           say("Step into the picture.", true);
           state.phase = "front"; state.okSince = 0; state.lastFrontAt = 0;
