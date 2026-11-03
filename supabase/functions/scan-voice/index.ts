@@ -30,6 +30,9 @@ const LINES: Record<string, string> = {
   middle: "Move to the middle.",
   facephone: "Face the phone.",
   apart: "Feet a little apart.",
+  spot: "Great, that's a good spot.",
+  spotarms: "Great, that's a good spot. Now raise your arms, like the picture.",
+  gotit: "Got it. Now turn slowly, all the way around.",
 };
 const VOICES = ["ash", "onyx", "echo", "ballad", "verse"];
 const STYLE =

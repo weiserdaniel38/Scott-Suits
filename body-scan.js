@@ -632,7 +632,7 @@
   // when VOICE_CLIPS is on; otherwise the phone's own voice, picking a
   // male one (Daniel: "I want it to be male and sound natural").
   const VOICE_CLIPS = true; // OpenAI "echo" voice (Daniel picked it), recorded 2026-11-03 (supabase/functions/scan-voice)
-  const VOICE_V = "echo2"; // bump when the clips are re-recorded
+  const VOICE_V = "echo3"; // bump when the clips are re-recorded
   const CLIP_FOR = {
     "Lean the phone on the floor. Step back.": "floor", "Hold the phone at waist height.": "hold",
     "Face the phone. Arms up.": "face", "Perfect. Hold still.": "perfect", "3": "3", "2": "2", "1": "1",
@@ -641,6 +641,8 @@
     "Step into the picture.": "enter", "Step back. Show your head.": "head", "Step back. Show your feet.": "feet",
     "Come closer.": "closer", "Step back a little.": "back", "Move to the middle.": "middle",
     "Face the phone.": "facephone", "Feet a little apart.": "apart",
+    "Great, that's a good spot.": "spot", "Great, that's a good spot. Now raise your arms, like the picture.": "spotarms",
+    "Got it. Now turn slowly, all the way around.": "gotit",
   };
   let clipAudio = null;
   // Fetch every clip once when the scan starts, so each line plays at once.
@@ -866,12 +868,10 @@
       '<div class="bs-cam">' +
       '<video class="bs-video" playsinline muted autoplay></video>' +
       '<canvas class="bs-overlay"></canvas>' +
-      '<div class="bs-ghost" aria-hidden="true"><img src="./assets/scan-figure-guide.webp" alt=""></div>' +
       '<div class="bs-scanline" aria-hidden="true" hidden></div>' +
       // Live "you're lined up" graphics: frame corners that turn gold when
       // the whole body is in the picture, three checks that light up one by
       // one, and a capture bar while the front frames are taken.
-      '<div class="bs-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' +
       '<div class="bs-checks" aria-hidden="true"><span data-k="frame">In frame</span><span data-k="pose">Arms up</span><span data-k="still">Still</span></div>' +
       '<div class="bs-capture" aria-hidden="true" hidden><span>Capturing</span><b><i></i></b></div>' +
       '<div class="bs-cam-top"><span class="bs-step">Getting ready&hellip;</span><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>' +
@@ -1022,7 +1022,7 @@
     const stepEl = sheet.querySelector(".bs-step");
     const countEl = sheet.querySelector(".bs-count");
     const ring = sheet.querySelector(".bs-ring");
-    const ghost = sheet.querySelector(".bs-ghost");
+    const ghost = null;
     const scanline = sheet.querySelector(".bs-scanline");
     let lastTs = -1;
     let counting = false;
@@ -1048,7 +1048,13 @@
       if (state.phase === "front") {
         const problem = frontProblem(lm);
         if (lm) { state.history.push(lm); if (state.history.length > 15) state.history.shift(); }
-        setChecks(!!lm && !inFrameProblem(lm), !problem, !problem && stillness(state.history) < 0.03);
+        const inFrame = !!lm && !inFrameProblem(lm);
+        setChecks(inFrame, !problem, !problem && stillness(state.history) < 0.03);
+        // First time they're well placed: say so, then the next step.
+        if (inFrame && !state.spotSaid) {
+          state.spotSaid = true;
+          if (problem) { setMsg("Good spot. " + problem, true); say(armsUp(lm, true) ? "Great, that's a good spot." : "Great, that's a good spot. Now raise your arms, like the picture.", true); return; }
+        }
         if (problem) { state.okSince = 0; setMsg(problem); say(problem); return; }
         setMsg("Hold still.", true);
         if (!state.okSince) { state.okSince = ts; say("Perfect. Hold still.", true); }
@@ -1065,7 +1071,7 @@
         setCapture(state.fronts.length / FRONT_FRAMES);
         if (!d || !d.mask || !lm || inFrameProblem(lm)) return;
         const f = G.measureFrontFrame(lm, d.mask);
-        if (!f.error) state.fronts.push(f);
+        if (!f.error) { state.fronts.push(f); state.flashAt = performance.now(); cue.tick(); }
         setCapture(state.fronts.length / FRONT_FRAMES);
         if (state.fronts.length < FRONT_FRAMES) return;
         state.base = G.combine(state.fronts);
@@ -1080,8 +1086,8 @@
         state.lastAngleTs = ts;
         stepEl.textContent = "Step 2 of 2: turn around";
         ring.hidden = false;
-        setMsg("Now turn slowly, all the way around.", true);
-        say("Now turn slowly, all the way around.", true);
+        setMsg("Got it. Now turn slowly, all the way around.", true);
+        say("Got it. Now turn slowly, all the way around.", true);
         return;
       }
 
@@ -1142,35 +1148,94 @@
     };
     step();
   }
-  // Nothing is drawn over the person (Daniel: no body block, no skeleton
-  // lines): the camera picture stays clean. The message bar, scan line and
-  // % ring say how it's going.
-  function drawGuide(ctx, canvas) {
+  // Live scan effects ON the body (Daniel: no outlines; "real-time graphics
+  // flashing over my body to make it look like it was captured"). Inside
+  // the person's outline only: a light gold tint, fine contour lines that
+  // drift like a 3D scan, a bright band sweeping up and down, twinkling
+  // points on the joints, and a flash each time a frame is captured.
+  // Before the pose is right the effect is soft white; once it is right it
+  // turns gold.
+  let fxCanvas = null, fxCtx = null, fxImg = null;
+  const FX_STEP = 2; // mask sampled every 2 px (fast enough every frame)
+  const FX_JOINTS = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+  function drawGuide(ctx, canvas, lm, mask) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!lm || !mask) return;
+    const W = canvas.width, H = canvas.height;
+    const w = Math.max(1, Math.floor(mask.width / FX_STEP)), h = Math.max(1, Math.floor(mask.height / FX_STEP));
+    if (!fxCanvas || fxCanvas.width !== w || fxCanvas.height !== h) {
+      fxCanvas = document.createElement("canvas");
+      fxCanvas.width = w; fxCanvas.height = h;
+      fxCtx = fxCanvas.getContext("2d");
+      fxImg = fxCtx.createImageData(w, h);
+    }
+    const px = fxImg.data, m = mask.data, mw = mask.width;
+    for (let y = 0, j = 0; y < h; y++) {
+      const row = y * FX_STEP * mw;
+      for (let x = 0; x < w; x++, j += 4) {
+        px[j] = px[j + 1] = px[j + 2] = 255;
+        px[j + 3] = m[row + x * FX_STEP] > 0.5 ? 255 : 0;
+      }
+    }
+    fxCtx.globalCompositeOperation = "copy";
+    fxCtx.putImageData(fxImg, 0, 0);
+    // Paint the effect only where the person is.
+    fxCtx.globalCompositeOperation = "source-in";
+    const t = performance.now() / 1000;
+    const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
+    const col = ok ? "226,196,141" : "235,240,255";
+    fxCtx.fillStyle = "rgba(" + col + ",0.16)";
+    fxCtx.fillRect(0, 0, w, h);
+    // Contour lines drifting downward.
+    const gap = Math.max(6, Math.round(h / 70));
+    const off = (t * gap * 1.5) % gap;
+    fxCtx.fillStyle = "rgba(" + col + ",0.55)";
+    for (let y = off; y < h; y += gap) fxCtx.fillRect(0, y, w, 1);
+    // Bright band sweeping up and down the body.
+    const by = (0.5 + 0.5 * Math.sin(t * 1.6)) * h;
+    const band = fxCtx.createLinearGradient(0, by - h * 0.08, 0, by + h * 0.08);
+    band.addColorStop(0, "rgba(" + col + ",0)");
+    band.addColorStop(0.5, "rgba(255,248,230,0.85)");
+    band.addColorStop(1, "rgba(" + col + ",0)");
+    fxCtx.fillStyle = band;
+    fxCtx.fillRect(0, by - h * 0.08, w, h * 0.16);
+    // Flash when a frame was just captured.
+    const since = state && state.flashAt ? performance.now() - state.flashAt : 1e9;
+    if (since < 220) {
+      fxCtx.fillStyle = "rgba(255,250,235," + (0.75 * (1 - since / 220)).toFixed(3) + ")";
+      fxCtx.fillRect(0, 0, w, h);
+    }
+    ctx.save();
+    ctx.shadowColor = "rgba(" + col + ",0.85)";
+    ctx.shadowBlur = Math.max(10, W / 50);
+    ctx.drawImage(fxCanvas, 0, 0, W, H);
+    ctx.restore();
+    // Twinkling tracking points on the joints.
+    FX_JOINTS.forEach((i, k) => {
+      const p = lm[i];
+      if (!p || (p.visibility != null && p.visibility < 0.5)) return;
+      const a = 0.45 + 0.55 * Math.abs(Math.sin(t * 3 + k));
+      const r = Math.max(3, W / 160) * (0.8 + 0.4 * a);
+      ctx.beginPath();
+      ctx.arc(p.x * W, p.y * H, r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,244,215," + a.toFixed(2) + ")";
+      ctx.shadowColor = "rgba(" + col + ",0.9)";
+      ctx.shadowBlur = r * 4;
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
   }
-  // Daniel's figures over the camera: the dashed guide until we see you,
-  // then the gold arms-up figure while you face the phone, and the gold
-  // turning figure while you turn (faint, so you still see yourself).
-  const GHOST_SRC = { guide: "./assets/scan-figure-guide.webp", front: "./assets/scan-figure-tpose.webp", spin: "./assets/scan-figure-turn.webp" };
-  function setGhost(ghost, lm, phase) {
-    const kind = !lm ? "guide" : phase === "spin" ? "spin" : "front";
-    if (ghost.dataset.kind === kind) return;
-    ghost.dataset.kind = kind;
-    ghost.querySelector("img").src = GHOST_SRC[kind];
-    ghost.classList.toggle("bs-ghost-dim", kind !== "guide");
-  }
+  // The outline figures are gone from the camera (Daniel); kept as no-op.
+  function setGhost() {}
 
   // frame / pose / still: true, false, or null (hide all checks).
   function setChecks(frame, pose, still) {
     if (!sheet) return;
-    const box = sheet.querySelector(".bs-checks"), fr = sheet.querySelector(".bs-frame"), gh = sheet.querySelector(".bs-ghost");
+    const box = sheet.querySelector(".bs-checks");
     if (!box) return;
     box.hidden = frame === null;
     const on = { frame: !!frame, pose: !!(frame && pose), still: !!(frame && pose && still) };
     box.querySelectorAll("span").forEach((el) => el.classList.toggle("on", on[el.dataset.k]));
-    fr.classList.toggle("bs-ok", !!frame);
-    fr.classList.toggle("bs-hide", frame === null);
-    gh.classList.toggle("bs-ghost-lock", on.pose);
   }
   function setCapture(frac) {
     const c = sheet && sheet.querySelector(".bs-capture");
