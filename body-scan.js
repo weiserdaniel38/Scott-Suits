@@ -620,7 +620,8 @@
   // The voice. Recorded clips of a natural male voice (assets/voice/*.mp3)
   // when VOICE_CLIPS is on; otherwise the phone's own voice, picking a
   // male one (Daniel: "I want it to be male and sound natural").
-  const VOICE_CLIPS = true; // OpenAI "ash" voice, recorded 2026-11-03 (supabase/functions/scan-voice)
+  const VOICE_CLIPS = true; // OpenAI "echo" voice (Daniel picked it), recorded 2026-11-03 (supabase/functions/scan-voice)
+  const VOICE_V = "echo1"; // bump when the clips are re-recorded
   const CLIP_FOR = {
     "Lean the phone at waist height. Step back.": "lean", "Hold the phone at waist height.": "hold",
     "Face the phone. Arms up.": "face", "Perfect. Hold still.": "perfect", "3": "3", "2": "2", "1": "1",
@@ -635,7 +636,7 @@
   function preloadVoice() {
     if (!VOICE_CLIPS || preloadVoice.done) return;
     preloadVoice.done = true;
-    Object.values(CLIP_FOR).forEach((c) => { try { fetch("./assets/voice/" + c + ".mp3").catch(() => {}); } catch (e) {} });
+    Object.values(CLIP_FOR).forEach((c) => { try { fetch("./assets/voice/" + c + ".mp3?v=" + VOICE_V).catch(() => {}); } catch (e) {} });
   }
   // Best male English voice on this phone: enhanced/premium/natural ones
   // first, then known male voice names. Robotic novelty voices are skipped.
@@ -664,7 +665,7 @@
         // lets it keep playing later.
         clipAudio = clipAudio || new Audio();
         clipAudio.pause();
-        clipAudio.src = "./assets/voice/" + clip + ".mp3";
+        clipAudio.src = "./assets/voice/" + clip + ".mp3?v=" + VOICE_V;
         clipAudio.play().catch(() => {});
         return;
       } catch (e) {}
