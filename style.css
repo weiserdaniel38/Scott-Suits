@@ -2444,3 +2444,22 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.22);}
 .bs-dots i.done{background:rgba(201,164,103,0.55);}
 .bs-dots i.on{background:#e2c48d;width:20px;border-radius:4px;}
+/* MTailor-style pieces (Daniel's recording, 2026-11-03) */
+.bs-bigpose{position:absolute;left:50%;top:50%;width:86%;max-height:78%;object-fit:contain;transform:translate(-50%,-48%);opacity:.55;pointer-events:none;filter:drop-shadow(0 0 10px rgba(226,196,141,0.45));transition:opacity .5s,transform .5s;}
+.bs-bigpose.bs-gone{opacity:0;transform:translate(-50%,-48%) scale(1.06);}
+.bs-level{position:relative;flex:1 1 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:calc(64px + env(safe-area-inset-top,0px)) 24px calc(20px + env(safe-area-inset-bottom,0px));background:#0b0c0e;color:var(--ivory);}
+.bs-level .bs-page-title{font-size:22px;max-width:320px;text-wrap:balance;}
+.bs-level .bs-page-sub{max-width:300px;}
+.bs-level-ok{min-height:24px;margin:6px 0 0;color:#e2c48d;font-weight:600;font-size:18px;}
+.bs-level-track{position:relative;width:16px;flex:1 1 auto;max-height:46vh;min-height:220px;margin:10px 0 18px;border-radius:8px;background:rgba(255,255,255,0.12);}
+.bs-level-ring{position:absolute;left:50%;top:50%;width:46px;height:46px;transform:translate(-50%,-50%);border:3px solid rgba(255,255,255,0.55);border-radius:50%;}
+.bs-level-ring::before,.bs-level-ring::after{content:"";position:absolute;top:50%;width:0;height:0;border:6px solid transparent;transform:translateY(-50%);}
+.bs-level-ring::before{right:calc(100% + 10px);border-left-color:rgba(255,255,255,0.55);}
+.bs-level-ring::after{left:calc(100% + 10px);border-right-color:rgba(255,255,255,0.55);}
+.bs-level-dot{position:absolute;left:50%;top:50%;width:34px;height:34px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);transition:transform .12s linear,background .2s,box-shadow .2s;}
+.bs-level-dot.on{background:#e2c48d;box-shadow:0 0 18px rgba(226,196,141,0.8);}
+.bs-level-done .bs-level-ring{border-color:#e2c48d;}
+.bs-level-skip{margin-top:auto;}
+.bs-done-check{display:inline-flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:50%;background:#e2c48d;}
+.bs-done-check svg{width:48px;height:48px;fill:none;stroke:#111;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;}
+.bs-replay{display:block;width:150px;aspect-ratio:9/16;object-fit:cover;margin:0 auto 14px;border-radius:10px;background:#000;}
