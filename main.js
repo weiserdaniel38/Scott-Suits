@@ -1022,7 +1022,8 @@ async function loadAdminNotifications() {
     if (error) throw error;
     const brandOf = {};
     if (!brandRes.error && brandRes.data) brandRes.data.forEach((x) => (brandOf[x.order_id] = x.brand));
-    const rows = data || [];
+    // Unpaid customer orders don't show (Daniel 2026-11-03); see adminAwaitingPayment.
+    const rows = (data || []).filter((n) => !adminAwaitingPayment(Object.assign({ brand: brandOf[n.order_id] }, n)));
     setAdminUnread(rows.filter((n) => !n.read_at).length + waits.length + done.length);
     if (adminNotifClearAll) adminNotifClearAll.hidden = !rows.length && !done.length;
     if (!rows.length && !waits.length && !done.length) {
@@ -1707,8 +1708,17 @@ async function loadAdminOrders() {
       const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
       (p.fabrics = p.fabrics || []).push(x);
     });
+    // Daniel (2026-11-03): unpaid customer orders (abandoned checkouts) don't
+    // show here; they appear once paid. His own no-payment orders and S.W.
+    // Atelier requests still show. Only filtered when payments loaded.
+    const rowsShown = data.map((o) => Object.assign({}, payments[o.order_id], o))
+      .filter((o) => pay.error || !adminAwaitingPayment(o));
     adminOrdersList.innerHTML = "";
-    data.forEach((o) => adminOrdersList.appendChild(adminOrderRow(Object.assign({}, payments[o.order_id], o))));
+    if (!rowsShown.length) {
+      adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
+      return;
+    }
+    rowsShown.forEach((o) => adminOrdersList.appendChild(adminOrderRow(o)));
   } catch (err) {
     console.error(err);
     adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
