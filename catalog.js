@@ -20,13 +20,16 @@ const JACKET_CATALOG = {
         hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
         replaceWith: "Peak Lapel" },
       // Semi-notch and semi-peak added from Daniel's drawings (2026-10-24).
+      // Semi-notch/semi-peak drawings redrawn 2026-11-04 (scripts/draw-semi-lapels.py):
+      // semi-notch = narrow notch with the lapel tip lifted toward the collar;
+      // semi-peak = short, low peak with a small gap under the collar.
       // Semi-notch follows Notch: not offered double breasted, becomes
       // Semi-Peak there.
-      { name: "Semi-Notch Lapel", factoryCode: "0003", img: "./assets/jacket-collar-new-seminotch.jpg",
+      { name: "Semi-Notch Lapel", factoryCode: "0003", img: "./assets/jacket-collar-new-seminotch-v2.jpg",
         hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
         replaceWith: "Semi-Peak Lapel" },
       { name: "Peak Lapel", factoryCode: "0002", img: "./assets/jacket-collar-new-peak.jpg" },
-      { name: "Semi-Peak Lapel", factoryCode: "0004", img: "./assets/jacket-collar-new-semipeak.jpg" },
+      { name: "Semi-Peak Lapel", factoryCode: "0004", img: "./assets/jacket-collar-new-semipeak-v2.jpg" },
       { name: "Shawl", displayName: "Shawl Collar", specName: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl.jpg" },
       { name: "Diamond Lapel", factoryCode: "001R", img: "./assets/jacket-collar-new-diamond.jpg" },
       // Arc Lapel (Daniel's drawing, 2026-11-04): a shawl whose lapels end in
