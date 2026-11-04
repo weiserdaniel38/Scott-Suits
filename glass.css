@@ -222,8 +222,13 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
 html[data-brand="scott"]{
   --ink:#F7F3EE;
   --ink-rgb:247,243,238;
-  --card-solid:#FFFDFA;
+  --card-solid:#FFFFFF;
   --glass-panel:linear-gradient(150deg,rgba(253,251,248,0.99) 0%,rgba(251,248,244,0.98) 100%);
+  /* Daniel, same day: the picture cards "don't stick out as much anymore,
+     contrast a little more, only subtly". Pure white cards, a slightly
+     firmer gold edge and a slightly deeper soft shadow. */
+  --card-edge:rgba(var(--brass-rgb),0.34);
+  --card-drop:0 2px 12px rgba(70,52,32,0.10),0 1px 2px rgba(70,52,32,0.06);
 }
 html[data-brand="scott"] body::before{opacity:0.6;}
 html[data-brand="scott"] .hiw-icon,
