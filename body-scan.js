@@ -814,11 +814,11 @@
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
       (pg.clothes ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" + clothesGrid() :
       pg.ready ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
-        '<div class="bs-ready">' + pg.ready.map((t) => '<div class="bs-ready-row"><img src="./assets/scan-clothes/' + t[0] + '.webp?v=1" alt="" width="200" height="160"><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>" :
+        '<div class="bs-ready">' + pg.ready.map((t) => '<div class="bs-ready-row"><img src="./assets/scan-clothes/' + t[0] + '-c.webp?v=1" alt="" width="200" height="160"><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>" :
       pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
         '<div class="bs-tips">' + pg.tips.map((t) => '<div class="bs-tip"><span class="bs-icon">' + ICON[t[0]] + '</span><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>"
       : (pg.figs ? '<div class="bs-page-art bs-figs">' + poseSvg("front") + poseSvg("turn") + "</div>"
-        : pg.height ? '<div class="bs-page-art bs-height-art"><img src="./assets/scan-clothes/height-figure.webp?v=1" alt="" width="370" height="432"></div>'
+        : pg.height ? '<div class="bs-page-art bs-height-art"><img src="./assets/scan-clothes/height-figure-c.webp?v=1" alt="" width="370" height="432"></div>'
         : '<div class="bs-page-art"><span class="bs-icon">' + ICON[pg.icon] + "</span></div>") +
         '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>") +
       (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
@@ -973,7 +973,7 @@
   // The two figures on the start screen (Daniel's ChatGPT drawings, gold
   // outlines on transparent).
   function poseSvg(kind) {
-    const src = kind === "front" ? "./assets/scan-figure-tpose.webp" : "./assets/scan-figure-turn.webp";
+    const src = kind === "front" ? "./assets/scan-figure-tpose-c.webp" : "./assets/scan-figure-turn-c.webp";
     return '<figure><img class="bs-pose-img" src="' + src + '" alt="" width="200" height="236">' + "<figcaption>" +
       (kind === "front" ? "1. Arms up" : "2. Turn around slowly") + "</figcaption></figure>";
   }
@@ -1803,7 +1803,7 @@
   function showGreatJob() {
     openSheet('<div class="ps-body bs-intro bs-page bs-great">' +
       // Daniel's gold figure in a ring (no big gold circle, no double tick).
-      '<div class="bs-page-art"><img class="bs-great-art" src="./assets/scan-clothes/great-job.webp?v=1" alt="" width="430" height="435"></div>' +
+      '<div class="bs-page-art"><img class="bs-great-art" src="./assets/scan-clothes/great-job-c.webp?v=1" alt="" width="430" height="435"></div>' +
       '<h3 class="bs-page-title">Great job!</h3>' +
       '<p class="bs-page-sub">Last step: check your scan.</p>' +
       "</div>" +
@@ -1877,7 +1877,7 @@
     openSheet(head("Your Measurements") +
       '<div class="ps-body bs-results">' +
       // Daniel's "Scan complete" banner (2026-11-04), replacing the big gold circle.
-      '<div class="bs-done-badge"><img src="./assets/scan-clothes/scan-complete.webp?v=1" alt="" width="297" height="300"><span>Scan complete</span></div>' +
+      '<div class="bs-done-badge"><img src="./assets/scan-clothes/scan-complete-c.webp?v=1" alt="" width="297" height="300"><span>Scan complete</span></div>' +
       '<p class="bs-lead">Tap a number to change it.</p>' +
       warn.map((w) => '<p class="bs-alert">' + esc(w) + "</p>").join("") +
       '<div class="ps-group">Jacket</div>' + jacketRows +
