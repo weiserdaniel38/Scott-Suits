@@ -664,6 +664,7 @@
     "Face the phone.": "facephone", "Feet a little apart.": "apart",
     "Great, that's a good spot.": "spot", "Great, that's a good spot. Now raise your arms, like the picture.": "spotarms",
     "Got it. Now turn slowly, all the way around.": "gotit", "Perfect.": "perfectonly",
+    "Done. Now step out of the picture, for a few seconds.": "stepout", "Step all the way out of the picture.": "stepout2",
   };
   let clipAudio = null;
   // Fetch every clip once when the scan starts, so each line plays at once.
@@ -1482,6 +1483,16 @@
         return;
       }
 
+      if (state.phase === "stepout") {
+        // Gone for 2.5 s = the empty room is filmed. Finish anyway after
+        // 15 s so a small room can't trap anyone.
+        if (!lm) { if (!state.emptySince) state.emptySince = ts; }
+        else state.emptySince = 0;
+        if ((state.emptySince && ts - state.emptySince > 2500) || ts - state.stepoutStart > 15000) { finishScan(true); return; }
+        if (lm && ts - state.stepoutStart > 6000) say("Step all the way out of the picture.");
+        return;
+      }
+
       if (state.phase === "spin") {
         const p = inFrameProblem(lm);
         if (p) { if (setMsg(p)) say(p); }
@@ -1513,7 +1524,14 @@
           state.result = spinResult();
           if (!state.result) return;
           cue.done();
-          finishScan();
+          if (state.uploaded) { finishScan(); return; }
+          // MTailor's last step (Daniel 2026-11-04, idea 8): walk out and
+          // film the empty room for a few seconds.
+          state.phase = "stepout";
+          state.stepoutStart = ts;
+          state.emptySince = 0;
+          ring.hidden = true;
+          say("Done. Now step out of the picture, for a few seconds.", true);
           return;
         }
         if (ts - state.spinStart > SPIN_TIMEOUT_MS || (ts - state.lastAngleTs > 12000 && state.spin.length > 20)) {
@@ -1754,10 +1772,11 @@
     state.fronts = [];
     return result;
   }
-  function finishScan() {
+  function finishScan(quiet) {
     state.phase = "done";
     const rec = stopRecording();
-    say("Done.", true);
+    if (!quiet) say("Done.", true);
+    else tone(990, 90);
     rec.then((url) => {
       stopCamera();
       if (!state) return;

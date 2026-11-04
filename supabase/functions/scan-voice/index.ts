@@ -33,6 +33,8 @@ const LINES: Record<string, string> = {
   spot: "Great, that's a good spot.",
   spotarms: "Great, that's a good spot. Now raise your arms, like the picture.",
   gotit: "Got it. Now turn slowly, all the way around.",
+  stepout: "Done. Now step out of the picture, for a few seconds.",
+  stepout2: "Step all the way out of the picture.",
 };
 const VOICES = ["ash", "onyx", "echo", "ballad", "verse"];
 const STYLE =
