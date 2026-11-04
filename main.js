@@ -4241,7 +4241,7 @@ function refreshOrderProgress() {
     const row = el.closest(".wiz-head");
     const cheer = row ? row.querySelector(".wiz-cheer") : null;
     if (cheer) {
-      cheer.textContent = "";
+      cheer.textContent = orderProgressCheer(pct, stage);
       cheer.classList.toggle("celebrate", stage === "design" && designProgressState().allDone);
     }
   });
