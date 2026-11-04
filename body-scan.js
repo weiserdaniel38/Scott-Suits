@@ -769,8 +769,11 @@
   // A few tips per card, so it's fewer taps on Next (Daniel 2026-11-03:
   // "don't have to keep pressing next, compile a few in one card").
   const PAGES = [
-    // Clothing card with ticks and crosses (copied from MTailor's).
-    { title: "What to wear", clothes: true, sub: "Good light, nobody else in the picture. A plain wall is best." },
+    // Daniel's "Get Ready" mock-up (2026-11-04): two drawings, two short lines.
+    { title: "Get Ready", ready: [
+      ["ready-shorts", "Wear shorts. No shirt.", "Or a tight T-shirt."],
+      ["ready-light", "Good light. Nobody else in the picture.", "A plain wall is best."],
+    ] },
     { icon: "height", title: "How tall are you?", height: true },
     { title: "Set up your phone", tips: [
       ["floor", "Lean your phone on the floor, against a wall.", "Screen facing you."],
@@ -806,6 +809,8 @@
       '<div class="ps-body bs-intro bs-page">' +
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
       (pg.clothes ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" + clothesGrid() :
+      pg.ready ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
+        '<div class="bs-ready">' + pg.ready.map((t) => '<div class="bs-ready-row"><img src="./assets/scan-clothes/' + t[0] + '.webp?v=1" alt="" width="200" height="160"><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>" :
       pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
         '<div class="bs-tips">' + pg.tips.map((t) => '<div class="bs-tip"><span class="bs-icon">' + ICON[t[0]] + '</span><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>"
       : (pg.figs ? '<div class="bs-page-art bs-figs">' + poseSvg("front") + poseSvg("turn") + "</div>"
@@ -822,6 +827,8 @@
         : '<button type="button" class="btn-primary bs-next">Next</button>' +
           (page > 0 ? '<button type="button" class="btn-ghost bs-back">Back</button>' : "")) +
       "</div>");
+    // Daniel's mock-ups: the intro cards sit in a thin gold frame too.
+    sheet.querySelector(".bs-card").classList.add("bs-framed");
     const readHeight = () => {
       const f = parseFloat(intro.ft), i = parseFloat(intro.inch) || 0;
       const cm = (f * 12 + i) * 2.54;
