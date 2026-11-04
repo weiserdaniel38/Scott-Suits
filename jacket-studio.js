@@ -146,7 +146,7 @@
     const raw = D.rawSelections();
     const v = {};
     Object.keys(PREVIEW_DEFAULTS).forEach((k) => { v[k] = PREVIEW_DEFAULTS[k]; });
-    Object.keys(raw).forEach((k) => { if (raw[k] && D.isShown(k)) v[k] = raw[k]; });
+    Object.keys(raw).forEach((k) => { if (raw[k] && (D.isShown(k) || (D.isAutoSet && D.isAutoSet(k)))) v[k] = raw[k]; });
     v._raw = raw;
     return v;
   }
