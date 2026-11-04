@@ -821,7 +821,8 @@
       "</div>" +
       '<div class="ps-actions">' +
       (pg.last ? '<button type="button" class="btn-primary bs-start">Start the Scan</button>' +
-        '<label class="btn-ghost bs-upload">Use a video I already took<input type="file" accept="video/*" hidden></label>'
+        // "Use a video I already took" removed (Daniel 2026-11-04).
+        '<button type="button" class="btn-ghost bs-back">Back</button>'
         : '<button type="button" class="btn-primary bs-next">Next</button>' +
           (page > 0 ? '<button type="button" class="btn-ghost bs-back">Back</button>' : "")) +
       "</div>");
@@ -875,10 +876,10 @@
       showCameraTime();
     };
     const fileInput = sheet.querySelector(".bs-upload input");
-    fileInput.onclick = (e) => {
+    if (fileInput) fileInput.onclick = (e) => {
       if (!isFinite(readHeight())) { e.preventDefault(); showIntro("Enter your height.", HEIGHT_PAGE); }
     };
-    fileInput.onchange = () => {
+    if (fileInput) fileInput.onchange = () => {
       const f = fileInput.files && fileInput.files[0];
       if (!f) return;
       state = { heightCm: readHeight(), who: "friend", voice: false, uploaded: true };
