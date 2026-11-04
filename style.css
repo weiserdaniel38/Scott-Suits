@@ -2538,3 +2538,11 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-ready-row>div{text-align:left;flex:1 1 auto;}
 .bs-ready-row b{font-size:clamp(18px,5.2vw,23px);}
 .bs-page:has(.bs-ready) .bs-page-title{font-size:clamp(30px,8vw,40px);}
+/* Height card: Daniel's gold figure with a height bar (no stick figure) */
+.bs-height-art{display:flex;align-items:stretch;justify-content:center;gap:18px;}
+.bs-height-art img{height:min(240px,30dvh);width:auto;filter:drop-shadow(0 0 10px rgba(226,196,141,.25));}
+.bs-hbar{position:relative;width:2px;background:#e2c48d;opacity:.85;margin:4px 0 2px;}
+.bs-hbar::before,.bs-hbar::after{content:"";position:absolute;left:-9px;width:20px;height:2px;background:#e2c48d;}
+.bs-hbar::before{top:0;}.bs-hbar::after{bottom:0;}
+.bs-height-art{align-items:center;}
+.bs-hbar{height:min(234px,29dvh);margin:0;}
