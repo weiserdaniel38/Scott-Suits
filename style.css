@@ -2527,3 +2527,14 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-camtime .bs-thanks .bs-done-check svg{width:26px;height:26px;}
 .bs-camtime .bs-thanks .bs-done-check::after{display:none;}
 .bs-camtime .bs-thanks .bs-done-check{background:#e2c48d;}
+/* Body scan "Get Ready" card (Daniel's mock-up) */
+.bs-ready{display:flex;flex-direction:column;gap:clamp(14px,3dvh,30px);margin:clamp(6px,2dvh,20px) 0;}
+.bs-ready-row{display:flex;align-items:center;gap:16px;}
+.bs-ready-row img{flex:0 0 auto;width:min(42%,190px);height:auto;max-height:26dvh;object-fit:contain;}
+.bs-ready-row:first-child img{width:min(30%,130px);}
+.bs-ready-row:first-child>div{border-left:1px solid rgba(226,196,141,.5);padding-left:18px;}
+.bs-ready-row b{display:block;font-size:clamp(18px,5vw,22px);font-weight:600;line-height:1.25;}
+.bs-ready-row span{display:block;color:var(--ivory-dim);font-size:16px;margin-top:6px;}
+.bs-ready-row>div{text-align:left;flex:1 1 auto;}
+.bs-ready-row b{font-size:clamp(18px,5.2vw,23px);}
+.bs-page:has(.bs-ready) .bs-page-title{font-size:clamp(30px,8vw,40px);}
