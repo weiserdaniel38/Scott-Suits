@@ -814,7 +814,7 @@
       pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
         '<div class="bs-tips">' + pg.tips.map((t) => '<div class="bs-tip"><span class="bs-icon">' + ICON[t[0]] + '</span><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>"
       : (pg.figs ? '<div class="bs-page-art bs-figs">' + poseSvg("front") + poseSvg("turn") + "</div>"
-        : pg.height ? '<div class="bs-page-art bs-height-art"><span class="bs-hbar"></span><img src="./assets/scan-clothes/ready-shorts.webp?v=1" alt="" width="210" height="342"></div>'
+        : pg.height ? '<div class="bs-page-art bs-height-art"><img src="./assets/scan-clothes/height-figure.webp?v=1" alt="" width="370" height="432"></div>'
         : '<div class="bs-page-art"><span class="bs-icon">' + ICON[pg.icon] + "</span></div>") +
         '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>") +
       (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
