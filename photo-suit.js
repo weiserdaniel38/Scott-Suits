@@ -26,10 +26,10 @@
   // Steps Claude is asked to read off the photo, in the order they are
   // applied (front buttons before the lapel, the lapel before its width).
   const JACKET_PHOTO_STEPS = ["frontbutton", "collar", "lapelwidth", "lapelbuttonhole", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "sleevecrown", "pickStitch"];
-  const PANTS_PHOTO_STEPS = ["frontPleat", "frontPocket", "bottomStyle", "beltLoops", "waistbandStyle", "backPocket"];
+  const PANTS_PHOTO_STEPS = ["frontPleat", "frontPocket", "bottomStyle", "beltLoops", "waistbandStyle", "waistbandExtension", "backPocket"];
   // Rows on the quick-edit sheet.
   const JACKET_ROWS = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "lining"];
-  const PANTS_ROWS = ["frontPleat", "frontPocket", "bottomStyle"];
+  const PANTS_ROWS = ["frontPleat", "frontPocket", "waistbandStyle", "beltLoops", "waistbandExtension", "backPocket", "bottomStyle"];
   const MATCH_COUNT = 11;
 
   const label = (o) => o.displayName || o.name;
