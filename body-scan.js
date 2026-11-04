@@ -775,10 +775,7 @@
       ["ready-light", "Good light. Nobody else in the picture.", "A plain wall is best."],
     ] },
     { icon: "height", title: "How tall are you?", height: true },
-    { title: "Set up your phone", tips: [
-      ["floor", "Lean your phone on the floor, against a wall.", "Screen facing you."],
-      ["away", "Stand 8 feet away.", "Your whole body in the picture."],
-    ] },
+    // "Set up your phone" card removed (Daniel 2026-11-04).
     { figs: true, title: "Arms up, then turn around slowly.", last: true },
   ];
   const HEIGHT_PAGE = 1;
