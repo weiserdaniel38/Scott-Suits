@@ -1553,7 +1553,9 @@
     const W = canvas.width, H = canvas.height;
     // Bigger, even, solid dots with no glow or twinkle (Daniel sent
     // MTailor's screen: "notice how clear and simple this is").
-    const gap = W / 22, r0 = gap * 0.27;
+    // Daniel 2026-11-04: "make the dots smaller and more of them so it
+    // really grabs onto the body" (was W / 22).
+    const gap = W / 40, r0 = gap * 0.3;
     const cols = Math.ceil(W / gap), rows = Math.ceil(H / gap);
     let fresh = false;
     if (!dots || dots.cols !== cols || dots.rows !== rows) { dots = { cols, rows, cur: new Float32Array(cols * rows), tgt: new Float32Array(cols * rows), lm: null }; fresh = true; }
@@ -1645,7 +1647,7 @@
       }
     }
     ctx.restore();
-    if (state && state.fxAt) drawMeasureFx(ctx, W, H, gap);
+    if (state && state.fxAt) drawMeasureFx(ctx, W, H, W / 22);
   }
   // The "being measured" moment after the front capture: a gold line sweeps
   // from head to feet, and as it passes each level a measurement line draws
@@ -1850,7 +1852,8 @@
     const finRows = FINISHED_FROM_BODY.map(([id, from, , , label]) => row("f_" + id, label, fin[id], result.pm[from] || 2, "")).join("");
     openSheet(head("Your Measurements") +
       '<div class="ps-body bs-results">' +
-      '<div class="bs-done-badge"><span class="bs-done-check" aria-hidden="true"></span>Scan complete</div>' +
+      // Daniel's "Scan complete" banner (2026-11-04), replacing the big gold circle.
+      '<div class="bs-done-badge"><img src="./assets/scan-clothes/scan-complete.webp?v=1" alt="" width="297" height="300"><span>Scan complete</span></div>' +
       '<p class="bs-lead">Tap a number to change it.</p>' +
       warn.map((w) => '<p class="bs-alert">' + esc(w) + "</p>").join("") +
       '<div class="ps-group">Jacket</div>' + jacketRows +
