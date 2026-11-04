@@ -2550,3 +2550,10 @@ label.bs-upload{display:inline-block;text-align:center;}
 /* Results: Daniel's "Scan complete" banner */
 .bs-results .bs-done-badge{gap:18px;margin:4px 0 16px;font-size:clamp(18px,5.4vw,24px);letter-spacing:.16em;color:#e2c48d;}
 .bs-results .bs-done-badge img{width:84px;height:auto;flex:0 0 auto;filter:drop-shadow(0 0 10px rgba(226,196,141,.35));}
+/* Height pickers (no keyboard) */
+.bs-pick{position:relative;}
+.bs-pick select{width:100%;height:100%;min-height:58px;padding:0 30px 0 8px;border:0;background:transparent;color:var(--ivory);font:inherit;font-size:22px;-webkit-appearance:none;appearance:none;cursor:pointer;}
+.bs-pick select:focus{outline:none;}
+.bs-pick:focus-within{border-color:#e2c48d;}
+.bs-pick .unit{pointer-events:none;}
+.bs-pick select option{color:#111;}

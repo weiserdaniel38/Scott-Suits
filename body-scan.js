@@ -793,6 +793,12 @@
       "</div>";
   }
 
+  function heightSelect(id, nums, cur, unit) {
+    return '<label class="measure-input-wrap bs-pick"><select id="' + id + '" aria-label="' + (unit === "ft" ? "Feet" : "Inches") + '">' +
+      '<option value=""' + (cur === "" || cur == null ? " selected" : "") + ">&ndash;</option>" +
+      nums.map((n) => '<option value="' + n + '"' + (String(cur) === String(n) ? " selected" : "") + ">" + n + "</option>").join("") +
+      '</select><span class="unit">' + unit + "</span></label>";
+  }
   function showIntro(msg, page) {
     preloadModel();
     if (page == null) page = msg ? PAGES.length - 1 : 0;
@@ -815,8 +821,9 @@
         : '<div class="bs-page-art"><span class="bs-icon">' + ICON[pg.icon] + "</span></div>") +
         '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>") +
       (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
-      (pg.height ? '<div class="bs-height bs-page-height"><div class="measure-input-wrap"><input type="number" id="bsFt" min="4" max="7" step="1" placeholder="5" value="' + intro.ft + '" inputmode="numeric"><span class="unit">ft</span></div>' +
-        '<div class="measure-input-wrap"><input type="number" id="bsIn" min="0" max="11.5" step="0.5" placeholder="10" value="' + intro.inch + '" inputmode="decimal"><span class="unit">in</span></div></div>' : "") +
+      // Scroll-wheel pickers, not typed boxes: the iPhone keyboard covered
+      // the card (Daniel 2026-11-04: "This keyboard is a problem").
+      (pg.height ? '<div class="bs-height bs-page-height">' + heightSelect("bsFt", [4, 5, 6, 7], intro.ft, "ft") + heightSelect("bsIn", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], intro.inch === "" ? "" : Math.round(parseFloat(intro.inch)) % 12, "in") + "</div>" : "") +
       '<div class="bs-dots" aria-hidden="true">' + dots + "</div>" +
       "</div>" +
       '<div class="ps-actions">' +
@@ -849,8 +856,7 @@
     if (pg.height && next) {
       const ftEl = sheet.querySelector("#bsFt"), inEl = sheet.querySelector("#bsIn");
       const check = () => { next.disabled = ftEl.value.trim() === "" || inEl.value.trim() === ""; };
-      ftEl.addEventListener("input", check);
-      inEl.addEventListener("input", check);
+      ["input", "change"].forEach((ev) => { ftEl.addEventListener(ev, check); inEl.addEventListener(ev, check); });
       check();
     }
     const back = sheet.querySelector(".bs-back");
