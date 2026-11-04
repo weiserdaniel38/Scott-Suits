@@ -913,11 +913,9 @@ function setAdminUnread(n) {
 // daily stock file (fabric-stock.json, see loadFabricStock) shows at least
 // minMetres, the admin gets a "back in stock" notification on this page.
 // Remove an entry once that order has gone to the factory.
-const FABRIC_WAITS = [
-  // 2026-11-02: new Rich Slate Blue arrived at the factory, in inspection
-  // (~2 days). The customer chose to wait for it.
-  { fabric: "26SU212.DBQ796A", minMetres: 10, factoryOrderNo: "DWNYP2611001" },
-];
+// Example: { fabric: "26SU212.DBQ796A", minMetres: 10, factoryOrderNo: "DWNYP2611001" }
+// (that order went to the factory 2026-11-04).
+const FABRIC_WAITS = [];
 // Before 2026-11-03 clears were kept per device under these keys; they are
 // sent to the server once (moveLocalClears) and then removed.
 const FABRIC_WAIT_CLEARED_KEY = "scottSuitsFabricWaitCleared";
