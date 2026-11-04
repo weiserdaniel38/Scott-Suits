@@ -199,7 +199,7 @@ const JACKET_CATALOG = {
   construction: {
     label: "Construction",
     column: "jacket_construction",
-    description: "What's inside the front of your jacket that gives it shape. Fused: a light inner layer bonded to the cloth, crisp and easy to care for. Full canvas: a sewn-in canvas layer that shapes to your chest over time. Unconstructed: no inner layer, soft and relaxed.",
+    description: "What gives the front its shape. Fused: crisp and easy care. Full canvas: sewn in, shapes to you over time. Unconstructed: soft and relaxed.",
     options: [
       // The factory only makes an unlined jacket unconstructed (Daniel,
       // 2026-10-21): picking "No Lining Construction" moves fused or full
@@ -324,7 +324,7 @@ const JACKET_CATALOG = {
 JACKET_CATALOG.pickStitch = {
   label: "Pick Stitching",
   column: "jacket_pick_stitch",
-  description: "Pick stitching is a row of small stitches just inside the edges, a classic hand-tailored detail.",
+  description: "Small stitches just inside the edges. A classic handmade detail.",
   options: [
     { name: "No Pick Stitching", displayName: "None", factoryCode: "0570", img: "./assets/jacket-pickstitch-none.jpg?v=2", badge: "Standard" },
     // The factory refuses these with some pockets (test drafts, 2026-10-25),
@@ -579,7 +579,7 @@ const MEASUREMENTS = [
   { id: "height", label: "Height", part: "body", unit: "in", step: "0.5", min: 48, max: 96 },
   { id: "weight", label: "Weight", part: "body", unit: "lb", step: "1", min: 70, max: 500 },
   { id: "shoulder", label: "Shoulder", part: "jacket", min: 31, max: 72 },
-  { id: "sleeve_length", label: "Sleeve Length", part: "jacket", hint: "Shoulder seam to where the sleeve should end at the wrist. Not from the neck", min: 20, max: 85 },
+  { id: "sleeve_length", label: "Sleeve Length", part: "jacket", hint: "Shoulder seam to sleeve end at the wrist. Not from the neck", min: 20, max: 85 },
   { id: "wrist", label: "Wrist", part: "jacket", min: 20, max: 90 },
   { id: "chest", label: "Chest", part: "jacket", min: 72, max: 211 },
   { id: "stomach", label: "Stomach", part: "jacket", min: 60, max: 221 },
@@ -588,8 +588,8 @@ const MEASUREMENTS = [
   { id: "bicep", label: "Bicep", part: "jacket", min: 26, max: 86 },
   { id: "hips", label: "Hips", part: "pants", min: 65, max: 243 },
   { id: "waist", label: "Waist", part: "pants", min: 58, max: 221 },
-  { id: "leg_length", label: "Full Pants Length", part: "pants", hint: "The outseam: down the side, from the top of the waistband to the hem", min: 40, max: 135 },
-  { id: "crotch", label: "Full Crotch", part: "pants", hint: "The FULL crotch of the suit pants, snug, not baggy: front waistband, down between the legs, up to the back waistband", min: 50, max: 132 },
+  { id: "leg_length", label: "Full Pants Length", part: "pants", hint: "Outseam: top of waistband, down the side, to the hem", min: 40, max: 135 },
+  { id: "crotch", label: "Full Crotch", part: "pants", hint: "Snug, not baggy: front waistband, between the legs, to back waistband", min: 50, max: 132 },
   { id: "thigh", label: "Thigh", part: "pants", min: 46, max: 137 },
   { id: "knee", label: "Knee", part: "pants", min: 30, max: 124 },
   { id: "calf", label: "Calf", part: "pants", min: 25, max: 90, factoryOptional: true },
@@ -2714,7 +2714,7 @@ JACKET_CATALOG.lapelButtonholeStyle = {
   defaultOption: "Machine Sewn",
   parentDefault: "Standard",
   inlineToggleLabel: "Handmade buttonhole styles",
-  description: "Have your lapel buttonhole stitched by hand in one of these shapes. Shown in light blue; yours is sewn in your Lapel Buttonhole Color. Tap a picked style again to remove it.",
+  description: "Hand stitched in your Lapel Buttonhole Color (shown in light blue). Tap again to remove.",
   requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
   options: [
     { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
@@ -2742,7 +2742,7 @@ JACKET_CATALOG.feltundercollar = {
   // The suit picture generator still knows this step by its old name.
   specLabel: "Felt Under Collar",
   column: "felt_under_collar",
-  description: "The felt under collar is a hidden layer sewn beneath the outer collar fabric, on the underside against your shirt -- it's never visible when worn, but its material affects the collar's structure and cost.",
+  description: "A hidden layer under the collar. Never seen when worn, but it shapes the collar.",
   options: [
     { name: "Match Felt Undercollar", displayName: "Matching Felt", specName: "Match Felt Undercollar", img: "./assets/jacket-felt-new-match.jpg", badge: "Standard" },
     { name: "Customer-Appointed Felt", displayName: "Choose a Felt Color", specName: "Choose Your Felt", img: "./assets/jacket-felt-new-customer.jpg" },

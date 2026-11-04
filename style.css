@@ -2560,3 +2560,31 @@ label.bs-upload{display:inline-block;text-align:center;}
 /* Great job: Daniel's figure-in-ring; old CSS tick never doubles an SVG tick */
 .bs-great-art{width:min(250px,32dvh);height:auto;filter:drop-shadow(0 0 16px rgba(226,196,141,.35));}
 .bs-done-check:has(svg)::after{display:none;}
+
+/* === MOBILE READABILITY (Daniel, 2026-11-04: fewer words, easier to read on phones) ===
+   Phones only. Regular (400) weight instead of Light for body text, darker
+   grey for helper text, no helper text under ~12.5px, roomier line height.
+   Colors use --ivory-rgb so every brand theme keeps its own tint. */
+@media(max-width:900px){
+  body{font-weight:400;}
+  html:not([data-brand]) {--ivory-dim:rgba(var(--ivory-rgb),0.78);}
+  p,li,.sub,.lead{line-height:1.55;}
+  .lead{font-size:16px;}
+  .welcome-intro p{font-size:15px;line-height:1.5;}
+  footer{font-size:13.5px;line-height:1.6;}
+  .designer-head p{font-size:14.5px;line-height:1.5;}
+  .suit-type-desc{font-size:10.5px;}
+  .suit-type-photo-text span{font-size:13.5px;line-height:1.45;}
+  .suit-type-note{font-size:13px;line-height:1.5;}
+  .wiz-step,.wiz-review-link{font-size:11.5px;color:rgba(var(--ivory-rgb),0.72);}
+  .wiz-cheer,.wiz-pct{font-size:13px;color:rgba(var(--ivory-rgb),0.72);}
+  .cat-description,.summary-note{font-size:14px;line-height:1.5;}
+  .sub,.fulfill-sub,.measure-mode-q,.pers-total{font-size:14.5px;line-height:1.5;}
+  .measure-mode-btn span{font-size:13.5px;}
+  .size-estimate-intro,.size-estimate-disclaimer,.body-scan-done{font-size:14px;line-height:1.5;}
+  .measure-part-heading{font-size:11.5px;}
+  .measure-field > label,.size-estimate label{font-size:12px;}
+  .measure-field-hint{font-size:12.5px;line-height:1.4;}
+  .faq-item p,.hiw-step p{font-size:15px;line-height:1.6;}
+  .lightbox-hint{font-size:13px;}
+}
