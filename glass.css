@@ -213,3 +213,20 @@ html[data-brand="scott"] #lightbox .lightbox-card::before{content:"";position:ab
   html[data-brand="scott"] #lightbox .lb-nav{background:rgba(255,255,255,0.55);}
   html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--glass-dark);color:#F6F1EA;box-shadow:0 10px 26px rgba(34,30,25,0.22);}
 }
+
+/* Very light beige (Daniel, 2026-11-04: "make it a very light beige"
+   after comparing the old cream with plain white). The page sits between
+   the old cream (#ECE4DD) and white; cards and panels are a touch lighter
+   still so they lift off it. Gold accents and buttons are unchanged, and
+   the fabric zoom keeps its own cloth backdrop. */
+html[data-brand="scott"]{
+  --ink:#F7F3EE;
+  --ink-rgb:247,243,238;
+  --card-solid:#FFFDFA;
+  --glass-panel:linear-gradient(150deg,rgba(253,251,248,0.99) 0%,rgba(251,248,244,0.98) 100%);
+}
+html[data-brand="scott"] body::before{opacity:0.6;}
+html[data-brand="scott"] .hiw-icon,
+html[data-brand="scott"] #designPreview.suit-preview.design-preview,
+html[data-brand="scott"] .nav-cart-dropdown,
+html[data-brand="scott"] #designPreview .suit-preview-card.reviewing .suit-preview-media > a{background:#FBF8F4;}
