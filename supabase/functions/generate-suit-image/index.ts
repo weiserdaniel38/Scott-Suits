@@ -171,6 +171,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Semi-Notch Lapel": "semi-notch lapel: like a classic notch lapel, but the notch between collar and lapel is a SMALL, shallow V and the lapel tip points straight out sideways (level, not down), sitting close under the collar",
     "Semi-Peak Lapel": "semi-peak lapel: a softer, shorter peak; the lapel's upper edge rises slightly UPWARD to a modest point that stays well below the collar, with a clear open gap between point and collar (less dramatic than a full peak lapel)",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
+    "Arc Lapel": "arc lapel (an arc-bottom shawl collar): like a SHAWL, collar and lapel are one continuous smoothly rounded piece from the back of the neck down, with NO notch, NO peak and NO corner; but each lapel stays WIDE all the way down and its outer edge curves round in a broad, soft U-shaped arc at the BOTTOM where the two lapels meet at the top button, instead of tapering to a narrow point like an ordinary shawl, so the lapels together form a rounded horseshoe shape. A thin horizontal seam line crosses the collar at the back of the neck",
     "Diamond Lapel": "diamond lapel, a cross between a shawl collar and a peak lapel: like a SHAWL, collar and lapel are one continuous piece starting right at the back of the neck, with NO notch, gap or step between them; like a PEAK lapel, it has one SHARP pointed corner. From the neck the edge runs in a straight line down and OUTWARD to that sharp point in the UPPER third of the lapel (about level with the chest pocket), then a much longer straight edge runs back INWARD to where the lapels meet at the top button, so each lapel is a tall kite shape. Both lapels are identical mirror images; the lapel is no wider than the chosen lapel width",
   },
   "Lapel Width": {
@@ -539,6 +540,7 @@ const LAPEL_NOT: Record<string, string> = {
   "Semi-Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up; a small V-shaped notch separates the collar from the lapel.",
   "Semi-Peak Lapel": "It is NOT a full peak lapel: the point rises only slightly and does NOT reach up toward the collar or shoulder. It is NOT a notch lapel: the tip angles a little upward, not down.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
+  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT an ordinary tapered shawl: the bottom of each lapel is broad and rounded, not pointed.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
 };
 
