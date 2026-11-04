@@ -2557,3 +2557,6 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-pick:focus-within{border-color:#e2c48d;}
 .bs-pick .unit{pointer-events:none;}
 .bs-pick select option{color:#111;}
+/* Great job: Daniel's figure-in-ring; old CSS tick never doubles an SVG tick */
+.bs-great-art{width:min(250px,32dvh);height:auto;filter:drop-shadow(0 0 16px rgba(226,196,141,.35));}
+.bs-done-check:has(svg)::after{display:none;}
