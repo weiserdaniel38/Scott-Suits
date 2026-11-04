@@ -4535,6 +4535,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // step) has no tab or wizard step of its own.
     if (catalog[key].inlineWith) return false;
     if (fixedBySelectionValue(key)) return false;
+    if (onlyAllowedValue(key)) return false;
     return isApplicable(key) && (!preset || preset.steps.indexOf(key) !== -1);
   }
   function fixedBySelectionValue(key) {
@@ -4544,6 +4545,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       if (by[dep][order[dep]]) return by[dep][order[dep]];
     }
     return null;
+  }
+  // A step that the other picks leave with a single possible answer (e.g.
+  // Lapel Buttonhole on a Shawl, Diamond or Arc lapel: only "No Buttonhole")
+  // isn't asked at all: that answer is filled in and the step is skipped
+  // (Daniel, 2026-11-04: don't even show a conflicting option).
+  function onlyAllowedValue(key) {
+    const cat = catalog[key];
+    if (!cat || !cat.options || !(cat.allowedBySelection || cat.options.some((o) => o.onlyWhen || o.hiddenWhen))) return null;
+    const list = allowedOptions(key);
+    return list.length === 1 && list.length < cat.options.length ? list[0].name : null;
   }
   function allowedOptions(key) {
     const cat = catalog[key];
@@ -4594,7 +4605,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // `fixedBySelection: { otherKey: { value: name } }`: that pick sets this
     // step itself and the step is skipped (a Diamond Lapel is always 8 cm).
     keys.forEach((k) => {
-      const v = fixedBySelectionValue(k);
+      const v = fixedBySelectionValue(k) || onlyAllowedValue(k);
       if (v) order[k] = v;
     });
     keys.forEach((k) => {
@@ -6355,6 +6366,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     catalog: catalog,
     keys: keys.slice(),
     isShown: (k) => !!catalog[k] && isShown(k),
+    // Filled in by the other picks and skipped (see onlyAllowedValue).
+    isAutoSet: (k) => !!catalog[k] && !!(fixedBySelectionValue(k) || onlyAllowedValue(k)),
     // The options a step offers right now (same filtering as its cards).
     // Used by Build From a Photo (photo-suit.js) for its quick edits.
     allowedFor: (k) => (catalog[k] ? allowedOptions(k) : []),
