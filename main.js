@@ -8688,7 +8688,7 @@ function applyFulfillmentChoice() {
   if (sub) {
     sub.textContent = pickup
       ? "We'll use these to let you know when your suit is ready to pick up."
-      : "Start typing your street address and pick it from the list \u2014 the fastest way to get your suit to the right door.";
+      : "Start typing and pick your address from the list.";
   }
   updateOrderSummaryUI();
   updateProcessBar();
@@ -8750,7 +8750,7 @@ function refreshAlterationText() {
   if (intro) {
     intro.textContent = "Add Alteration Protection" + (price ? " for " + price + (qty > 1 ? " per " + noun : "") : "") +
       " and get three free alterations" + (qty > 1 ? " on each " + noun : "") +
-      ", so if anything needs adjusting after your " + noun + (qty > 1 ? "s arrive" : " arrives") + ", we fix it at no cost.";
+      " after your " + noun + (qty > 1 ? "s arrive." : " arrives.");
   }
   const yesSub = document.getElementById("alterationYesSub");
   if (yesSub) yesSub.textContent = !price ? "Three free alterations" + (qty > 1 ? " each" : "") : qty > 1 ? price + " each (" + usd(protectionPriceUsd() * qty) + ") \u00b7 three free alterations each" : price + " \u00b7 three free alterations";
