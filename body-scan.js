@@ -898,6 +898,8 @@
       '<p class="bs-thanks" hidden><span class="bs-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Thanks!</p>' +
       "</div>" +
       '<div class="ps-actions"><button type="button" class="btn-primary bs-cam-go">Continue</button></div>');
+    // Daniel's mock-up: the screen sits in a thin gold frame.
+    sheet.querySelector(".bs-card").classList.add("bs-framed");
     sheet.querySelector(".bs-cam-go").onclick = () => {
       const cam = openCam();
       const ask = window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission;
