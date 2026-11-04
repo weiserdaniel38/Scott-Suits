@@ -2588,3 +2588,4 @@ label.bs-upload{display:inline-block;text-align:center;}
   .faq-item p,.hiw-step p{font-size:15px;line-height:1.6;}
   .lightbox-hint{font-size:13px;}
 }
+.account-intro:empty{display:none;}

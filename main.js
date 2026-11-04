@@ -4241,7 +4241,7 @@ function refreshOrderProgress() {
     const row = el.closest(".wiz-head");
     const cheer = row ? row.querySelector(".wiz-cheer") : null;
     if (cheer) {
-      cheer.textContent = orderProgressCheer(pct, stage);
+      cheer.textContent = "";
       cheer.classList.toggle("celebrate", stage === "design" && designProgressState().allDone);
     }
   });
@@ -5496,7 +5496,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       if (!otherColorBrowse[activeTab] && browsedFamily === null) {
         optionsEl.innerHTML =
           "<h3>" + cat.label + "</h3>" + descriptionHtml +
-          '<p class="sub">' + (cat.tagline || "Match your fabric, or choose a different color.") + '</p><div class="opt-grid color-family-grid" id="' +
+          '<div class="opt-grid color-family-grid" id="' +
           gridId + '"></div>';
         const grid = document.getElementById(gridId);
         renderSameAsCard(cat, grid);
@@ -5527,7 +5527,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         : "";
       optionsEl.innerHTML =
         "<h3>" + cat.label + "</h3>" + descriptionHtml + backToChoice +
-        '<p class="sub">' + (cat.tagline || "Choose a color family, then a shade within it.") + '</p><div class="opt-grid color-family-grid" id="' +
+        '<div class="opt-grid color-family-grid" id="' +
         gridId + '"></div>';
       const grid = document.getElementById(gridId);
 
@@ -5646,7 +5646,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     if (browsedType === null) {
       optionsEl.innerHTML =
         "<h3>" + cat.label + "</h3>" + descriptionHtml +
-        '<p class="sub">' + (cat.tagline || "Choose a pattern type, then a color.") + '</p><div class="opt-grid color-family-grid" id="' +
+        '<div class="opt-grid color-family-grid" id="' +
         gridId + '"></div>';
       const grid = document.getElementById(gridId);
 
@@ -5770,7 +5770,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // sits on it in spaced capitals. Whole grid ordered darkest to lightest. Tapping a tile opens the zoom with Confirm.
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      '<p class="sub">' + (cat.tagline || "Choose a fabric.") + '</p><div class="opt-grid fabric-palette-grid" id="' + gridId + '"></div>';
+      '<div class="opt-grid fabric-palette-grid" id="' + gridId + '"></div>';
     const grid = document.getElementById(gridId);
     renderSameAsCard(cat, grid);
     (cat.specialOptions || []).forEach((opt) => renderSwatchCard(cat, opt, grid));
@@ -5903,7 +5903,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       : "";
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      '<p class="sub">' + (cat.tagline || "Choose a color.") + "</p>" + backdropNote + '<div class="opt-grid fabric-palette-grid' + (backdrop ? " mono-backdrop-grid" : "") + '" id="' + gridId + '"></div>';
+      "" + backdropNote + '<div class="opt-grid fabric-palette-grid' + (backdrop ? " mono-backdrop-grid" : "") + '" id="' + gridId + '"></div>';
     const grid = document.getElementById(gridId);
     renderSameAsCard(cat, grid);
     const sameAsResolver = sameAsResolvers[activeTab];
@@ -6032,7 +6032,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       : "";
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      (cat.tagline === "" ? "" : '<p class="sub">' + (cat.tagline || "Choose one.") + "</p>") + textBoxHtml + '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' +
+      "" + textBoxHtml + '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' +
       gridId + '"></div>';
     if (showTextBox && textKey === "monogram" && !cat.fontCards) renderInlineFonts();
     if (showTextBox) {
@@ -7853,11 +7853,10 @@ function updateOrderSummaryUI() {
   if (!orderTotalNote) return;
   const qty = cartItems.length || 1;
   let text = "Total: " + usd(total) + " (" + qty + (qty === 1 ? " suit" : " suits") + (protection ? " + " + usd(protection) + " Alteration Protection" : "") + (discount ? ", " + usd(discount) + " off with promo code " + appliedPromo.code : "") + (shipping ? " + " + usd(shipping) + " shipping" : "") + ")";
-  if (shipped && liveShippingRates()) text += " plus shipping (the cheapest carrier rate to your address) and sales tax, both worked out at checkout.";
-  else if (shipped) text += " plus sales tax, worked out at checkout from your address.";
-  else if (STRIPE_ENABLED) text += ", in-store pickup in Clifton, NJ: no shipping, no tax.";
-  if (STRIPE_ENABLED) text += " You'll pay securely by card, Apple Pay, Google Pay or Klarna before your order is submitted.";
-  else if (PAYPAL_ENABLED) text += " -- you'll pay securely via PayPal before your order is submitted.";
+  if (shipped && liveShippingRates()) text += " + shipping and tax at checkout.";
+  else if (shipped) text += " + tax at checkout.";
+  else if (STRIPE_ENABLED) text += ". Pickup: no shipping, no tax.";
+  if (!STRIPE_ENABLED && PAYPAL_ENABLED) text += " Pay via PayPal before your order is submitted.";
   orderTotalNote.textContent = text;
   orderTotalNote.hidden = false;
   const persPriceEl = document.getElementById("persPrice");
@@ -8706,8 +8705,8 @@ function shippingUsd() {
 (function () {
   const sub = document.getElementById("fulfillShipSub");
   if (sub && STRIPE_ENABLED) sub.textContent = liveShippingRates()
-    ? "Cheapest carrier rate to your address + sales tax, added at checkout"
-    : (shippingUsd() ? usd(shippingUsd()) + " shipping" : "Free shipping") + " + sales tax, added at checkout";
+    ? "Shipping + tax added at checkout"
+    : (shippingUsd() ? usd(shippingUsd()) + " shipping" : "Free shipping") + " + tax added at checkout";
   document.querySelectorAll('input[name="fulfillment"]').forEach((el) =>
     el.addEventListener("change", () => {
       applyFulfillmentChoice();

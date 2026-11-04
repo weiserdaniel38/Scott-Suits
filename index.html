@@ -121,7 +121,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261104readable">
+<link rel="stylesheet" href="./style.css?v=20261104fewer">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261104readable"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -245,7 +245,6 @@
       <div class="welcome-intro" id="welcomeIntro" role="note">
         <span class="welcome-intro-label">Grand Opening</span>
         <strong class="welcome-intro-title">We're officially open!</strong>
-        <p>Custom suits cut to your measurements, designed by you, delivered to your door.</p>
       </div>
       <!-- "Welcome, Bob" the first time a just-created account is seen in
            this browser, "Welcome back, Bob" every other time. Filled in and
@@ -254,7 +253,6 @@
       <div class="hero-eyebrow">Custom Tailoring, Considered</div>
       <h1>Custom-made, <em>without leaving home.</em></h1>
       <div class="hero-rule"></div>
-      <p class="lead">Design it online. See a free preview. Send your measurements. We make it for you.</p>
       <div class="hero-cta">
         <!-- Hidden once design has actually started (see
              updateNavActionButtons() in main.js) -- same reasoning as the nav's
@@ -346,7 +344,6 @@
   <div class="designer-head">
     <span class="suit-type-eyebrow">Let's begin</span>
     <h2>What are we building?</h2>
-    <p>Pick one. You can add more pieces later.</p>
   </div>
   <div class="suit-type-grid">
     <button type="button" class="suit-type-card" id="chooseFullSuitBtn" data-suit-type="full">
@@ -388,7 +385,7 @@
        on one short sheet. Hidden until photo-suit.js wires it up. -->
   <button type="button" class="suit-type-photo" id="buildFromPhotoBtn" hidden>
     <span class="suit-type-photo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg></span>
-    <span class="suit-type-photo-text"><b>Have a photo or link of a suit you love?</b><span>Upload a photo or paste a link. We'll build the closest match.</span></span>
+    <span class="suit-type-photo-text"><b>Have a photo or link of a suit you love?</b></span>
     <span class="suit-type-photo-go" aria-hidden="true">&rarr;</span>
   </button>
   <p class="suit-type-note">Price depends on the fabric. All style options included, except full canvas (+$200).</p>
@@ -407,7 +404,7 @@
   <div class="studio-designer-host" id="studioDesignerHost"></div>
   <div class="designer-head">
     <h2>Design your jacket</h2>
-    <p>From <span id="jacketPriceText">$350</span>, set by the fabric. All style options included except full canvas (+$200). Tap the magnifier to zoom in.</p>
+    <p>From <span id="jacketPriceText">$350</span>, set by the fabric. All style options included except full canvas (+$200).</p>
   </div>
 
   <div class="designer-grid" id="designerGrid">
@@ -419,7 +416,6 @@
       <div id="summaryRows"></div>
       <div class="summary-total"><span>Estimated Total</span><b id="totalPrice">$350</b></div>
       <p class="my-cost-line" id="myCostLine" hidden></p>
-      <p class="summary-note">We confirm the final price with you before we start.</p>
       <button class="btn-primary" id="continueBtn">Continue to Pants</button>
     </div>
   </div>
@@ -428,7 +424,7 @@
 <section class="designer step" id="pantsSection">
   <div class="designer-head">
     <h2>Customize your pants</h2>
-    <p>Match your jacket or pick a contrast fabric. Tap the magnifier to zoom in.</p>
+    <p>Match your jacket or pick a contrast fabric.</p>
   </div>
 
   <div class="designer-grid" id="pantsGrid">
@@ -440,7 +436,6 @@
       <div id="pantsSummaryRows"></div>
       <div class="summary-total"><span>Estimated Total</span><b id="pantsTotalPrice">$350</b></div>
       <p class="my-cost-line" id="pantsMyCostLine" hidden></p>
-      <p class="summary-note">Whole suit. We confirm the final price with you before we start.</p>
       <div class="measure-actions">
         <button class="btn-ghost" id="backToJacketBtn">&larr; Back to Jacket</button>
         <button class="btn-primary" id="continuePantsBtn">Continue to Measurements</button>
@@ -476,14 +471,12 @@
   </div>
   <div class="meas-intro">
     <h3>Your measurements</h3>
-    <p class="sub">Grab a tape measure and a friend. Use centimeters; height and weight can be in feet and pounds.</p>
   </div>
 
   <!-- Finished-garment sizes (the default) or body measurements plus a fit,
        which the factory turns into garment sizes (see setMeasureMode() in
        main.js). -->
   <div class="measure-mode" id="measureModeBox">
-    <p class="measure-mode-q">Which measurements will you give us?</p>
     <div class="measure-mode-pick">
       <button type="button" class="measure-mode-btn active" data-mode="finished" aria-pressed="true"><b>Finished suit sizes</b><span>The sizes of a suit that fits you well</span></button>
       <button type="button" class="measure-mode-btn" data-mode="body" aria-pressed="false"><b>Body measurements</b><span>Measure yourself; our tailors do the rest</span></button>
@@ -534,7 +527,7 @@
       <span class="size-estimate-toggle-cta">Find a tailor near you</span>
     </button>
     <div class="size-estimate-panel" id="tailorFinderPanel" hidden>
-      <p class="size-estimate-intro">Our partner tailors can measure you. Enter your address to see the closest. Bring a suit and the list below.</p>
+      <p class="size-estimate-intro">Bring a suit and the list below.</p>
       <form class="tailor-finder-form" id="tailorFinderForm">
         <div class="measure-field address-field-with-suggestions">
           <label for="tailorZipInput">Your address or ZIP code</label>
@@ -555,7 +548,6 @@
       <span class="size-estimate-toggle-cta">Estimate from your standard size</span>
     </button>
     <div class="size-estimate-panel" id="sizeEstimatePanel" hidden>
-      <p class="size-estimate-intro">Enter the store sizes you usually wear and we'll fill in a starting estimate. Adjust anything that looks off.</p>
       <div class="size-estimate-grid">
         <div class="measure-field size-estimate-jacket-field">
           <label for="estJacketChest">Jacket chest size</label>
@@ -611,7 +603,7 @@
         </div>
       </div>
       <button type="button" class="btn-primary" id="applyEstimateBtn">Fill in my measurements</button>
-      <p class="size-estimate-disclaimer">These are estimates from standard sizes, not your body. Please check every field.</p>
+      <p class="size-estimate-disclaimer">Estimates only. Please check every field.</p>
     </div>
   </div>
 
@@ -656,12 +648,11 @@
     <label class="fulfill-option">
       <input type="radio" name="fulfillment" value="pickup">
       <span class="fulfill-title">Pick up in store in Clifton, NJ</span>
-      <span class="fulfill-sub">No shipping, no tax. We'll contact you when it's ready.</span>
+      <span class="fulfill-sub">No shipping, no tax.</span>
     </label>
   </div>
   <div class="meas-intro">
     <h3 id="persIntroTitle">Where should we send it?</h3>
-    <p class="sub" id="persIntroSub">Start typing and pick your address from the list.</p>
   </div>
 
   <div class="pers-grid">
@@ -711,7 +702,6 @@
        alterationChoice() in main.js. -->
   <div class="protect-block" id="alterationBlock">
     <h3>Alteration Protection</h3>
-    <p class="sub" id="alterationIntro">Add Alteration Protection for $100 and get three free alterations after your suit arrives.</p>
     <div class="fulfill-choice" role="radiogroup" aria-label="Alteration Protection">
       <label class="fulfill-option">
         <input type="radio" name="alterationProtection" value="yes">
@@ -761,7 +751,7 @@
        (see finalizeOrder() in main.js). -->
 </section>
 
-<footer>Scott's Suits: made to measure suits, designed online, delivered to your door. <a href="./faq.html" style="color:inherit;">FAQ</a> · <a href="./contact.html" style="color:inherit;">Contact</a> · <a href="https://www.instagram.com/scott_suits/" target="_blank" rel="noopener" style="color:inherit;white-space:nowrap;"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.6" fill="currentColor" stroke="none"/></svg>Follow us on Instagram</a> · <a href="./privacy.html" style="color:inherit;">Privacy Policy</a></footer>
+<footer><a href="./faq.html" style="color:inherit;">FAQ</a> · <a href="./contact.html" style="color:inherit;">Contact</a> · <a href="https://www.instagram.com/scott_suits/" target="_blank" rel="noopener" style="color:inherit;white-space:nowrap;"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.6" fill="currentColor" stroke="none"/></svg>Follow us on Instagram</a> · <a href="./privacy.html" style="color:inherit;">Privacy Policy</a></footer>
 <!-- Invisible by default (height:0) -- scrollToStepTop() in main.js grows
      this on demand right before it scrolls, just enough so the page has
      room to fully scroll a short step (like the suit-type choice) up to
@@ -800,13 +790,12 @@
     <div class="hiw-head">
       <div class="hiw-eyebrow">Custom tailoring from home</div>
       <h2 id="howItWorksTitle">How It Works</h2>
-      <p class="how-it-works-intro">Six steps, all online. No showroom, no fittings.</p>
     </div>
     <ol class="how-it-works-list">
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-jacket.png?v=20261006h" alt="Jacket"></span><div class="hiw-step-body"><span class="hiw-num">Step 1</span><h3>Choose what you're building</h3><p>A full suit from $350, a jacket from $275, or pants from $150. Or start from a preset.</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-jacket.png?v=20261006h" alt="Jacket"></span><div class="hiw-step-body"><span class="hiw-num">Step 1</span><h3>Choose what you're building</h3><p>A full suit from $350, a jacket from $275, or pants from $150.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-pants.png?v=20261006h" alt="Pants"></span><div class="hiw-step-body"><span class="hiw-num">Step 2</span><h3>Design every detail</h3><p>Pick your fabric (it sets the price), then the lapel, pockets, buttons, lining and more. All style options included except full canvas (+$200).</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 3</span><h3>See your suit before you buy</h3><p>Sign in for a free picture of your finished suit.</p></div></li>
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 4</span><h3>Add your measurements</h3><p>Measure a suit that fits you, measure your body, or estimate from your usual size. Saved to your account for next time.</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 4</span><h3>Add your measurements</h3><p>Measure a suit that fits you, measure your body, or estimate from your usual size.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6.5 14.5h4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 5</span><h3>Choose delivery and pay</h3><p>Ship to your door or pick up free in store. Pay by card, Apple Pay, Google Pay or Klarna.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2z"/><path d="M14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 6</span><h3>Follow your suit and reorder anytime</h3><p>Track your suit in My Account. Reorder any time in one tap.</p></div></li>
     </ol>
@@ -832,7 +821,7 @@
     </div>
 
     <div id="accountLoggedOutView">
-      <p class="account-intro" id="accountIntro">Your measurements and past orders, in one place.</p>
+      <p class="account-intro" id="accountIntro"></p>
 
       <!-- Google sign-in works the same whether this is someone's first visit
            or their tenth -- Supabase creates the account automatically the
@@ -893,7 +882,6 @@
            long measurements grid doesn't push Past Orders off the screen. -->
       <details class="account-collapse" id="savedMeasurementsSection">
         <summary><h3>Saved Measurements</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
-        <p class="account-section-note">Fill in once, reuse for every suit.</p>
         <div class="measure-grid" id="profileMeasureGrid"></div>
         <button type="button" class="btn-primary" id="saveProfileMeasurementsBtn">Save Measurements</button>
         <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
@@ -1066,10 +1054,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261022protect"></script>
-<script src="./catalog.js?v=20261104readable"></script>
+<script src="./catalog.js?v=20261104fewer"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261104readable"></script>
+<script src="./main.js?v=20261104fewer"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>
