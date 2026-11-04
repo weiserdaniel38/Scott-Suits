@@ -29,6 +29,10 @@ const JACKET_CATALOG = {
       { name: "Semi-Peak Lapel", factoryCode: "0004", img: "./assets/jacket-collar-new-semipeak.jpg" },
       { name: "Shawl", displayName: "Shawl Collar", specName: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl.jpg" },
       { name: "Diamond Lapel", factoryCode: "001R", img: "./assets/jacket-collar-new-diamond.jpg" },
+      // Arc Lapel (Daniel's drawing, 2026-11-04): a shawl whose lapels end in
+      // a wide rounded U at the bottom instead of a point. Factory "Arc bottom
+      // shawl" 00F2. Treated like the Shawl for the lapel buttonhole (none).
+      { name: "Arc Lapel", factoryCode: "00F2", img: "./assets/jacket-collar-new-arc.jpg" },
     ],
   },
   lapelwidth: {
@@ -94,6 +98,7 @@ const JACKET_CATALOG = {
       collar: {
         "Shawl": ["No Lapel Buttonhole"],
         "Diamond Lapel": ["No Lapel Buttonhole"],
+        "Arc Lapel": ["No Lapel Buttonhole"],
       },
     },
     // Exactly the factory's (Kutetailor) Jacket > Hole Position choices, in
@@ -103,7 +108,7 @@ const JACKET_CATALOG = {
     options: [
       { name: "No Lapel Buttonhole", displayName: "No Buttonhole", specName: "No Lapel Buttonhole", factoryCode: "0544", img: "./assets/jacket-lapelbuttonhole-none.jpg",
         // Shows the shawl drawing (no buttonhole) when the collar is Shawl or Diamond.
-        imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg" } } },
+        imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg", "Arc Lapel": "./assets/jacket-lapelbuttonhole-new-none-shawl.jpg" } } },
       { name: "Standard", displayName: "One on Left Lapel", specName: "Left Buttonhole", factoryCode: "0541", formNote: "1 buttonhole on left lapel", img: "./assets/jacket-lapelbuttonhole-left.jpg",
         imgBySelection: { collar: { "Shawl": "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg", "Diamond Lapel": "./assets/jacket-lapelbuttonhole-shawl-diamond-only.jpg" } } },
       { name: "Left Two", displayName: "Two on Left Lapel", specName: "Double Left Buttonhole", factoryCode: "0545", formNote: "2 buttonholes on left lapel", img: "./assets/jacket-lapelbuttonhole-left-two.jpg" },
@@ -3233,6 +3238,7 @@ const CLASSIC_SUIT_PRESET = {
     fixedBySelection: {
       collar: {
         "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
+        "Arc Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
         "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole", lapelwidth: "8 cm" },
         // The factory's nearest sizes to standard 9 cm for these lapels.
         "Peak Lapel": { lapelwidth: "8.9 cm" },

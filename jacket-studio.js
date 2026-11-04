@@ -47,6 +47,7 @@
     "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
     "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
     "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
@@ -55,6 +56,7 @@
   const SHADE_DB_LAPEL = {
     "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
     "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
   };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
@@ -616,7 +618,7 @@
   function lapelHoleSpots(v) {
     // Wearer's left lapel = viewer's right. Each hole runs across the lapel.
     const h = lapelHolesFor(v);
-    const shawl = v.collar === "Shawl" || v.collar === "Diamond Lapel";
+    const shawl = v.collar === "Shawl" || v.collar === "Arc Lapel" || v.collar === "Diamond Lapel";
     // On the double breasted photo the holes sit where its own one was.
     const base = isDB(v) ? (shawl ? [[512, 196], [533, 189]] : [[525, 188], [547, 181]]) : shawl ? [[506, 176], [526, 183]] : [[515, 156], [536, 164]];
     const st = isDB(v) ? [-6, 10] : [-4.2, 10.5];
@@ -645,7 +647,7 @@
 
     // The lapel's outer edge where the mockup's labels were painted out
     // (diamond and shawl lapels have their own edge in their shading).
-    if (!db && v.collar !== "Diamond Lapel" && v.collar !== "Shawl") {
+    if (!db && v.collar !== "Diamond Lapel" && v.collar !== "Shawl" && v.collar !== "Arc Lapel") {
       line(g, [[541, 196], [482, 338]], "rgba(0,0,0,0.32)", 1.3);
       line(g, [[539.5, 196], [480.5, 338]], "rgba(255,255,255,0.07)", 0.9);
     }
