@@ -1802,7 +1802,8 @@
   // "Great job!" then the review (MTailor's order).
   function showGreatJob() {
     openSheet('<div class="ps-body bs-intro bs-page bs-great">' +
-      '<div class="bs-page-art"><span class="bs-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>' +
+      // Daniel's gold figure in a ring (no big gold circle, no double tick).
+      '<div class="bs-page-art"><img class="bs-great-art" src="./assets/scan-clothes/great-job.webp?v=1" alt="" width="430" height="435"></div>' +
       '<h3 class="bs-page-title">Great job!</h3>' +
       '<p class="bs-page-sub">Last step: check your scan.</p>' +
       "</div>" +
