@@ -1,0 +1,35 @@
+/* PREVIEW ONLY (Daniel 2026-11-04: "analyze high ticket websites and match
+   my website style"). Not linked from any page. Loaded on top of
+   white-theme.css. Borrows the shared look of luxury tailoring sites:
+   white page, black type and buttons, small spaced capitals for labels,
+   thin hairlines instead of shadows, square-ish corners, a classic serif
+   for headings, gold kept only as a thin accent. */
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url(./assets/sw/fonts/cormorant-600.woff) format('woff');}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:500;font-display:swap;src:url(./assets/sw/fonts/cormorant-500-italic.woff) format('woff');}
+html[data-brand="scott"]{--lux-black:#141210;--lux-hair:#E4DFD8;--card-drop:none;--card-edge:var(--lux-hair);}
+html[data-brand="scott"] body::before{display:none;}
+/* Headings: classic serif, like Savile Row and Italian houses */
+html[data-brand="scott"] h1,html[data-brand="scott"] h2,html[data-brand="scott"] h3,html[data-brand="scott"] h1 *,html[data-brand="scott"] h2 *{font-family:'Cormorant Garamond',Georgia,serif !important;font-weight:600;letter-spacing:0;}
+html[data-brand="scott"] h1 em,html[data-brand="scott"] h1 i,html[data-brand="scott"] h2 em{font-weight:500;}
+/* Buttons: flat black, small spaced capitals, nearly square */
+html[data-brand="scott"] .btn-primary,html[data-brand="scott"] #lightbox .lightbox-confirm-btn{background:var(--lux-black) !important;color:#FFFFFF;border-radius:2px;box-shadow:none !important;text-transform:uppercase;letter-spacing:0.16em;font-size:12px;font-weight:600;}
+html[data-brand="scott"] .btn-primary:hover{background:#000 !important;}
+html[data-brand="scott"] .nav-cta,html[data-brand="scott"] .nav-startover-btn,html[data-brand="scott"] .wiz-back,html[data-brand="scott"] .suit-type-go,html[data-brand="scott"] .btn-ghost{background:#FFFFFF;border:1px solid var(--lux-black);border-radius:2px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;text-transform:uppercase;letter-spacing:0.14em;font-size:11px;color:var(--lux-black);}
+html[data-brand="scott"] .btn-ghost{border-width:0 0 1px 0;}
+/* Nav: plain white bar, hairline, spaced capitals */
+html[data-brand="scott"] nav{background:#FFFFFF !important;box-shadow:none;border-bottom:1px solid var(--lux-hair);}
+html[data-brand="scott"] nav a,html[data-brand="scott"] nav .navlink-btn{text-transform:uppercase;letter-spacing:0.14em;font-size:11px;}
+@media (max-width:600px){html[data-brand="scott"] nav a,html[data-brand="scott"] nav .navlink-btn{letter-spacing:0.06em;font-size:10px;}}
+html[data-brand="scott"] .process,html[data-brand="scott"] .wiz-bar{background:#FFFFFF !important;box-shadow:none;border-color:var(--lux-hair);}
+/* Cards: white, hairline edge, no shadow, small corners */
+html[data-brand="scott"] #suitTypeSection .suit-type-card,
+html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card),
+html[data-brand="scott"] .welcome-intro,html[data-brand="scott"] .opening-soon-notice,
+html[data-brand="scott"] #designPreview.suit-preview.design-preview,html[data-brand="scott"] .size-estimate{border-radius:3px;box-shadow:none;border:1px solid var(--lux-hair);}
+html[data-brand="scott"] #suitTypeSection .suit-type-card:hover,html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile):not(.same-as-card):hover{border-color:var(--lux-black);box-shadow:none;}
+html[data-brand="scott"] .designer-grid .opt-card.selected:not(.fabric-tile):not(.same-as-card){background:#FFFFFF;border:1.5px solid var(--lux-black);box-shadow:none;}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.fabric-tile{border-radius:2px;box-shadow:none;}
+html[data-brand="scott"] .designer-grid .fabric-palette-grid .opt-card.same-as-card{border-radius:2px;}
+html[data-brand="scott"] .measure-input-wrap{border-radius:2px;background:#FFFFFF;border-color:var(--lux-hair);}
+html[data-brand="scott"] #lightbox .lightbox-card{box-shadow:none;}
+html[data-brand="scott"] #lightbox .lb-chip{border-radius:2px;}
