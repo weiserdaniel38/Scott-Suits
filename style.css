@@ -2546,3 +2546,4 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-hbar::before{top:0;}.bs-hbar::after{bottom:0;}
 .bs-height-art{align-items:center;}
 .bs-hbar{height:min(234px,29dvh);margin:0;}
+.bs-height-art img{height:min(300px,34dvh);filter:none;}
