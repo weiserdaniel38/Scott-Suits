@@ -2547,3 +2547,6 @@ label.bs-upload{display:inline-block;text-align:center;}
 .bs-height-art{align-items:center;}
 .bs-hbar{height:min(234px,29dvh);margin:0;}
 .bs-height-art img{height:min(300px,34dvh);filter:none;}
+/* Results: Daniel's "Scan complete" banner */
+.bs-results .bs-done-badge{gap:18px;margin:4px 0 16px;font-size:clamp(18px,5.4vw,24px);letter-spacing:.16em;color:#e2c48d;}
+.bs-results .bs-done-badge img{width:84px;height:auto;flex:0 0 auto;filter:drop-shadow(0 0 10px rgba(226,196,141,.35));}
