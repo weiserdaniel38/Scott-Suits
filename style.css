@@ -2570,7 +2570,6 @@ label.bs-upload{display:inline-block;text-align:center;}
   html:not([data-brand]) {--ivory-dim:rgba(var(--ivory-rgb),0.78);}
   p,li,.sub,.lead{line-height:1.55;}
   .lead{font-size:16px;}
-  .welcome-intro p{font-size:15px;line-height:1.5;}
   footer{font-size:13.5px;line-height:1.6;}
   .designer-head p{font-size:14.5px;line-height:1.5;}
   .suit-type-desc{font-size:10.5px;}
@@ -2593,7 +2592,3 @@ label.bs-upload{display:inline-block;text-align:center;}
 .wiz-cheer{font-size:15px;font-weight:600;font-style:normal;color:rgba(var(--ivory-rgb),0.88);}
 .wiz-cheer.celebrate{font-size:15px;color:var(--brass);}
 @media(max-width:900px){.wiz-cheer{font-size:15px;color:rgba(var(--ivory-rgb),0.88);}}
-/* Grand Opening box: bigger, bolder text (Daniel, 2026-11-05) */
-.welcome-intro-title{font-size:25px;font-weight:700;}
-.welcome-intro p{font-size:16.5px;line-height:1.5;font-weight:500;}
-@media(max-width:900px){.welcome-intro-title{font-size:24px;}.welcome-intro p{font-size:16.5px;font-weight:500;}}
