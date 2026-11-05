@@ -2592,3 +2592,15 @@ label.bs-upload{display:inline-block;text-align:center;}
 .wiz-cheer{font-size:15px;font-weight:600;font-style:normal;color:rgba(var(--ivory-rgb),0.88);}
 .wiz-cheer.celebrate{font-size:15px;color:var(--brass);}
 @media(max-width:900px){.wiz-cheer{font-size:15px;color:rgba(var(--ivory-rgb),0.88);}}
+/* Home page on phones: a little smaller overall (Daniel, 2026-11-05 "make the entire page less big") */
+@media(max-width:900px){
+  body:not(.designing) .hero-photo{height:210px;}
+  .hero-text{padding:24px 20px 24px;}
+  body:not(.designing) .hero h1{font-size:29px;}
+  .hero-rule{margin:14px 0;}
+  .welcome-intro{padding:11px 14px 12px;margin-bottom:20px;}
+  .welcome-intro-label{font-size:10px;margin-bottom:4px;}
+  .welcome-intro-title{font-size:18px;margin-bottom:4px;}
+  .welcome-intro p{font-size:13.5px;line-height:1.5;}
+  .hero-cta .btn-primary{padding-top:12px;padding-bottom:12px;font-size:13px;}
+}
