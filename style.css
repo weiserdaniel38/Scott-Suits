@@ -2589,3 +2589,7 @@ label.bs-upload{display:inline-block;text-align:center;}
   .lightbox-hint{font-size:13px;}
 }
 .account-intro:empty{display:none;}
+/* Progress bar encouragement line: bigger and bolder (Daniel, 2026-11-05) */
+.wiz-cheer{font-size:15px;font-weight:600;font-style:normal;color:rgba(var(--ivory-rgb),0.88);}
+.wiz-cheer.celebrate{font-size:15px;color:var(--brass);}
+@media(max-width:900px){.wiz-cheer{font-size:15px;color:rgba(var(--ivory-rgb),0.88);}}
