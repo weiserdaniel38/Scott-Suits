@@ -13,7 +13,7 @@ const JACKET_CATALOG = {
     // catalog_BACKUP_before_lapel_cleanup_20261005.js.txt. The stored
     // names are unchanged, so older orders still read correctly.
     options: [
-      { name: "Notch Lapel", factoryCode: "0001", img: "./assets/jacket-collar-new-notch-v3.jpg",
+      { name: "Notch Lapel", factoryCode: "0001", img: "./assets/jacket-collar-new-notch-v4.jpg",
         // Not offered on a double breasted jacket (Daniel, 2026-10-11). A
         // Notch picked earlier becomes Peak when the front turns double
         // breasted (see reconcileSelections() in main.js).
@@ -22,17 +22,17 @@ const JACKET_CATALOG = {
       // Semi-notch and semi-peak added from Daniel's drawings (2026-10-24).
       // Semi-notch follows Notch: not offered double breasted, becomes
       // Semi-Peak there.
-      { name: "Semi-Notch Lapel", factoryCode: "0003", img: "./assets/jacket-collar-new-seminotch-v3.jpg",
+      { name: "Semi-Notch Lapel", factoryCode: "0003", img: "./assets/jacket-collar-new-seminotch-v4.jpg",
         hiddenWhen: { frontbutton: ["Double Breasted 6X2", "Double Breasted 4X2", "Double Breasted 6X3", "Double Breasted 4X1", "Double Breasted One Button", "Double Breasted 2X1", "Double Breasted 6X1"] },
         replaceWith: "Semi-Peak Lapel" },
-      { name: "Peak Lapel", factoryCode: "0002", img: "./assets/jacket-collar-new-peak-v3.jpg" },
-      { name: "Semi-Peak Lapel", factoryCode: "0004", img: "./assets/jacket-collar-new-semipeak-v3.jpg" },
-      { name: "Shawl", displayName: "Shawl Collar", specName: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl-v3.jpg" },
-      { name: "Diamond Lapel", factoryCode: "001R", img: "./assets/jacket-collar-new-diamond-v3.jpg" },
+      { name: "Peak Lapel", factoryCode: "0002", img: "./assets/jacket-collar-new-peak-v4.jpg" },
+      { name: "Semi-Peak Lapel", factoryCode: "0004", img: "./assets/jacket-collar-new-semipeak-v4.jpg" },
+      { name: "Shawl", displayName: "Shawl Collar", specName: "Shawl", factoryCode: "0005", img: "./assets/jacket-collar-new-shawl-v4.jpg" },
+      { name: "Diamond Lapel", factoryCode: "001R", img: "./assets/jacket-collar-new-diamond-v4.jpg" },
       // Arc Lapel (Daniel's drawing, 2026-11-04): a shawl whose lapels end in
       // a wide rounded U at the bottom instead of a point. Factory "Arc bottom
       // shawl" 00F2. Treated like the Shawl for the lapel buttonhole (none).
-      { name: "Arc Lapel", factoryCode: "00F2", img: "./assets/jacket-collar-new-arc-v3.jpg" },
+      { name: "Arc Lapel", factoryCode: "00F2", img: "./assets/jacket-collar-new-arc-v4.jpg" },
     ],
   },
   lapelwidth: {
