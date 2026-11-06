@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<base href="/">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scott's Suits: Wool Suit Fabrics</title>
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="./assets/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<!-- Home Screen app: opens full screen (no Safari bars) when added
+     from Share > Add to Home Screen. See manifest.webmanifest and sw.js. -->
+<link rel="manifest" href="./manifest.webmanifest?v=20261101name">
+<meta name="theme-color" content="#F7F3EE">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Scott Suits">
+<meta name="description" content="Scott's Suits are made from fine wool suiting, much of it from Italian mills: soft, breathable, drapes smoothly and resists creases.">
+
+<!-- Linked from the nav "Fabrics" item. Uses the homepage's own stylesheet,
+     nav and hero layout so it looks like the rest of the site; no main.js,
+     so the nav buttons here are plain links back to the homepage. -->
+<link rel="stylesheet" href="/mock/style.css?v=mock1">
+<style>
+  a.navlink-btn,a.nav-cta,a.btn-primary{text-decoration:none;display:inline-flex;align-items:center;}
+  .logo-block a{display:block;}
+  .hero .fabric-about p.lead{max-width:500px;margin:0 0 14px;}
+  .fabric-facts{max-width:760px;margin:0 auto;padding:40px 20px 56px;}
+  .fabric-facts h2{font-size:1.5rem;margin:0 0 14px;}
+  .fabric-facts ul{margin:0;padding-left:20px;line-height:1.6;}
+  .fabric-facts li{margin:0 0 8px;}
+  .fabric-facts a{color:inherit;text-decoration:underline;}
+  .fab-head{max-width:1080px;margin:0 auto;padding:28px 20px 8px;display:flex;flex-direction:column;gap:8px;}
+  .fab-head h1{margin:0;font-size:clamp(28px,5vw,44px);line-height:1.1;}
+  .fab-head p{margin:0;font-size:17px;line-height:1.55;color:rgba(var(--ivory-rgb),0.8);max-width:620px;}
+  .fab-filters{position:sticky;top:0;z-index:5;background:var(--ink,#F7F3EE);max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid rgba(var(--brass-rgb),0.25);}
+  .fab-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .fab-row::-webkit-scrollbar{display:none;}
+  .fab-chip{flex:none;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(var(--brass-rgb),0.55);background:var(--card-solid,#fff);font:inherit;font-size:14px;font-weight:600;color:var(--ivory);cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .fab-chip[aria-pressed="true"]{background:var(--ivory);color:var(--ink,#F7F3EE);border-color:var(--ivory);}
+  .fab-dot{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);}
+  .fab-count{max-width:1080px;margin:0 auto;padding:12px 20px 0;font-size:14px;color:rgba(var(--ivory-rgb),0.7);}
+  .fab-grid{max-width:1080px;margin:0 auto;padding:12px 20px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+  .fab-card{background:var(--card-solid,#fff);border:1px solid rgba(var(--brass-rgb),0.3);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;text-align:left;padding:0;font:inherit;color:inherit;}
+  .fab-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#ddd;}
+  .fab-card-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px;}
+  .fab-card-body b{font-size:15px;line-height:1.3;}
+  .fab-card-body span{font-size:13px;color:rgba(var(--ivory-rgb),0.7);}
+  .fab-card-body .fab-price{font-weight:700;color:var(--ivory);font-size:14px;}
+  .fab-sheet{position:fixed;inset:0;z-index:50;background:rgba(20,16,12,0.5);display:flex;align-items:flex-end;justify-content:center;}
+  .fab-sheet-card{background:var(--ink,#F7F3EE);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto;}
+  .fab-sheet-card img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;}
+  .fab-sheet-card h2{margin:0;font-size:24px;}
+  .fab-sheet-card p{margin:0;font-size:16px;line-height:1.5;color:rgba(var(--ivory-rgb),0.82);}
+  .fab-sheet-card .btn-primary{justify-content:center;min-height:52px;}
+  .fab-close{align-self:flex-end;min-width:44px;min-height:44px;border:0;background:none;font-size:28px;line-height:1;cursor:pointer;color:var(--ivory);}
+  @media (min-width:700px){.fab-sheet{align-items:center}.fab-sheet-card{border-radius:20px}}
+</style>
+
+<script src="./brand.js?v=20261104readable"></script>
+<link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
+<link rel="stylesheet" href="./glass.css?v=20261104cardcontrast">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <div class="logo-block"><a href="/mock/" aria-label="Scott Suits — back to the homepage" title="Back to the homepage">
+      <img class="logo-mark" src="./assets/logo-full-new.png" alt="Scott's Suits custom tailoring logo" width="779" height="420">
+    </a></div>
+    <div class="nav-right">
+      <div class="navlinks"><a class="navlink-btn nav-fabrics-link" href="/mock/fabrics.html" aria-current="page">Fabrics</a><a class="navlink-btn nav-contact-link" href="./contact.html">Contact</a></div>
+      <a class="nav-cta" href="/mock/">Start Designing</a>
+    </div>
+  </div>
+</nav>
+
+<header class="fab-head">
+  <h1>Our fabrics</h1>
+  <p>Nearly 200 suit fabrics, almost all pure wool, many from Italian mills. Tap one to see it close up and design a suit with it.</p>
+</header>
+<div class="fab-filters">
+  <div class="fab-row" id="fabPrice" aria-label="Price"></div>
+  <div class="fab-row" id="fabPattern" aria-label="Pattern"></div>
+  <div class="fab-row" id="fabColor" aria-label="Color"></div>
+</div>
+<p class="fab-count" id="fabCount"></p>
+<div class="fab-grid" id="fabGrid"></div>
+
+<section class="fabric-facts" aria-labelledby="fabricFactsTitle">
+  <h2 id="fabricFactsTitle">Fabric facts</h2>
+  <ul>
+    <li>Nearly 200 suit fabrics: about 90 solids, 40 pinstripes, 25 herringbones and 45 plaids.</li>
+    <li>Almost all pure wool, in many colors.</li>
+    <li data-scott-only>The fabric sets the price: suits $350 to $470, jackets $275 to $360, pants $150 to $180.</li>
+  </ul>
+</section>
+<footer><a href="./faq.html" style="color:inherit;">FAQ</a> · <a href="./contact.html" style="color:inherit;">Contact</a> · <a href="https://www.instagram.com/scott_suits/" target="_blank" rel="noopener" style="color:inherit;white-space:nowrap;"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.6" fill="currentColor" stroke="none"/></svg>Follow us on Instagram</a> · <a href="./privacy.html" style="color:inherit;">Privacy Policy</a></footer>
+<div class="mock-badge" aria-hidden="true">Test version &middot; no real orders</div>
+<script src="./config.js"></script>
+<script src="/mock/catalog.js?v=mock1"></script>
+<script>
+(function(){
+  var all=[];
+  FABRIC_COLOR_FIRST.forEach(function(g){g.patterns.forEach(function(b){b.options.forEach(function(o){all.push({o:o,color:g.name,hex:g.swatchHex,pattern:o.pattern,tier:(o.name in FABRIC_PRICE_TIER)?FABRIC_PRICE_TIER[o.name]:FABRIC_PRICE_TIERS.length-1});});});});
+  all.sort(function(a,b){return a.tier-b.tier;});
+  var f={price:null,pattern:null,color:null};
+  function chips(el,key,items){
+    el.innerHTML="";
+    var mk=function(val,label,dot){var b=document.createElement("button");b.type="button";b.className="fab-chip";b.setAttribute("aria-pressed",f[key]===val?"true":"false");b.innerHTML=(dot?'<span class="fab-dot" style="background:'+dot+'"></span>':"")+label;b.onclick=function(){f[key]=f[key]===val?null:val;render();};el.appendChild(b);};
+    mk(null,key==="price"?"All prices":key==="pattern"?"All patterns":"All colors");
+    items.forEach(function(it){mk(it[0],it[1],it[2]);});
+  }
+  function render(){
+    chips(document.getElementById("fabPrice"),"price",FABRIC_PRICE_TIERS.map(function(t,i){return [i,"Suit $"+t.suitUsd];}));
+    var pats=[];all.forEach(function(x){if(pats.indexOf(x.pattern)<0)pats.push(x.pattern);});
+    chips(document.getElementById("fabPattern"),"pattern",pats.map(function(p){return [p,p];}));
+    var cols=[];FABRIC_COLOR_FIRST.forEach(function(g){if(g.all.length)cols.push([g.name,g.name,g.swatchHex]);});
+    chips(document.getElementById("fabColor"),"color",cols);
+    var list=all.filter(function(x){return (f.price===null||x.tier===f.price)&&(!f.pattern||x.pattern===f.pattern)&&(!f.color||x.color===f.color);});
+    document.getElementById("fabCount").textContent=list.length+(list.length===1?" fabric":" fabrics");
+    var grid=document.getElementById("fabGrid");grid.innerHTML="";
+    list.forEach(function(x){
+      var c=document.createElement("button");c.type="button";c.className="fab-card";
+      c.innerHTML='<img loading="lazy" decoding="async" alt="" src="'+x.o.img+'"><span class="fab-card-body"><b></b><span>'+x.pattern+'</span><span class="fab-price">Suit $'+FABRIC_PRICE_TIERS[x.tier].suitUsd+'</span></span>';
+      c.querySelector("b").textContent=x.o.displayName||x.o.name;
+      c.onclick=function(){open(x);};grid.appendChild(c);
+    });
+  }
+  function open(x){
+    var w=document.createElement("div");w.className="fab-sheet";
+    var t=FABRIC_PRICE_TIERS[x.tier];
+    w.innerHTML='<div class="fab-sheet-card" role="dialog" aria-modal="true"><button type="button" class="fab-close" aria-label="Close">&times;</button><img alt="" src="'+x.o.img+'"><h2></h2><p class="fab-desc"></p><p><b>Suit $'+t.suitUsd+'</b> &middot; Jacket $'+t.jacketUsd+' &middot; Pants $'+t.pantsUsd+'</p><a class="btn-primary" href="/mock/?fabric='+encodeURIComponent(x.o.name)+'">Design a suit with this fabric &rarr;</a></div>';
+    w.querySelector("h2").textContent=x.o.displayName||x.o.name;
+    w.querySelector(".fab-desc").textContent=(x.pattern?x.pattern+". ":"")+(x.o.description||"");
+    var close=function(){w.remove();};
+    w.querySelector(".fab-close").onclick=close;w.onclick=function(e){if(e.target===w)close();};
+    document.body.appendChild(w);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
