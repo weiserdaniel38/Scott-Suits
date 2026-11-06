@@ -419,7 +419,9 @@ function describeSpec(spec: string): string {
         // The hex is an average of the whole photo; the photo and the material are what count.
         if (b) return "Button Color: " + b.name + (b.material ? " (" + b.material + " button)" : "") + (buttonWords(b) ? " -- looks like: " + buttonWords(b) : "") + "; copy the button photo exactly";
       }
-      const look = m && (m[1] === "Lining" && /^matched to the fabric color/i.test(m[2]) ? PLAIN_MATCH_LINING : OPTION_LOOKS[m[1]] && OPTION_LOOKS[m[1]][m[2].trim()]);
+      const look = m && (m[1] === "Lining" && /^matched to the fabric color/i.test(m[2]) ? PLAIN_MATCH_LINING
+        : m[1] === "Lining" && /\(Artistic Print pattern/.test(m[2]) ? ARTISTIC_PRINT_LINING
+        : OPTION_LOOKS[m[1]] && OPTION_LOOKS[m[1]][m[2].trim()]);
       return look ? line + " -- looks like: " + look : line;
     })
     .join("\n");
@@ -630,6 +632,10 @@ const HIP_REF: Record<string, string> = {
 function liningMatchesFabric(spec: string): boolean {
   return !/^Facing Style: No Lining/m.test(spec) && /^Lining: (matched to the fabric color|Match Fabric)/im.test(spec);
 }
+// Artistic Print linings (illustrated scenes, collages, maps, botanical
+// paintings; added 2026-11-06): the name alone ("Hollywood Map", "Menswear
+// Atelier") could be drawn as anything, so the model must copy the swatch.
+const ARTISTIC_PRINT_LINING = "a PRINTED artistic lining with an illustrated all-over picture print (scenes, collage, botanical painting or map, as in the lining swatch photo): copy the lining swatch exactly, with the same motifs, colors and a small repeat scale on the lining inside the jacket; it is NOT a plain, paisley or jacquard lining";
 const PLAIN_MATCH_LINING = "a PLAIN, SOLID-COLOR lining in one single color matching the suit fabric's color (the same shade or a slightly lighter or darker tone of it), smooth and slightly lustrous like satin/bemberg; absolutely NO pattern, print, paisley, jacquard, stripes, dots, texture motif or design of any kind on it";
 
 // Buttons. The spec line is "Button Color: <name> (<material> button,
