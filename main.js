@@ -5625,13 +5625,17 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     if (!cat.patternTypes || !name) return { type: null, family: null };
     for (const pt of cat.patternTypes) {
       for (const fam of pt.colorFamilies) {
-        if (fam.options.some((o) => o.name === name)) return { type: pt.name, family: fam.name };
+        if (fam.options.some((o) => o.name === name)) return { type: pt.name, family: pt.flat ? FLAT_FAMILY : fam.name };
       }
     }
     return { type: null, family: null };
   }
   const patternBrowse = {};
   const patternFamilyBrowse = {};
+  // A pattern type marked `flat` (Tonal Jacquard linings, Daniel 2026-11-06)
+  // skips the color boxes: tapping it shows all its linings in one grid,
+  // in color-family order.
+  const FLAT_FAMILY = "__all__";
 
   function renderPatternTypeOptions(cat, gridId, descriptionHtml) {
     if (!(activeTab in patternBrowse)) {
@@ -5674,7 +5678,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         card.onclick = () => {
           scrollToTopThenSwap(() => {
             patternBrowse[activeTab] = pt.name;
-            patternFamilyBrowse[activeTab] = null;
+            patternFamilyBrowse[activeTab] = pt.flat ? FLAT_FAMILY : null;
             renderOptions();
           });
         };
@@ -5684,6 +5688,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     }
 
     const pt = cat.patternTypes.find((p) => p.name === browsedType);
+    if (pt.flat) patternFamilyBrowse[activeTab] = FLAT_FAMILY;
     const browsedFamily = patternFamilyBrowse[activeTab];
 
     // Level 2: color-family cards within the chosen pattern type.
@@ -5736,11 +5741,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // which can run to 40-70+ cards for a big family (Navy, Charcoal) --
     // collapse the category tab strip so this content gets the full screen.
     setTabsCollapsedOnMobile(true);
-    const fam = pt.colorFamilies.find((f) => f.name === browsedFamily);
+    const fam = pt.flat
+      ? { name: pt.name, options: pt.colorFamilies.reduce((all, f) => all.concat(f.options), []) }
+      : pt.colorFamilies.find((f) => f.name === browsedFamily);
+    const backUp = cat.backToColorFamilies && !pt.flat;
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
       '<button type="button" class="back-to-families-btn">&larr; ' +
-      (cat.backToColorFamilies ? pt.name + " Colors" : "All " + cat.label + "s") + "</button>" +
+      (backUp ? pt.name + " Colors" : "All " + cat.label + "s") + "</button>" +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
       '<div class="opt-grid" id="' + gridId + '"></div>';
     // Back from a color's shades goes all the way to the step's first page,
@@ -5748,7 +5756,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // one level up, to the color boxes of the same pattern type.
     optionsEl.querySelector(".back-to-families-btn").onclick = () => {
       scrollToTopThenSwap(() => {
-        if (!cat.backToColorFamilies) patternBrowse[activeTab] = null;
+        if (!backUp) patternBrowse[activeTab] = null;
         patternFamilyBrowse[activeTab] = null;
         renderOptions();
       });
