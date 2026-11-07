@@ -40,6 +40,9 @@ const MOBILE_BREAKPOINT = 900;
 // to "full" so anything that runs before a type is ever chosen (or an old
 // saved draft from before this feature existed) behaves exactly as before.
 let currentSuitType = "full";
+// Customization level for a full suit or jacket: "minimal", "basic" or
+// "advanced" (the full designer). Set by applySuitType().
+let currentLevel = "advanced";
 
 // Whether the order has a Pants step to design: the full suit, the Preset
 // Suit (whose Pants step only asks hem or cuff) and pants on their own. Use
@@ -8215,7 +8218,7 @@ function loadCartItemIntoDesigner(index) {
   jacketDesigner.resetSelections();
   pantsDesigner.resetSelections();
   // Suit type first: it decides which measurement fields exist below.
-  applySuitType(item.type);
+  applySuitType(item.type, item.level);
   // Photo and texts before setSelections, same order as restoreDraft().
   if (item.liningPhoto) jacketDesigner.setLiningPhoto(item.liningPhoto);
   jacketDesigner.setTexts((item.texts && item.texts.jacket) || {});
@@ -8367,6 +8370,7 @@ function commitCurrentSuitToCart() {
   }
   const item = {
     type: currentSuitType,
+    level: currentLevel,
     // Pants on their own carry no jacket choices.
     jacket: hasJacketStep() ? jacketDesigner.getSelections() : {},
     pants: isJacketOnlyType(currentSuitType) ? null : pantsDesigner.getSelections(),
@@ -9701,6 +9705,7 @@ function saveDraft() {
       step: activeStepEl ? activeStepEl.id : "designer",
       furthestStep: ALL_STEPS[furthestStepIndex] ? ALL_STEPS[furthestStepIndex].id : "",
       suitType: currentSuitType,
+      level: currentLevel,
       jacket: jacketDesigner.getSelections(),
       pants: pantsDesigner.getSelections(),
       jacketTexts: jacketDesigner.getTexts(),
@@ -9791,7 +9796,7 @@ function restoreDraft() {
   // applySuitType() -> renderMeasurementFields()). An older draft saved
   // before this feature existed has no suitType at all, so it falls back to
   // "full", matching exactly how every draft behaved before.
-  applySuitType(draft.suitType || "full");
+  applySuitType(draft.suitType || "full", draft.level);
 
   if (draft.jacketTexts) jacketDesigner.setTexts(draft.jacketTexts);
   if (draft.pantsTexts) pantsDesigner.setTexts(draft.pantsTexts);
@@ -10330,11 +10335,16 @@ function updateContinueBackLabelsForSuitType() {
 // a "Jacket Only" order only shows/requires jacket measurements), and keeps
 // the progress bar, prices shown while designing, and the Continue/Back
 // button wording all in sync with the choice.
-function applySuitType(type) {
+function applySuitType(type, level) {
   currentSuitType = ["jacketOnly", "preset", "presetJacket", "pantsOnly"].indexOf(type) !== -1 ? type : "full";
   const isPreset = type === "preset" || type === "presetJacket";
-  jacketDesigner.setPreset(isPreset ? CLASSIC_SUIT_PRESET.jacket : null);
-  pantsDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.pants : null);
+  // Customization level (Minimal / Basic / Advanced) only applies to a full
+  // suit or a jacket on its own; anything else is the full designer.
+  const levelOk = (currentSuitType === "full" || currentSuitType === "jacketOnly") && CUSTOMIZATION_LEVELS[level];
+  currentLevel = levelOk ? level : "advanced";
+  const lv = CUSTOMIZATION_LEVELS[currentLevel];
+  jacketDesigner.setPreset(isPreset ? CLASSIC_SUIT_PRESET.jacket : lv.jacket);
+  pantsDesigner.setPreset(type === "preset" ? CLASSIC_SUIT_PRESET.pants : currentSuitType === "full" ? lv.pants : null);
   pantsDesigner.setSameAsEnabled(hasJacketStep());
   setMeasureMode(measureMode); // rebuilds the fields for this suit type
   updateSamePreviousMeasurementsBanner();
@@ -10347,9 +10357,16 @@ function applySuitType(type) {
 // Wires up the two suit-type cards -- picking one commits the choice and
 // moves straight into the jacket designer, same "scroll up before hiding"
 // swap every other step transition uses (see goToStep()).
-function chooseSuitType(type) {
+function chooseSuitType(type, level) {
+  // Full Suit and Jacket Only first ask how much to customize (Minimal /
+  // Basic / Advanced, see CUSTOMIZATION_LEVELS in catalog.js).
+  if ((type === "full" || type === "jacketOnly") && !level) {
+    showLevelPicker(type);
+    return;
+  }
+  hideLevelPicker();
   // (Leaving the Classic Suit preset clears its fixed answers -- see setPreset.)
-  applySuitType(type);
+  applySuitType(type, level);
   // Pants on their own start straight on the pants designer.
   if (!hasJacketStep()) {
     pantsDesigner.resetToFirstTab();
@@ -10367,6 +10384,32 @@ const choosePresetJacketBtn = document.getElementById("choosePresetJacketBtn");
 if (choosePresetJacketBtn) choosePresetJacketBtn.addEventListener("click", () => chooseSuitType("presetJacket"));
 if (chooseFullSuitBtn) chooseFullSuitBtn.addEventListener("click", () => chooseSuitType("full"));
 if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => chooseSuitType("jacketOnly"));
+// The level picker replaces the suit-type cards in place (same section), so
+// it needs no step of its own in the progress bar.
+let levelPickerType = null;
+function showLevelPicker(type) {
+  levelPickerType = type;
+  const panel = document.getElementById("levelPicker");
+  if (!panel) { chooseSuitType(type, "advanced"); return; }
+  suitTypeSection.classList.add("level-picking");
+  const what = document.getElementById("levelPickerWhat");
+  if (what) what.textContent = type === "jacketOnly" ? "jacket" : "suit";
+  panel.classList.toggle("jacket-only", type === "jacketOnly");
+  panel.hidden = false;
+  const top = window.scrollY + suitTypeSection.getBoundingClientRect().top - getNavClearance();
+  if (window.scrollY > top + 2) window.scrollTo(0, top);
+}
+function hideLevelPicker() {
+  levelPickerType = null;
+  suitTypeSection.classList.remove("level-picking");
+  const panel = document.getElementById("levelPicker");
+  if (panel) panel.hidden = true;
+}
+document.querySelectorAll("#levelPicker [data-level]").forEach((btn) => {
+  btn.addEventListener("click", () => { if (levelPickerType) chooseSuitType(levelPickerType, btn.getAttribute("data-level")); });
+});
+const levelBackBtn = document.getElementById("levelBackBtn");
+if (levelBackBtn) levelBackBtn.addEventListener("click", hideLevelPicker);
 const choosePantsOnlyBtn = document.getElementById("choosePantsOnlyBtn");
 if (choosePantsOnlyBtn) choosePantsOnlyBtn.addEventListener("click", () => chooseSuitType("pantsOnly"));
 
