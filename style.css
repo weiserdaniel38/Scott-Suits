@@ -2604,3 +2604,32 @@ label.bs-upload{display:inline-block;text-align:center;}
   .welcome-intro p{font-size:13.5px;line-height:1.5;}
   .hero-cta .btn-primary{padding-top:12px;padding-bottom:12px;font-size:13px;}
 }
+
+/* Customization level picker (Minimal / Basic / Advanced), shown in place of
+   the suit-type cards after Full Suit or Jacket Only. */
+#suitTypeSection.level-picking > :not(.level-picker){display:none !important;}
+.level-picker{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.level-picker[hidden]{display:none;}
+.level-picker h2{font-weight:500;font-size:36px;line-height:1.15;margin:0;}
+.level-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:900px;width:100%;margin-top:28px;}
+.level-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 20px 24px;border:1px solid var(--line);border-radius:14px;background:rgba(var(--surface-rgb),0.45);color:var(--ivory);font:inherit;text-align:center;cursor:pointer;transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;}
+.level-card:focus-visible{outline:2px solid var(--brass);outline-offset:3px;}
+.level-name{font-size:26px;font-weight:500;}
+.level-desc{font-size:15px;line-height:1.45;font-weight:500;}
+.level-list{font-size:13px;line-height:1.55;color:var(--ivory-dim);flex:1 1 auto;}
+.level-card .suit-type-go{margin-top:6px;}
+.level-picker.jacket-only .level-pants{display:none;}
+.level-back{margin-top:22px;background:none;border:none;color:var(--ivory);font:500 14px inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px;}
+@media(hover:hover){
+  .level-card:hover{border-color:var(--brass);transform:translateY(-3px);box-shadow:0 14px 34px rgba(var(--ivory-rgb),0.10);}
+  .level-card:hover .suit-type-go{background:var(--brass);color:#fff;}
+}
+@media(max-width:700px){
+  .level-picker h2{font-size:26px;}
+  .level-grid{grid-template-columns:1fr;gap:12px;margin-top:20px;}
+  .level-card{padding:18px 16px;gap:6px;align-items:flex-start;text-align:left;}
+  .level-name{font-size:21px;}
+  .level-desc{font-size:14.5px;}
+  .level-list{font-size:13px;}
+  .level-card .suit-type-go{align-self:flex-start;}
+}

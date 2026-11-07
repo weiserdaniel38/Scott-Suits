@@ -3325,3 +3325,57 @@ const CLIENT_FABRIC_LISTS_BUILTIN = {
   // Dovid's list (2026-11-01) was removed 2026-11-02: he is waiting for
   // Rich Slate Blue to come back in stock instead.
 };
+
+// ---------------------------------------------------------------------
+// Customization levels (Daniel, 2026-11-07): after "Full Suit" or "Jacket
+// Only" the customer picks Minimal, Basic or Advanced.
+//   Minimal:  the Preset Suit's questions and answers, but any fabric on
+//             the site (CLASSIC_SUIT_PRESET without its 4-fabric limit).
+//   Basic:    the main style choices; the fine details (lining, inside
+//             pocket, construction, felt, threads, stitching...) are
+//             filled in with the Preset Suit's standard answers.
+//   Advanced: the full designer (no level preset at all).
+// Same shape as CLASSIC_SUIT_PRESET (steps / allowed / fixed /
+// fixedBySelection); see setPreset() in createDesigner (main.js). A step
+// the other picks rule out is still hidden the usual way.
+// ---------------------------------------------------------------------
+const CUSTOMIZATION_LEVELS = (function () {
+  const P = CLASSIC_SUIT_PRESET;
+  const without = (obj, drop) => {
+    const out = {};
+    Object.keys(obj).forEach((k) => { if (drop.indexOf(k) === -1) out[k] = obj[k]; });
+    return out;
+  };
+  const minimal = {
+    jacket: Object.assign({}, P.jacket, { allowed: without(P.jacket.allowed, ["fabric"]) }),
+    pants: P.pants,
+  };
+  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "monogram"];
+  const basicPantsSteps = ["fabric", "frontPleat", "waistbandStyle", "beltLoops", "frontPocket", "backPocket", "bottomStyle"];
+  const basic = {
+    jacket: {
+      steps: basicJacketSteps,
+      allowed: {},
+      fixed: without(P.jacket.fixed, basicJacketSteps),
+      // Lapel width is asked in Basic, so only the lapel buttonhole follows
+      // the lapel here.
+      fixedBySelection: {
+        collar: {
+          "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
+          "Arc Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
+          "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
+        },
+      },
+    },
+    pants: {
+      steps: basicPantsSteps,
+      allowed: {},
+      fixed: without(P.pants.fixed, basicPantsSteps),
+    },
+  };
+  return {
+    minimal: { label: "Minimal", jacket: minimal.jacket, pants: minimal.pants },
+    basic: { label: "Basic", jacket: basic.jacket, pants: basic.pants },
+    advanced: { label: "Advanced", jacket: null, pants: null },
+  };
+})();
