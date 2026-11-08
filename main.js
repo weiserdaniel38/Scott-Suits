@@ -10306,6 +10306,26 @@ if (adminNoPayBtn) {
 // once an order is submitted.
 // ---------------------------------------------------------------------------
 const DRAFT_STORAGE_KEY = "scottSuitsDraftOrder";
+// The tailor-route copy of the draft (localStorage, kept 60 days).
+const TAILOR_RESUME_KEY = "scottSuitsTailorResume";
+// A new tab with no draft of its own picks up a customer who chose a tailor
+// and left to get measured: their suit comes back on the Measurements step.
+function resumeTailorDraft() {
+  try {
+    if (sessionStorage.getItem(DRAFT_STORAGE_KEY)) return;
+    const saved = JSON.parse(localStorage.getItem(TAILOR_RESUME_KEY) || "null");
+    if (!saved || !saved.draft) return;
+    if (Date.now() - (saved.savedAt || 0) > 60 * 24 * 3600 * 1000) {
+      localStorage.removeItem(TAILOR_RESUME_KEY);
+      return;
+    }
+    const draft = saved.draft;
+    if (draft.step !== "personalInfoSection") draft.step = "measurementsSection";
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch (e) {
+    // storage unavailable: start fresh as usual
+  }
+}
 
 // Drafts used to live in localStorage (shared by every tab); drop any copy
 // left over from then so it can't linger in the browser.
@@ -10361,6 +10381,15 @@ function saveDraft() {
         : null,
     };
     sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    // Someone going to a tailor leaves the site and comes back later, often
+    // in a new tab, which normally starts fresh. So while a tailor is chosen,
+    // a copy of the draft is also kept in localStorage (see resumeTailorDraft).
+    try {
+      if (measuredBy || cartItems.some((it) => it && it.measuredBy)) localStorage.setItem(TAILOR_RESUME_KEY, JSON.stringify({ savedAt: Date.now(), draft }));
+      else localStorage.removeItem(TAILOR_RESUME_KEY);
+    } catch (e2) {
+      // not fatal
+    }
   } catch (e) {
     // sessionStorage can be unavailable (private browsing, disabled storage, etc) -- not fatal.
   }
@@ -10378,6 +10407,11 @@ function saveDraft() {
 }
 
 function clearDraft() {
+  try {
+    localStorage.removeItem(TAILOR_RESUME_KEY);
+  } catch (e) {
+    // ignore
+  }
   try {
     sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
   } catch (e) {
@@ -10523,6 +10557,7 @@ function resetDesignStarted() {
   updateNavActionButtons();
 }
 
+resumeTailorDraft();
 if (restoreDraft()) markDesignStarted();
 handlePayPalReturn();
 handleStripeReturn();
