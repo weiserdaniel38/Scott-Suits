@@ -6885,8 +6885,10 @@ function refreshMeasHub() {}
   const estPanel = document.getElementById("sizeEstimatePanel");
   const estBtn = document.getElementById("applyEstimateBtn");
   if (estBtn) estBtn.hidden = true;
+  // The tailor finder's panel becomes the "have a pro measure you" page.
+  const tailorPanel = document.getElementById("tailorFinderPanel");
 
-  // Pages: "mode", "estimate", a measurement id, or "review".
+  // Pages: "start", "know" / "dontknow", "pro" / "estimate", a measurement id, or "review".
   let pages = [];
   let idx = 0;
   let borrowed = null; // { field, marker }
@@ -6922,11 +6924,16 @@ function refreshMeasHub() {}
   // Plainer names for the customer (the stored labels stay as they are).
   const nameOf = (m) => ({ back_jacket: "Jacket Length" })[m.id] || m.label;
 
+  // Route picked on the first two pages: "finished" / "body" (I know my
+  // measurements) or "pro" / "estimate" (I don't).
   function buildPages() {
-    pages = ["mode"];
-    if (measureMode === "finished" && wiz.dataset.estimate === "1") pages.push("estimate");
-    list().forEach((m) => pages.push(m.id));
-    pages.push("review");
+    const route = wiz.dataset.route || "";
+    const branch = route === "pro" || route === "estimate" ? "dontknow" : route ? "know" : wiz.dataset.branch || "";
+    pages = ["start"];
+    if (branch) pages.push(branch);
+    if (route === "pro" || route === "estimate") pages.push(route);
+    if (route) list().forEach((m) => pages.push(m.id));
+    if (route) pages.push("review");
   }
 
   function returnBorrowed() {
@@ -6958,34 +6965,69 @@ function refreshMeasHub() {}
     backBtn.style.visibility = idx === 0 ? "hidden" : "visible";
     nextBtn.hidden = false;
 
-    if (key === "mode") {
-      page.append(el("p", "meas-wiz-eyebrow", "Measurements"), el("h2", "meas-wiz-q", "How would you like to measure?"));
+    const optionPage = (eyebrow, question, options) => {
+      page.append(el("p", "meas-wiz-eyebrow", eyebrow), el("h2", "meas-wiz-q", question));
       const opts = el("div", "meas-wiz-options");
-      [
-        ["finished", "", "Measure a suit you own", "Lay a jacket and pants that fit you well flat and measure them."],
-        ["body", "", "Measure your body", "A soft tape around you. Our tailors add the right room."],
-        ["finished", "1", "Start from my usual size", "Pick your store size. We fill in the rest for you to check."],
-      ].forEach(([mode, est, title, sub]) => {
+      options.forEach(([on, title, sub, pick]) => {
         const b = el("button", "meas-wiz-option");
         b.type = "button";
-        const on = measureMode === mode && (wiz.dataset.estimate || "") === est;
-        b.classList.toggle("active", on && wiz.dataset.picked === "1");
+        b.classList.toggle("active", !!on);
         b.append(el("b", "", title), el("span", "", sub));
-        b.addEventListener("click", () => {
-          wiz.dataset.estimate = est;
-          wiz.dataset.picked = "1";
-          if (measureMode !== mode) {
-            setMeasureMode(mode);
-            saveDraft();
-          }
-          buildPages();
-          go(1);
-        });
+        b.addEventListener("click", pick);
         opts.appendChild(b);
       });
       page.appendChild(opts);
-      nextBtn.hidden = wiz.dataset.picked !== "1";
-      setNext("Next &rarr;");
+      nextBtn.hidden = true;
+    };
+    const pickRoute = (route) => () => {
+      wiz.dataset.route = route;
+      const mode = route === "body" ? "body" : "finished";
+      if (measureMode !== mode) {
+        setMeasureMode(mode);
+        saveDraft();
+      }
+      buildPages();
+      go(1);
+    };
+    const pickBranch = (branch) => () => {
+      if (wiz.dataset.branch !== branch) wiz.dataset.route = "";
+      wiz.dataset.branch = branch;
+      buildPages();
+      go(1);
+    };
+
+    if (key === "start") {
+      const br = wiz.dataset.branch || "";
+      optionPage("Measurements", "How would you like to be measured?", [
+        [br === "know", "I know my measurements", "Enter them one at a time.", pickBranch("know")],
+        [br === "dontknow", "I don't know my measurements", "Have a pro measure you, or start from your usual size.", pickBranch("dontknow")],
+      ]);
+      return;
+    }
+    if (key === "know") {
+      const r = wiz.dataset.route || "";
+      optionPage("I know my measurements", "Which measurements do you have?", [
+        [r === "finished", "Finished suit sizes", "Measured on a suit that fits you well.", pickRoute("finished")],
+        [r === "body", "Body measurements", "Measured around your body. Our tailors add the right room.", pickRoute("body")],
+      ]);
+      return;
+    }
+    if (key === "dontknow") {
+      const r = wiz.dataset.route || "";
+      optionPage("I don't know my measurements", "How should we get them?", [
+        [r === "pro", "Have a pro measure me", "Find a tailor near you. Bring our list.", pickRoute("pro")],
+        [r === "estimate", "Fill in from standard sizing", "Pick your usual store size. We fill in the rest for you to check.", pickRoute("estimate")],
+      ]);
+      return;
+    }
+    if (key === "pro") {
+      page.append(el("p", "meas-wiz-eyebrow", "Have a pro measure you"), el("h2", "meas-wiz-q", "Find a tailor near you"));
+      page.appendChild(el("p", "meas-wiz-hint", "Bring a suit and this list. When you have the numbers, tap Enter them."));
+      if (tailorPanel) {
+        tailorPanel.hidden = false;
+        page.appendChild(tailorPanel);
+      }
+      setNext("Enter them &rarr;");
       return;
     }
 
@@ -7118,7 +7160,10 @@ function refreshMeasHub() {}
     wiz.dataset.returnToReview = "";
     const ms = list();
     const anyDone = ms.some(isDone);
-    if (anyDone) wiz.dataset.picked = "1";
+    if (anyDone && !wiz.dataset.route) {
+      wiz.dataset.route = measureMode === "body" ? "body" : "finished";
+      wiz.dataset.branch = "know";
+    }
     buildPages();
     const firstMissing = ms.find((m) => !isDone(m));
     idx = atId ? pages.indexOf(atId) : !anyDone ? 0 : firstMissing ? pages.indexOf(firstMissing.id) : pages.indexOf("review");
@@ -7133,6 +7178,11 @@ function refreshMeasHub() {}
     if (estPanel && estPanel.parentNode !== document.getElementById("sizeEstimateBox")) {
       const box = document.getElementById("sizeEstimateBox");
       if (box) box.appendChild(estPanel);
+    }
+    const tBox = document.getElementById("tailorFinderBox");
+    if (tailorPanel && tBox && tailorPanel.parentNode !== tBox) {
+      tailorPanel.hidden = true;
+      tBox.appendChild(tailorPanel);
     }
     measWizOpen = false;
     wiz.classList.remove("open");
@@ -7161,14 +7211,14 @@ function refreshMeasHub() {}
     if (statusEl) {
       statusEl.innerHTML = "";
       if (!done) {
-        statusEl.append(el("b", "", ms.length + " measurements, one at a time."), el("span", "", "About 5 minutes. A tape measure helps."));
+        statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Enter your own, have a pro measure you, or start from your usual size."));
       } else {
         statusEl.append(el("b", "", all ? "All " + ms.length + " measurements done" : done + " of " + ms.length + " done"),
           el("span", "", all ? "Tap any one to change it." : "Pick up where you left off."));
       }
     }
     if (barFill) barFill.style.width = (done / Math.max(ms.length, 1)) * 100 + "%";
-    startBtn.innerHTML = !done ? "Start measuring &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
+    startBtn.innerHTML = !done ? "Get started &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
     startBtn.classList.toggle("meas-hub-quiet", all);
     document.getElementById("measHubCard").classList.toggle("done", all);
     if (summary) {
