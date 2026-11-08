@@ -2664,7 +2664,9 @@ html[data-brand="sw"] .level-img{filter:invert(1) sepia(.35);mix-blend-mode:scre
    The step page is a start card + summary; the questions open full screen
    in .meas-wiz (initMeasureWizard() in main.js). */
 #measurementsSection .meas-store{display:none !important;}
-#measurementsSection #sizeEstimateBox,#measurementsSection .measure-mode{display:none !important;}
+#measurementsSection #sizeEstimateBox,#measurementsSection .measure-mode,#measurementsSection #tailorFinderBox{display:none !important;}
+.meas-wiz-page .tailor-finder-form{margin-bottom:14px;}
+.meas-wiz-page #tailorFinderPanel > .size-estimate-intro{display:none;}
 .meas-hub-card{border:1.5px solid var(--brass);border-radius:18px;background:rgba(var(--surface-rgb),0.6);padding:22px 20px 20px;margin-top:6px;}
 .meas-hub-status{margin:0 0 14px;display:flex;flex-direction:column;gap:4px;}
 .meas-hub-status b{font-size:17px;font-weight:600;}
