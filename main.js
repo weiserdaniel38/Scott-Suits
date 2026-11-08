@@ -841,19 +841,101 @@ function readAdminEditState() {
   }
 }
 
-async function refreshAdminStatus() {
+// Admin status is asked from the database (is_admin) every time the sign-in
+// changes -- including the silent hourly token refresh and the refresh a
+// phone does when it wakes up. That check can fail for a moment (no network
+// yet, an expired token mid-refresh), and it used to turn the admin back
+// into a customer until the next reload: the step progress bar locked
+// again, the QA nav bar vanished, etc. (Daniel, 2026-11-08: "it doesn't let
+// me skip to different pages... it fixes only temporary").
+// Now a failed check never downgrades the same signed-in account -- only a
+// clear "no" from the database, signing out, or a different account does --
+// and it retries by itself. The last answer is also remembered per account
+// so the admin tools are there right away on load. This is display only:
+// the database still refuses admin actions from non-admins.
+const ADMIN_CACHE_KEY = "scottSuitsAdminUserId";
+let adminCheckRetry = 0;
+let adminCheckRetryTimer = null;
+function readCachedAdminId() {
+  try { return localStorage.getItem(ADMIN_CACHE_KEY) || ""; } catch (e) { return ""; }
+}
+function writeCachedAdminId(id) {
+  try {
+    if (id) localStorage.setItem(ADMIN_CACHE_KEY, id);
+    else localStorage.removeItem(ADMIN_CACHE_KEY);
+  } catch (e) { /* ignore */ }
+}
+function scheduleAdminRecheck() {
+  if (adminCheckRetryTimer) return;
+  const delay = [2000, 5000, 15000, 30000, 60000][Math.min(adminCheckRetry, 4)];
+  adminCheckRetry++;
+  adminCheckRetryTimer = setTimeout(() => {
+    adminCheckRetryTimer = null;
+    if (currentUser) refreshAdminStatus({ quiet: true });
+  }, delay);
+}
+let adminStatusUserId = "";
+
+// quiet: a background re-check -- only touch the page if the answer changed.
+async function refreshAdminStatus(opts) {
+  const quiet = !!(opts && opts.quiet);
   const user = currentUser;
+  const userId = user ? user.id : "";
   let admin = false;
+  let applied = false;
   if (user) {
+    // Same account as the last answer (or the remembered one): keep it
+    // while we ask again, so nothing flickers back to locked.
+    if (userId === adminStatusUserId) admin = currentIsAdmin;
+    else admin = readCachedAdminId() === userId;
+    if (admin !== currentIsAdmin || userId !== adminStatusUserId) {
+      adminStatusUserId = userId;
+      applyAdminStatus(user, admin);
+      applied = true;
+    }
+    let answer = null;
     try {
       const { data, error } = await getSupabase().rpc("is_admin");
-      admin = !error && data === true;
+      if (!error && typeof data === "boolean") answer = data;
     } catch (e) {
-      admin = false;
+      answer = null;
     }
+    if ((currentUser ? currentUser.id : "") !== userId) return;
+    if (answer === null) {
+      scheduleAdminRecheck();
+      return;
+    }
+    adminCheckRetry = 0;
+    writeCachedAdminId(answer ? userId : "");
+    // Already shown with this answer a moment ago -- don't load the admin
+    // lists twice.
+    if ((applied || quiet) && answer === currentIsAdmin) return;
+    admin = answer;
   }
-  if (user !== currentUser) return;
+  adminStatusUserId = userId;
+  applyAdminStatus(user, admin);
+}
+// A failed check retries on its own; coming back to the tab or getting the
+// network back asks again straight away.
+function recheckAdminSoon() {
+  if (currentUser && (currentIsAdmin || readCachedAdminId() === currentUser.id)) refreshAdminStatus({ quiet: true });
+}
+window.addEventListener("online", recheckAdminSoon);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") recheckAdminSoon();
+});
+
+function applyAdminStatus(user, admin) {
+  const changed = admin !== currentIsAdmin;
   currentIsAdmin = admin;
+  // The step progress bars draw locked steps when they render; redraw them
+  // so a change in admin status shows straight away.
+  if (changed) {
+    try {
+      if (typeof jacketDesigner !== "undefined" && jacketDesigner.refreshProgress) jacketDesigner.refreshProgress();
+      if (typeof pantsDesigner !== "undefined" && pantsDesigner.refreshProgress) pantsDesigner.refreshProgress();
+    } catch (e) { /* designers not built yet */ }
+  }
   document.body.classList.toggle("admin-skip", admin);
   if (setQaNavAllowed) setQaNavAllowed(admin);
   if (setQaMyCostAllowed) setQaMyCostAllowed(admin);
@@ -6358,6 +6440,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     hasUserChoices: () => keys.filter(isShown).some((k) => order[k]),
     // Same move as tapping a progress segment (scrolls up, then swaps).
     showTab: (k) => { if (keys.indexOf(k) !== -1 && k !== activeTab) switchTab(k); },
+    // Redraws the step progress bar (e.g. after admin status changes).
+    refreshProgress: () => renderWizard(),
     resetToFirstTab: () => {
       closeReview();
       activeTab = keys.find(isShown) || keys[0];
@@ -10858,7 +10942,8 @@ function goToStepById(stepId) {
   const targetIndex = STEP_ORDER.indexOf(stepId);
   const currentActiveStepEl = ALL_STEPS.find((el) => el.classList.contains("active"));
   const currentIndex = currentActiveStepEl ? STEP_ORDER.indexOf(currentActiveStepEl.id) : -1;
-  if (targetIndex > -1 && currentIndex > -1 && targetIndex > currentIndex) {
+  // The signed-in shop admin can jump to any page, like the QA nav bar.
+  if (!currentIsAdmin && targetIndex > -1 && currentIndex > -1 && targetIndex > currentIndex) {
     if (ALL_STEPS.indexOf(stepEl) > furthestStepIndex) {
       alert('Please use "Continue" to move forward one step at a time.');
       return;
