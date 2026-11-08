@@ -4607,6 +4607,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function applyPresetFixed() {
     if (!preset) return;
     Object.keys(preset.fixed || {}).forEach((k) => { if (catalog[k]) order[k] = preset.fixed[k]; });
+    // `defaults` only fill an empty answer, so the customer can change them.
+    Object.keys(preset.defaults || {}).forEach((k) => { if (catalog[k] && !order[k]) order[k] = preset.defaults[k]; });
     const bySel = preset.fixedBySelection || {};
     Object.keys(bySel).forEach((dep) => {
       const extra = bySel[dep][order[dep]];
