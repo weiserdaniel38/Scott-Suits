@@ -5783,7 +5783,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       optionsEl.innerHTML =
         "<h3>" + cat.label + "</h3>" + descriptionHtml +
         '<button type="button" class="back-to-families-btn">&larr; All ' + cat.label + "s</button>" +
-        '<p class="sub">' + pt.name + " -- choose a color family, then a shade within it.</p>" +
+        '<p class="sub">' + pt.name + (pt.themes ? " -- choose a theme." : " -- choose a color, then a shade.") + "</p>" +
         '<div class="opt-grid color-family-grid" id="' + gridId + '"></div>';
       optionsEl.querySelector(".back-to-families-btn").onclick = () => {
         scrollToTopThenSwap(() => {
@@ -5812,7 +5812,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         card.innerHTML =
           famSwatchHtml +
           '<div class="opt-name">' + fam.name + "</div>" +
-          '<div class="family-count">' + fam.options.length + " shade" + (fam.options.length === 1 ? "" : "s") + "</div>";
+          '<div class="family-count">' + fam.options.length + (pt.themes ? " print" : " shade") + (fam.options.length === 1 ? "" : "s") + "</div>";
         card.onclick = () => {
           scrollToTopThenSwap(() => {
             patternFamilyBrowse[activeTab] = fam.name;
@@ -5835,7 +5835,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
       '<button type="button" class="back-to-families-btn">&larr; ' +
-      (backUp ? pt.name + " Colors" : "All " + cat.label + "s") + "</button>" +
+      (backUp ? (pt.themes ? "All " + pt.name : pt.name + " Colors") : "All " + cat.label + "s") + "</button>" +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
       '<div class="opt-grid" id="' + gridId + '"></div>';
     // Back from a color's shades goes all the way to the step's first page,
@@ -8383,7 +8383,7 @@ function visualSpecOptionDetail(cat, rawValue) {
   }
   const parts = [];
   if (pattern) parts.push(pattern + " pattern");
-  if (family) parts.push(family + " " + (cat.familySpecLabel || "color family"));
+  if (family) parts.push(family + " " + (pattern === "Prints" ? "theme" : (cat.familySpecLabel || "color family")));
   if (opt && opt.hex) parts.push("approx. color " + opt.hex);
   return { opt, text: shown + (parts.length ? " (" + parts.join(", ") + ")" : ""), matchesFabric: false };
 }
