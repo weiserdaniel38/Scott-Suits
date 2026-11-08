@@ -7156,7 +7156,19 @@ function refreshMeasHub() {}
     }
     if (key === "pro-bring") {
       page.append(el("p", "meas-wiz-eyebrow", "Step 1 of 2"), el("h2", "meas-wiz-q", "At the tailor"));
-      page.appendChild(el("p", "meas-wiz-hint", "Wear or bring a suit that fits you. Show the tailor this list. They fill in each number."));
+      const who = chosenTailors.length ? chosenTailors.map((t) => t.name).join(" or ") : "your tailor";
+      const steps = el("ol", "tc-steps");
+      [
+        ["Copy or share this list.", "Tap the button below. Or just show this screen."],
+        ["Go to " + who + ".", "Wear or bring a suit that fits you well."],
+        ["Have them measure you.", "They write a number in cm next to each item."],
+        ["Come back on this phone.", "Tap \u201cEnter my measurements\u201d and type each number. Your design is saved for 60 days."],
+      ].forEach(([b, t]) => {
+        const li = document.createElement("li");
+        li.append(el("b", "", b), el("span", "", t));
+        steps.appendChild(li);
+      });
+      page.append(el("p", "tc-steps-title", "What to do"), steps);
       renderTailorChecklist();
       if (checklistEl) page.appendChild(checklistEl);
       setNext("Next &rarr;");
@@ -7164,7 +7176,7 @@ function refreshMeasHub() {}
     }
     if (key === "pro-ready") {
       page.append(el("p", "meas-wiz-eyebrow", "Step 2 of 2"), el("h2", "meas-wiz-q", "Got your numbers?"));
-      page.appendChild(el("p", "meas-wiz-hint", "Enter what the tailor gave you, one at a time. Not yet? Close this and come back any time. Your design is saved."));
+      page.appendChild(el("p", "meas-wiz-hint", "Type in what the tailor wrote, one at a time. Not yet? Close this. When you have them, come back on this phone and tap \u201cEnter my measurements\u201d. Your design is saved for 60 days."));
       setNext("Enter them &rarr;");
       return;
     }
@@ -7363,7 +7375,7 @@ function refreshMeasHub() {}
     if (statusEl) {
       statusEl.innerHTML = "";
       if (!done && measuredBy) {
-        statusEl.append(el("b", "", "Got your tailor's numbers?"), el("span", "", "Measured by " + measuredBy + ". Enter what they gave you, one at a time."));
+        statusEl.append(el("b", "", "Got your tailor's numbers?"), el("span", "", "Measured by " + measuredBy + ". Tap below and type in each number they wrote, one at a time."));
       } else if (!done) {
         statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Have a pro measure you, start from your usual size, or enter your own."));
       } else {
