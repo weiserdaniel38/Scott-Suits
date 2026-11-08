@@ -3350,7 +3350,7 @@ const CUSTOMIZATION_LEVELS = (function () {
     jacket: Object.assign({}, P.jacket, { allowed: without(P.jacket.allowed, ["fabric"]) }),
     pants: P.pants,
   };
-  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "monogram"];
+  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "lining", "monogram"];
   const basicPantsSteps = ["fabric", "frontPleat", "waistbandStyle", "beltLoops", "frontPocket", "backPocket", "bottomStyle"];
   const basic = {
     jacket: {
