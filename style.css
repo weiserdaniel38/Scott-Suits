@@ -2644,3 +2644,14 @@ label.bs-upload{display:inline-block;text-align:center;}
 .level-bars i.on{background:var(--brass);}
 .level-go{color:var(--brass);}
 @media(hover:hover){.level-card:hover .level-go{color:#fff;}}
+
+/* Daniel's jacket drawings on the level buttons (2026-11-08, from his
+   mock-up): drawing, thin gold divider, name, arrow. Replaces the bars. */
+.level-card::before{display:none;}
+.level-bars{display:none;}
+.level-card{gap:16px;padding:10px 16px 10px 12px;}
+.level-img{flex:none;width:68px;height:auto;mix-blend-mode:multiply;}
+.level-divider{flex:none;width:1.5px;align-self:stretch;margin:8px 4px 8px 0;background:rgba(var(--brass-rgb),0.7);}
+.level-name{font-weight:500;}
+@media(max-width:700px){.level-img{width:64px;}}
+html[data-brand="sw"] .level-img{filter:invert(1) sepia(.35);mix-blend-mode:screen;opacity:.9;}
