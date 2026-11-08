@@ -6076,7 +6076,11 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // A category can carry an optional one-line "description" (see e.g.
     // facing in catalog.js) explaining a term customers may not know on
     // sight -- shown above the usual selection hint when present.
-    const descriptionHtml = cat.description ? '<p class="cat-description">' + cat.description + "</p>" : "";
+    let descriptionHtml = cat.description ? '<p class="cat-description">' + cat.description + "</p>" : "";
+    // Fabric step: the tiles are only color approximations -- the real cloth
+    // shows when a tile is tapped (zoom with Confirm). Say so plainly
+    // (Daniel, 2026-11-08: "make it clear ... select the fabric to see it").
+    if (activeTab === "fabric") descriptionHtml += '<p class="fabric-tap-hint"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Tap any fabric to see it up close.</p>';
 
     // A step a preset narrows to a few options (e.g. its 4 fabrics) shows
     // them as plain picture cards instead of the full color/pattern browser.

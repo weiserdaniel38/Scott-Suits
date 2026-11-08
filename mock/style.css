@@ -2709,3 +2709,7 @@ body.designing .mock-trust,body.order-done-view .mock-trust{display:none;}
 #accountOverlay .email-promise{text-align:center;max-width:380px;margin:-8px auto 22px;}
 #accountOverlay .account-intro:empty + .email-promise{margin-top:4px;}
 .pers-grid .pers-email-promise{grid-column:1/-1;margin:0;}
+
+/* Fabric step hint: tap a tile to see the real cloth (2026-11-08). */
+.fabric-tap-hint{display:flex;align-items:center;gap:8px;margin:0 0 14px;color:var(--ivory);font-size:14.5px;font-weight:600;line-height:1.4;}
+.fabric-tap-hint svg{flex:none;color:var(--brass);}

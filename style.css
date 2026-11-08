@@ -2841,3 +2841,7 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 .suit-pic-viewer-scroll img{display:block;max-width:100%;max-height:100%;height:auto;object-fit:contain;border-radius:8px;}
 .suit-pic-viewer-close{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:12px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,0.16);color:#fff;font-size:30px;line-height:44px;cursor:pointer;}
 html.suit-pic-viewer-open,html.suit-pic-viewer-open body{overflow:hidden;}
+
+/* Fabric step hint: tap a tile to see the real cloth (2026-11-08). */
+.fabric-tap-hint{display:flex;align-items:center;gap:8px;margin:0 0 14px;color:var(--ivory);font-size:14.5px;font-weight:600;line-height:1.4;}
+.fabric-tap-hint svg{flex:none;color:var(--brass);}
