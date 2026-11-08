@@ -7083,8 +7083,8 @@ function refreshMeasHub() {}
     if (key === "start") {
       const br = wiz.dataset.branch || "";
       optionPage("Measurements", "How would you like to be measured?", [
-        [br === "know", "I know my measurements", "Enter them one at a time.", pickBranch("know")],
         [br === "dontknow", "I don't know my measurements", "Have a pro measure you, or start from your usual size.", pickBranch("dontknow")],
+        [br === "know", "I know my measurements", "Enter them one at a time.", pickBranch("know")],
       ]);
       return;
     }
@@ -7295,7 +7295,7 @@ function refreshMeasHub() {}
     if (statusEl) {
       statusEl.innerHTML = "";
       if (!done) {
-        statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Enter your own, have a pro measure you, or start from your usual size."));
+        statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Have a pro measure you, start from your usual size, or enter your own."));
       } else {
         statusEl.append(el("b", "", all ? "All " + ms.length + " measurements done" : done + " of " + ms.length + " done"),
           el("span", "", all ? "Tap any one to change it." : "Pick up where you left off."));
