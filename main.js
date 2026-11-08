@@ -7304,13 +7304,17 @@ function refreshMeasHub() {}
     wiz.dataset.returnToReview = "";
     const ms = list();
     const anyDone = ms.some(isDone);
+    if (measuredBy && !wiz.dataset.route) {
+      wiz.dataset.route = "pro";
+      wiz.dataset.branch = "dontknow";
+    }
     if (anyDone && !wiz.dataset.route) {
       wiz.dataset.route = measureMode === "body" ? "body" : "finished";
       wiz.dataset.branch = "know";
     }
     buildPages();
     const firstMissing = ms.find((m) => !isDone(m));
-    idx = atId ? pages.indexOf(atId) : !anyDone ? 0 : firstMissing ? pages.indexOf(firstMissing.id) : pages.indexOf("review");
+    idx = atId ? pages.indexOf(atId) : !anyDone && measuredBy && firstMissing ? pages.indexOf(firstMissing.id) : !anyDone ? 0 : firstMissing ? pages.indexOf(firstMissing.id) : pages.indexOf("review");
     if (idx < 0) idx = 0;
     wiz.hidden = false;
     document.documentElement.classList.add("meas-wiz-lock");
@@ -7340,6 +7344,17 @@ function refreshMeasHub() {}
     }
   });
   startBtn.addEventListener("click", () => open());
+  // With a tailor chosen, the start card goes straight to entering their
+  // numbers; this link goes back to the "How would you like to be measured?" page.
+  const otherWayBtn = el("button", "meas-hub-other", "Choose a different way to measure");
+  otherWayBtn.type = "button";
+  otherWayBtn.hidden = true;
+  startBtn.after(otherWayBtn);
+  otherWayBtn.addEventListener("click", () => {
+    open();
+    idx = 0;
+    render();
+  });
 
   refreshMeasHub = function () {
     const ms = list();
@@ -7347,7 +7362,9 @@ function refreshMeasHub() {}
     const all = done === ms.length;
     if (statusEl) {
       statusEl.innerHTML = "";
-      if (!done) {
+      if (!done && measuredBy) {
+        statusEl.append(el("b", "", "Got your tailor's numbers?"), el("span", "", "Measured by " + measuredBy + ". Enter what they gave you, one at a time."));
+      } else if (!done) {
         statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Have a pro measure you, start from your usual size, or enter your own."));
       } else {
         statusEl.append(el("b", "", all ? "All " + ms.length + " measurements done" : done + " of " + ms.length + " done"),
@@ -7355,8 +7372,9 @@ function refreshMeasHub() {}
       }
     }
     if (barFill) barFill.style.width = (done / Math.max(ms.length, 1)) * 100 + "%";
-    startBtn.innerHTML = !done ? "Get started &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
+    startBtn.innerHTML = !done && measuredBy ? "Enter my measurements &rarr;" : !done ? "Get started &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
     startBtn.classList.toggle("meas-hub-quiet", all);
+    if (otherWayBtn) otherWayBtn.hidden = !(measuredBy && !all);
     document.getElementById("measHubCard").classList.toggle("done", all);
     if (summary) {
       summary.innerHTML = "";
