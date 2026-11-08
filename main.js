@@ -6692,6 +6692,7 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
     lines.push(label + " " + shown);
   });
   if (mode === "body" && extras && extras.bodyScan) bodyScanSummaryLines(extras.bodyScan, measurements).forEach((l) => lines.push(l));
+  if (extras && extras.measuredBy) lines.push("", "Measured by: " + extras.measuredBy);
 
   return lines.join("\n");
 }
@@ -6699,6 +6700,7 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
 // Forgets the phone body scan (a new suit, or the form cleared).
 function clearBodyScan() {
   window.__bodyScan = null;
+  measuredBy = null;
   const note = document.getElementById("bodyScanDone");
   if (note) note.hidden = true;
 }
@@ -6935,6 +6937,9 @@ var MEAS_WIZ_HINTS = {
 var measWizOpen = false;
 // Tailors picked on the "Have a pro measure me" page (buildTailorCard).
 var chosenTailors = [];
+// Who measured the customer, saved with the suit and written into the
+// order text: the chosen partner tailor(s), or "Customer's own tailor".
+var measuredBy = null;
 var tailorChooseSync = null;
 function refreshMeasHub() {}
 (function initMeasureWizard() {
@@ -7087,6 +7092,7 @@ function refreshMeasHub() {}
     };
     const pickRoute = (route) => () => {
       wiz.dataset.route = route;
+      if (route !== "pro") measuredBy = null;
       const mode = route === "body" ? "body" : "finished";
       if (measureMode !== mode) {
         setMeasureMode(mode);
@@ -7260,6 +7266,11 @@ function refreshMeasHub() {}
   function go(step, force) {
     const key = pages[idx];
     if (step > 0 && key === "pro" && !force && !chosenTailors.length) return;
+    if (step > 0 && key === "pro") {
+      measuredBy = chosenTailors.length
+        ? chosenTailors.map((t) => t.name + (t.city ? " (" + t.city + (t.state ? ", " + t.state : "") + ")" : "")).join(" or ")
+        : "Customer's own tailor";
+    }
     if (step > 0 && key === "estimate" && estBtn) {
       estBtn.click(); // fills every field (handler in the estimator code)
       if (estPanel) estPanel.hidden = false;
@@ -8827,6 +8838,7 @@ function loadCartItemIntoDesigner(index) {
     if (el && item.measurements && item.measurements[m.id] !== undefined) el.value = item.measurements[m.id];
   });
   window.__bodyScan = item.bodyScan || null;
+  measuredBy = item.measuredBy || null;
   designPreview = null;
   pendingCommitIndex = index;
   editingCartIndex = index;
@@ -8976,6 +8988,8 @@ function commitCurrentSuitToCart() {
     // The phone body scan behind these body measurements (body-scan.js),
     // for the tailor's review; written into the order text.
     bodyScan: measureMode === "body" && window.__bodyScan ? window.__bodyScan : null,
+    // Partner tailor(s) the customer chose to be measured by, if any.
+    measuredBy: measuredBy || null,
   };
   if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
     // A suit of an order the admin is editing stays tied to its order row.
@@ -9415,11 +9429,11 @@ function monoText(item, part) {
 function buildAllSuitsOrderSummaryText(customerName) {
   if (cartItems.length === 1) {
     const item = cartItems[0];
-    return buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan });
+    return buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[0], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan, measuredBy: item.measuredBy });
   }
   return cartItems
     .map((item, i) => {
-      const text = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan });
+      const text = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: (window.__liningPhotoUrls || [])[i], jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan, measuredBy: item.measuredBy });
       return "SUIT " + (i + 1) + " OF " + cartItems.length + "\n" + text;
     })
     .join("\n\n" + "=".repeat(40) + "\n\n");
@@ -9469,7 +9483,7 @@ function suitSpecRow(item, i, count, customerName, liningPhotoUrl) {
   // only for the notification email (finalizeOrder), in their own separate block,
   // so the shop still has a fast way to reach the customer without it
   // cluttering the spec sheet.
-  const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrl, jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan });
+  const suitText = buildOrderSummaryText(customerName, item.type, item.jacket, item.pants, item.measurements, { liningPhotoUrl: liningPhotoUrl, jacketMonogramText: monoText(item, "jacket"), pantsMonogramText: monoText(item, "pants"), bodyScan: item.bodyScan, measuredBy: item.measuredBy });
   row.client_form_text = count === 1 ? suitText : "SUIT " + (i + 1) + " OF " + count + "\n" + suitText;
   // Plain-English, personal-data-free description of the suit -- read by
   // the AI that writes the "finished suit" image prompt once the shop marks
@@ -10305,6 +10319,7 @@ function saveDraft() {
       pantsTexts: pantsDesigner.getTexts(),
       measurements: measurements,
       bodyScan: window.__bodyScan || null,
+      measuredBy: measuredBy || null,
       customerName: customerNameInput.value,
       customerPhone: customerPhoneInput.value,
       customerEmail: customerEmailInput.value,
@@ -10410,6 +10425,7 @@ function restoreDraft() {
   }
 
   if (draft.bodyScan) window.__bodyScan = draft.bodyScan;
+  if (draft.measuredBy) measuredBy = draft.measuredBy;
   if (draft.measurements) {
     applyMeasureExtras(draft.measurements);
     activeMeasurements().forEach((m) => {
