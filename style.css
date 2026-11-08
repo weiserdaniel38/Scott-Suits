@@ -2746,3 +2746,19 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 /* Gold "Recommended" badge on an option card, same look as the level picker's
    tag (Two Side Vents, Daniel 2026-11-08). */
 .designer-grid .opt-badge.opt-badge-rec,.opt-badge.opt-badge-rec{background:var(--brass);border-radius:999px;padding:3px 9px;letter-spacing:.8px;font-weight:600;}
+/* "Have a pro measure me": choose a tailor, then book / bring list / enter */
+.meas-wiz-page #tailorFinderPanel #tailorChecklist{display:none;}
+.meas-wiz-page .tailor-results{grid-template-columns:1fr;}
+.meas-wiz-page .tailor-card{border-radius:14px;background:var(--surface);}
+.tailor-card-choose{margin-top:10px;align-self:stretch;border:1.5px solid var(--ivory);border-radius:999px;background:none;color:var(--ivory);font:600 14px 'Inter',sans-serif;padding:11px 16px;cursor:pointer;}
+.tailor-card.chosen{border:1.5px solid var(--brass);background:rgba(var(--brass-rgb),0.1);}
+.tailor-card.chosen .tailor-card-choose{background:var(--brass);border-color:var(--brass);color:#fff;}
+#tailorFinderBox .tailor-card-choose{display:none;}
+.meas-wiz-own{display:block;margin:22px auto 0;background:none;border:none;font:500 14px 'Inter',sans-serif;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.meas-pro-card{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:16px 18px;margin-bottom:12px;font-size:14px;color:var(--ivory-dim);line-height:1.5;}
+.meas-pro-card b{font-size:17px;color:var(--ivory);font-weight:600;}
+.meas-pro-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.meas-pro-btn{flex:1 1 auto;text-align:center;border:1px solid var(--line);border-radius:999px;padding:11px 14px;font:600 14px 'Inter',sans-serif;color:var(--ivory);text-decoration:none;white-space:nowrap;}
+.meas-pro-btn.primary{flex-basis:100%;background:var(--ivory);color:var(--ink);border-color:var(--ivory);}
+.meas-wiz-page .tailor-checklist{margin-top:0;}
+.meas-wiz-page .tailor-checklist-steps{display:none;}

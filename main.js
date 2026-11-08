@@ -6933,6 +6933,9 @@ const MEAS_WIZ_HINTS = {
   cuff: "Around the leg opening at the hem.",
 };
 var measWizOpen = false;
+// Tailors picked on the "Have a pro measure me" page (buildTailorCard).
+var chosenTailors = [];
+var tailorChooseSync = null;
 function refreshMeasHub() {}
 (function initMeasureWizard() {
   const startBtn = document.getElementById("measStartBtn");
@@ -6971,6 +6974,7 @@ function refreshMeasHub() {}
   if (estBtn) estBtn.hidden = true;
   // The tailor finder's panel becomes the "have a pro measure you" page.
   const tailorPanel = document.getElementById("tailorFinderPanel");
+  const checklistEl = document.getElementById("tailorChecklist");
 
   // Pages: "start", "know" / "dontknow", "pro" / "estimate", a measurement id, or "review".
   let pages = [];
@@ -7016,8 +7020,24 @@ function refreshMeasHub() {}
     pages = ["start"];
     if (branch) pages.push(branch);
     if (route === "pro" || route === "estimate") pages.push(route);
+    if (route === "pro") pages.push("pro-book", "pro-bring", "pro-ready");
     if (route) list().forEach((m) => pages.push(m.id));
     if (route) pages.push("review");
+  }
+
+  // Puts the estimator panel, tailor finder panel and tailor checklist
+  // back where they live on the page (they're shown inside some pages).
+  function restorePanels() {
+    if (estPanel && estPanel.parentNode !== document.getElementById("sizeEstimateBox")) {
+      const box = document.getElementById("sizeEstimateBox");
+      if (box) box.appendChild(estPanel);
+    }
+    const tBox = document.getElementById("tailorFinderBox");
+    if (tailorPanel && tBox && tailorPanel.parentNode !== tBox) {
+      tailorPanel.hidden = true;
+      tBox.appendChild(tailorPanel);
+    }
+    if (checklistEl && tailorPanel && checklistEl.parentNode !== tailorPanel) tailorPanel.appendChild(checklistEl);
   }
 
   function returnBorrowed() {
@@ -7036,11 +7056,13 @@ function refreshMeasHub() {}
 
   function render() {
     returnBorrowed();
+    restorePanels();
     page.innerHTML = "";
     page.classList.remove("in");
     void page.offsetWidth;
     page.classList.add("in");
     body.scrollTop = 0;
+    tailorChooseSync = null;
     const key = pages[idx];
     const ms = list();
     const qIndex = ms.findIndex((m) => m.id === key);
@@ -7105,12 +7127,72 @@ function refreshMeasHub() {}
       return;
     }
     if (key === "pro") {
-      page.append(el("p", "meas-wiz-eyebrow", "Have a pro measure you"), el("h2", "meas-wiz-q", "Find a tailor near you"));
-      page.appendChild(el("p", "meas-wiz-hint", "Bring a suit and this list. When you have the numbers, tap Enter them."));
+      page.append(el("p", "meas-wiz-eyebrow", "Have a pro measure you"), el("h2", "meas-wiz-q", "Choose a tailor near you"));
+      page.appendChild(el("p", "meas-wiz-hint", "Search your address or ZIP, then tap Choose on one or two tailors."));
       if (tailorPanel) {
         tailorPanel.hidden = false;
         page.appendChild(tailorPanel);
       }
+      const own = el("button", "meas-wiz-own", "I'll use my own tailor");
+      own.type = "button";
+      own.addEventListener("click", () => {
+        chosenTailors = [];
+        go(1, true);
+      });
+      page.appendChild(own);
+      const sync = () => {
+        nextBtn.hidden = !chosenTailors.length;
+      };
+      sync();
+      tailorChooseSync = sync;
+      setNext("Next &rarr;");
+      return;
+    }
+    if (key === "pro-book") {
+      const many = chosenTailors.length > 1;
+      page.append(el("p", "meas-wiz-eyebrow", "Step 1 of 3"), el("h2", "meas-wiz-q", "Book a time"));
+      const anyPhone = chosenTailors.some((t) => t.phone);
+      page.appendChild(el("p", "meas-wiz-hint", !chosenTailors.length
+        ? "Call your tailor to set up a time to get measured for a suit."
+        : (anyPhone ? "Call" : "Stop by or call") + " " + (many ? "a tailor" : "the tailor") + " to set up a time to get measured for a suit."));
+      chosenTailors.forEach((t) => {
+        const c = el("div", "meas-pro-card");
+        c.appendChild(el("b", "", t.name));
+        const addr = tailorAddressLine(t);
+        if (addr) c.appendChild(el("span", "", addr));
+        if (t.hours) c.appendChild(el("span", "", t.hours));
+        const acts = el("div", "meas-pro-actions");
+        const act = (label, href, primary) => {
+          if (!href) return;
+          const a = el("a", "meas-pro-btn" + (primary ? " primary" : ""), label);
+          a.href = href;
+          if (/^https?:/i.test(href)) {
+            a.target = "_blank";
+            a.rel = "noopener";
+          }
+          acts.appendChild(a);
+        };
+        act("Call " + (t.phone || ""), t.phone ? "tel:" + t.phone.replace(/[^\d+]/g, "") : "", true);
+        act("Directions", addr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t.name + ", " + addr) : "");
+        const site = tailorWebsiteUrl(t.website);
+        act("Website", site || "");
+        c.appendChild(acts);
+        page.appendChild(c);
+      });
+      setNext("Booked &rarr;");
+      return;
+    }
+    if (key === "pro-bring") {
+      page.append(el("p", "meas-wiz-eyebrow", "Step 2 of 3"), el("h2", "meas-wiz-q", "At the tailor"));
+      page.appendChild(el("p", "meas-wiz-hint", "Wear or bring a suit that fits you. Tap Copy list and show it to the tailor. They write a number next to each one."));
+      renderTailorChecklist();
+      if (checklistEl) page.appendChild(checklistEl);
+      setNext("Next &rarr;");
+      return;
+    }
+    if (key === "pro-ready") {
+      page.append(el("p", "meas-wiz-eyebrow", "Step 3 of 3"), el("h2", "meas-wiz-q", "Got your numbers?"));
+      page.appendChild(el("p", "meas-wiz-hint", "Enter what the tailor gave you, one at a time. Not yet? Close this and come back any time. Your design is saved."));
       setNext("Enter them &rarr;");
       return;
     }
@@ -7209,8 +7291,9 @@ function refreshMeasHub() {}
     return false;
   }
 
-  function go(step) {
+  function go(step, force) {
     const key = pages[idx];
+    if (step > 0 && key === "pro" && !force && !chosenTailors.length) return;
     if (step > 0 && key === "estimate" && estBtn) {
       estBtn.click(); // fills every field (handler in the estimator code)
       if (estPanel) estPanel.hidden = false;
@@ -7259,15 +7342,8 @@ function refreshMeasHub() {}
   }
   function close() {
     returnBorrowed();
-    if (estPanel && estPanel.parentNode !== document.getElementById("sizeEstimateBox")) {
-      const box = document.getElementById("sizeEstimateBox");
-      if (box) box.appendChild(estPanel);
-    }
-    const tBox = document.getElementById("tailorFinderBox");
-    if (tailorPanel && tBox && tailorPanel.parentNode !== tBox) {
-      tailorPanel.hidden = true;
-      tBox.appendChild(tailorPanel);
-    }
+    restorePanels();
+    tailorChooseSync = null;
     measWizOpen = false;
     wiz.classList.remove("open");
     document.documentElement.classList.remove("meas-wiz-lock");
@@ -7867,6 +7943,24 @@ function buildTailorCard(t, miles) {
   addLine("tailor-card-line", site ? t.website.replace(/^https?:\/\//i, "").replace(/\/$/, "") : "", site);
   addLine("tailor-card-note", t.note);
   addLine("tailor-card-map", "Open in Maps", mapUrl);
+  // "Choose" (one or two) for the measuring steps in the flow.
+  const choose = document.createElement("button");
+  choose.type = "button";
+  choose.className = "tailor-card-choose";
+  const paint = () => {
+    const on = chosenTailors.some((c) => c.id === t.id);
+    card.classList.toggle("chosen", on);
+    choose.textContent = on ? "\u2713 Chosen" : "Choose";
+  };
+  choose.addEventListener("click", () => {
+    if (chosenTailors.some((c) => c.id === t.id)) chosenTailors = chosenTailors.filter((c) => c.id !== t.id);
+    else chosenTailors = chosenTailors.concat([t]).slice(-2);
+    document.querySelectorAll(".tailor-card-choose").forEach((b) => b._paint && b._paint());
+    if (typeof tailorChooseSync === "function") tailorChooseSync();
+  });
+  choose._paint = paint;
+  paint();
+  card.appendChild(choose);
   return card;
 }
 
@@ -7884,7 +7978,7 @@ function renderTailorChecklist() {
     '<li><strong>Tap "Copy list"</strong> and paste it into a note or text message on your phone.</li>' +
     '<li><strong>Wear or bring a suit to the tailor</strong> (jacket and pants), so they can check the measurements against a real suit.</li>' +
     '<li><strong>Show the list to the tailor.</strong> They measure you and fill in a number next to each item.</li>' +
-    '<li><strong>Come back here and type their numbers</strong> into the matching boxes below.</li>' +
+    '<li><strong>Come back here and enter their numbers,</strong> one at a time.</li>' +
     '</ol>' +
     '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
   // Plain-text copy to paste into Notes or a message and type the numbers in.
