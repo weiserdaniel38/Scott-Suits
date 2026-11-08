@@ -2613,10 +2613,10 @@ label.bs-upload{display:inline-block;text-align:center;}
 .level-picker[hidden]{display:none;}
 .level-picker h2{font-weight:500;font-size:32px;line-height:1.2;margin:0;}
 .level-grid{display:flex;flex-direction:column;gap:12px;max-width:460px;width:100%;margin-top:24px;}
-.level-card{display:flex;align-items:center;gap:14px;padding:18px 20px;border:1px solid var(--line);border-radius:14px;background:rgba(var(--surface-rgb),0.45);color:var(--ivory);font:inherit;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;}
+.level-card{display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 16px 12px 22px;border:1px solid var(--line);border-radius:14px;background:rgba(var(--surface-rgb),0.45);color:var(--ivory);font:inherit;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;}
 .level-card:focus-visible{outline:2px solid var(--brass);outline-offset:3px;}
 .level-text{display:flex;flex-direction:column;gap:3px;flex:1 1 auto;}
-.level-name{font-size:21px;font-weight:600;}
+.level-name{font-size:22px;font-weight:600;}
 .level-desc{font-size:14.5px;line-height:1.35;color:var(--ivory-dim);}
 .level-go{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:1.5px solid var(--brass);font-size:17px;transition:background .15s ease,color .15s ease;}
 .level-back{margin-top:18px;background:none;border:none;color:var(--ivory);font:500 14px inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:8px;}
@@ -2627,7 +2627,6 @@ label.bs-upload{display:inline-block;text-align:center;}
 @media(max-width:700px){
   .level-picker h2{font-size:24px;}
   .level-grid{gap:10px;margin-top:18px;}
-  .level-card{padding:15px 16px;}
-  .level-name{font-size:19px;}
-  .level-desc{font-size:14px;}
+  .level-card{min-height:60px;}
+  .level-name{font-size:20px;}
 }
