@@ -2659,3 +2659,78 @@ html[data-brand="sw"] .level-img{filter:invert(1) sepia(.35);mix-blend-mode:scre
 /* One fun line under each level name (Daniel, 2026-11-08). */
 .level-desc{display:block;font-size:13px;line-height:1.3;color:var(--ivory-dim);letter-spacing:.2px;margin-top:3px;}
 @media(max-width:700px){.level-desc{font-size:12.5px;}}
+
+/* === MEASUREMENTS, ONE PER PAGE (2026-11-08) ===
+   The step page is a start card + summary; the questions open full screen
+   in .meas-wiz (initMeasureWizard() in main.js). */
+#measurementsSection .meas-store{display:none !important;}
+#measurementsSection #sizeEstimateBox,#measurementsSection .measure-mode{display:none !important;}
+.meas-hub-card{border:1.5px solid var(--brass);border-radius:18px;background:rgba(var(--surface-rgb),0.6);padding:22px 20px 20px;margin-top:6px;}
+.meas-hub-status{margin:0 0 14px;display:flex;flex-direction:column;gap:4px;}
+.meas-hub-status b{font-size:17px;font-weight:600;}
+.meas-hub-status span{font-size:14px;color:var(--ivory-dim);line-height:1.45;}
+.meas-hub-bar{height:4px;border-radius:4px;background:rgba(var(--ivory-rgb),0.1);overflow:hidden;margin-bottom:18px;}
+.meas-hub-bar span{display:block;height:100%;width:0;background:var(--brass);border-radius:4px;transition:width .3s ease;}
+.meas-hub-start{width:100%;justify-content:center;border-radius:999px;font-size:15px;padding:16px 24px;}
+.meas-hub-start.meas-hub-quiet{background:none;color:var(--ivory);border:1px solid var(--ivory);}
+.meas-hub-card.done{border-color:var(--line);}
+.meas-summary{margin-top:14px;}
+.meas-sum-list{border:1px solid var(--line);border-radius:16px;background:rgba(var(--surface-rgb),0.45);padding:4px 16px 8px;}
+.meas-sum-head{margin:14px 0 2px;font:600 11px 'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--brass);}
+.meas-sum-row{display:flex;justify-content:space-between;align-items:center;width:100%;gap:12px;background:none;border:none;border-bottom:1px solid var(--line);padding:12px 0;font:inherit;color:var(--ivory);text-align:left;cursor:pointer;}
+.meas-sum-row:last-child{border-bottom:none;}
+.meas-sum-label{font-size:15px;}
+.meas-sum-val{font-size:15px;font-weight:600;white-space:nowrap;}
+.meas-sum-val::after{content:"\203A";margin-left:10px;color:var(--brass);font-weight:400;}
+.meas-sum-row.missing .meas-sum-val{color:var(--brass);}
+#measurementsSection .saved-measurements-banner,#measurementsSection .tailor-finder,#measurementsSection .body-scan-box{margin-top:12px;}
+.meas-foot{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:22px;}
+.meas-foot .meas-add-card{margin-top:0;}
+.meas-reset-link{background:none;border:none;padding:0;font:13px 'Inter',sans-serif;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+
+html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
+.meas-wiz{position:fixed;inset:0;z-index:2000;background:var(--ink);display:flex;flex-direction:column;opacity:0;transform:translateY(16px);transition:opacity .22s ease,transform .22s ease;}
+.meas-wiz.open{opacity:1;transform:none;}
+.meas-wiz[hidden]{display:none;}
+.meas-wiz-top{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 8px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box;}
+.meas-wiz-close{width:40px;height:40px;border:none;background:none;font-size:30px;line-height:1;color:var(--ivory);cursor:pointer;padding:0;}
+.meas-wiz-top-gap{width:40px;}
+.meas-wiz-count{font:600 12px 'Inter',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--ivory-dim);}
+.meas-wiz-progress{height:3px;background:rgba(var(--ivory-rgb),0.1);max-width:560px;width:calc(100% - 40px);margin:0 auto;border-radius:3px;overflow:hidden;}
+.meas-wiz-progress span{display:block;height:100%;width:0;background:var(--brass);transition:width .3s ease;}
+.meas-wiz-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.meas-wiz-page{max-width:560px;margin:0 auto;padding:34px 22px 28px;box-sizing:border-box;}
+.meas-wiz-page.in{animation:measWizIn .28s ease;}
+@keyframes measWizIn{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:none;}}
+.meas-wiz-eyebrow{margin:0 0 10px;font:600 11px 'Inter',sans-serif;letter-spacing:2.2px;text-transform:uppercase;color:var(--brass);}
+.meas-wiz-q{font-size:34px;line-height:1.15;margin:0 0 12px;}
+.meas-wiz-hint{font-size:16px;line-height:1.55;color:var(--ivory-dim);margin:0 0 26px;}
+.meas-wiz-options{display:flex;flex-direction:column;gap:12px;margin-top:22px;}
+.meas-wiz-option{display:flex;flex-direction:column;gap:5px;text-align:left;border:1px solid var(--line);border-radius:16px;background:rgba(var(--surface-rgb),0.6);padding:18px 18px;font:inherit;color:var(--ivory);cursor:pointer;}
+.meas-wiz-option b{font-size:17px;font-weight:600;}
+.meas-wiz-option span{font-size:14px;color:var(--ivory-dim);line-height:1.45;}
+.meas-wiz-option.active{border:1.5px solid var(--brass);background:rgba(var(--brass-rgb),0.1);padding:17.5px;}
+.meas-wiz-field{display:flex;flex-direction:column;gap:8px;}
+.meas-wiz-field > label,.meas-wiz-field .measure-field-hint{display:none;}
+.meas-wiz-field .measure-input-wrap{border:1.5px solid var(--brass);border-radius:16px;background:var(--surface);padding:0 18px;}
+.meas-wiz-field .measure-input-wrap input{font-size:34px;font-weight:600;padding:16px 0;}
+.meas-wiz-field .measure-input-wrap .unit{font-size:18px;font-weight:600;}
+.meas-wiz-field .measure-input-wrap input::placeholder{color:rgba(var(--ivory-rgb),0.22);}
+.meas-wiz-field .measure-body-row{gap:10px;}
+.meas-wiz-field .measure-unit-pick{border-color:var(--line);}
+.meas-wiz-field .measure-unit-pick select{font-size:16px;padding:22px 0;}
+.meas-wiz-field .measure-field-error{font-size:14px;margin:4px 0 0;}
+.meas-wiz-conv{font-size:14px;color:var(--ivory-dim);margin:10px 2px 0;}
+.meas-wiz-page .size-estimate-panel{padding:0;}
+.meas-wiz-page .size-estimate-grid{grid-template-columns:1fr 1fr;gap:12px;}
+.meas-wiz-page .size-estimate-grid .measure-field label{font-size:13px;}
+.meas-wiz-page .size-estimate-grid .measure-input-wrap{border-radius:12px;background:var(--surface);}
+.meas-wiz-page .size-estimate-disclaimer{display:none;}
+.meas-wiz-page .meas-sum-list{margin-top:8px;}
+.meas-wiz-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box;padding:12px 18px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);}
+.meas-wiz-back{background:none;border:none;font:500 15px 'Inter',sans-serif;color:var(--ivory-dim);cursor:pointer;padding:12px 6px;}
+.meas-wiz-next{border-radius:999px;padding:15px 30px;font-size:15px;min-width:150px;justify-content:center;}
+.meas-wiz-next[hidden]{display:none;}
+.meas-wiz-page #applyEstimateBtn{display:none;}
+@media(hover:hover){.meas-wiz-option:hover{border-color:var(--brass);}}
+@media(max-width:600px){.meas-wiz-q{font-size:30px;}}

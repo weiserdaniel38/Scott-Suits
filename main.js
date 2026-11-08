@@ -6734,6 +6734,7 @@ function renderMeasureChrome() {
   const priceEl = document.getElementById("measPrice");
   const src = document.getElementById(!hasPantsStep() ? "totalPrice" : "pantsTotalPrice");
   if (priceEl && src) priceEl.textContent = src.textContent;
+  if (typeof refreshMeasHub === "function") refreshMeasHub();
 }
 
 // "Don't know your measurements?" size-based estimator -- see the big
@@ -6817,6 +6818,385 @@ if (applyEstimateBtn) {
     }
   });
 }
+
+// =====================================================================
+// MEASUREMENTS, ONE PER PAGE (2026-11-08, Daniel: "too long and confusing",
+// "open up to a new page with one question per page").
+// The Measurements step only shows a start button and, once filled, a
+// short summary. Tapping it opens #measWizard full screen: first "How
+// would you like to measure?" (suit you own = finished sizes, your body =
+// body measurements, usual size = the size estimator), then one page per
+// measurement, then a review page. Each page borrows the real field from
+// #measureGrid (the hidden store) and puts it back when leaving, so the
+// values, drafts, prefill, saved profile, body scan and order text all
+// keep using the same m_<id> inputs as before.
+// =====================================================================
+// Short "how to measure" lines for finished sizes that have no hint in
+// catalog.js (finished sizes are measured on a suit that fits well).
+const MEAS_WIZ_HINTS = {
+  height: "Without shoes.",
+  weight: "Roughly is fine.",
+  shoulder: "Across the back of a jacket that fits you, shoulder seam to shoulder seam.",
+  wrist: "All the way around the jacket's sleeve opening.",
+  chest: "Around the jacket at the chest, under the arms. Lay it flat, measure across and double it.",
+  stomach: "Around the jacket at the top button, buttoned. Lay it flat, measure across and double it.",
+  back_jacket: "Jacket length: from the collar seam at the back of the neck down to the hem.",
+  bicep: "Around the sleeve at its widest, just below the armpit.",
+  hips: "Around the pants at the widest part of the seat. Lay them flat, measure across and double it.",
+  waist: "Around the waistband, buttoned. Lay it flat, measure across and double it.",
+  thigh: "Around the leg at its widest, just below the crotch.",
+  knee: "Around the leg at the knee.",
+  cuff: "Around the leg opening at the hem.",
+};
+var measWizOpen = false;
+function refreshMeasHub() {}
+(function initMeasureWizard() {
+  const startBtn = document.getElementById("measStartBtn");
+  if (!startBtn || !measureGrid) return;
+  const statusEl = document.getElementById("measHubStatus");
+  const barFill = document.getElementById("measHubBarFill");
+  const summary = document.getElementById("measSummary");
+
+  const wiz = document.createElement("div");
+  wiz.className = "meas-wiz";
+  wiz.id = "measWizard";
+  wiz.hidden = true;
+  wiz.setAttribute("role", "dialog");
+  wiz.setAttribute("aria-modal", "true");
+  wiz.setAttribute("aria-label", "Your measurements");
+  wiz.innerHTML =
+    '<div class="meas-wiz-top">' +
+    '<button type="button" class="meas-wiz-close" aria-label="Close">&times;</button>' +
+    '<span class="meas-wiz-count"></span><span class="meas-wiz-top-gap"></span></div>' +
+    '<div class="meas-wiz-progress"><span></span></div>' +
+    '<div class="meas-wiz-body"><div class="meas-wiz-page"></div></div>' +
+    '<div class="meas-wiz-nav">' +
+    '<button type="button" class="meas-wiz-back">&larr; Back</button>' +
+    '<button type="button" class="btn-primary meas-wiz-next">Next &rarr;</button></div>';
+  document.body.appendChild(wiz);
+  const page = wiz.querySelector(".meas-wiz-page");
+  const countEl = wiz.querySelector(".meas-wiz-count");
+  const progFill = wiz.querySelector(".meas-wiz-progress span");
+  const backBtn = wiz.querySelector(".meas-wiz-back");
+  const nextBtn = wiz.querySelector(".meas-wiz-next");
+  const body = wiz.querySelector(".meas-wiz-body");
+
+  // The size estimator's panel becomes the "usual size" page.
+  const estPanel = document.getElementById("sizeEstimatePanel");
+  const estBtn = document.getElementById("applyEstimateBtn");
+  if (estBtn) estBtn.hidden = true;
+
+  // Pages: "mode", "estimate", a measurement id, or "review".
+  let pages = [];
+  let idx = 0;
+  let borrowed = null; // { field, marker }
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text) n.textContent = text;
+    return n;
+  };
+  const list = () => activeMeasurements();
+  const valueOf = (m) => {
+    const input = document.getElementById("m_" + m.id);
+    const raw = input ? input.value : "";
+    const v = parseFloat(raw);
+    return raw === "" || isNaN(v) || v <= 0 ? null : v;
+  };
+  const isDone = (m) => {
+    const v = valueOf(m);
+    return v !== null && measureInRange(m, v);
+  };
+  const shown = (m, v) => {
+    if (m.id === "height") {
+      const ft = Math.floor(v / 12);
+      return ft + " ft " + Math.round((v - ft * 12) * 10) / 10 + " in";
+    }
+    if (m.id === "weight") return Math.round(v) + " lb";
+    return v + " cm";
+  };
+  const groupName = (m) =>
+    m.part === "body" ? "About you" : m.mode === "body" ? (m.part === "pants" ? "Lower body" : "Upper body")
+      : isPantsOnlyType(currentSuitType) || m.part === "pants" ? "Pants" : "Jacket";
+  // Plainer names for the customer (the stored labels stay as they are).
+  const nameOf = (m) => ({ back_jacket: "Jacket Length" })[m.id] || m.label;
+
+  function buildPages() {
+    pages = ["mode"];
+    if (measureMode === "finished" && wiz.dataset.estimate === "1") pages.push("estimate");
+    list().forEach((m) => pages.push(m.id));
+    pages.push("review");
+  }
+
+  function returnBorrowed() {
+    if (!borrowed) return;
+    const { field, marker } = borrowed;
+    field.classList.remove("meas-wiz-field");
+    if (marker.parentNode) marker.parentNode.replaceChild(field, marker);
+    else field.remove();
+    borrowed = null;
+  }
+
+  function setNext(label, primary) {
+    nextBtn.innerHTML = label;
+    nextBtn.classList.toggle("meas-wiz-finish", !!primary);
+  }
+
+  function render() {
+    returnBorrowed();
+    page.innerHTML = "";
+    page.classList.remove("in");
+    void page.offsetWidth;
+    page.classList.add("in");
+    body.scrollTop = 0;
+    const key = pages[idx];
+    const ms = list();
+    const qIndex = ms.findIndex((m) => m.id === key);
+    countEl.textContent = qIndex > -1 ? qIndex + 1 + " of " + ms.length : key === "review" ? "Review" : "";
+    progFill.style.width = (qIndex > -1 ? (qIndex / ms.length) * 100 : key === "review" ? 100 : 0) + "%";
+    backBtn.style.visibility = idx === 0 ? "hidden" : "visible";
+    nextBtn.hidden = false;
+
+    if (key === "mode") {
+      page.append(el("p", "meas-wiz-eyebrow", "Measurements"), el("h2", "meas-wiz-q", "How would you like to measure?"));
+      const opts = el("div", "meas-wiz-options");
+      [
+        ["finished", "", "Measure a suit you own", "Lay a jacket and pants that fit you well flat and measure them."],
+        ["body", "", "Measure your body", "A soft tape around you. Our tailors add the right room."],
+        ["finished", "1", "Start from my usual size", "Pick your store size. We fill in the rest for you to check."],
+      ].forEach(([mode, est, title, sub]) => {
+        const b = el("button", "meas-wiz-option");
+        b.type = "button";
+        const on = measureMode === mode && (wiz.dataset.estimate || "") === est;
+        b.classList.toggle("active", on && wiz.dataset.picked === "1");
+        b.append(el("b", "", title), el("span", "", sub));
+        b.addEventListener("click", () => {
+          wiz.dataset.estimate = est;
+          wiz.dataset.picked = "1";
+          if (measureMode !== mode) {
+            setMeasureMode(mode);
+            saveDraft();
+          }
+          buildPages();
+          go(1);
+        });
+        opts.appendChild(b);
+      });
+      page.appendChild(opts);
+      nextBtn.hidden = wiz.dataset.picked !== "1";
+      setNext("Next &rarr;");
+      return;
+    }
+
+    if (key === "estimate") {
+      page.append(el("p", "meas-wiz-eyebrow", "Your usual size"), el("h2", "meas-wiz-q", "What size do you buy in a store?"));
+      if (estPanel) {
+        estPanel.hidden = false;
+        page.appendChild(estPanel);
+      }
+      page.appendChild(el("p", "meas-wiz-hint", "We fill in every measurement. You check each one next."));
+      setNext("Fill in &rarr;");
+      return;
+    }
+
+    if (key === "review") {
+      const missing = ms.filter((m) => !isDone(m));
+      page.append(
+        el("p", "meas-wiz-eyebrow", missing.length ? "Almost there" : "All set"),
+        el("h2", "meas-wiz-q", missing.length ? missing.length + " still to fill in" : "Your measurements")
+      );
+      page.appendChild(summaryList(true));
+      setNext(missing.length ? "Fill in the rest &rarr;" : "Done &check;", !missing.length);
+      return;
+    }
+
+    const m = ms[qIndex];
+    if (!m) return;
+    const field = document.getElementById("m_" + m.id) && document.getElementById("m_" + m.id).closest(".measure-field");
+    page.appendChild(el("p", "meas-wiz-eyebrow", groupName(m)));
+    const q = el("h2", "meas-wiz-q", nameOf(m));
+    page.appendChild(q);
+    const hint = m.hint || MEAS_WIZ_HINTS[m.id];
+    if (hint) page.appendChild(el("p", "meas-wiz-hint", hint + (/[.!?]$/.test(hint) ? "" : ".")));
+    if (field) {
+      const marker = document.createComment("meas");
+      field.parentNode.replaceChild(marker, field);
+      borrowed = { field, marker };
+      field.classList.add("meas-wiz-field");
+      page.appendChild(field);
+      const inputs = field.querySelectorAll("input:not([type=hidden]), select");
+      inputs.forEach((i) => {
+        if (i.tagName === "INPUT") i.setAttribute("inputmode", "decimal");
+      });
+      if (m.part !== "body") {
+        const conv = el("p", "meas-wiz-conv");
+        const upd = () => {
+          const v = valueOf(m);
+          conv.textContent = v ? "= " + Math.round((v / 2.54) * 10) / 10 + " inches" : "In centimeters. 1 inch = 2.54 cm";
+        };
+        upd();
+        field.querySelector("input").addEventListener("input", upd);
+        page.appendChild(conv);
+      }
+      const first = field.querySelector("input:not([type=hidden]):not([hidden])");
+      if (first) setTimeout(() => { try { first.focus({ preventScroll: true }); } catch (e) {} }, 260);
+    }
+    setNext("Next &rarr;");
+  }
+
+  function summaryList(inWizard) {
+    const box = el("div", "meas-sum-list");
+    let last = null;
+    list().forEach((m) => {
+      const g = groupName(m);
+      if (g !== last) box.appendChild(el("p", "meas-sum-head", g));
+      last = g;
+      const row = el("button", "meas-sum-row" + (isDone(m) ? "" : " missing"));
+      row.type = "button";
+      const v = valueOf(m);
+      row.append(el("span", "meas-sum-label", nameOf(m)), el("span", "meas-sum-val", v !== null ? shown(m, v) : "Add"));
+      row.addEventListener("click", () => {
+        if (!inWizard) open();
+        buildPages();
+        idx = pages.indexOf(m.id);
+        wiz.dataset.returnToReview = "1";
+        render();
+      });
+      box.appendChild(row);
+    });
+    return box;
+  }
+
+  function currentFieldOk() {
+    const key = pages[idx];
+    const m = list().find((x) => x.id === key);
+    if (!m) return true;
+    const v = valueOf(m);
+    const err = borrowed && borrowed.field.querySelector(".measure-field-error");
+    if (v !== null && measureInRange(m, v)) return true;
+    if (err) {
+      err.textContent = v === null ? "Please enter a number." : "Must be " + measureRangeText(m) + ".";
+      err.hidden = false;
+      borrowed.field.classList.add("measure-field-invalid");
+    }
+    return false;
+  }
+
+  function go(step) {
+    const key = pages[idx];
+    if (step > 0 && key === "estimate" && estBtn) {
+      estBtn.click(); // fills every field (handler in the estimator code)
+      if (estPanel) estPanel.hidden = false;
+    }
+    if (step > 0 && !currentFieldOk()) return;
+    if (step > 0 && key === "review") {
+      const firstMissing = list().find((m) => !isDone(m));
+      if (firstMissing) {
+        idx = pages.indexOf(firstMissing.id);
+        render();
+        return;
+      }
+      close();
+      return;
+    }
+    if (step > 0 && wiz.dataset.returnToReview === "1" && list().some((m) => m.id === key)) {
+      wiz.dataset.returnToReview = "";
+      idx = pages.indexOf("review");
+      saveDraft();
+      render();
+      return;
+    }
+    idx = Math.max(0, Math.min(pages.length - 1, idx + step));
+    saveDraft();
+    render();
+  }
+
+  function open(atId) {
+    if (measWizOpen) return;
+    measWizOpen = true;
+    wiz.dataset.returnToReview = "";
+    const ms = list();
+    const anyDone = ms.some(isDone);
+    if (anyDone) wiz.dataset.picked = "1";
+    buildPages();
+    const firstMissing = ms.find((m) => !isDone(m));
+    idx = atId ? pages.indexOf(atId) : !anyDone ? 0 : firstMissing ? pages.indexOf(firstMissing.id) : pages.indexOf("review");
+    if (idx < 0) idx = 0;
+    wiz.hidden = false;
+    document.documentElement.classList.add("meas-wiz-lock");
+    requestAnimationFrame(() => wiz.classList.add("open"));
+    render();
+  }
+  function close() {
+    returnBorrowed();
+    if (estPanel && estPanel.parentNode !== document.getElementById("sizeEstimateBox")) {
+      const box = document.getElementById("sizeEstimateBox");
+      if (box) box.appendChild(estPanel);
+    }
+    measWizOpen = false;
+    wiz.classList.remove("open");
+    document.documentElement.classList.remove("meas-wiz-lock");
+    setTimeout(() => { if (!measWizOpen) wiz.hidden = true; }, 250);
+    saveDraft();
+    refreshMeasHub();
+  }
+
+  backBtn.addEventListener("click", () => go(-1));
+  nextBtn.addEventListener("click", () => go(1));
+  wiz.querySelector(".meas-wiz-close").addEventListener("click", close);
+  wiz.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+    if (e.key === "Enter" && e.target.tagName === "INPUT") {
+      e.preventDefault();
+      go(1);
+    }
+  });
+  startBtn.addEventListener("click", () => open());
+
+  refreshMeasHub = function () {
+    const ms = list();
+    const done = ms.filter(isDone).length;
+    const all = done === ms.length;
+    if (statusEl) {
+      statusEl.innerHTML = "";
+      if (!done) {
+        statusEl.append(el("b", "", ms.length + " measurements, one at a time."), el("span", "", "About 5 minutes. A tape measure helps."));
+      } else {
+        statusEl.append(el("b", "", all ? "All " + ms.length + " measurements done" : done + " of " + ms.length + " done"),
+          el("span", "", all ? "Tap any one to change it." : "Pick up where you left off."));
+      }
+    }
+    if (barFill) barFill.style.width = (done / Math.max(ms.length, 1)) * 100 + "%";
+    startBtn.innerHTML = !done ? "Start measuring &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
+    startBtn.classList.toggle("meas-hub-quiet", all);
+    document.getElementById("measHubCard").classList.toggle("done", all);
+    if (summary) {
+      summary.innerHTML = "";
+      summary.hidden = !done;
+      if (done) summary.appendChild(summaryList(false));
+    }
+  };
+
+  // Continue / add another suit with something missing: open the flow at
+  // the first missing measurement instead of a list in an alert.
+  ["continueToPersonalInfoBtn", "addAnotherSuitBtn"].forEach((id) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.addEventListener(
+      "click",
+      (e) => {
+        if (collectMeasurements().missing.length) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          open();
+        }
+      },
+      true
+    );
+  });
+  refreshMeasHub();
+})();
 
 document.getElementById("continueBtn").addEventListener("click", () => {
   if (!jacketDesigner.isComplete()) {
@@ -9693,6 +10073,7 @@ try {
 }
 
 function saveDraft() {
+  if (typeof refreshMeasHub === "function" && !measWizOpen) refreshMeasHub();
   try {
     const measurements = {};
     activeMeasurements().forEach((m) => {
@@ -10498,7 +10879,12 @@ function goToFirstIncomplete() {
     goToStep(active, next);
     return;
   }
-  if (active === measurementsSection) { focusFirstEmpty(measureInputs()); return; }
+  if (active === measurementsSection) {
+    const b = document.getElementById("measStartBtn");
+    if (b && collectMeasurements().missing.length) b.click();
+    else focusFirstEmpty(measureInputs());
+    return;
+  }
   if (active === personalInfoSection) {
     if (collectMeasurements().missing.length) { goToStep(active, measurementsSection); return; }
     focusFirstEmpty(fulfillmentChoice() === "pickup" ? [customerNameInput, customerPhoneInput, customerEmailInput] : [customerNameInput, shippingAddress1Input, shippingCityInput, shippingStateInput, shippingZipInput]);
