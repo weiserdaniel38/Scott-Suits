@@ -4607,8 +4607,6 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function applyPresetFixed() {
     if (!preset) return;
     Object.keys(preset.fixed || {}).forEach((k) => { if (catalog[k]) order[k] = preset.fixed[k]; });
-    // `defaults` only fill an empty answer, so the customer can change them.
-    Object.keys(preset.defaults || {}).forEach((k) => { if (catalog[k] && !order[k]) order[k] = preset.defaults[k]; });
     const bySel = preset.fixedBySelection || {};
     Object.keys(bySel).forEach((dep) => {
       const extra = bySel[dep][order[dep]];
@@ -4688,6 +4686,8 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // so the customer is asked again instead of keeping an invalid combination.
   function reconcileSelections() {
     applyPresetFixed();
+    // A catalog `preselect` fills an empty answer; the customer can change it.
+    keys.forEach((k) => { if (catalog[k].preselect && !order[k]) order[k] = catalog[k].preselect; });
     fillInlineDefaults();
     // `fixedBySelection: { otherKey: { value: name } }`: that pick sets this
     // step itself and the step is skipped (a Diamond Lapel is always 8 cm).
