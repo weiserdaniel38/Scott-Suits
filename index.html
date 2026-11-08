@@ -121,7 +121,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261108levels7">
+<link rel="stylesheet" href="./style.css?v=20261108meas1">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261104readable"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -500,13 +500,26 @@
     <h3>Your measurements</h3>
   </div>
 
-  <!-- Finished-garment sizes (the default) or body measurements plus a fit,
-       which the factory turns into garment sizes (see setMeasureMode() in
-       main.js). -->
-  <div class="measure-mode" id="measureModeBox">
+  <!-- The measurements are asked one per page in a full-screen flow
+       (#measWizard, see initMeasureWizard() in main.js). This page only
+       shows where the customer is: a start button, then a short summary
+       of the values with tap-to-edit. -->
+  <div class="meas-hub" id="measHub">
+    <div class="meas-hub-card" id="measHubCard">
+      <p class="meas-hub-status" id="measHubStatus"></p>
+      <div class="meas-hub-bar"><span id="measHubBarFill"></span></div>
+      <button type="button" class="btn-primary meas-hub-start" id="measStartBtn">Start measuring &rarr;</button>
+    </div>
+    <div class="meas-summary" id="measSummary" hidden></div>
+  </div>
+
+  <!-- Finished-garment sizes (the default) or body measurements. The
+       buttons live on the first page of the flow; kept here as data-mode
+       buttons so setMeasureMode() can mark the active one. -->
+  <div class="measure-mode" id="measureModeBox" hidden>
     <div class="measure-mode-pick">
-      <button type="button" class="measure-mode-btn active" data-mode="finished" aria-pressed="true"><b>Finished suit sizes</b><span>The sizes of a suit that fits you well</span></button>
-      <button type="button" class="measure-mode-btn" data-mode="body" aria-pressed="false"><b>Body measurements</b><span>Measure yourself; our tailors do the rest</span></button>
+      <button type="button" class="measure-mode-btn active" data-mode="finished" aria-pressed="true"><b>Finished suit sizes</b></button>
+      <button type="button" class="measure-mode-btn" data-mode="body" aria-pressed="false"><b>Body measurements</b></button>
     </div>
   </div>
 
@@ -634,10 +647,9 @@
     </div>
   </div>
 
-  <div class="measure-grid-head">
-    <button type="button" class="btn-ghost measure-reset-btn" id="resetMeasurementsBtn">Reset measurements</button>
-  </div>
-  <div class="measure-grid" id="measureGrid"></div>
+  <!-- The real inputs. Hidden: each field is moved into the flow while
+       its page is open and put back after. -->
+  <div class="measure-grid meas-store" id="measureGrid"></div>
   <!-- Only shown while signed in -- lets a customer opt out of overwriting
        their saved profile measurements with whatever's entered for this
        particular order (e.g. ordering a suit as a gift for someone else).
@@ -646,7 +658,10 @@
     <input type="checkbox" id="saveMeasurementsToProfileCheckbox" checked>
     Save these measurements to my profile
   </label>
-  <button class="meas-add-card" id="addAnotherSuitBtn" type="button">+ Add to Cart &amp; Design Another Suit</button>
+  <div class="meas-foot">
+    <button class="meas-add-card" id="addAnotherSuitBtn" type="button">+ Add to cart &amp; design another suit</button>
+    <button type="button" class="meas-reset-link" id="resetMeasurementsBtn">Clear measurements</button>
+  </div>
   <div class="measure-actions wiz-bar meas-bar">
     <button type="button" class="wiz-back" id="backToDesignerBtn">&larr; Back</button>
     <div class="wiz-price" id="measPrice"></div>
@@ -1086,7 +1101,7 @@
 <script src="./catalog.js?v=20261108levels3"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261107levels"></script>
+<script src="./main.js?v=20261108meas1"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>
