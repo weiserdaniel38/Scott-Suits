@@ -273,7 +273,7 @@ const JACKET_CATALOG = {
     label: "Back Vents",
     column: "back_vents",
     options: [
-      { name: "Side Vent", displayName: "Two Side Vents", specName: "Side Vent", factoryCode: "04N2", img: "./assets/jacket-backvent-new-side.jpg" },
+      { name: "Side Vent", displayName: "Two Side Vents", badge: "Recommended", specName: "Side Vent", factoryCode: "04N2", img: "./assets/jacket-backvent-new-side.jpg" },
       { name: "Center Vent", displayName: "One Center Vent", specName: "Center Vent", factoryCode: "04N1", img: "./assets/jacket-backvent-new-center.jpg" },
       { name: "No Vent", displayName: "No Vents", specName: "No Vent", factoryCode: "04N0", img: "./assets/jacket-backvent-new-no.jpg" },
     ],

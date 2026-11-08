@@ -5422,7 +5422,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // doesn't know what to pick, not part of the stored/printed value.
     // No badges (e.g. "Standard") on a step a preset narrows down.
     const presetStep = !!(preset && preset.allowed && preset.allowed[activeTab]) || !!accountFabricsFor(activeTab);
-    const badgeHtml = opt.badge && !presetStep ? '<div class="opt-badge">' + opt.badge + "</div>" : "";
+    const badgeHtml = opt.badge && !presetStep ? '<div class="opt-badge' + (opt.badge === "Recommended" ? " opt-badge-rec" : "") + '">' + opt.badge + "</div>" : "";
     // The magnifier/zoom button is redundant on a zoom category (Fabric,
     // Lining, Felt Color): clicking the card itself now opens the same
     // (large) zoom view first -- see the onclick branch below -- so the
