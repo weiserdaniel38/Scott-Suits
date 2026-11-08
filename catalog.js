@@ -283,6 +283,9 @@ const JACKET_CATALOG = {
     // The suit picture generator still knows this step by its old name.
     specLabel: "Sleeve Cuff Styles",
     column: "sleeve_cuff_style",
+    // Every suit starts with working buttonholes (Daniel, 2026-11-08); see
+    // reconcileSelections in main.js.
+    preselect: "Working Sleeve Cuff",
     options: [
       { name: "Working Sleeve Cuff", displayName: "Working Buttonholes", specName: "Opening Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-working.jpg" },
       { name: "Imitation Button Hole On Sleeve Cuff", displayName: "Decorative Buttonholes (Sewn Shut)", specName: "Imitation Buttonhole Sleeve Cuff", img: "./assets/jacket-sleevecuffstyle-new-imitation.jpg" },
@@ -3351,16 +3354,14 @@ const CUSTOMIZATION_LEVELS = (function () {
     pants: P.pants,
   };
   // Basic asks the monogram thread color right after the monogram (Daniel,
-  // 2026-11-08), and shows Sleeve Buttonholes with Working already picked.
-  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "sleevecuffstyle", "cuffbuttons", "buttoncolor", "lining", "monogram", "monogramThreadColor"];
+  // 2026-11-08). Sleeve Buttonholes stays fixed to Working (not asked).
+  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "lining", "monogram", "monogramThreadColor"];
   const basicPantsSteps = ["fabric", "frontPleat", "waistbandStyle", "beltLoops", "frontPocket", "backPocket", "bottomStyle"];
   const basic = {
     jacket: {
       steps: basicJacketSteps,
       allowed: {},
       fixed: without(P.jacket.fixed, basicJacketSteps),
-      // Pre-picked but still changeable (see applyPresetFixed in main.js).
-      defaults: { sleevecuffstyle: "Working Sleeve Cuff" },
       // Lapel width is asked in Basic, so only the lapel buttonhole follows
       // the lapel here.
       fixedBySelection: {
