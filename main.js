@@ -9639,6 +9639,53 @@ function loadingKindForType(type) {
   return isJacketOnlyType(type) ? "jacket" : isPantsOnlyType(type) ? "pants" : "full";
 }
 
+// Full-screen view of a finished suit picture. Opening it adds one history
+// entry (same page), so the phone's Back gesture just closes the picture and
+// leaves the customer on the Preview step with everything they picked.
+let suitPicViewer = null;
+function openSuitPictureViewer(url) {
+  closeSuitPictureViewer(true);
+  const ov = document.createElement("div");
+  ov.className = "suit-pic-viewer";
+  ov.setAttribute("role", "dialog");
+  ov.setAttribute("aria-label", "Your suit picture");
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "suit-pic-viewer-close";
+  close.setAttribute("aria-label", "Close");
+  close.innerHTML = "&times;";
+  const scroller = document.createElement("div");
+  scroller.className = "suit-pic-viewer-scroll";
+  const img = document.createElement("img");
+  img.src = url;
+  img.alt = "Your finished suit";
+  scroller.appendChild(img);
+  ov.append(scroller, close);
+  document.body.appendChild(ov);
+  document.documentElement.classList.add("suit-pic-viewer-open");
+  suitPicViewer = ov;
+  let pushed = false;
+  try {
+    window.history.pushState(Object.assign({}, window.history.state || {}, { suitPicViewer: true }), "", window.location.href);
+    pushed = true;
+  } catch (e) { /* history unavailable: the X still closes it */ }
+  ov._pushed = pushed;
+  const shut = () => {
+    if (ov._pushed && window.history.state && window.history.state.suitPicViewer) window.history.back();
+    else closeSuitPictureViewer(true);
+  };
+  close.addEventListener("click", shut);
+  ov.addEventListener("click", (e) => { if (e.target === ov || e.target === scroller) shut(); });
+}
+function closeSuitPictureViewer() {
+  if (!suitPicViewer) return false;
+  suitPicViewer.remove();
+  suitPicViewer = null;
+  document.documentElement.classList.remove("suit-pic-viewer-open");
+  return true;
+}
+window.addEventListener("popstate", () => { closeSuitPictureViewer(); });
+
 function buildSuitImageCard(labelText) {
   const card = document.createElement("div");
   card.className = "suit-preview-card";
@@ -9711,6 +9758,13 @@ function buildSuitImageCard(labelText) {
       link.href = url;
       link.target = "_blank";
       link.rel = "noopener";
+      // Tapping the picture opens it full screen on this same page. It used
+      // to open the image in a new tab, and Back from there could reload the
+      // site and drop the customer at the start of the designer.
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        openSuitPictureViewer(url);
+      });
       const img = document.createElement("img");
       img.className = "suit-preview-img";
       img.alt = "Your finished suit";
@@ -11251,6 +11305,9 @@ document.addEventListener("click", (e) => {
 
   window.addEventListener("popstate", (e) => {
     const k = e.state && e.state.scottsuitsNav;
+    // Same page and question as now (e.g. Back only closed the full-screen
+    // suit picture): nothing to change, and don't jump the scroll.
+    if (k && k === lastKey) return;
     if (k) apply(k);
   });
 
