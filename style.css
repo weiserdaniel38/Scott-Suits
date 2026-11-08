@@ -2630,3 +2630,17 @@ label.bs-upload{display:inline-block;text-align:center;}
   .level-card{min-height:60px;}
   .level-name{font-size:20px;}
 }
+
+/* A touch of flair (Daniel, 2026-11-08): gold level bars (1, 2, 3) on each
+   button, a soft gold edge, and a gentle press. */
+.level-card{position:relative;overflow:hidden;box-shadow:0 2px 10px rgba(var(--ivory-rgb),0.05);transition:border-color .15s ease,box-shadow .15s ease,transform .12s ease;}
+.level-card::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--brass);opacity:.85;}
+.level-card:active{transform:scale(.98);border-color:var(--brass);}
+.level-bars{flex:none;display:inline-flex;align-items:flex-end;gap:3px;height:22px;}
+.level-bars i{display:block;width:5px;border-radius:2px;background:rgba(var(--brass-rgb),0.22);}
+.level-bars i:nth-child(1){height:9px;}
+.level-bars i:nth-child(2){height:15px;}
+.level-bars i:nth-child(3){height:22px;}
+.level-bars i.on{background:var(--brass);}
+.level-go{color:var(--brass);}
+@media(hover:hover){.level-card:hover .level-go{color:#fff;}}
