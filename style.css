@@ -2763,6 +2763,12 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 .meas-wiz-page .tailor-checklist{margin-top:0;padding-top:0;border-top:none;}
 .meas-wiz-page .tailor-checklist-steps{display:none;}
 /* Tailor list ("At the tailor"): big copy button + a clear numbered sheet */
+.tc-steps-title{margin:0 0 10px;font:600 12px 'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--brass);}
+.tc-steps{list-style:none;counter-reset:tcs;margin:0 0 22px;padding:0;}
+.tc-steps li{counter-increment:tcs;position:relative;padding:0 0 12px 40px;font-size:16px;line-height:1.45;color:var(--ivory);}
+.tc-steps li::before{content:counter(tcs);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--brass);color:#fff;font:700 14px/28px 'Inter',sans-serif;text-align:center;}
+.tc-steps b{display:block;font-weight:700;}
+.tc-steps span{display:block;font-size:14.5px;color:var(--ivory-dim);}
 .tc-actions{display:flex;gap:10px;margin-bottom:10px;}
 .tc-copy{flex:1;justify-content:center;border-radius:999px;font-size:16px;padding:16px 20px;}
 .tc-share{flex:0 0 auto;border:1.5px solid var(--ivory);border-radius:999px;background:none;color:var(--ivory);font:600 15px 'Inter',sans-serif;padding:0 22px;cursor:pointer;}
