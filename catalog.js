@@ -3350,13 +3350,17 @@ const CUSTOMIZATION_LEVELS = (function () {
     jacket: Object.assign({}, P.jacket, { allowed: without(P.jacket.allowed, ["fabric"]) }),
     pants: P.pants,
   };
-  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "lining", "monogram"];
+  // Basic asks the monogram thread color right after the monogram (Daniel,
+  // 2026-11-08), and shows Sleeve Buttonholes with Working already picked.
+  const basicJacketSteps = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "sleevecuffstyle", "cuffbuttons", "buttoncolor", "lining", "monogram", "monogramThreadColor"];
   const basicPantsSteps = ["fabric", "frontPleat", "waistbandStyle", "beltLoops", "frontPocket", "backPocket", "bottomStyle"];
   const basic = {
     jacket: {
       steps: basicJacketSteps,
       allowed: {},
       fixed: without(P.jacket.fixed, basicJacketSteps),
+      // Pre-picked but still changeable (see applyPresetFixed in main.js).
+      defaults: { sleevecuffstyle: "Working Sleeve Cuff" },
       // Lapel width is asked in Basic, so only the lapel buttonhole follows
       // the lapel here.
       fixedBySelection: {
