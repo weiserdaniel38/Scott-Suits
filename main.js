@@ -7020,7 +7020,7 @@ function refreshMeasHub() {}
     pages = ["start"];
     if (branch) pages.push(branch);
     if (route === "pro" || route === "estimate") pages.push(route);
-    if (route === "pro") pages.push("pro-book", "pro-bring", "pro-ready");
+    if (route === "pro") pages.push("pro-bring", "pro-ready");
     if (route) list().forEach((m) => pages.push(m.id));
     if (route) pages.push("review");
   }
@@ -7148,42 +7148,8 @@ function refreshMeasHub() {}
       setNext("Next &rarr;");
       return;
     }
-    if (key === "pro-book") {
-      const many = chosenTailors.length > 1;
-      page.append(el("p", "meas-wiz-eyebrow", "Step 1 of 3"), el("h2", "meas-wiz-q", "Book a time"));
-      const anyPhone = chosenTailors.some((t) => t.phone);
-      page.appendChild(el("p", "meas-wiz-hint", !chosenTailors.length
-        ? "Call your tailor to set up a time to get measured for a suit."
-        : (anyPhone ? "Call" : "Stop by or call") + " " + (many ? "a tailor" : "the tailor") + " to set up a time to get measured for a suit."));
-      chosenTailors.forEach((t) => {
-        const c = el("div", "meas-pro-card");
-        c.appendChild(el("b", "", t.name));
-        const addr = tailorAddressLine(t);
-        if (addr) c.appendChild(el("span", "", addr));
-        if (t.hours) c.appendChild(el("span", "", t.hours));
-        const acts = el("div", "meas-pro-actions");
-        const act = (label, href, primary) => {
-          if (!href) return;
-          const a = el("a", "meas-pro-btn" + (primary ? " primary" : ""), label);
-          a.href = href;
-          if (/^https?:/i.test(href)) {
-            a.target = "_blank";
-            a.rel = "noopener";
-          }
-          acts.appendChild(a);
-        };
-        act("Call " + (t.phone || ""), t.phone ? "tel:" + t.phone.replace(/[^\d+]/g, "") : "", true);
-        act("Directions", addr ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t.name + ", " + addr) : "");
-        const site = tailorWebsiteUrl(t.website);
-        act("Website", site || "");
-        c.appendChild(acts);
-        page.appendChild(c);
-      });
-      setNext("Booked &rarr;");
-      return;
-    }
     if (key === "pro-bring") {
-      page.append(el("p", "meas-wiz-eyebrow", "Step 2 of 3"), el("h2", "meas-wiz-q", "At the tailor"));
+      page.append(el("p", "meas-wiz-eyebrow", "Step 1 of 2"), el("h2", "meas-wiz-q", "At the tailor"));
       page.appendChild(el("p", "meas-wiz-hint", "Wear or bring a suit that fits you. Tap Copy list and show it to the tailor. They write a number next to each one."));
       renderTailorChecklist();
       if (checklistEl) page.appendChild(checklistEl);
@@ -7191,7 +7157,7 @@ function refreshMeasHub() {}
       return;
     }
     if (key === "pro-ready") {
-      page.append(el("p", "meas-wiz-eyebrow", "Step 3 of 3"), el("h2", "meas-wiz-q", "Got your numbers?"));
+      page.append(el("p", "meas-wiz-eyebrow", "Step 2 of 2"), el("h2", "meas-wiz-q", "Got your numbers?"));
       page.appendChild(el("p", "meas-wiz-hint", "Enter what the tailor gave you, one at a time. Not yet? Close this and come back any time. Your design is saved."));
       setNext("Enter them &rarr;");
       return;
