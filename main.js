@@ -7304,13 +7304,17 @@ function refreshMeasHub() {}
     wiz.dataset.returnToReview = "";
     const ms = list();
     const anyDone = ms.some(isDone);
+    if (measuredBy && !wiz.dataset.route) {
+      wiz.dataset.route = "pro";
+      wiz.dataset.branch = "dontknow";
+    }
     if (anyDone && !wiz.dataset.route) {
       wiz.dataset.route = measureMode === "body" ? "body" : "finished";
       wiz.dataset.branch = "know";
     }
     buildPages();
     const firstMissing = ms.find((m) => !isDone(m));
-    idx = atId ? pages.indexOf(atId) : !anyDone ? 0 : firstMissing ? pages.indexOf(firstMissing.id) : pages.indexOf("review");
+    idx = atId ? pages.indexOf(atId) : !anyDone && measuredBy && firstMissing ? pages.indexOf(firstMissing.id) : !anyDone ? 0 : firstMissing ? pages.indexOf(firstMissing.id) : pages.indexOf("review");
     if (idx < 0) idx = 0;
     wiz.hidden = false;
     document.documentElement.classList.add("meas-wiz-lock");
@@ -7340,6 +7344,17 @@ function refreshMeasHub() {}
     }
   });
   startBtn.addEventListener("click", () => open());
+  // With a tailor chosen, the start card goes straight to entering their
+  // numbers; this link goes back to the "How would you like to be measured?" page.
+  const otherWayBtn = el("button", "meas-hub-other", "Choose a different way to measure");
+  otherWayBtn.type = "button";
+  otherWayBtn.hidden = true;
+  startBtn.after(otherWayBtn);
+  otherWayBtn.addEventListener("click", () => {
+    open();
+    idx = 0;
+    render();
+  });
 
   refreshMeasHub = function () {
     const ms = list();
@@ -7347,7 +7362,9 @@ function refreshMeasHub() {}
     const all = done === ms.length;
     if (statusEl) {
       statusEl.innerHTML = "";
-      if (!done) {
+      if (!done && measuredBy) {
+        statusEl.append(el("b", "", "Got your tailor's numbers?"), el("span", "", "Measured by " + measuredBy + ". Enter what they gave you, one at a time."));
+      } else if (!done) {
         statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Have a pro measure you, start from your usual size, or enter your own."));
       } else {
         statusEl.append(el("b", "", all ? "All " + ms.length + " measurements done" : done + " of " + ms.length + " done"),
@@ -7355,8 +7372,9 @@ function refreshMeasHub() {}
       }
     }
     if (barFill) barFill.style.width = (done / Math.max(ms.length, 1)) * 100 + "%";
-    startBtn.innerHTML = !done ? "Get started &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
+    startBtn.innerHTML = !done && measuredBy ? "Enter my measurements &rarr;" : !done ? "Get started &rarr;" : all ? "Review measurements" : "Continue measuring &rarr;";
     startBtn.classList.toggle("meas-hub-quiet", all);
+    if (otherWayBtn) otherWayBtn.hidden = !(measuredBy && !all);
     document.getElementById("measHubCard").classList.toggle("done", all);
     if (summary) {
       summary.innerHTML = "";
@@ -10288,6 +10306,26 @@ if (adminNoPayBtn) {
 // once an order is submitted.
 // ---------------------------------------------------------------------------
 const DRAFT_STORAGE_KEY = "scottSuitsDraftOrder";
+// The tailor-route copy of the draft (localStorage, kept 60 days).
+const TAILOR_RESUME_KEY = "scottSuitsTailorResume";
+// A new tab with no draft of its own picks up a customer who chose a tailor
+// and left to get measured: their suit comes back on the Measurements step.
+function resumeTailorDraft() {
+  try {
+    if (sessionStorage.getItem(DRAFT_STORAGE_KEY)) return;
+    const saved = JSON.parse(localStorage.getItem(TAILOR_RESUME_KEY) || "null");
+    if (!saved || !saved.draft) return;
+    if (Date.now() - (saved.savedAt || 0) > 60 * 24 * 3600 * 1000) {
+      localStorage.removeItem(TAILOR_RESUME_KEY);
+      return;
+    }
+    const draft = saved.draft;
+    if (draft.step !== "personalInfoSection") draft.step = "measurementsSection";
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch (e) {
+    // storage unavailable: start fresh as usual
+  }
+}
 
 // Drafts used to live in localStorage (shared by every tab); drop any copy
 // left over from then so it can't linger in the browser.
@@ -10343,6 +10381,15 @@ function saveDraft() {
         : null,
     };
     sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    // Someone going to a tailor leaves the site and comes back later, often
+    // in a new tab, which normally starts fresh. So while a tailor is chosen,
+    // a copy of the draft is also kept in localStorage (see resumeTailorDraft).
+    try {
+      if (measuredBy || cartItems.some((it) => it && it.measuredBy)) localStorage.setItem(TAILOR_RESUME_KEY, JSON.stringify({ savedAt: Date.now(), draft }));
+      else localStorage.removeItem(TAILOR_RESUME_KEY);
+    } catch (e2) {
+      // not fatal
+    }
   } catch (e) {
     // sessionStorage can be unavailable (private browsing, disabled storage, etc) -- not fatal.
   }
@@ -10360,6 +10407,11 @@ function saveDraft() {
 }
 
 function clearDraft() {
+  try {
+    localStorage.removeItem(TAILOR_RESUME_KEY);
+  } catch (e) {
+    // ignore
+  }
   try {
     sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
   } catch (e) {
@@ -10505,6 +10557,7 @@ function resetDesignStarted() {
   updateNavActionButtons();
 }
 
+resumeTailorDraft();
 if (restoreDraft()) markDesignStarted();
 handlePayPalReturn();
 handleStripeReturn();
