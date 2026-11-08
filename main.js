@@ -6917,7 +6917,7 @@ if (applyEstimateBtn) {
 // =====================================================================
 // Short "how to measure" lines for finished sizes that have no hint in
 // catalog.js (finished sizes are measured on a suit that fits well).
-const MEAS_WIZ_HINTS = {
+var MEAS_WIZ_HINTS = {
   height: "Without shoes.",
   weight: "Roughly is fine.",
   shoulder: "Across the back of a jacket that fits you, shoulder seam to shoulder seam.",
@@ -7150,7 +7150,7 @@ function refreshMeasHub() {}
     }
     if (key === "pro-bring") {
       page.append(el("p", "meas-wiz-eyebrow", "Step 1 of 2"), el("h2", "meas-wiz-q", "At the tailor"));
-      page.appendChild(el("p", "meas-wiz-hint", "Wear or bring a suit that fits you. Tap Copy list and show it to the tailor. They write a number next to each one."));
+      page.appendChild(el("p", "meas-wiz-hint", "Wear or bring a suit that fits you. Show the tailor this list. They fill in each number."));
       renderTailorChecklist();
       if (checklistEl) page.appendChild(checklistEl);
       setNext("Next &rarr;");
@@ -7938,25 +7938,26 @@ function buildTailorCard(t, miles) {
 function renderTailorChecklist() {
   const box = document.getElementById("tailorChecklist");
   if (!box) return;
+  const share = typeof navigator !== "undefined" && typeof navigator.share === "function";
   box.innerHTML =
-    '<div class="tailor-checklist-head"><h4>What to have measured</h4><button type="button" class="btn-ghost tailor-checklist-copy">Copy list</button></div>' +
-    '<ol class="tailor-checklist-steps">' +
-    '<li><strong>Tap "Copy list"</strong> and paste it into a note or text message on your phone.</li>' +
-    '<li><strong>Wear or bring a suit to the tailor</strong> (jacket and pants), so they can check the measurements against a real suit.</li>' +
-    '<li><strong>Show the list to the tailor.</strong> They measure you and fill in a number next to each item.</li>' +
-    '<li><strong>Come back here and enter their numbers,</strong> one at a time.</li>' +
-    '</ol>' +
-    '<p class="tailor-checklist-intro"></p><ol class="tailor-checklist-list"></ol><p class="tailor-checklist-foot"></p>';
-  // Plain-text copy to paste into Notes or a message and type the numbers in.
+    '<div class="tc-actions">' +
+    '<button type="button" class="btn-primary tc-copy tailor-checklist-copy">Copy list</button>' +
+    (share ? '<button type="button" class="tc-share">Share</button>' : "") +
+    "</div>" +
+    '<p class="tc-copied" hidden>Copied. Paste it into a text or a note, or just show this screen.</p>' +
+    '<div class="tc-sheet">' +
+    '<p class="tc-title">For the tailor</p>' +
+    '<p class="tc-note">Please measure for a <b>suit that fits well</b> (finished suit sizes, not tight body measurements). <b>All in centimeters.</b> The factory adds nothing.</p>' +
+    '<ol class="tailor-checklist-list tc-list"></ol>' +
+    "</div>";
   const lines = [
     SITE_BRAND.name + " suit measurements",
     "",
-    "FOR THE TAILOR: these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so measure for a close, slim fit.",
+    "FOR THE TAILOR: please measure for a suit that fits well (finished suit sizes, not tight body measurements). ALL IN CENTIMETERS. The factory adds nothing.",
   ];
-  box.querySelector(".tailor-checklist-intro").textContent =
-    "Tell the tailor these are finished suit measurements, the size the suit itself should be, not body measurements. The factory makes the suit to exactly these numbers and adds nothing, so they should measure for a close, slim fit.";
-  const list = box.querySelector(".tailor-checklist-list");
+  const list = box.querySelector(".tc-list");
   let lastPart = null;
+  let n = 0;
   // Height and weight are the customer's own to type in, not the tailor's.
   MEASUREMENTS.filter((m) => !m.factoryOptional && !m.mode && m.part !== "body" && measurementForType(m, currentSuitType)).forEach((m) => {
     const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
@@ -7968,27 +7969,37 @@ function renderTailorChecklist() {
       list.appendChild(h);
       lastPart = part;
     }
+    n++;
     const li = document.createElement("li");
     li.className = "tailor-checklist-item";
+    const num = document.createElement("span");
+    num.className = "tc-num";
+    num.textContent = String(n);
     const name = document.createElement("span");
     name.className = "tailor-checklist-name";
-    name.textContent = m.label;
-    if (m.hint) {
+    const label = m.id === "back_jacket" ? "Jacket Length" : m.label;
+    name.textContent = label;
+    const how = m.hint || (typeof MEAS_WIZ_HINTS !== "undefined" && MEAS_WIZ_HINTS[m.id]);
+    if (how) {
       const hint = document.createElement("small");
-      hint.textContent = m.hint;
+      hint.textContent = how;
       name.appendChild(hint);
     }
-    lines.push(m.label +
+    const blank = document.createElement("span");
+    blank.className = "tc-blank";
+    blank.textContent = "___ cm";
+    li.append(num, name, blank);
+    list.appendChild(li);
+    lines.push(n + ". " + label +
+      (m.id === "back_jacket" ? " (back of the collar seam down to the hem)" : "") +
       (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") +
       (m.id === "sleeve_length" || m.id === "body_sleeve" ? " (shoulder to wrist, NOT from the neck)" : "") +
-      (m.id === "leg_length" ? " (outseam: top of waistband to hem)" : "") + ": ");
-    li.append(name);
-    list.appendChild(li);
+      (m.id === "leg_length" ? " (outseam: top of waistband to hem)" : "") + ": ____ cm");
   });
-  box.querySelector(".tailor-checklist-foot").textContent = "ALL MEASUREMENTS IN CENTIMETERS.";
   lines.push("", "ALL MEASUREMENTS IN CENTIMETERS.");
   const text = lines.join("\n");
-  const copyBtn = box.querySelector(".tailor-checklist-copy");
+  const copyBtn = box.querySelector(".tc-copy");
+  const copied = box.querySelector(".tc-copied");
   copyBtn.addEventListener("click", async () => {
     let ok = false;
     try {
@@ -8010,9 +8021,16 @@ function renderTailorChecklist() {
       }
       ta.remove();
     }
-    copyBtn.textContent = ok ? "Copied" : "Couldn\u2019t copy";
-    setTimeout(() => (copyBtn.textContent = "Copy list"), 2000);
+    copyBtn.textContent = ok ? "\u2713 Copied" : "Couldn\u2019t copy";
+    copied.hidden = !ok;
+    setTimeout(() => (copyBtn.textContent = "Copy list"), 2500);
   });
+  const shareBtn = box.querySelector(".tc-share");
+  if (shareBtn) {
+    shareBtn.addEventListener("click", () => {
+      navigator.share({ title: SITE_BRAND.name + " suit measurements", text }).catch(() => {});
+    });
+  }
 }
 
 function initTailorFinder() {

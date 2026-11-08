@@ -2760,5 +2760,22 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 .meas-pro-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .meas-pro-btn{flex:1 1 auto;text-align:center;border:1px solid var(--line);border-radius:999px;padding:11px 14px;font:600 14px 'Inter',sans-serif;color:var(--ivory);text-decoration:none;white-space:nowrap;}
 .meas-pro-btn.primary{flex-basis:100%;background:var(--ivory);color:var(--ink);border-color:var(--ivory);}
-.meas-wiz-page .tailor-checklist{margin-top:0;}
+.meas-wiz-page .tailor-checklist{margin-top:0;padding-top:0;border-top:none;}
 .meas-wiz-page .tailor-checklist-steps{display:none;}
+/* Tailor list ("At the tailor"): big copy button + a clear numbered sheet */
+.tc-actions{display:flex;gap:10px;margin-bottom:10px;}
+.tc-copy{flex:1;justify-content:center;border-radius:999px;font-size:16px;padding:16px 20px;}
+.tc-share{flex:0 0 auto;border:1.5px solid var(--ivory);border-radius:999px;background:none;color:var(--ivory);font:600 15px 'Inter',sans-serif;padding:0 22px;cursor:pointer;}
+.tc-copied{margin:0 0 12px;font-size:14px;color:var(--brass);font-weight:600;}
+.tc-sheet{border:1.5px solid var(--brass);border-radius:16px;background:var(--surface);padding:18px 18px 10px;}
+.tc-title{margin:0 0 8px;font:600 12px 'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--brass);}
+.tc-note{margin:0 0 6px;font-size:15px;line-height:1.5;color:var(--ivory);}
+.tc-note b{font-weight:700;}
+.tc-list.tailor-checklist-list{display:block;margin:8px 0 0;}
+.tc-list .tailor-checklist-part{margin:16px 0 2px;font-size:12px;}
+.tc-list .tailor-checklist-item{display:grid;grid-template-columns:26px 1fr auto;align-items:start;gap:10px;padding:12px 0;font-size:16px;}
+.tc-list .tailor-checklist-item:last-child{border-bottom:none;}
+.tc-num{width:24px;height:24px;border-radius:50%;background:rgba(var(--brass-rgb),0.15);color:var(--brass);font:700 12.5px/24px 'Inter',sans-serif;text-align:center;}
+.tc-list .tailor-checklist-name{font-weight:600;}
+.tc-list .tailor-checklist-name small{font-weight:400;font-size:13px;margin-top:3px;}
+.tc-blank{color:var(--ivory-dim);font-size:15px;white-space:nowrap;padding-top:2px;}
