@@ -2664,8 +2664,10 @@ html[data-brand="sw"] .level-img{filter:invert(1) sepia(.35);mix-blend-mode:scre
    buttons so nobody thinks Advanced costs more. */
 .level-price-note{max-width:460px;width:100%;margin:14px 0 0;padding:8px 12px;border:1px solid rgba(var(--brass-rgb),0.55);border-radius:12px;background:rgba(var(--brass-rgb),0.08);font-size:13.5px;line-height:1.35;color:var(--ivory);}
 .level-price-note b{font-weight:600;color:var(--brass);}
-.level-picker .level-price-note + .level-back{margin-top:4px;}
-@media(max-width:700px){.level-price-note{margin-top:10px;padding:7px 10px;font-size:12.5px;}}
+/* Sits under the heading, above the buttons (Daniel, 2026-11-08). */
+.level-picker .level-price-note + .level-grid{margin-top:14px;}
+@media(max-width:700px){.level-price-note{margin-top:10px;padding:7px 10px;font-size:12.5px;}.level-picker .level-price-note + .level-grid{margin-top:12px;}}
+@media(max-width:700px) and (max-height:620px){.level-picker .level-price-note + .level-grid{margin-top:8px;}}
 /* Small phones (iPhone SE): tighten the buttons so the note and Back still
    fit on one screen. */
 @media(max-width:700px) and (max-height:620px){
