@@ -236,16 +236,24 @@ html[data-brand="scott"] #designPreview.suit-preview.design-preview,
 html[data-brand="scott"] .nav-cart-dropdown,
 html[data-brand="scott"] #designPreview .suit-preview-card.reviewing .suit-preview-media > a{background:#FBF8F4;}
 
-/* Start Designing buttons in gold (Daniel, 2026-11-08: "I don't like it
-   black, change the color to something that matches the website
-   better"). The hero, How It Works, FAQ and mock trust-section Start
-   Designing pills use the site's brass gold with near-black text (about
-   6:1 contrast); other .btn-primary buttons keep the dark look. */
+/* Start Designing buttons: clear pill with a gold outline (Daniel,
+   2026-11-08: first "I don't like it black", then "change the pill to be
+   clear with gold outline"). Transparent fill, 1.5px brass edge and dark
+   text (gold text on the light beige would be too faint to read); on
+   hover (mouse only) it fills with a light gold tint. Covers the hero,
+   How It Works, FAQ and mock trust-section Start Designing pills; other
+   .btn-primary buttons keep the dark look. */
 html[data-brand="scott"] #heroStartDesigningBtn,
 html[data-brand="scott"] .how-it-works-cta,
 html[data-brand="scott"] .mock-trust-cta,
-html[data-brand="scott"] .faq-page .cta{background:linear-gradient(180deg,#C9A467 0%,#B08D57 100%);color:#161310;font-weight:700;border:1px solid rgba(140,108,60,0.55);box-shadow:inset 0 1px 0 rgba(255,255,255,0.35),0 6px 18px rgba(var(--brass-rgb),0.30);}
+html[data-brand="scott"] .faq-page .cta{background:transparent;color:#1E1A16;font-weight:700;border:1.5px solid var(--brass);box-shadow:none;}
+html[data-brand="scott"] #heroStartDesigningBtn span,
+html[data-brand="scott"] .how-it-works-cta span,
+html[data-brand="scott"] .mock-trust-cta span,
+html[data-brand="scott"] .faq-page .cta span{color:var(--brass);}
+@media(hover:hover){
 html[data-brand="scott"] #heroStartDesigningBtn:hover,
 html[data-brand="scott"] .how-it-works-cta:hover,
 html[data-brand="scott"] .mock-trust-cta:hover,
-html[data-brand="scott"] .faq-page .cta:hover{background:linear-gradient(180deg,#BE985B 0%,#A07E4A 100%);color:#161310;}
+html[data-brand="scott"] .faq-page .cta:hover{background:rgba(var(--brass-rgb),0.14);color:#1E1A16;}
+}
