@@ -2779,3 +2779,5 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 .tc-list .tailor-checklist-name{font-weight:600;}
 .tc-list .tailor-checklist-name small{font-weight:400;font-size:13px;margin-top:3px;}
 .tc-blank{color:var(--ivory-dim);font-size:15px;white-space:nowrap;padding-top:2px;}
+.meas-hub-other{display:block;margin:14px auto 0;background:none;border:none;padding:0;font:500 14px 'Inter',sans-serif;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.meas-hub-other[hidden]{display:none;}
