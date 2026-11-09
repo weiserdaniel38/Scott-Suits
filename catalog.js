@@ -2026,6 +2026,37 @@ const NEW_FABRICS = [
   // (Daniel: "Anything with shatnez remove"). Never add a wool + linen fabric.
   { name: "26VB043.DAY9091", displayName: "Plum", img: "./assets/jacket-fabric-26vb043-day9091.jpg", hex: "#431a37", pattern: "Solid", family: "Purple", palette: "Plum", tier: 3, description: "Plum solid in pure wool from Vitale Barberis Canonico, Italy. A rich tone for fall and winter." }, // $45/m
   { name: "26VB042.DAY9090", displayName: "Rose Pink", img: "./assets/jacket-fabric-26vb042-day9090.jpg", hex: "#a9517f", pattern: "Solid", family: "Pink", palette: "Dusty Rose", tier: 3, description: "Rose pink solid in pure wool from Vitale Barberis Canonico, Italy. A bold color for spring and summer occasions." }, // $45/m
+  // Signature Flannel book (Daniel, 2026-11-09: "add all the fabrics" from
+  // this book): every in-stock fabric not already on the site. Not all pure
+  // wool: flannels are wool/cashmere/silk, Camel Hair is camel hair/silk.
+  // No linen in any of them (no shatnez).
+  { name: "26SU072.DGG1129", displayName: "Taupe Glen Check", img: "./assets/jacket-fabric-26su072-dgg1129.jpg", hex: "#6b6056", pattern: "Plaid", family: "Brown Pattern", palette: "Taupe", tier: 1, description: "Taupe glen check in Super 110s pure wool. Versatile for any season." }, // $23.5/m
+  { name: "26SU075.DBV406A", displayName: "Espresso Windowpane", img: "./assets/jacket-fabric-26su075-dbv406a.jpg", hex: "#3a312a", pattern: "Plaid", family: "Brown Pattern", palette: "Chocolate Brown", tier: 0, description: "Espresso windowpane check in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
+  { name: "26SU080.DBV398A", displayName: "Light Taupe", img: "./assets/jacket-fabric-26su080-dbv398a.jpg", hex: "#7f7268", pattern: "Solid", family: "Brown", palette: "Taupe", tier: 0, description: "Light taupe solid in Super 100s pure wool. Easy and relaxed for daytime." }, // $17/m
+  { name: "26SU081.DBV399A", displayName: "Rich Dark Chocolate", img: "./assets/jacket-fabric-26su081-dbv399a.jpg", hex: "#382c25", pattern: "Solid", family: "Brown", palette: "Chocolate Brown", tier: 0, description: "Dark chocolate solid in Super 100s pure wool. Year-round, from business to evening." }, // $17/m
+  { name: "26SU082.DBV395A", displayName: "Pale Gray", img: "./assets/jacket-fabric-26su082-dbv395a.jpg", hex: "#868789", pattern: "Solid", family: "Gray", palette: "Light Grey", tier: 0, description: "Pale gray solid in Super 100s pure wool. Light and fresh for daytime." }, // $17/m
+  { name: "26SU089.DZZ0004", displayName: "Olive Glen Check", img: "./assets/jacket-fabric-26su089-dzz0004.jpg", hex: "#48463d", pattern: "Plaid", family: "Green Pattern", palette: "Forest Green", tier: 1, description: "Olive glen check in Super 100s pure wool. A country classic for fall and winter." }, // $25/m
+  { name: "26SU093.DBV6377", displayName: "Dark Brown Check", img: "./assets/jacket-fabric-26su093-dbv6377.jpg", hex: "#2e2929", pattern: "Plaid", family: "Brown Pattern", palette: "Chocolate Brown", tier: 1, description: "Dark brown check in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU095.DZZ0010", displayName: "Olive Stripe", img: "./assets/jacket-fabric-26su095-dzz0010.jpg", hex: "#33342d", pattern: "Pinstripe", family: "Green Pattern", palette: "Forest Green", tier: 1, description: "Olive stripe in Super 100s pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU099.DEE2023", displayName: "Classic Camel", img: "./assets/jacket-fabric-26su099-dee2023.jpg", hex: "#916b3f", pattern: "Solid", family: "Brown", palette: "Camel", tier: 1, description: "Camel solid in pure wool. A bold, warm color for fall." }, // $25/m
+  { name: "26SU100.DEE2024", displayName: "Saddle Brown", img: "./assets/jacket-fabric-26su100-dee2024.jpg", hex: "#523521", pattern: "Solid", family: "Brown", palette: "Cognac", tier: 1, description: "Saddle brown solid in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU101.DEE2025", displayName: "Cognac Brown", img: "./assets/jacket-fabric-26su101-dee2025.jpg", hex: "#3f250e", pattern: "Solid", family: "Brown", palette: "Cognac", tier: 1, description: "Cognac brown solid in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU102.DEE2027", displayName: "Bottle Green", img: "./assets/jacket-fabric-26su102-dee2027.jpg", hex: "#1d251a", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 1, description: "Bottle green solid in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU105.DBV3343", displayName: "Deep Espresso", img: "./assets/jacket-fabric-26su105-dbv3343.jpg", hex: "#28201c", pattern: "Solid", family: "Brown", palette: "Chocolate Brown", tier: 1, description: "Espresso solid in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU106.DAV7773", displayName: "Deep Forest Green", img: "./assets/jacket-fabric-26su106-dav7773.jpg", hex: "#1c211a", pattern: "Solid", family: "Green", palette: "Forest Green", tier: 1, description: "Forest green solid in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU109.DBV5301", displayName: "Heathered Blue", img: "./assets/jacket-fabric-26su109-dbv5301.jpg", hex: "#222c44", pattern: "Solid", family: "Navy", palette: "Navy", tier: 1, description: "Heathered blue solid in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU115.DBV387A", displayName: "Tan Herringbone", img: "./assets/jacket-fabric-26su115-dbv387a.jpg", hex: "#736249", pattern: "Herringbone", family: "Brown Pattern", palette: "Taupe", tier: 1, description: "Tan herringbone in heavy pure wool. Warm and soft for fall and winter." }, // $20/m
+  { name: "26SU116.DBV388A", displayName: "Chocolate Herringbone", img: "./assets/jacket-fabric-26su116-dbv388a.jpg", hex: "#443122", pattern: "Herringbone", family: "Brown Pattern", palette: "Chocolate Brown", tier: 1, description: "Chocolate herringbone in heavy pure wool. Warm and soft for fall and winter." }, // $20/m
+  { name: "26SU117.DBV389A", displayName: "Olive Herringbone", img: "./assets/jacket-fabric-26su117-dbv389a.jpg", hex: "#2c3226", pattern: "Herringbone", family: "Green Pattern", palette: "Forest Green", tier: 1, description: "Olive herringbone in heavy pure wool. Warm and soft for fall and winter." }, // $20/m
+  { name: "26SU119.DBV6372", displayName: "Rust Houndstooth", img: "./assets/jacket-fabric-26su119-dbv6372.jpg", hex: "#736151", pattern: "Plaid", family: "Brown Pattern", palette: "Taupe", tier: 1, description: "Rust and tan houndstooth in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU120.DBV5579", displayName: "Black & White Houndstooth", img: "./assets/jacket-fabric-26su120-dbv5579.jpg", hex: "#6e6e6b", pattern: "Plaid", family: "Black Pattern", palette: "Smoke", tier: 1, description: "Black and white houndstooth in pure wool. A bold classic for any season." }, // $25/m
+  { name: "26SU121.DBV6371", displayName: "Brown Houndstooth", img: "./assets/jacket-fabric-26su121-dbv6371.jpg", hex: "#756b66", pattern: "Plaid", family: "Brown Pattern", palette: "Taupe", tier: 1, description: "Brown houndstooth in pure wool. Warm and soft for fall and winter." }, // $25/m
+  { name: "26SU123.DBV6564", displayName: "Camel Hair", img: "./assets/jacket-fabric-26su123-dbv6564.jpg", hex: "#835c35", pattern: "Solid", family: "Brown", palette: "Camel", tier: 2, description: "Camel solid in camel hair and silk. Soft, warm and rich for fall and winter." }, // $30/m
+  { name: "26SU124.DBV6565", displayName: "Black Camel Hair", img: "./assets/jacket-fabric-26su124-dbv6565.jpg", hex: "#1e1e1e", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Black solid in camel hair and silk. Soft, warm and rich for fall and winter." }, // $30/m
+  { name: "26SU125.DBV5319", displayName: "Charcoal Flannel", img: "./assets/jacket-fabric-26su125-dbv5319.jpg", hex: "#252628", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 2, description: "Charcoal flannel in wool with cashmere and silk. Warm and soft for fall and winter." }, // $33/m
+  { name: "26SU126.DBV5316", displayName: "Midnight Blue Flannel", img: "./assets/jacket-fabric-26su126-dbv5316.jpg", hex: "#1b1d2a", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Midnight blue flannel in wool with cashmere and silk. Warm and soft for fall and winter." }, // $33/m
+  { name: "26SU127.DBV5315", displayName: "Navy Flannel", img: "./assets/jacket-fabric-26su127-dbv5315.jpg", hex: "#14161d", pattern: "Solid", family: "Navy", palette: "Navy", tier: 2, description: "Navy flannel in wool with cashmere and silk. Warm and soft for fall and winter." }, // $33/m
+  { name: "26SU128.DBV5314", displayName: "Black Flannel", img: "./assets/jacket-fabric-26su128-dbv5314.jpg", hex: "#151714", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 2, description: "Black flannel in wool with cashmere and silk. Warm and soft for fall and winter." }, // $33/m
 ];
 // Color headings inside the New Fabrics section, in order, each listing the
 // FABRIC_PALETTE colors it covers.
@@ -3175,6 +3206,33 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26VB104.DAY9291": { sprite: "./assets/fabric-zoom-26vb104-day9291.avif", col: 0, row: 0, tile: 1200 },
   "26VB105.DAY9292": { sprite: "./assets/fabric-zoom-26vb105-day9292.avif", col: 0, row: 0, tile: 1200 },
   "26VB043.DAY9091": { sprite: "./assets/fabric-zoom-26vb043-day9091.avif", col: 0, row: 0, tile: 1200 },
+  "26SU072.DGG1129": { sprite: "./assets/fabric-zoom-26su072-dgg1129.avif", col: 0, row: 0, tile: 1200 },
+  "26SU075.DBV406A": { sprite: "./assets/fabric-zoom-26su075-dbv406a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU080.DBV398A": { sprite: "./assets/fabric-zoom-26su080-dbv398a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU081.DBV399A": { sprite: "./assets/fabric-zoom-26su081-dbv399a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU082.DBV395A": { sprite: "./assets/fabric-zoom-26su082-dbv395a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU089.DZZ0004": { sprite: "./assets/fabric-zoom-26su089-dzz0004.avif", col: 0, row: 0, tile: 1200 },
+  "26SU093.DBV6377": { sprite: "./assets/fabric-zoom-26su093-dbv6377.avif", col: 0, row: 0, tile: 1200 },
+  "26SU095.DZZ0010": { sprite: "./assets/fabric-zoom-26su095-dzz0010.avif", col: 0, row: 0, tile: 1200 },
+  "26SU099.DEE2023": { sprite: "./assets/fabric-zoom-26su099-dee2023.avif", col: 0, row: 0, tile: 1200 },
+  "26SU100.DEE2024": { sprite: "./assets/fabric-zoom-26su100-dee2024.avif", col: 0, row: 0, tile: 1200 },
+  "26SU101.DEE2025": { sprite: "./assets/fabric-zoom-26su101-dee2025.avif", col: 0, row: 0, tile: 1200 },
+  "26SU102.DEE2027": { sprite: "./assets/fabric-zoom-26su102-dee2027.avif", col: 0, row: 0, tile: 1200 },
+  "26SU105.DBV3343": { sprite: "./assets/fabric-zoom-26su105-dbv3343.avif", col: 0, row: 0, tile: 1200 },
+  "26SU106.DAV7773": { sprite: "./assets/fabric-zoom-26su106-dav7773.avif", col: 0, row: 0, tile: 1200 },
+  "26SU109.DBV5301": { sprite: "./assets/fabric-zoom-26su109-dbv5301.avif", col: 0, row: 0, tile: 1200 },
+  "26SU115.DBV387A": { sprite: "./assets/fabric-zoom-26su115-dbv387a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU116.DBV388A": { sprite: "./assets/fabric-zoom-26su116-dbv388a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU117.DBV389A": { sprite: "./assets/fabric-zoom-26su117-dbv389a.avif", col: 0, row: 0, tile: 1200 },
+  "26SU119.DBV6372": { sprite: "./assets/fabric-zoom-26su119-dbv6372.avif", col: 0, row: 0, tile: 1200 },
+  "26SU120.DBV5579": { sprite: "./assets/fabric-zoom-26su120-dbv5579.avif", col: 0, row: 0, tile: 1200 },
+  "26SU121.DBV6371": { sprite: "./assets/fabric-zoom-26su121-dbv6371.avif", col: 0, row: 0, tile: 1200 },
+  "26SU123.DBV6564": { sprite: "./assets/fabric-zoom-26su123-dbv6564.avif", col: 0, row: 0, tile: 1200 },
+  "26SU124.DBV6565": { sprite: "./assets/fabric-zoom-26su124-dbv6565.avif", col: 0, row: 0, tile: 1200 },
+  "26SU125.DBV5319": { sprite: "./assets/fabric-zoom-26su125-dbv5319.avif", col: 0, row: 0, tile: 1200 },
+  "26SU126.DBV5316": { sprite: "./assets/fabric-zoom-26su126-dbv5316.avif", col: 0, row: 0, tile: 1200 },
+  "26SU127.DBV5315": { sprite: "./assets/fabric-zoom-26su127-dbv5315.avif", col: 0, row: 0, tile: 1200 },
+  "26SU128.DBV5314": { sprite: "./assets/fabric-zoom-26su128-dbv5314.avif", col: 0, row: 0, tile: 1200 },
   "26VB042.DAY9090": { sprite: "./assets/fabric-zoom-26vb042-day9090.avif", col: 0, row: 0, tile: 1200 },
   "26VB109.DAY9293": { sprite: "./assets/fabric-zoom-26vb109-day9293.avif", col: 0, row: 0, tile: 1200 },
   "26VB111.DAY9294": { sprite: "./assets/fabric-zoom-26vb111-day9294.avif", col: 0, row: 0, tile: 1200 },
