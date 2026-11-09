@@ -1097,9 +1097,9 @@
        back -- useful for cross-checking a fabric against the supplier sheet
        without leaving the designer. Checked state is remembered in
        localStorage like the hide/show toggle above. -->
-  <label class="qa-nav-checkbox" for="qaRawFabricNamesToggle" title="Show fabrics by their original supplier code instead of the customer-facing name">
+  <label class="qa-nav-checkbox" for="qaRawFabricNamesToggle" title="Show fabrics and thread colors by their factory code instead of the customer-facing name">
     <input type="checkbox" id="qaRawFabricNamesToggle">
-    Raw Fabric Codes
+    Raw Codes
   </label>
   <!-- Admin only: shows what each suit really costs the shop (factory
        making charge + fabric + card fee) and what it leaves as profit, on
@@ -1121,7 +1121,7 @@
 <script src="./catalog.js?v=20261109flannel"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261109measaccount"></script>
+<script src="./main.js?v=20261109rawthread"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>
