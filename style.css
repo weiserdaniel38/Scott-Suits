@@ -2791,7 +2791,7 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 .tc-steps span{display:block;font-size:14.5px;color:var(--ivory-dim);}
 .tc-actions{display:flex;gap:10px;margin-bottom:10px;}
 .tc-copy{flex:1;justify-content:center;border-radius:999px;font-size:16px;padding:16px 20px;}
-.tc-share{flex:0 0 auto;border:1.5px solid var(--ivory);border-radius:999px;background:none;color:var(--ivory);font:600 15px 'Inter',sans-serif;padding:0 22px;cursor:pointer;}
+.tc-print{flex:0 0 auto;border:1.5px solid var(--ivory);border-radius:999px;background:none;color:var(--ivory);font:600 15px 'Inter',sans-serif;padding:0 22px;cursor:pointer;}
 .tc-copied{margin:0 0 12px;font-size:14px;color:var(--brass);font-weight:600;}
 .tc-sheet{border:1.5px solid var(--brass);border-radius:16px;background:var(--surface);padding:18px 18px 10px;}
 .tc-title{margin:0 0 8px;font:600 12px 'Inter',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--brass);}
@@ -2865,3 +2865,28 @@ html.suit-pic-viewer-open,html.suit-pic-viewer-open body{overflow:hidden;}
 /* Fabric step hint: tap a tile to see the real cloth (2026-11-08). */
 .fabric-tap-hint{display:flex;align-items:center;gap:8px;margin:0 0 14px;color:var(--ivory);font-size:14.5px;font-weight:600;line-height:1.4;}
 .fabric-tap-hint svg{flex:none;color:var(--brass);}
+
+/* Print the tailor's measurement list (replaces Share, Daniel 2026-11-09).
+   printTailorSheet() in main.js adds #tcPrintSheet and body.tc-printing. */
+#tcPrintSheet{display:none;}
+@media print{
+  html:has(body.tc-printing),body.tc-printing{background:#fff!important;}
+  body.tc-printing::before,body.tc-printing::after,html:has(body.tc-printing)::before,html:has(body.tc-printing)::after{display:none!important;}
+  body.tc-printing > *:not(#tcPrintSheet){display:none!important;}
+  body.tc-printing #tcPrintSheet{display:block!important;color:#000;font-family:'Inter',Arial,sans-serif;}
+  #tcPrintSheet *{color:#000!important;background:none!important;box-shadow:none!important;}
+  #tcPrintSheet .tcp-head{border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:14px;}
+  #tcPrintSheet .tcp-brand{margin:0;font:600 22px 'Cormorant Garamond',Georgia,serif;letter-spacing:1px;}
+  #tcPrintSheet .tcp-sub{margin:2px 0 0;font-size:13px;letter-spacing:2px;text-transform:uppercase;}
+  #tcPrintSheet .tc-sheet{border:none;padding:0;}
+  #tcPrintSheet .tc-title{font-size:12px;margin:0 0 6px;}
+  #tcPrintSheet .tc-note{font-size:13px;margin:0 0 6px;}
+  #tcPrintSheet .tailor-checklist-part{font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin:10px 0 0;padding:0 0 4px;border-bottom:1px solid #000;list-style:none;}
+  #tcPrintSheet .tailor-checklist-item{display:grid;grid-template-columns:24px 1fr 120px;gap:10px;align-items:start;padding:6px 0;border-bottom:1px solid #bbb;font-size:14px;break-inside:avoid;list-style:none;}
+  #tcPrintSheet .tc-num{background:none!important;border:1px solid #000;font-size:11px;width:20px;height:20px;line-height:20px;}
+  #tcPrintSheet .tailor-checklist-name small{display:block;font-size:11px;color:#444!important;}
+  #tcPrintSheet .tc-blank{font-size:0!important;display:flex;justify-content:flex-end;align-items:flex-end;gap:5px;align-self:end;}
+  #tcPrintSheet .tc-blank::before{content:"";width:85px;height:18px;border-bottom:1px solid #000;}
+  #tcPrintSheet .tc-blank::after{content:"cm";font-size:13px;}
+  @page{margin:12mm;}
+}
