@@ -1127,7 +1127,7 @@ function fixedRules(spec: string, buttonPhoto = false): string {
     rules.push("- MOST IMPORTANT: " + cuffCountText(spec) + ", in the cuff close-up and on both sleeves in every view.");
   }
   if (/^Facing Style: No Lining/m.test(spec)) {
-    rules.push("- The jacket is UNLINED: wherever the inside shows (neck opening, folded-open front), draw the suit fabric facings and neat bound seams, with no lining fabric.");
+    rules.push("- The jacket is UNLINED: wherever the inside shows (neck opening, folded-open front), draw the suit fabric facings and neat bound seams, with no lining fabric; any inside pockets sit on the fabric facings.");
   }
   if (liningMatchesFabric(spec)) {
     rules.push("- The lining is " + PLAIN_MATCH_LINING + ", everywhere the inside of the jacket shows.");

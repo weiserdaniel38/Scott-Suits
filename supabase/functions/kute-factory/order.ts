@@ -263,9 +263,11 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     // Lining style and facing.
     const facing = s(row.facing_style);
     if (facing === "No Lining Construction") {
-      // No lining with piping, inner facing F with edge; the factory only
-      // accepts it unconstructed and with no body or sleeve lining.
-      jc.push("AAWY", "0866", "0706");
+      // No lining with piping, unconstructed, no body or sleeve lining and
+      // no facing code: our account has no inner facing F (0866/0706, "You
+      // do not have a specified process") and AAWY conflicts with facings
+      // A (0701) and Italian (0791) (test drafts, 2026-11-09).
+      jc.push("AAWY");
       if (s(row.jacket_construction) !== "Unconstructed") {
         for (const c of ["00C1", "000A"]) { const i = jc.indexOf(c); if (i !== -1) jc.splice(i, 1); }
         if (jc.indexOf("00D1") === -1) jc.push("00D1");
