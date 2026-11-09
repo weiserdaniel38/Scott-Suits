@@ -6957,6 +6957,13 @@ var chosenTailors = [];
 // Who measured the customer, saved with the suit and written into the
 // order text: the chosen partner tailor(s), or "Customer's own tailor".
 var measuredBy = null;
+// "Get measured first" on the home page: the measurements pages open on
+// their own before any suit is designed. While pending (until design
+// starts), the values live only in localStorage under MEASURE_FIRST_KEY
+// (60 days), not in the tab's draft, so the home page stays the home page.
+var measureFirst = false; // the wizard was opened from the home page
+var measureFirstPending = false; // measured first, not designing yet
+var openMeasureFirst = null; // set by initMeasureWizard
 var tailorChooseSync = null;
 function refreshMeasHub() {}
 (function initMeasureWizard() {
@@ -7045,6 +7052,7 @@ function refreshMeasHub() {}
     if (route === "pro") pages.push("pro-bring", "pro-ready");
     if (route) list().forEach((m) => pages.push(m.id));
     if (route) pages.push("review");
+    if (route && measureFirst) pages.push("saved");
   }
 
   // Puts the estimator panel, tailor finder panel and tailor checklist
@@ -7089,7 +7097,7 @@ function refreshMeasHub() {}
     const ms = list();
     const qIndex = ms.findIndex((m) => m.id === key);
     countEl.textContent = qIndex > -1 ? qIndex + 1 + " of " + ms.length : key === "review" ? "Review" : "";
-    progFill.style.width = (qIndex > -1 ? (qIndex / ms.length) * 100 : key === "review" ? 100 : 0) + "%";
+    progFill.style.width = (qIndex > -1 ? (qIndex / ms.length) * 100 : key === "review" || key === "saved" ? 100 : 0) + "%";
     backBtn.style.visibility = idx === 0 ? "hidden" : "visible";
     nextBtn.hidden = false;
 
@@ -7209,6 +7217,17 @@ function refreshMeasHub() {}
       return;
     }
 
+    if (key === "saved") {
+      page.append(
+        el("p", "meas-wiz-eyebrow", "Saved"),
+        el("h2", "meas-wiz-q", "Your measurements are saved"),
+        el("p", "meas-wiz-hint", "Kept on this phone for 60 days" + (currentUser ? " and in your account" : "") +
+          ". They'll be filled in when you design your suit.")
+      );
+      setNext("Start Designing &rarr;", true);
+      return;
+    }
+
     if (key === "review") {
       const missing = ms.filter((m) => !isDone(m));
       page.append(
@@ -7294,6 +7313,11 @@ function refreshMeasHub() {}
 
   function go(step, force) {
     const key = pages[idx];
+    if (step > 0 && key === "saved") {
+      close();
+      startDesigning();
+      return;
+    }
     if (step > 0 && key === "pro" && !force && !chosenTailors.length) return;
     if (step > 0 && key === "pro") {
       measuredBy = chosenTailors.length
@@ -7309,6 +7333,12 @@ function refreshMeasHub() {}
       const firstMissing = list().find((m) => !isDone(m));
       if (firstMissing) {
         idx = pages.indexOf(firstMissing.id);
+        render();
+        return;
+      }
+      if (measureFirst) {
+        saveMeasureFirst(true);
+        idx = pages.indexOf("saved");
         render();
         return;
       }
@@ -7360,6 +7390,11 @@ function refreshMeasHub() {}
     setTimeout(() => { if (!measWizOpen) wiz.hidden = true; }, 250);
     saveDraft();
     refreshMeasHub();
+    if (measureFirst) {
+      measureFirst = false;
+      buildPages(); // drops the "saved" page for the next, normal opening
+      updateMeasureFirstBtn();
+    }
   }
 
   backBtn.addEventListener("click", () => go(-1));
@@ -7373,6 +7408,13 @@ function refreshMeasHub() {}
     }
   });
   startBtn.addEventListener("click", () => open());
+  // "Get measured first" (home page button and step 3 link).
+  openMeasureFirst = function () {
+    if (measWizOpen) return;
+    measureFirst = true;
+    if (!hasStartedDesigning) measureFirstPending = true;
+    open();
+  };
   // With a tailor chosen, the start card goes straight to entering their
   // numbers; this link goes back to the "How would you like to be measured?" page.
   const otherWayBtn = el("button", "meas-hub-other", "Choose a different way to measure");
@@ -10619,6 +10661,79 @@ if (adminNoPayBtn) {
 const DRAFT_STORAGE_KEY = "scottSuitsDraftOrder";
 // The tailor-route copy of the draft (localStorage, kept 60 days).
 const TAILOR_RESUME_KEY = "scottSuitsTailorResume";
+// Measurements taken from the home page's "Get measured first" (60 days).
+const MEASURE_FIRST_KEY = "scottSuitsMeasureFirst";
+const MEASURE_FIRST_DAYS = 60;
+function readMeasureFirst() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MEASURE_FIRST_KEY) || "null");
+    if (!saved) return null;
+    if (Date.now() - (saved.savedAt || 0) > MEASURE_FIRST_DAYS * 24 * 3600 * 1000) {
+      localStorage.removeItem(MEASURE_FIRST_KEY);
+      return null;
+    }
+    return saved;
+  } catch (e) {
+    return null;
+  }
+}
+function hasMeasureFirst() {
+  return !!readMeasureFirst();
+}
+// Every measurement field with a value, plus the mode (finished/body).
+function saveMeasureFirst(toProfile) {
+  const values = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && el.value !== "") values[m.id] = el.value;
+  });
+  const hasValues = Object.keys(values).length > 0;
+  Object.assign(values, measureExtras());
+  try {
+    if (hasValues || measuredBy) {
+      localStorage.setItem(MEASURE_FIRST_KEY, JSON.stringify({ savedAt: Date.now(), values: values, measuredBy: measuredBy || null }));
+    }
+  } catch (e) {
+    // storage unavailable: they stay filled in for this visit only
+  }
+  if (toProfile && hasValues && currentUser) saveProfileMeasurements(values);
+  updateMeasureFirstBtn();
+}
+// A new visit with no design of its own gets the measurements back.
+function applyMeasureFirst() {
+  const saved = readMeasureFirst();
+  if (!saved) return;
+  const anyFilled = activeMeasurements().some((m) => {
+    const el = document.getElementById("m_" + m.id);
+    return el && el.value !== "";
+  });
+  if (anyFilled) return;
+  const values = saved.values || {};
+  applyMeasureExtras(values);
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && values[m.id] !== undefined && values[m.id] !== null) el.value = values[m.id];
+  });
+  if (!measuredBy && saved.measuredBy) measuredBy = saved.measuredBy;
+  if (typeof refreshMeasHub === "function") refreshMeasHub();
+}
+// The home page button says where they are: not started, waiting on the
+// tailor's numbers, or done.
+function updateMeasureFirstBtn() {
+  const saved = readMeasureFirst();
+  const vals = (saved && saved.values) || {};
+  const any = MEASUREMENTS.some((m) => vals[m.id] !== undefined && vals[m.id] !== "");
+  const label = any ? "Review my measurements" : saved && saved.measuredBy ? "Enter my tailor's numbers" : "Get measured first";
+  const btn = document.getElementById("heroMeasureFirstBtn");
+  if (btn) {
+    const txt = btn.querySelector(".hero-measure-label");
+    if (txt) txt.textContent = label;
+  }
+}
+function getMeasuredFirst() {
+  if (typeof openMeasureFirst === "function") openMeasureFirst();
+}
+window.getMeasuredFirst = getMeasuredFirst;
 // A new tab with no draft of its own picks up a customer who chose a tailor
 // and left to get measured: their suit comes back on the Measurements step.
 function resumeTailorDraft() {
@@ -10649,6 +10764,11 @@ try {
 
 function saveDraft() {
   if (typeof refreshMeasHub === "function" && !measWizOpen) refreshMeasHub();
+  if (measureFirstPending) {
+    saveMeasureFirst(false);
+    return;
+  }
+  if (hasMeasureFirst()) saveMeasureFirst(false);
   try {
     const measurements = {};
     activeMeasurements().forEach((m) => {
@@ -10720,6 +10840,7 @@ function saveDraft() {
 function clearDraft() {
   try {
     localStorage.removeItem(TAILOR_RESUME_KEY);
+    localStorage.removeItem(MEASURE_FIRST_KEY);
   } catch (e) {
     // ignore
   }
@@ -10848,9 +10969,12 @@ function updateNavActionButtons() {
   // from anywhere), so it simply disappears once design has actually started
   // rather than swapping to something else.
   if (heroStartDesigningBtn) heroStartDesigningBtn.hidden = hasStartedDesigning;
+  const heroMeasureFirstBtn = document.getElementById("heroMeasureFirstBtn");
+  if (heroMeasureFirstBtn) heroMeasureFirstBtn.hidden = hasStartedDesigning;
 }
 
 function markDesignStarted() {
+  measureFirstPending = false;
   if (hasStartedDesigning) return;
   hasStartedDesigning = true;
   document.body.classList.add("designing");
@@ -10870,6 +10994,9 @@ function resetDesignStarted() {
 
 resumeTailorDraft();
 if (restoreDraft()) markDesignStarted();
+else if (hasMeasureFirst()) measureFirstPending = true;
+applyMeasureFirst();
+updateMeasureFirstBtn();
 handlePayPalReturn();
 handleStripeReturn();
 updateAdminEditUI();
