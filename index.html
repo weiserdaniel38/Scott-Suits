@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261109cartlater">
+<link rel="stylesheet" href="./style.css?v=20261109measreq">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261104readable"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -501,12 +501,11 @@
   </div>
   <div class="suit-preview design-preview" id="designPreview" hidden></div>
   <!-- Daniel (2026-11-09): the suit can go in the cart right from here,
-       before measuring. Its measurements are added later, from the cart
-       before paying or from My Account after ordering (see
-       addToCartMeasureLater() in main.js). -->
+       before measuring. Its measurements must be added from the cart or
+       checkout before paying (see addToCartMeasureLater() in main.js). -->
   <div class="preview-cart-choice">
     <button type="button" class="preview-add-cart" id="addToCartFromPreviewBtn">Add to cart</button>
-    <p class="preview-cart-note">Add your measurements later, before you pay or after you order.</p>
+    <p class="preview-cart-note">Add your measurements later, before you pay.</p>
   </div>
   <div class="measure-actions wiz-bar meas-bar">
     <button type="button" class="wiz-back" id="backFromPreviewBtn">&larr; Back</button>
@@ -962,6 +961,8 @@
         <summary><h3>Saved Measurements</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
         <div class="measure-grid" id="profileMeasureGrid"></div>
         <button type="button" class="btn-primary" id="saveProfileMeasurementsBtn">Save Measurements</button>
+        <!-- Daniel (2026-11-09): wipe the saved measurements. Asks first. -->
+        <button type="button" class="meas-reset-link profile-clear-meas" id="clearProfileMeasurementsBtn">Clear measurements</button>
         <p class="account-status-msg" id="profileMeasurementsStatusMsg" hidden></p>
       </details>
 
@@ -1135,7 +1136,7 @@
 <script src="./catalog.js?v=20261109unlined"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261109cartlater"></script>
+<script src="./main.js?v=20261109measreq"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>
