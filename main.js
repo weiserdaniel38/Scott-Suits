@@ -3734,6 +3734,53 @@ if (saveProfileMeasurementsBtn) {
   });
 }
 
+// "Clear measurements" under Saved Measurements (Daniel, 2026-11-09):
+// empties the account's saved measurements and the ones kept on this phone
+// from "Get measured first". Suits already in the cart keep theirs.
+async function clearProfileMeasurements() {
+  if (!currentUser) return false;
+  try {
+    const { error } = await getSupabase().from("profiles").upsert({
+      id: currentUser.id,
+      email: currentUser.email,
+      measurements: {},
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error("Failed to clear profile measurements:", error);
+      return false;
+    }
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+  currentProfile = Object.assign({}, currentProfile, { measurements: {} });
+  try {
+    localStorage.removeItem(MEASURE_FIRST_KEY);
+  } catch (e) {
+    // storage unavailable
+  }
+  if (typeof updateMeasureFirstBtn === "function") updateMeasureFirstBtn();
+  renderProfileMeasureGrid(null);
+  updateAccountUI();
+  return true;
+}
+const clearProfileMeasurementsBtn = document.getElementById("clearProfileMeasurementsBtn");
+if (clearProfileMeasurementsBtn) {
+  clearProfileMeasurementsBtn.addEventListener("click", () => {
+    openEditSuitConfirm(null, {
+      title: "Clear your measurements?",
+      text: "This removes the measurements saved to your account. Suits already in your cart keep theirs.",
+      confirm: "Yes, clear them",
+      cancel: "Keep them",
+      onConfirm: async () => {
+        const ok = await clearProfileMeasurements();
+        showAccountStatus(profileMeasurementsStatusMsg, ok ? "Measurements cleared." : "Something went wrong clearing your measurements. Please try again.");
+      },
+    });
+  });
+}
+
 // "Use my saved measurements" on the real designer's Measurements step --
 // same fill-every-field idea as applyEstimateBtn above (see
 // renderMeasurementFields), just sourced from the signed-in customer's
@@ -7993,9 +8040,7 @@ function renderCheckoutMeasureNotice() {
   };
   const one = cartItems.length === 1;
   box.appendChild(make("h3", "", one ? "Your measurements" : idx.length === 1 ? "1 suit needs measurements" : idx.length + " suits need measurements"));
-  box.appendChild(make("p", "", currentUser || currentIsAdmin
-    ? "Add them now, or after you order from My Account. We start making your suit once we have them."
-    : "Add them now, or sign in to add them after you order. We start making your suit once we have them."));
+  box.appendChild(make("p", "", "Add " + (idx.length > 1 ? "them" : "your measurements") + " before you pay."));
   const list = make("div", "checkout-measure-list");
   idx.forEach((i) => {
     const row = make("div", "checkout-measure-row");
@@ -8018,14 +8063,6 @@ function renderCheckoutMeasureNotice() {
     goToStep(personalInfoSection, suitTypeSection);
   });
   box.appendChild(another);
-  if (!currentUser && !currentIsAdmin) {
-    const signIn = make("button", "checkout-measure-signin", "Sign in to measure later");
-    signIn.type = "button";
-    signIn.addEventListener("click", () =>
-      requireSignIn(signIn, "Sign in so you can add your measurements after you order.", renderCheckoutMeasureNotice)
-    );
-    box.appendChild(signIn);
-  }
 }
 
 // Reads + validates the measurement fields without navigating anywhere;
@@ -10091,14 +10128,15 @@ function collectAndValidateOrderInput() {
     loadCartItemIntoDesigner(reviewAt);
     return null;
   }
-  // Suits added to measure later: paying without measurements needs an
-  // account, so they can be added from My Account afterwards.
+  // Suits added to the cart before measuring: Daniel (2026-11-09) "don't
+  // allow checkout until it's filled". Every suit needs its measurements
+  // before paying, signed in or not.
   const pendingAt = pendingMeasureIndexes();
-  if (pendingAt.length && !currentUser && !currentIsAdmin && !adminEditState) {
+  if (pendingAt.length && !adminEditState) {
     renderCheckoutMeasureNotice();
     const box = document.getElementById("checkoutMeasureNotice");
     if (box) box.scrollIntoView({ behavior: "smooth", block: "center" });
-    alert((cartItems.length === 1 ? "Your suit doesn't" : "Suit " + (pendingAt[0] + 1) + " doesn't") + " have measurements yet. Add them now, or sign in so you can add them from My Account after you order.");
+    alert("Please add measurements for " + (cartItems.length === 1 ? "your suit" : pendingAt.map((i) => "Suit " + (i + 1)).join(" and ")) + " before you pay.");
     return null;
   }
 

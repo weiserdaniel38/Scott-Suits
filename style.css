@@ -2948,3 +2948,4 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 /* Adding measurements to an order already placed: no cart button or price. */
 .order-measure-mode .meas-add-card{display:none !important;}
 .order-measure-mode #measPrice{visibility:hidden;}
+.profile-clear-meas{display:block;margin:14px auto 0;}
