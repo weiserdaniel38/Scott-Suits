@@ -2909,3 +2909,8 @@ html.suit-pic-viewer-open,html.suit-pic-viewer-open body{overflow:hidden;}
 @media (max-width:760px){
   .home-steps{grid-template-columns:1fr;gap:14px;margin-top:28px;}
 }
+
+/* "Get measured first" (home page): same clear outlined pill as Start
+   Designing (see glass.css). */
+#heroMeasureFirstBtn{border-radius:999px;padding:16px 32px;}
+#heroMeasureFirstBtn[hidden]{display:none;}

@@ -136,11 +136,11 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261109nomag1">
+<link rel="stylesheet" href="./style.css?v=20261109measurefirst">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261104readable"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
-<link rel="stylesheet" href="./glass.css?v=20261108goldoutline">
+<link rel="stylesheet" href="./glass.css?v=20261109measurefirst">
 </head>
 <body>
 
@@ -276,6 +276,10 @@
              clicking this again would just be a confusing detour back to the
              suit-type choice, not a real "start" action anymore. -->
         <button class="btn-primary" id="heroStartDesigningBtn" onclick="startDesigning()">Start Designing <span aria-hidden="true">&rarr;</span></button>
+        <!-- Opens the measurements pages on their own, before any suit is
+             designed (getMeasuredFirst() in main.js). Saved on the phone for
+             60 days and filled in when they design. -->
+        <button class="btn-primary hero-measure-btn" id="heroMeasureFirstBtn" type="button" onclick="getMeasuredFirst()"><span class="hero-measure-label">Get measured first</span> <span aria-hidden="true">&rarr;</span></button>
         <button class="btn-ghost" id="howItWorksHeroBtn">See how it works</button>
       </div>
       <!-- The four steps of an order, short, right under Start Designing.
@@ -1125,7 +1129,7 @@
 <script src="./catalog.js?v=20261108liningroups"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261109tailortype"></script>
+<script src="./main.js?v=20261109measurefirst"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>

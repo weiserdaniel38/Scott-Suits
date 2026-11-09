@@ -244,15 +244,18 @@ html[data-brand="scott"] #designPreview .suit-preview-card.reviewing .suit-previ
    How It Works, FAQ and mock trust-section Start Designing pills; other
    .btn-primary buttons keep the dark look. */
 html[data-brand="scott"] #heroStartDesigningBtn,
+html[data-brand="scott"] #heroMeasureFirstBtn,
 html[data-brand="scott"] .how-it-works-cta,
 html[data-brand="scott"] .mock-trust-cta,
 html[data-brand="scott"] .faq-page .cta{background:transparent;color:#1E1A16;font-weight:700;border:1.5px solid var(--brass);box-shadow:none;}
 html[data-brand="scott"] #heroStartDesigningBtn span,
+html[data-brand="scott"] #heroMeasureFirstBtn span[aria-hidden],
 html[data-brand="scott"] .how-it-works-cta span,
 html[data-brand="scott"] .mock-trust-cta span,
 html[data-brand="scott"] .faq-page .cta span{color:var(--brass);}
 @media(hover:hover){
 html[data-brand="scott"] #heroStartDesigningBtn:hover,
+html[data-brand="scott"] #heroMeasureFirstBtn:hover,
 html[data-brand="scott"] .how-it-works-cta:hover,
 html[data-brand="scott"] .mock-trust-cta:hover,
 html[data-brand="scott"] .faq-page .cta:hover{background:rgba(var(--brass-rgb),0.14);color:#1E1A16;}
