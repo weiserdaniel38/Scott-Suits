@@ -1079,6 +1079,13 @@ function fabricWaitItem(w) {
 const FACTORY_FINISHED = ["Stocked", "On Delivery", "Signed", "Delivered"];
 // Factory statuses that are still an unsubmitted draft (Submit to factory shows).
 const FACTORY_DRAFT_STATUSES = ["Draft", "Saving", "Stay Payments"];
+// Past the factory's checking step: cutting has started, so the order can no
+// longer be changed. The suit card drops its Send to factory tools
+// (Daniel, 2026-11-09); the header still shows the factory status.
+const FACTORY_LOCKED = ["Pattern Making", "Production"].concat(FACTORY_FINISHED);
+function adminFactoryLocked(f) {
+  return !!(f && f.factory_order_no && FACTORY_LOCKED.indexOf(f.factory_status) !== -1);
+}
 async function finishedSuits() {
   try {
     const client = getSupabase();
@@ -2466,6 +2473,7 @@ function adminWaitingPaymentButton() {
 // (height/weight, Check, Save/Update draft, Factory status) inside the card.
 // The suit's factory fields are read fresh each time it opens.
 function adminSuitFactoryButton(o, s, suitBox, stateEl) {
+  if (adminFactoryLocked(s.factory)) return document.createTextNode("");
   if (adminAwaitingPayment(o)) return adminWaitingPaymentButton();
   const btn = document.createElement("button");
   btn.type = "button";
@@ -2896,6 +2904,9 @@ function adminFactorySuit(suit, count, stateEl) {
     statusBtn.hidden = !suit.factory_order_no;
     submitBtn.hidden = !suit.factory_order_no || FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
     draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
+    // Submitted (no longer a draft): the factory won't take changes from here.
+    draftBtn.hidden = !!suit.factory_order_no && FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
+
   };
   showState();
   // Height and weight always come from the order (kute-factory reads them).
