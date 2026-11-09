@@ -28,8 +28,9 @@
 {
   "@context": "https://schema.org",
   "@type": "ClothingStore",
+  "@id": "https://scottssuits.com/#store",
   "name": "Scott's Suits",
-  "alternateName": "Scott Suits",
+  "alternateName": ["Scott Suits", "Scotts Suits", "ScottsSuits"],
   "url": "https://scottssuits.com/",
   "logo": "https://scottssuits.com/assets/icon-192.png",
   "image": "https://scottssuits.com/assets/share-image-square-safe.jpg",
@@ -104,6 +105,20 @@
       }
     ]
   }
+}
+</script>
+<!-- WebSite data tells Google this home page is the site's main page and
+     what the brand is called (all the spellings people type), so a search
+     for "Scott Suits" lands here instead of on the FAQ. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://scottssuits.com/#website",
+  "name": "Scott's Suits",
+  "alternateName": ["Scott Suits", "Scotts Suits", "scottssuits.com"],
+  "url": "https://scottssuits.com/",
+  "publisher": { "@id": "https://scottssuits.com/#store" }
 }
 </script>
 <meta property="og:type" content="website">
