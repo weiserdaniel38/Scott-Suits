@@ -217,7 +217,7 @@ const JACKET_CATALOG = {
     // Shown on the options page as a brief explainer -- most customers
     // won't know this tailoring term on sight the way they might "collar"
     // or "pocket".
-    description: "How much of the inside of your jacket is lined.",
+    description: "How much of the inside of your jacket is lined. Unlined is the lightest and coolest.",
     // Options taken off the designer. A draft saved while one of these was
     // picked has it cleared on reload (see reconcileSelections in main.js)
     // so the customer is asked again instead of ordering a retired style.
@@ -225,13 +225,18 @@ const JACKET_CATALOG = {
       "Small Round Facing",
       "Arrow Shape Facing W/ Normal Inside Pocket + Cigarette Pocket",
       "No Lining Light Construction W/ Piping Seam",
-      // The factory refuses every no-lining order ("You do not have a
-      // specified process": inner facing F 0866/0706), test drafts 2026-10-25.
-      "No Lining Construction",
     ],
     options: [
       { name: "Round Shape Facing", displayName: "Full Lining", specName: "Round Shape Facing", factoryCode: "0702", img: "./assets/jacket-facing-new-round.jpg", badge: "Standard" },
       { name: "Half Lining W/ Fabric Facing", displayName: "Half Lining", specName: "Half Lining W/ Fabric Facing", img: "./assets/jacket-facing-new-halflwfabric.jpg" },
+      // Unlined (Daniel, 2026-11-09). The factory makes it as "No lining
+      // with piping" (seams bound inside), only unconstructed, with no
+      // facing code and no body/sleeve lining (kute-factory order.ts). Test
+      // drafts 2026-11-09: refused with Welt lower pockets (so Unlined is
+      // hidden after them) and with seam pick stitching (hidden after it).
+      // Picking it moves Fused / Full Canvas to Unconstructed and drops the
+      // Lining Fabric step.
+      { name: "No Lining Construction", displayName: "Unlined", specName: "No Lining Construction", img: "./assets/jacket-facing-new-nolining.jpg", hiddenWhen: { lowerpocket: ["Flat Welt Pocket"] } },
     ],
   },
   insidepocket: {
@@ -338,7 +343,9 @@ JACKET_CATALOG.pickStitch = {
         pockettype: ["No Pocket"],
         lowerpocket: ["Double Besom Pocket", "Double Besom Pocket + Double Besom Ticket Pocket", "Double Besom Slant Pocket", "Patch Pocket", "Patch Pocket + Double Besom Ticket Pocket", "No Front Pocket"],
       } },
-    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=4", hiddenWhen: { pockettype: ["No Pocket"] } },
+    { name: "Pick Stitch All Seams", displayName: "Lapels, Edges & Seams", factoryCode: "0577", img: "./assets/jacket-pickstitch-seams.jpg?v=4",
+      // The factory refuses seam pick stitching on an unlined jacket (test drafts, 2026-11-09).
+      hiddenWhen: { pockettype: ["No Pocket"], facing: ["No Lining Construction"] }, replaceWith: ["Pick Stitch Edges", "Pick Stitch Collar Lapels Front"] },
   ],
 };
 
@@ -347,11 +354,13 @@ const JACKET_CATALOG_GROUPS = [
   { label: "Shape & Lapel", keys: ["frontbutton", "collar", "lapelwidth"] },
   { label: "Pockets & Vents", keys: ["pockettype", "lowerpocket", "backvent"] },
   { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
-  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "lining", "lapelbuttonhole", "lapelButtonholeStyle", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
+  // Lining Style comes right before Lining Fabric: Unlined skips the
+  // fabric (Daniel, 2026-11-09).
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "facing", "lining", "lapelbuttonhole", "lapelButtonholeStyle", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
   // Technical tailoring questions go last so they don't slow down the
   // visible style choices above.
-  { label: "Tailor's Details", keys: ["construction", "facing", "sleevecrown"] },
+  { label: "Tailor's Details", keys: ["construction", "sleevecrown"] },
 ];
 
 const PANTS_CATALOG = {
@@ -2719,11 +2728,13 @@ JACKET_CATALOG.lapelButtonholeStyle = {
   options: [
     { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
     { name: "Handmade", displayName: "Handmade (+$40)", specName: "Handmade", surchargeUsd: 40, factoryCode: "064Q", img: "./assets/jacket-handmadehole-classic.jpg?v=lightblue" },
-    { name: "Handmade Knotted End", displayName: "Handmade, Knotted End (+$40)", specName: "Handmade Knotted End", surchargeUsd: 40, factoryCode: "035C", img: "./assets/jacket-handmadehole-knotted.jpg?v=lightblue" },
+    // Knotted End and Journey of Life: the factory refuses them with a
+    // double left buttonhole (test drafts, 2026-11-09).
+    { name: "Handmade Knotted End", displayName: "Handmade, Knotted End (+$40)", specName: "Handmade Knotted End", surchargeUsd: 40, factoryCode: "035C", img: "./assets/jacket-handmadehole-knotted.jpg?v=lightblue", hiddenWhen: { lapelbuttonhole: ["Left Two"] } },
     { name: "Handmade Small Round End", displayName: "Handmade, Small Round End (+$35)", specName: "Handmade Small Round End", surchargeUsd: 35, factoryCode: "00EC", img: "./assets/jacket-handmadehole-small-round.jpg?v=lightblue" },
     { name: "Handmade Downward Arc", displayName: "Handmade, Slight Downward Arc (+$35)", specName: "Handmade Downward Arc", surchargeUsd: 35, factoryCode: "06EG", img: "./assets/jacket-handmadehole-arc-down.jpg?v=lightblue" },
     { name: "Handmade Upward Arc", displayName: "Handmade, Upward Arc (+$35)", specName: "Handmade Upward Arc", surchargeUsd: 35, factoryCode: "055F", img: "./assets/jacket-handmadehole-arc-up.jpg?v=lightblue" },
-    { name: "Journey of Life", displayName: "Journey of Life (+$60)", specName: "Journey of Life Handmade", surchargeUsd: 60, factoryCode: "0352", img: "./assets/jacket-handmadehole-journey.jpg?v=lightblue" },
+    { name: "Journey of Life", displayName: "Journey of Life (+$60)", specName: "Journey of Life Handmade", surchargeUsd: 60, factoryCode: "0352", img: "./assets/jacket-handmadehole-journey.jpg?v=lightblue", hiddenWhen: { lapelbuttonhole: ["Left Two"] } },
     { name: "Light of Victory", displayName: "Light of Victory (+$40)", specName: "Light of Victory Handmade", surchargeUsd: 40, factoryCode: "0357", img: "./assets/jacket-handmadehole-victory.jpg?v=lightblue" },
     { name: "Rose End", displayName: "Rose End (+$45)", specName: "Rose End Handmade", surchargeUsd: 45, factoryCode: "0359", img: "./assets/jacket-handmadehole-rose.jpg?v=lightblue" },
     { name: "Vertical Flower", displayName: "Vertical Flower (+$45)", specName: "Vertical Flower Handmade", surchargeUsd: 45, factoryCode: "055N", img: "./assets/jacket-handmadehole-flower.jpg?v=lightblue" },
