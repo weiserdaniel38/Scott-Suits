@@ -4316,6 +4316,8 @@ lightboxFrame.addEventListener("pointerup", (e) => {
 // near the bottom of this file, alongside the rest of the QA nav bar. Remove
 // this flag along with the rest of that block when QA testing is done.
 let qaShowRawFabricNames = false;
+// The thread color lists the toggle also switches to raw codes.
+const QA_RAW_THREAD_FAMILIES = [THREAD_COLOR_FAMILIES, BUTTONHOLE_THREAD_COLOR_FAMILIES, MONOGRAM_THREAD_COLOR_FAMILIES];
 
 // Builds a tabs/options/summary designer bound to a catalog + a set of DOM ids.
 // Used for both the jacket step and the pants step so the logic isn't duplicated.
@@ -4516,10 +4518,19 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // category, when that category defines one. Categories without a
   // displayName (everything except the color-family thread categories) just
   // fall back to their existing name, which was already customer-facing.
+  // QA "Raw Codes" toggle: true for Fabric and the thread color categories
+  // (seam thread, buttonhole thread, monogram thread), so their real
+  // factory codes (e.g. "C8989") show instead of the friendly names.
+  function showRawCode(key) {
+    if (!qaShowRawFabricNames) return false;
+    if (key === "fabric") return true;
+    const c = catalog[key];
+    return !!(c && c.colorFamilies && QA_RAW_THREAD_FAMILIES.indexOf(c.colorFamilies) !== -1);
+  }
   function friendlyName(key, name) {
-    // QA-only escape hatch: see qaShowRawFabricNames above -- Fabric only,
+    // QA-only escape hatch: see qaShowRawFabricNames above -- Fabric and thread colors only,
     // every other category keeps showing its normal displayName.
-    if (key === "fabric" && qaShowRawFabricNames) return name;
+    if (showRawCode(key)) return name;
     const opts = (catalog[key] && catalog[key].options) || [];
     const opt = opts.find((o) => o.name === name);
     // A "match the fabric" choice stays just that -- the factory does the
@@ -5454,7 +5465,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // order[activeTab] below and is never shown here -- see resolvedValue/
     // buildRow/getSelections, which use opt.name and are unaffected.
     let shownName =
-      activeTab === "fabric" && qaShowRawFabricNames ? opt.name : opt.displayName || opt.name;
+      showRawCode(activeTab) && !opt.matchesFabric ? opt.name : opt.displayName || opt.name;
     // A "matchesFabric" option (Match Fabric Color / Best Match to Fabric)
     // no longer reveals the actual real color option that the nearest-color
     // match would pick -- instead it shows a soft gradient of the
@@ -5586,7 +5597,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const sourceName = resolver();
     const sourceOpt = sourceName ? cat.options.find((o) => o.name === sourceName) : null;
     const shownSourceName =
-      activeTab === "fabric" && qaShowRawFabricNames
+      showRawCode(activeTab)
         ? sourceName
         : sourceOpt
         ? sourceOpt.displayName || sourceOpt.name
@@ -11988,7 +11999,7 @@ setQaNavAllowed = (function () {
   return apply;
 })();
 
-// "Raw Fabric Codes" toggle -- flips qaShowRawFabricNames (declared up near
+// "Raw Codes" toggle -- flips qaShowRawFabricNames (declared up near
 // createDesigner) and immediately re-renders both designers so any fabric
 // name already on screen (swatch cards, "Same as Jacket" label, tab
 // subtitle, summary panel) updates right away. Remembered in localStorage
