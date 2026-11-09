@@ -1416,9 +1416,54 @@ async function loadProfile() {
     currentProfile = data || null;
     renderProfileMeasureGrid(currentProfile ? currentProfile.measurements : null);
     updateAccountUI();
+    syncMeasToAccount();
   } catch (err) {
     console.error(err);
   }
+}
+
+// Measurements waiting to go into the account of whoever signs in next
+// (asked for on the measurements "Save them to your account" page).
+const MEAS_TO_ACCOUNT_KEY = "scottSuitsMeasToAccount";
+function markMeasToAccount(values) {
+  try {
+    localStorage.setItem(MEAS_TO_ACCOUNT_KEY, JSON.stringify({ savedAt: Date.now(), values: values }));
+  } catch (e) {
+    // storage unavailable: saved once the sign-in finishes on this page
+  }
+}
+function clearMeasToAccount() {
+  try {
+    localStorage.removeItem(MEAS_TO_ACCOUNT_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+function syncMeasToAccount() {
+  if (!currentUser) return;
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem(MEAS_TO_ACCOUNT_KEY) || "null");
+  } catch (e) {
+    saved = null;
+  }
+  if (!saved || !saved.values) return;
+  clearMeasToAccount();
+  if (Date.now() - (saved.savedAt || 0) > 60 * 24 * 3600 * 1000) return;
+  saveMeasToAccount(saved.values);
+}
+function saveMeasToAccount(values) {
+  if (values && Object.keys(values).length) saveProfileMeasurements(values);
+}
+// Every measurement field with a value right now, plus the mode extras.
+function currentMeasValues() {
+  const values = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && el.value !== "") values[m.id] = el.value;
+  });
+  if (!Object.keys(values).length) return values;
+  return Object.assign(values, measureExtras());
 }
 
 // Merges (never replaces outright) new measurement values into whatever's
@@ -7052,7 +7097,27 @@ function refreshMeasHub() {}
     if (route === "pro") pages.push("pro-bring", "pro-ready");
     if (route) list().forEach((m) => pages.push(m.id));
     if (route) pages.push("review");
+    if (route && accountAsk()) pages.push("account");
     if (route && measureFirst) pages.push("saved");
+  }
+  // Before measurements are kept for later (measured first from the home
+  // page, or numbers from a tailor), a guest is asked to sign in so they
+  // land in their account. "Keep on this phone only" skips it.
+  function accountAsk() {
+    return !!((measureFirst || wiz.dataset.route === "pro") && isSupabaseConfigured());
+  }
+  // After the account page (or straight from review when signed in).
+  // skipProfile: just signed in, so loadProfile() saves them once the
+  // account's existing measurements are loaded (nothing gets overwritten).
+  function finishMeasurements(skipProfile) {
+    if (measureFirst) {
+      saveMeasureFirst(!skipProfile);
+      idx = pages.indexOf("saved");
+      render();
+      return;
+    }
+    if (!skipProfile && currentUser && !adminEditState) saveMeasToAccount(currentMeasValues());
+    close();
   }
 
   // Puts the estimator panel, tailor finder panel and tailor checklist
@@ -7114,7 +7179,7 @@ function refreshMeasHub() {}
     const ms = list();
     const qIndex = ms.findIndex((m) => m.id === key);
     countEl.textContent = qIndex > -1 ? qIndex + 1 + " of " + ms.length : key === "review" ? "Review" : "";
-    progFill.style.width = (qIndex > -1 ? (qIndex / ms.length) * 100 : key === "review" || key === "saved" ? 100 : 0) + "%";
+    progFill.style.width = (qIndex > -1 ? (qIndex / ms.length) * 100 : key === "review" || key === "saved" || key === "account" ? 100 : 0) + "%";
     backBtn.style.visibility = idx === 0 ? "hidden" : "visible";
     nextBtn.hidden = false;
 
@@ -7242,6 +7307,23 @@ function refreshMeasHub() {}
       }
       page.appendChild(el("p", "meas-wiz-hint", "We fill in every measurement. You check each one next."));
       setNext("Fill in &rarr;");
+      return;
+    }
+
+    if (key === "account") {
+      page.append(
+        el("p", "meas-wiz-eyebrow", "Save your measurements"),
+        el("h2", "meas-wiz-q", "Save them to your account"),
+        el("p", "meas-wiz-hint", "Sign in or create an account so your measurements are kept safely in your profile, ready for this suit and the next.")
+      );
+      const keep = el("button", "meas-wiz-own", "Keep on this phone only");
+      keep.type = "button";
+      keep.addEventListener("click", () => {
+        clearMeasToAccount();
+        finishMeasurements();
+      });
+      page.appendChild(keep);
+      setNext(currentUser ? "Save &rarr;" : "Sign in to save &rarr;", true);
       return;
     }
 
@@ -7378,15 +7460,28 @@ function refreshMeasHub() {}
         render();
         return;
       }
-      if (measureFirst) {
-        saveMeasureFirst(true);
-        idx = pages.indexOf("saved");
+      if (!currentUser && pages.indexOf("account") > -1) {
+        idx = pages.indexOf("account");
         render();
         return;
       }
-      close();
+      finishMeasurements();
       return;
     }
+    if (step > 0 && key === "account") {
+      if (currentUser) {
+        finishMeasurements();
+        return;
+      }
+      // Kept until they're signed in (survives Continue with Google
+      // leaving the page), then saved to the profile by loadProfile().
+      markMeasToAccount(currentMeasValues());
+      requireSignIn(nextBtn, "Sign in or create an account to save your measurements to your profile.", () => {
+        if (measWizOpen && pages[idx] === "account") finishMeasurements(true);
+      });
+      return;
+    }
+    if (step < 0 && key === "saved" && pages[idx - 1] === "account" && currentUser) step = -2;
     if (step > 0 && wiz.dataset.returnToReview === "1" && list().some((m) => m.id === key)) {
       wiz.dataset.returnToReview = "";
       idx = pages.indexOf("review");

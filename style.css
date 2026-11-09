@@ -2874,7 +2874,7 @@ html.suit-pic-viewer-open,html.suit-pic-viewer-open body{overflow:hidden;}
 .fabric-tap-hint-icon{flex:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--brass);color:#fff;animation:fabricTapPulse 1.6s ease-out 0.4s 3;}
 .fabric-tap-hint-icon svg{display:block;}
 @keyframes fabricTapPulse{0%{box-shadow:0 0 0 0 rgba(var(--brass-rgb),0.55);}70%{box-shadow:0 0 0 12px rgba(var(--brass-rgb),0);}100%{box-shadow:0 0 0 0 rgba(var(--brass-rgb),0);}}
-@media(min-width:700px){@media(prefers-reduced-motion:reduce){.fabric-tap-hint-icon{animation:none;}}
+@media(prefers-reduced-motion:reduce){.fabric-tap-hint-icon{animation:none;}}
 
 /* Print the tailor's measurement list (replaces Share, Daniel 2026-11-09).
    printTailorSheet() in main.js adds #tcPrintSheet and body.tc-printing. */
@@ -2914,3 +2914,4 @@ html.suit-pic-viewer-open,html.suit-pic-viewer-open body{overflow:hidden;}
    Designing (see glass.css). */
 #heroMeasureFirstBtn{border-radius:999px;padding:16px 32px;}
 #heroMeasureFirstBtn[hidden]{display:none;}
+html.meas-wiz-lock #accountOverlay{z-index:2100;}
