@@ -231,7 +231,7 @@ function setMeasureMode(mode) {
     if (el && el.value !== "") measureStash[m.id] = el.value;
   });
   measureMode = mode === "body" ? "body" : "finished";
-  document.querySelectorAll(".measure-mode-btn").forEach((b) => {
+  document.querySelectorAll(".measure-mode-btn:not(.profile-mode-btn)").forEach((b) => {
     const on = b.dataset.mode === measureMode;
     b.classList.toggle("active", on);
     b.setAttribute("aria-pressed", on ? "true" : "false");
@@ -270,7 +270,7 @@ function applyMeasureExtras(saved) {
   if (saved.pants_fit && pantsFitSelect) pantsFitSelect.value = saved.pants_fit;
   setMeasureMode(saved.measure_type || "finished");
 }
-document.querySelectorAll(".measure-mode-btn").forEach((b) =>
+document.querySelectorAll(".measure-mode-btn:not(.profile-mode-btn)").forEach((b) =>
   b.addEventListener("click", () => {
     setMeasureMode(b.dataset.mode);
     saveDraft();
@@ -1270,12 +1270,37 @@ const saveMeasurementsToProfileCheckbox = document.getElementById("saveMeasureme
 // -- a saved profile isn't tied to one suit's jacket-only-vs-full-suit
 // choice the way a single order's measurements are. Re-run every time the
 // account overlay opens with fresh data, same idea as renderMeasurementFields.
-function renderProfileMeasureGrid(values) {
+// One set only (Daniel, 2026-11-09: the list showed Jacket and Pants twice,
+// the finished sizes and then the body measurements, which read as two
+// suits). It shows whichever kind is saved (finished suit sizes by
+// default), with a switch to the other kind.
+var profileMeasureMode = null;
+function renderProfileMeasureGrid(values, mode) {
   if (!profileMeasureGrid) return;
+  profileMeasureMode = mode || (values && values.measure_type === "body" ? "body" : "finished");
   profileMeasureGrid.innerHTML = "";
+  const pick = document.createElement("div");
+  pick.className = "measure-mode-pick profile-measure-mode";
+  [["finished", "Finished suit sizes"], ["body", "Body measurements"]].forEach(([key, label]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "measure-mode-btn profile-mode-btn" + (key === profileMeasureMode ? " active" : "");
+    b.setAttribute("aria-pressed", key === profileMeasureMode ? "true" : "false");
+    b.innerHTML = "<b>" + label + "</b>";
+    b.addEventListener("click", () => {
+      if (key === profileMeasureMode) return;
+      // Keep what's typed (height and weight carry over) and anything
+      // saved for the other kind.
+      const typed = Object.assign({}, (currentProfile && currentProfile.measurements) || {}, collectProfileMeasurements());
+      renderProfileMeasureGrid(typed, key);
+    });
+    pick.appendChild(b);
+  });
+  profileMeasureGrid.appendChild(pick);
   let lastPart = null;
   MEASUREMENTS.forEach((m) => {
     if (m.factoryOptional) return;
+    if (m.part !== "body" && (m.mode || "finished") !== profileMeasureMode) return;
     if (m.part !== lastPart) {
       const h = document.createElement("h4");
       h.className = "measure-part-heading";
@@ -1306,6 +1331,8 @@ function collectProfileMeasurements() {
     const val = el ? parseFloat(el.value) : NaN;
     if (!isNaN(val) && val > 0) values[m.id] = val;
   });
+  // Which kind these are, so "Use my saved measurements" fills the right set.
+  if (Object.keys(values).length && profileMeasureMode) values.measure_type = profileMeasureMode;
   return values;
 }
 // Saved measurements outside their allowed range, as "Chest (72 to 211 cm)".
