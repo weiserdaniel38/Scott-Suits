@@ -7165,7 +7165,7 @@ function refreshMeasHub() {}
       const who = chosenTailors.length ? chosenTailors.map((t) => t.name).join(" or ") : "your tailor";
       const steps = el("ol", "tc-steps");
       [
-        ["Copy or share this list.", "Tap the button below. Or just show this screen."],
+        ["Copy or print this list.", "Use the buttons below. Or just show this screen."],
         ["Go to " + who + ".", "Wear or bring a suit that fits you well."],
         ["Have them measure you.", "They write a number in cm next to each item."],
         ["Come back on this phone.", "Tap \u201cEnter my measurements\u201d and type each number. Your design is saved for 60 days."],
@@ -7985,11 +7985,10 @@ function buildTailorCard(t, miles) {
 function renderTailorChecklist() {
   const box = document.getElementById("tailorChecklist");
   if (!box) return;
-  const share = typeof navigator !== "undefined" && typeof navigator.share === "function";
   box.innerHTML =
     '<div class="tc-actions">' +
     '<button type="button" class="btn-primary tc-copy tailor-checklist-copy">Copy list</button>' +
-    (share ? '<button type="button" class="tc-share">Share</button>' : "") +
+    '<button type="button" class="tc-print">Print</button>' +
     "</div>" +
     '<p class="tc-copied" hidden>Copied. Paste it into a text or a note, or just show this screen.</p>' +
     '<div class="tc-sheet">' +
@@ -8072,12 +8071,46 @@ function renderTailorChecklist() {
     copied.hidden = !ok;
     setTimeout(() => (copyBtn.textContent = "Copy list"), 2500);
   });
-  const shareBtn = box.querySelector(".tc-share");
-  if (shareBtn) {
-    shareBtn.addEventListener("click", () => {
-      navigator.share({ title: SITE_BRAND.name + " suit measurements", text }).catch(() => {});
-    });
-  }
+  const printBtn = box.querySelector(".tc-print");
+  if (printBtn) printBtn.addEventListener("click", () => printTailorSheet(box));
+}
+
+// Prints only the tailor's list: a clean black-on-white page with the
+// numbered items and ___ cm blanks. Everything else on the page is hidden
+// by the print rules in style.css while body has .tc-printing.
+function printTailorSheet(box) {
+  const sheet = box.querySelector(".tc-sheet");
+  if (!sheet) return;
+  let out = document.getElementById("tcPrintSheet");
+  if (out) out.remove();
+  out = document.createElement("div");
+  out.id = "tcPrintSheet";
+  const el = (tag, cls, txt) => {
+    const n = document.createElement(tag);
+    n.className = cls;
+    n.textContent = txt;
+    return n;
+  };
+  const head = document.createElement("div");
+  head.className = "tcp-head";
+  head.append(el("p", "tcp-brand", SITE_BRAND.name), el("p", "tcp-sub", "Suit measurements"));
+  out.append(head, sheet.cloneNode(true));
+  document.body.appendChild(out);
+  document.body.classList.add("tc-printing");
+  const done = () => {
+    document.body.classList.remove("tc-printing");
+    out.remove();
+    window.removeEventListener("afterprint", done);
+  };
+  window.addEventListener("afterprint", done);
+  // Give the browser a moment to lay out the sheet before the print dialog.
+  setTimeout(() => {
+    try {
+      window.print();
+    } catch (e) {
+      done();
+    }
+  }, 60);
 }
 
 function initTailorFinder() {
