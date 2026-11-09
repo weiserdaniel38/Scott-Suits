@@ -6010,7 +6010,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // Fabric step: the tiles are only color approximations -- the real cloth
     // shows when a tile is tapped (zoom with Confirm). Say so plainly
     // (Daniel, 2026-11-08: "make it clear ... select the fabric to see it").
-    if (activeTab === "fabric") descriptionHtml += '<p class="fabric-tap-hint"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Tap any fabric to see it up close.</p>';
+    if (activeTab === "fabric") descriptionHtml += '<p class="fabric-tap-hint"><span class="fabric-tap-hint-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span><strong>Tap any fabric to see it up close.</strong><small>See the real cloth before you choose.</small></span></p>';
 
     // A step a preset narrows to a few options (e.g. its 4 fabrics) shows
     // them as plain picture cards instead of the full color/pattern browser.
