@@ -6957,7 +6957,7 @@ var chosenTailors = [];
 // Who measured the customer, saved with the suit and written into the
 // order text: the chosen partner tailor(s), or "Customer's own tailor".
 var measuredBy = null;
-// "Get measured first" on the home page: the measurements pages open on
+// "Get measured first" on the home page (button under Start Designing): the measurements pages open on
 // their own before any suit is designed. While pending (until design
 // starts), the values live only in localStorage under MEASURE_FIRST_KEY
 // (60 days), not in the tab's draft, so the home page stays the home page.
