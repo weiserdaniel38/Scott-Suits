@@ -2803,8 +2803,10 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
 .tc-list .tailor-checklist-item:last-child{border-bottom:none;}
 .tc-num{width:24px;height:24px;border-radius:50%;background:rgba(var(--brass-rgb),0.15);color:var(--brass);font:700 12.5px/24px 'Inter',sans-serif;text-align:center;}
 .tc-list .tailor-checklist-name{font-weight:600;}
-.tc-list .tailor-checklist-name small{font-weight:400;font-size:13px;margin-top:3px;}
-.tc-blank{color:var(--ivory-dim);font-size:15px;white-space:nowrap;padding-top:2px;}
+.tc-list .tailor-checklist-name small{font-weight:700;font-size:13px;margin-top:3px;color:var(--ivory);}
+.tc-field{display:flex;align-items:center;gap:6px;color:var(--ivory-dim);font-size:15px;white-space:nowrap;}
+.tc-input{width:64px;padding:8px 8px;border:1.5px solid rgba(var(--brass-rgb),0.55);border-radius:10px;background:var(--surface);color:var(--ivory);font:600 16px 'Inter',sans-serif;text-align:center;}
+.tc-input:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 3px rgba(var(--brass-rgb),0.18);}
 
 /* === WHAT ARE WE BUILDING? ON PHONES (Daniel, 2026-11-08) ===
    Bigger and friendlier: the three choices stack as full-width rows
@@ -2895,10 +2897,9 @@ html.suit-pic-viewer-open,html.suit-pic-viewer-open body{overflow:hidden;}
   #tcPrintSheet .tailor-checklist-part{font-weight:700;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin:10px 0 0;padding:0 0 4px;border-bottom:1px solid #000;list-style:none;}
   #tcPrintSheet .tailor-checklist-item{display:grid;grid-template-columns:24px 1fr 120px;gap:10px;align-items:start;padding:6px 0;border-bottom:1px solid #bbb;font-size:14px;break-inside:avoid;list-style:none;}
   #tcPrintSheet .tc-num{background:none!important;border:1px solid #000;font-size:11px;width:20px;height:20px;line-height:20px;}
-  #tcPrintSheet .tailor-checklist-name small{display:block;font-size:11px;color:#444!important;}
-  #tcPrintSheet .tc-blank{font-size:0!important;display:flex;justify-content:flex-end;align-items:flex-end;gap:5px;align-self:end;}
-  #tcPrintSheet .tc-blank::before{content:"";width:85px;height:18px;border-bottom:1px solid #000;}
-  #tcPrintSheet .tc-blank::after{content:"cm";font-size:13px;}
+  #tcPrintSheet .tailor-checklist-name small{display:block;font-size:11px;font-weight:700;color:#222!important;}
+  #tcPrintSheet .tc-field{display:flex;justify-content:flex-end;align-items:flex-end;gap:4px;align-self:end;font-size:13px;}
+  #tcPrintSheet .tc-input{border:none!important;width:70px;padding:0;font:700 14px 'Inter',Arial,sans-serif;text-align:right;}
   @page{margin:12mm;}
 }
 
