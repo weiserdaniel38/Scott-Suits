@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261109muted2">
+<link rel="stylesheet" href="./style.css?v=20261109cartlater">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261104readable"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -219,8 +219,8 @@
      a new design) closes it. -->
 <section class="order-done-page" id="orderDoneNotice" role="status" hidden>
   <div class="order-done-card">
-    <div class="hero-eyebrow">Order confirmed</div>
-    <h2>Order received. Thank you!</h2>
+    <div class="hero-eyebrow" id="orderDoneEyebrow">Order confirmed</div>
+    <h2 id="orderDoneTitle">Order received. Thank you!</h2>
     <p id="orderDoneText"></p>
     <!-- "Your finished suit": filled in by renderSuitPreview() in main.js,
          only once the generate-suit-image function answers that it's set up. -->
@@ -500,10 +500,18 @@
     <h2>Preview your suit</h2>
   </div>
   <div class="suit-preview design-preview" id="designPreview" hidden></div>
+  <!-- Daniel (2026-11-09): the suit can go in the cart right from here,
+       before measuring. Its measurements are added later, from the cart
+       before paying or from My Account after ordering (see
+       addToCartMeasureLater() in main.js). -->
+  <div class="preview-cart-choice">
+    <button type="button" class="preview-add-cart" id="addToCartFromPreviewBtn">Add to cart</button>
+    <p class="preview-cart-note">Add your measurements later, before you pay or after you order.</p>
+  </div>
   <div class="measure-actions wiz-bar meas-bar">
     <button type="button" class="wiz-back" id="backFromPreviewBtn">&larr; Back</button>
     <div class="wiz-price"></div>
-    <button type="button" class="wiz-next btn-primary" id="continueFromPreviewBtn">Continue &rarr;</button>
+    <button type="button" class="wiz-next btn-primary" id="continueFromPreviewBtn">Measurements &rarr;</button>
   </div>
 </section>
 
@@ -519,6 +527,9 @@
   <div class="meas-intro">
     <h3>Your measurements</h3>
   </div>
+  <!-- Adding measurements to an order already placed (My Account > Past
+       Orders); see startOrderMeasurements() in main.js. -->
+  <p class="order-measure-banner" id="orderMeasureBanner" hidden></p>
 
   <!-- The measurements are asked one per page in a full-screen flow
        (#measWizard, see initMeasureWizard() in main.js). This page only
@@ -713,6 +724,9 @@
       <span class="fulfill-sub">No shipping, no tax.</span>
     </label>
   </div>
+  <!-- Suits added to the cart before measuring (see
+       renderCheckoutMeasureNotice() in main.js). -->
+  <div class="checkout-measure-notice" id="checkoutMeasureNotice" hidden></div>
   <div class="meas-intro">
     <h3 id="persIntroTitle">Where should we send it?</h3>
   </div>
@@ -1121,7 +1135,7 @@
 <script src="./catalog.js?v=20261109unlined"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261109rawthread"></script>
+<script src="./main.js?v=20261109cartlater"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>

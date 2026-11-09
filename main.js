@@ -1394,6 +1394,12 @@ function updateAccountUI() {
   const hasSaved = !!(currentProfile && currentProfile.measurements && Object.keys(currentProfile.measurements).length);
   if (savedMeasurementsBanner) savedMeasurementsBanner.hidden = !(loggedIn && hasSaved);
   if (savedMeasurementsEmail) savedMeasurementsEmail.textContent = customerDisplayName();
+  // Can run before the cart code below has loaded.
+  try {
+    renderCheckoutMeasureNotice();
+  } catch (e) {
+    // not ready yet
+  }
 }
 
 async function loadProfile() {
@@ -1517,7 +1523,8 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd");
+    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type");
+    if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd"));
     if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url"));
@@ -1538,7 +1545,7 @@ async function loadOrderHistory() {
     data.forEach((row) => {
       const key = row.order_id || row.created_at;
       if (!byOrder[key]) {
-        byOrder[key] = { orderId: row.order_id, created_at: row.created_at, suits: [], suitNumbers: [], total: 0, images: [], completed: true, paid: false, ship: row };
+        byOrder[key] = { orderId: row.order_id, created_at: row.created_at, suits: [], suitNumbers: [], total: 0, images: [], completed: true, paid: false, ship: row, toMeasure: [] };
         order.push(key);
       }
       byOrder[key].suits.push(row.suit_type === "jacket_only" ? "Jacket Only" : row.suit_type === "pants_only" ? "Pants Only" : "Full Suit");
@@ -1548,7 +1555,13 @@ async function loadOrderHistory() {
       // Reorder is only offered on orders that were actually paid for.
       if (row.payment_status === "paid") byOrder[key].paid = true;
       if (row.image_url) byOrder[key].images.push(row.image_url);
+      // Ordered before measuring: still waiting on the measurements.
+      if (row.measure_type === MEASUREMENTS_PENDING && row.order_id) byOrder[key].toMeasure.push({ n: Number(row.suit_number) || 1, type: row.suit_type });
     });
+    // An order still waiting on measurements opens Past Orders, so its
+    // "Add measurements" button is the first thing seen.
+    const pastOrdersSection = document.getElementById("pastOrdersSection");
+    if (pastOrdersSection && order.some((key) => byOrder[key].toMeasure.length)) pastOrdersSection.open = true;
     pastOrdersList.innerHTML = order
       .map((key) => {
         const o = byOrder[key];
@@ -1573,6 +1586,7 @@ async function loadOrderHistory() {
           o.total.toFixed(0) +
           "</span>" +
           shippingLineHtml(o.ship) +
+          orderMeasureButtonsHtml(o) +
           (imgs ? '<div class="past-order-imgs">' + imgs + "</div>" : "") +
           reorderButtonsHtml(o) +
           "</div>"
@@ -1673,6 +1687,7 @@ async function cartItemFromOrderRow(row) {
     .concat(jacketOnly ? [] : pantsDesigner.missingLabels());
 
   // Measurements: the same fields the Measurements page would ask for now.
+  const measurePending = row.measure_type === MEASUREMENTS_PENDING;
   const measurements = { measure_type: row.measure_type === "body" ? "body" : "finished" };
   if (row.jacket_fit) measurements.jacket_fit = row.jacket_fit;
   if (row.pants_fit) measurements.pants_fit = row.pants_fit;
@@ -1689,12 +1704,13 @@ async function cartItemFromOrderRow(row) {
     type,
     jacket: pantsOnly ? {} : jacketDesigner.getSelections(),
     pants: jacketOnly ? null : pantsDesigner.getSelections(),
-    measurements,
+    // Still waiting on the customer's measurements: stays that way.
+    measurements: measurePending ? { measure_type: MEASUREMENTS_PENDING } : measurements,
     liningPhoto: pantsOnly ? null : jacketDesigner.getLiningPhoto(),
     texts: { jacket: pantsOnly ? {} : jacketDesigner.getTexts(), pants: jacketOnly ? {} : pantsDesigner.getTexts() },
     previewId: null,
   };
-  if (!measurementsOk) missing.push("Measurements");
+  if (!measurementsOk && !measurePending) missing.push("Measurements");
   // Checked again at checkout (collectAndValidateOrderInput) and cleared
   // once the suit is saved from the designer.
   if (missing.length) item.needsReview = missing;
@@ -1703,6 +1719,10 @@ async function cartItemFromOrderRow(row) {
 
 // Puts the designer back to a blank new suit (the cart is left alone).
 function resetDesignerForNewSuit() {
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
   jacketDesigner.resetSelections();
   pantsDesigner.resetSelections();
   measureStash = {};
@@ -1771,8 +1791,37 @@ function reorderReviewMessage(index, missing) {
   return "Suit " + (index + 1) + " is in your cart with everything filled in as before. Please " + parts.join(" and ") + ", then continue to checkout.";
 }
 
+// "Add measurements" on a past order that was paid for before measuring.
+function orderMeasureButtonsHtml(o) {
+  if (!o.toMeasure || !o.toMeasure.length) return "";
+  const id = escapeAttr(o.orderId);
+  const many = o.suits.length > 1;
+  const btns = o.toMeasure
+    .sort((a, b) => a.n - b.n)
+    .map((t) => '<button type="button" class="past-order-measure-btn" data-order-measure="' + id + '" data-suit="' + t.n + '" data-type="' + escapeAttr(t.type || "full_suit") + '">Add measurements' + (many ? " for Suit " + t.n : "") + "</button>")
+    .join("");
+  return '<div class="past-order-measure"><p>We need your measurements to start making ' + (o.toMeasure.length > 1 ? "these suits" : many ? "this suit" : "your suit") + ".</p>" + btns + "</div>";
+}
+
 if (pastOrdersList) {
   pastOrdersList.addEventListener("click", (e) => {
+    const measureBtn = e.target.closest("[data-order-measure]");
+    if (measureBtn) {
+      const target = {
+        orderId: measureBtn.getAttribute("data-order-measure"),
+        suitNumber: Number(measureBtn.getAttribute("data-suit")) || 1,
+        rowType: measureBtn.getAttribute("data-type") || "full_suit",
+      };
+      const go = () => startOrderMeasurements(target);
+      if (!designerHasUnsavedWork()) return go();
+      openEditSuitConfirm(null, {
+        title: "Add your measurements?",
+        text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+        confirm: "Yes, continue",
+        onConfirm: go,
+      });
+      return;
+    }
     const btn = e.target.closest("[data-reorder]");
     if (!btn) return;
     const orderId = btn.getAttribute("data-reorder");
@@ -1853,12 +1902,35 @@ function shippingLineHtml(row) {
 const adminOrdersList = document.getElementById("adminOrdersList");
 const shippingLiveToggle = document.getElementById("shippingLiveToggle");
 
+// Suits paid for before the customer added measurements ("orderId/suitN"),
+// from the order-measurements function. They can't go to the factory yet.
+var adminMeasurePending = new Set();
+async function adminPendingMeasurements() {
+  const out = new Set();
+  try {
+    const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+    const res = await fetch(SUPABASE_URL + "/functions/v1/order-measurements", { method: "POST", headers, body: JSON.stringify({ action: "pending" }) });
+    const data = await res.json().catch(() => ({}));
+    (data.suits || []).forEach((x) => out.add(x.order_id + "/" + (x.suit_number || 1)));
+  } catch (e) {
+    console.warn("Couldn't check which suits are waiting for measurements:", e);
+  }
+  return out;
+}
+function adminSuitAwaitingMeasurements(orderId, suitNumber) {
+  return adminMeasurePending.has(orderId + "/" + (suitNumber || 1));
+}
+function adminOrderAwaitingMeasurements(orderId) {
+  for (const k of adminMeasurePending) if (k.indexOf(orderId + "/") === 0) return true;
+  return false;
+}
+
 async function loadAdminOrders() {
   if (!adminOrdersList) return;
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos, toMeasure] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
@@ -1869,7 +1941,9 @@ async function loadAdminOrders() {
       client.rpc("admin_order_pictures"),
       client.rpc("admin_order_factory"),
       client.rpc("admin_order_promos"),
+      adminPendingMeasurements(),
     ]);
+    adminMeasurePending = toMeasure;
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
     if (error) {
       console.error("Failed to load orders:", error);
@@ -2520,6 +2594,11 @@ function adminWaitingPaymentButton() {
 function adminSuitFactoryButton(o, s, suitBox, stateEl) {
   if (adminFactoryLocked(s.factory)) return document.createTextNode("");
   if (adminAwaitingPayment(o)) return adminWaitingPaymentButton();
+  if (adminSuitAwaitingMeasurements(o.order_id, s.suit_number)) {
+    const wait = adminWaitingPaymentButton();
+    wait.textContent = "Factory: waiting for measurements";
+    return wait;
+  }
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "admin-ship-factory admin-suit-factory-btn";
@@ -2789,7 +2868,7 @@ function adminOrderRow(o) {
   if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) name.textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
   row.querySelector(".admin-order-sub").textContent = [date, suits].filter(Boolean).join(" \u00b7 ");
   const shipBadge = row.querySelector(".admin-ship-badge");
-  shipBadge.textContent = shippingLabel(o.shipping_status) || "Order received";
+  shipBadge.textContent = adminOrderAwaitingMeasurements(o.order_id) ? "Waiting for measurements" : shippingLabel(o.shipping_status) || "Order received";
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   const info = row.querySelector(".admin-order-info");
   const protection = adminProtectionLabel(o).replace(/^Alteration Protection: /, "");
@@ -2813,6 +2892,9 @@ function adminOrderRow(o) {
   else if (adminAwaitingPayment(o)) {
     factoryBtn.disabled = true;
     factoryBtn.textContent = "Factory: waiting for payment";
+  } else if (adminOrderAwaitingMeasurements(o.order_id)) {
+    factoryBtn.disabled = true;
+    factoryBtn.textContent = "Factory: waiting for measurements";
   }
   let factoryPanel = null;
   factoryBtn.addEventListener("click", () => {
@@ -6752,6 +6834,11 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
   }
 
   lines.push("MEASUREMENTS");
+  if (measurements && measurements.measure_type === MEASUREMENTS_PENDING) {
+    lines.push(PENDING_MEASUREMENTS_LINE);
+    if (extras && extras.measuredBy) lines.push("", "Measured by: " + extras.measuredBy);
+    return lines.join("\n");
+  }
   const mode = measurements.measure_type === "body" ? "body" : "finished";
   const measurementList = MEASUREMENTS.filter(
     (m) => (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, suitType)
@@ -6877,6 +6964,7 @@ function renderPersonalChrome() {
     bar.innerHTML = html + '<span class="wiz-seg current"></span>';
   }
   refreshOrderProgress();
+  renderCheckoutMeasureNotice();
   const priceEl = document.getElementById("persPrice");
   if (priceEl) priceEl.textContent = "$" + cartTotalUsd();
 }
@@ -7842,8 +7930,18 @@ document.getElementById("backFromPreviewBtn").addEventListener("click", () => {
 document.getElementById("continueFromPreviewBtn").addEventListener("click", () => {
   goToStep(previewSection, measurementsSection);
 });
+// "Add to cart" on the Preview page: the suit goes in the cart now and the
+// customer goes to checkout, where the suits still needing measurements are
+// listed (renderCheckoutMeasureNotice).
+function addToCartMeasureLater() {
+  if (!commitCurrentSuitToCart({ measureLater: true })) return;
+  goToStep(previewSection, personalInfoSection);
+}
+const addToCartFromPreviewBtn = document.getElementById("addToCartFromPreviewBtn");
+if (addToCartFromPreviewBtn) addToCartFromPreviewBtn.addEventListener("click", addToCartMeasureLater);
 
 document.getElementById("backToDesignerBtn").addEventListener("click", () => {
+  if (orderMeasureTarget) return cancelOrderMeasurements();
   // Same as backToJacketBtn above -- Back resumes on the last tab you had
   // open, it doesn't reset to Fabric. "Jacket Only" skipped Pants on the way
   // in, so Back skips it too, straight to the jacket designer.
@@ -7857,6 +7955,78 @@ document.getElementById("backToDesignerBtn").addEventListener("click", () => {
   }
   goToStep(measurementsSection, pantsSection);
 });
+
+// ---------------------------------------------------------------------------
+// Measure later (Daniel, 2026-11-09): "Add to cart" on the Preview page puts
+// the suit in the cart before any measurements. Its measurements are
+// { measure_type: "pending" } until the customer adds them: from the cart
+// ("Add measurements") before paying, or from My Account > Past Orders after
+// ordering (order-measurements edge function). The order row keeps
+// measure_type "pending" and kute-factory refuses it until they're in.
+// ---------------------------------------------------------------------------
+const MEASUREMENTS_PENDING = "pending";
+// Written into the order text in place of the measurements.
+const PENDING_MEASUREMENTS_LINE = "NOT GIVEN YET -- the customer will add them from My Account. Do not send to the factory until they do.";
+function itemNeedsMeasurements(item) {
+  return !!(item && item.measurements && item.measurements.measure_type === MEASUREMENTS_PENDING);
+}
+function pendingMeasureIndexes() {
+  return cartItems.map((it, i) => (itemNeedsMeasurements(it) ? i : -1)).filter((i) => i !== -1);
+}
+
+// Checkout: which suits in the cart still need measurements, each with an
+// "Add measurements" button. Paying without them needs an account, so the
+// customer can add them from My Account after ordering (and so the account
+// rule for saving measurements still holds).
+function renderCheckoutMeasureNotice() {
+  const box = document.getElementById("checkoutMeasureNotice");
+  if (!box) return;
+  const idx = pendingMeasureIndexes();
+  box.innerHTML = "";
+  box.hidden = !idx.length || !!adminEditState;
+  if (box.hidden) return;
+  const make = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text) n.textContent = text;
+    return n;
+  };
+  const one = cartItems.length === 1;
+  box.appendChild(make("h3", "", one ? "Your measurements" : idx.length === 1 ? "1 suit needs measurements" : idx.length + " suits need measurements"));
+  box.appendChild(make("p", "", currentUser || currentIsAdmin
+    ? "Add them now, or after you order from My Account. We start making your suit once we have them."
+    : "Add them now, or sign in to add them after you order. We start making your suit once we have them."));
+  const list = make("div", "checkout-measure-list");
+  idx.forEach((i) => {
+    const row = make("div", "checkout-measure-row");
+    row.appendChild(make("span", "", one ? cartItemTitle(cartItems[i]) : "Suit " + (i + 1) + " \u00b7 " + cartItemTitle(cartItems[i])));
+    const btn = make("button", "checkout-measure-btn", "Add measurements");
+    btn.type = "button";
+    btn.addEventListener("click", () => measureCartItem(i));
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+  // Added straight from Preview, so offer the "keep shopping" step that
+  // the Measurements page's "Add to cart & design another suit" gives.
+  const another = make("button", "checkout-measure-signin checkout-design-another", "+ Design another suit");
+  another.type = "button";
+  another.addEventListener("click", () => {
+    resetDesignerForNewSuit();
+    designPreview = null;
+    saveDraft();
+    goToStep(personalInfoSection, suitTypeSection);
+  });
+  box.appendChild(another);
+  if (!currentUser && !currentIsAdmin) {
+    const signIn = make("button", "checkout-measure-signin", "Sign in to measure later");
+    signIn.type = "button";
+    signIn.addEventListener("click", () =>
+      requireSignIn(signIn, "Sign in so you can add your measurements after you order.", renderCheckoutMeasureNotice)
+    );
+    box.appendChild(signIn);
+  }
+}
 
 // Reads + validates the measurement fields without navigating anywhere;
 // shared by the "Continue" button here and the final submit on the next page.
@@ -7883,6 +8053,7 @@ function collectMeasurements() {
 }
 
 document.getElementById("continueToPersonalInfoBtn").addEventListener("click", () => {
+  if (orderMeasureTarget) return saveOrderMeasurements();
   if (!commitCurrentSuitToCart()) return;
   goToStep(measurementsSection, personalInfoSection);
 });
@@ -8992,6 +9163,7 @@ function cartItemTitle(item) {
 }
 
 function renderCartBar() {
+  renderCheckoutMeasureNotice();
   const cartBadge = document.getElementById("cartBadge");
   const cartBarCount = document.getElementById("cartBarCount");
   const cartBarTotal = document.getElementById("cartBarTotal");
@@ -9033,6 +9205,21 @@ function renderCartBar() {
       '<button type="button" class="cart-item-remove" aria-label="Remove this suit">&times;</button>';
     row.querySelector(".cart-item-type").textContent = "Suit " + (i + 1) + " \u00b7 " + typeTag;
     row.querySelector(".cart-item-label").textContent = cartItemTitle(item);
+    if (itemNeedsMeasurements(item)) {
+      const measureBtn = document.createElement("button");
+      measureBtn.type = "button";
+      measureBtn.className = "cart-item-measure";
+      measureBtn.textContent = "Add measurements";
+      measureBtn.setAttribute("aria-label", "Add measurements for suit " + (i + 1));
+      measureBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        measureCartItem(i);
+      });
+      const need = document.createElement("span");
+      need.className = "cart-item-need";
+      need.textContent = "Measurements needed";
+      row.querySelector(".cart-item-info").append(need, measureBtn);
+    }
     if (i === editingCartIndex) row.classList.add("editing");
     const editBtn = row.querySelector(".cart-item-edit");
     editBtn.textContent = i === editingCartIndex ? "Editing now" : "Edit";
@@ -9097,18 +9284,25 @@ const samePreviousMeasurementsBanner = document.getElementById("samePreviousMeas
 const useSamePreviousMeasurementsBtn = document.getElementById("useSamePreviousMeasurementsBtn");
 const samePreviousMeasurementsSuitNum = document.getElementById("samePreviousMeasurementsSuitNum");
 
+function lastMeasuredCartIndex() {
+  for (let i = cartItems.length - 1; i >= 0; i--) if (cartItems[i] && cartItems[i].measurements && !itemNeedsMeasurements(cartItems[i])) return i;
+  return -1;
+}
+
 function updateSamePreviousMeasurementsBanner() {
   if (!samePreviousMeasurementsBanner) return;
-  // Not while a cart suit is open with "Edit": it already has its own.
-  samePreviousMeasurementsBanner.hidden = !cartItems.length || editingCartIndex !== null;
-  if (cartItems.length && samePreviousMeasurementsSuitNum) {
-    samePreviousMeasurementsSuitNum.textContent = String(cartItems.length);
+  // The last suit that has its measurements (not one added to measure later).
+  const prev = lastMeasuredCartIndex();
+  // Not while a cart suit with its own measurements is open with "Edit".
+  samePreviousMeasurementsBanner.hidden = prev === -1 || (editingCartIndex !== null && !itemNeedsMeasurements(cartItems[editingCartIndex]));
+  if (prev !== -1 && samePreviousMeasurementsSuitNum) {
+    samePreviousMeasurementsSuitNum.textContent = String(prev + 1);
   }
 }
 
 if (useSamePreviousMeasurementsBtn) {
   useSamePreviousMeasurementsBtn.addEventListener("click", () => {
-    const previous = cartItems[cartItems.length - 1];
+    const previous = cartItems[lastMeasuredCartIndex()];
     if (!previous || !previous.measurements) return;
     applyMeasureExtras(previous.measurements);
     activeMeasurements().forEach((m) => {
@@ -9224,6 +9418,10 @@ if (resetMeasurementsBtn) {
 // the cart simply isn't part of the order, same as any other cart/checkout
 // flow -- its draft stays saved, so nothing is lost, just not submitted yet.
 function goToCheckout() {
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
   const swap = () => {
     ALL_STEPS.forEach((el) => el.classList.remove("active"));
     personalInfoSection.classList.add("active");
@@ -9291,7 +9489,11 @@ function editCartItem(index) {
   loadCartItemIntoDesigner(index);
 }
 
-function loadCartItemIntoDesigner(index) {
+function loadCartItemIntoDesigner(index, toMeasurements) {
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
   const item = cartItems[index];
   if (!item) return;
   jacketDesigner.resetSelections();
@@ -9324,7 +9526,174 @@ function loadCartItemIntoDesigner(index) {
   furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(measurementsSection));
   markDesignStarted();
   renderCartBar();
-  showDesignerForEditing();
+  if (toMeasurements) showStepForEditing(measurementsSection);
+  else showDesignerForEditing();
+}
+
+// "Add measurements" on a cart suit added before measuring: opens that suit
+// on the Measurements page (same unsaved-work check as Edit). Finishing it
+// saves the measurements into the same cart slot.
+function measureCartItem(index) {
+  if (!cartItems[index]) return;
+  closeCartDropdown();
+  if (index === pendingCommitIndex) {
+    editingCartIndex = index;
+    renderCartBar();
+    showStepForEditing(measurementsSection);
+    return;
+  }
+  if (designerHasUnsavedWork()) {
+    openEditSuitConfirm(index, {
+      title: "Add measurements for Suit " + (index + 1) + "?",
+      text: "The suit you're designing now isn't in your cart yet, so its choices will be cleared.",
+      confirm: "Yes, continue",
+      onConfirm: () => loadCartItemIntoDesigner(index, true),
+    });
+    return;
+  }
+  loadCartItemIntoDesigner(index, true);
+}
+
+// ---------------------------------------------------------------------------
+// Measurements for an order already placed (My Account > Past Orders >
+// "Add measurements"). Opens the usual Measurements page for that suit's
+// type; "Save measurements" sends them to the order-measurements function,
+// which writes them on the order row (customers can't update orders
+// themselves). The cart is left alone.
+// ---------------------------------------------------------------------------
+// var: saveDraft() can run before this line.
+var orderMeasureTarget = null; // { orderId, suitNumber, rowType }
+const ORDER_MEASURE_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/order-measurements" : "";
+
+function orderRowSuitType(rowType) {
+  return rowType === "jacket_only" ? "jacketOnly" : rowType === "pants_only" ? "pantsOnly" : "full";
+}
+
+function startOrderMeasurements(target) {
+  if (!currentUser || !target || !target.orderId) return;
+  if (closeAccountOverlay) closeAccountOverlay();
+  hideOrderDoneNotice();
+  resetDesignerForNewSuit();
+  applySuitType(orderRowSuitType(target.rowType));
+  orderMeasureTarget = { orderId: target.orderId, suitNumber: target.suitNumber || 1, rowType: target.rowType || "full_suit" };
+  markDesignStarted();
+  furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(measurementsSection));
+  applyOrderMeasureMode();
+  renderCartBar();
+  showStepForEditing(measurementsSection);
+}
+
+// The Measurements page's buttons while adding to a placed order.
+function applyOrderMeasureMode() {
+  const on = !!orderMeasureTarget;
+  measurementsSection.classList.toggle("order-measure-mode", on);
+  const banner = document.getElementById("orderMeasureBanner");
+  if (banner) {
+    banner.hidden = !on;
+    if (on) {
+      const what = orderMeasureTarget.rowType === "jacket_only" ? "jacket" : orderMeasureTarget.rowType === "pants_only" ? "pants" : "suit";
+      banner.textContent = "For the " + what + " you ordered" + (orderMeasureTarget.suitNumber > 1 ? " (Suit " + orderMeasureTarget.suitNumber + ")" : "") + ". They're saved straight to your order.";
+    }
+  }
+  const cont = document.getElementById("continueToPersonalInfoBtn");
+  if (cont) cont.innerHTML = on ? "Save measurements" : "Continue &rarr;";
+  const add = document.getElementById("addAnotherSuitBtn");
+  if (add) add.hidden = on;
+}
+
+// Leaves the mode without saving (Back).
+function cancelOrderMeasurements() {
+  orderMeasureTarget = null;
+  applyOrderMeasureMode();
+  resetDesignerForNewSuit();
+  saveDraft();
+  goHome();
+}
+
+async function saveOrderMeasurements() {
+  const target = orderMeasureTarget;
+  if (!target) return;
+  const { values, missing, outOfRange } = collectMeasurements();
+  if (outOfRange.length) {
+    alert("These measurements are outside what can be made. Please check them. Allowed:\n\n" + outOfRange.join("\n"));
+    return;
+  }
+  if (missing.length) {
+    alert("Please enter a valid measurement for: " + missing.join(", "));
+    return;
+  }
+  if (!currentUser) {
+    alert("Please sign in again to save your measurements to your order.");
+    return;
+  }
+  const type = orderRowSuitType(target.rowType);
+  const full = buildOrderSummaryText("", type, {}, {}, values, {
+    bodyScan: measureMode === "body" ? window.__bodyScan || null : null,
+    measuredBy: measuredBy || null,
+  });
+  const at = full.indexOf("\nMEASUREMENTS\n");
+  const measurementsText = at === -1 ? "" : full.slice(at + "\nMEASUREMENTS\n".length);
+  const btn = document.getElementById("continueToPersonalInfoBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+  }
+  try {
+    const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+    const res = await fetch(ORDER_MEASURE_FN_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action: "save", order_id: target.orderId, suit_number: target.suitNumber, measurements: values, measurements_text: measurementsText }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      alert(data.error || "Sorry, your measurements couldn't be saved right now. Please try again.");
+      return;
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Sorry, your measurements couldn't be saved right now. Please check your connection and try again.");
+    return;
+  } finally {
+    if (btn) btn.disabled = false;
+    applyOrderMeasureMode();
+  }
+  if (saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) saveProfileMeasurements(values);
+  // Let the shop know the suit can go to the factory now.
+  sendOrderEmail(
+    "Measurements added \u2014 " + (customerDisplayName() || currentUser.email || "customer"),
+    currentUser.email || "",
+    "MEASUREMENTS ADDED AFTER ORDERING\nOrder " + target.orderId + ", Suit " + target.suitNumber + "\n\nMEASUREMENTS\n" + measurementsText + "\n\nThis suit can go to the factory now."
+  );
+  orderMeasureTarget = null;
+  applyOrderMeasureMode();
+  resetDesignerForNewSuit();
+  if (currentUser) loadOrderHistory();
+  saveDraft();
+  ALL_STEPS.forEach((el) => el.classList.remove("active"));
+  suitTypeSection.classList.add("active");
+  const oldPicture = document.getElementById("suitPreview");
+  if (oldPicture) oldPicture.hidden = true;
+  showOrderDonePage("Measurements saved", "Thank you!", "We have your measurements and will start making your " + (target.rowType === "jacket_only" ? "jacket" : target.rowType === "pants_only" ? "pants" : "suit") + " now. You can follow it under Past Orders in My Account.");
+}
+
+// Shows one step from whatever page is showing (same "scroll up before
+// hiding" swap as goToCheckout).
+function showStepForEditing(section) {
+  const swap = () => {
+    ALL_STEPS.forEach((el) => el.classList.remove("active"));
+    section.classList.add("active");
+    if (section === measurementsSection && typeof renderMeasureChrome === "function") renderMeasureChrome();
+    scrollToStepTop(section);
+    saveDraft();
+  };
+  const currentActiveEl = ALL_STEPS.find((el) => el.classList.contains("active"));
+  const hideTop = currentActiveEl ? window.scrollY + currentActiveEl.getBoundingClientRect().top - getNavClearance() : 0;
+  if (currentActiveEl && window.scrollY > hideTop + 2) {
+    smoothScrollWindowTo(hideTop, swap);
+  } else {
+    swap();
+  }
 }
 
 // The cart suit's existing picture, while the design still matches it.
@@ -9438,8 +9807,19 @@ const openEditSuitConfirm = (function () {
 // updating that entry in place so going back to tweak something, or
 // reopening it with the cart's "Edit" link, never creates a duplicate. Used by
 // both "Add to Cart & Design Another Suit" and "Continue to Personal Info".
-function commitCurrentSuitToCart() {
-  const { values: measurementValues, missing: missingMeasurements, outOfRange } = collectMeasurements();
+function commitCurrentSuitToCart(opts) {
+  let { values: measurementValues, missing: missingMeasurements, outOfRange } = collectMeasurements();
+  // "Add to cart" on the Preview page: measurements come later. A cart suit
+  // reopened with Edit keeps the measurements it already has (and only
+  // those: fields left over from another suit are never used unseen).
+  const editedItem = pendingCommitIndex !== null ? cartItems[pendingCommitIndex] : null;
+  const keepOwn = !!editedItem && !itemNeedsMeasurements(editedItem) && !missingMeasurements.length && !outOfRange.length;
+  const measureLater = !!(opts && opts.measureLater) && !keepOwn;
+  if (measureLater) {
+    measurementValues = { measure_type: MEASUREMENTS_PENDING };
+    missingMeasurements = [];
+    outOfRange = [];
+  }
   if (outOfRange.length) {
     alert("These measurements are outside what can be made. Please check them. Allowed:\n\n" + outOfRange.join("\n"));
     return false;
@@ -9463,7 +9843,7 @@ function commitCurrentSuitToCart() {
     previewId: currentDesignPreviewId() || editedSuitPreviewId(),
     // The phone body scan behind these body measurements (body-scan.js),
     // for the tailor's review; written into the order text.
-    bodyScan: measureMode === "body" && window.__bodyScan ? window.__bodyScan : null,
+    bodyScan: !measureLater && measureMode === "body" && window.__bodyScan ? window.__bodyScan : null,
     // Partner tailor(s) the customer chose to be measured by, if any.
     measuredBy: measuredBy || null,
   };
@@ -9490,7 +9870,7 @@ function commitCurrentSuitToCart() {
   // someone else -- and nothing about their own saved profile changes.
   // Never while the admin edits a customer's order (it would overwrite the
   // admin's own saved measurements).
-  if (currentUser && !adminEditState && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
+  if (!measureLater && currentUser && !adminEditState && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
     saveProfileMeasurements(measurementValues);
   }
 
@@ -9709,6 +10089,16 @@ function collectAndValidateOrderInput() {
   if (reviewAt !== -1) {
     alert(reorderReviewMessage(reviewAt, cartItems[reviewAt].needsReview));
     loadCartItemIntoDesigner(reviewAt);
+    return null;
+  }
+  // Suits added to measure later: paying without measurements needs an
+  // account, so they can be added from My Account afterwards.
+  const pendingAt = pendingMeasureIndexes();
+  if (pendingAt.length && !currentUser && !currentIsAdmin && !adminEditState) {
+    renderCheckoutMeasureNotice();
+    const box = document.getElementById("checkoutMeasureNotice");
+    if (box) box.scrollIntoView({ behavior: "smooth", block: "center" });
+    alert((cartItems.length === 1 ? "Your suit doesn't" : "Suit " + (pendingAt[0] + 1) + " doesn't") + " have measurements yet. Add them now, or sign in so you can add them from My Account after you order.");
     return null;
   }
 
@@ -10628,15 +11018,18 @@ async function sendOrderEmail(subject, customerEmail, message) {
 // Supabase (client_form_text) and in the notification email.
 function finishOrder(previewItems, paid, discountUsd) {
   if (currentUser) loadOrderHistory();
+  // Read before returnHomeAfterOrder() clears the cart.
+  const measureLater = pendingMeasureIndexes().length > 0;
   // Built from the cart before returnHomeAfterOrder() clears it.
   if (previewItems) renderSuitPreview(previewItems);
   if (window.resetPromoCode) window.resetPromoCode();
   returnHomeAfterOrder(
     (discountUsd > 0 ? "Your promo code saved you $" + discountUsd.toFixed(2) + ". " : "") +
     (paid
-      ? "We've received your payment and recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins."
-      : "We've recorded your suit selections, measurements, and shipping details. We'll be in touch to confirm the final details before production begins.") +
-      (currentUser ? " You can see this order any time under Past Orders in My Account." : "")
+      ? "We've received your payment and recorded your suit selections" + (measureLater ? "" : ", measurements,") + " and shipping details. We'll be in touch to confirm the final details before production begins."
+      : "We've recorded your suit selections" + (measureLater ? "" : ", measurements,") + " and shipping details. We'll be in touch to confirm the final details before production begins.") +
+    (measureLater ? " Next, add your measurements under Past Orders in My Account. We start making your suit once we have them." : "") +
+      (currentUser && !measureLater ? " You can see this order any time under Past Orders in My Account." : "")
   );
 }
 
@@ -10963,6 +11356,8 @@ function saveDraft() {
       cart: cartItems.map((it) => { const c = Object.assign({}, it); delete c.liningPhoto; return c; }),
       pendingCommitIndex: pendingCommitIndex,
       editingCartIndex: editingCartIndex,
+      // Adding measurements to an order already placed (My Account).
+      orderMeasureTarget: orderMeasureTarget || null,
       // The suit picture already drawn (or still drawing) for this design,
       // so a reload shows that same picture instead of offering a new one.
       // The lining photo itself is saved with the photos below.
@@ -11089,6 +11484,11 @@ function restoreDraft() {
   if (draft.fulfillment) setFulfillmentChoice(draft.fulfillment);
   if (draft.alterationProtection) setAlterationChoice(draft.alterationProtection);
 
+  if (draft.orderMeasureTarget && draft.orderMeasureTarget.orderId && draft.step === "measurementsSection") {
+    orderMeasureTarget = draft.orderMeasureTarget;
+    applyOrderMeasureMode();
+  }
+
   // Never resume straight onto the confirmation screen -- that only happens
   // right after a real submission, which already clears the draft anyway.
   const stepId = draft.step && draft.step !== "confirmationSection" ? draft.step : "designer";
@@ -11192,6 +11592,10 @@ window.startDesigning = startDesigning;
 // picks the suit type again and carries on with the same selections and
 // cart; the saved draft is left as it was.
 function goHome() {
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
   hideOrderDoneNotice();
   resetDesignStarted();
   ALL_STEPS.forEach((el) => el.classList.remove("active"));
@@ -11217,8 +11621,18 @@ function returnHomeAfterOrder(message) {
   ALL_STEPS.forEach((el) => el.classList.remove("active"));
   suitTypeSection.classList.add("active");
   updateProcessBar();
+  showOrderDonePage("Order confirmed", "Order received. Thank you!", message);
+}
+
+// The confirmation page, also used after measurements are added to an
+// order already placed (saveOrderMeasurements).
+function showOrderDonePage(eyebrow, title, message) {
   const notice = document.getElementById("orderDoneNotice");
   if (notice) {
+    const eb = document.getElementById("orderDoneEyebrow");
+    if (eb) eb.textContent = eyebrow;
+    const t = document.getElementById("orderDoneTitle");
+    if (t) t.textContent = title;
     document.getElementById("orderDoneText").textContent = message;
     notice.hidden = false;
     document.body.classList.add("order-done-view");
@@ -11277,6 +11691,10 @@ function startOver() {
 // Over and returnHomeAfterOrder(); the cart and saved draft are left to the
 // caller.
 function clearDesignerAndForm() {
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
   jacketDesigner.resetSelections();
   pantsDesigner.resetSelections();
   // Back to the default suit type -- also rebuilds the measurement grid to
