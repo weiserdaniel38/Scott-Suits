@@ -7159,7 +7159,7 @@ function refreshMeasHub() {}
     }
     if (key === "pro") {
       page.append(el("p", "meas-wiz-eyebrow", "Have a pro measure you"), el("h2", "meas-wiz-q", "Choose a tailor near you"));
-      page.appendChild(el("p", "meas-wiz-hint", "Search your address or ZIP, then tap Choose on one or two tailors."));
+      page.appendChild(el("p", "meas-wiz-hint", "Search your address or ZIP, then tap Choose on a tailor."));
       if (tailorPanel) {
         tailorPanel.hidden = false;
         page.appendChild(tailorPanel);
@@ -7175,7 +7175,11 @@ function refreshMeasHub() {}
         nextBtn.hidden = !chosenTailors.length;
       };
       sync();
-      tailorChooseSync = sync;
+      // Tapping Choose on a tailor goes straight to the next page.
+      tailorChooseSync = () => {
+        sync();
+        if (chosenTailors.length) go(1, true);
+      };
       setNext("Next &rarr;");
       return;
     }
@@ -8019,8 +8023,8 @@ function buildTailorCard(t, miles) {
     choose.textContent = on ? "\u2713 Chosen" : "Choose";
   };
   choose.addEventListener("click", () => {
-    if (chosenTailors.some((c) => c.id === t.id)) chosenTailors = chosenTailors.filter((c) => c.id !== t.id);
-    else chosenTailors = chosenTailors.concat([t]).slice(-2);
+    // One tap picks this tailor (and the measuring flow moves on).
+    chosenTailors = [t];
     document.querySelectorAll(".tailor-card-choose").forEach((b) => b._paint && b._paint());
     if (typeof tailorChooseSync === "function") tailorChooseSync();
   });
