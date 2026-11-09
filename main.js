@@ -7079,6 +7079,21 @@ function refreshMeasHub() {}
     borrowed = null;
   }
 
+  // How many items in the tailor list have a number typed in.
+  const tailorTyped = () => list().filter((m) => m.part !== "body" && valueOf(m) !== null).length;
+  let tailorTypedSync = null;
+  wiz.addEventListener("input", () => {
+    if (tailorTypedSync) tailorTypedSync();
+  });
+  // Next page after "Use these measurements": the next measurement still
+  // missing, or the review page.
+  function nextMissing(fromKey) {
+    const ms = list();
+    const from = ms.findIndex((m) => m.id === fromKey);
+    const m = ms.find((x, i) => i > from && !isDone(x)) || ms.find((x) => !isDone(x) && x.id !== fromKey);
+    return m ? pages.indexOf(m.id) : pages.indexOf("review");
+  }
+
   function setNext(label, primary) {
     nextBtn.innerHTML = label;
     nextBtn.classList.toggle("meas-wiz-finish", !!primary);
@@ -7093,7 +7108,9 @@ function refreshMeasHub() {}
     page.classList.add("in");
     body.scrollTop = 0;
     tailorChooseSync = null;
+    tailorTypedSync = null;
     const key = pages[idx];
+    if (key === "review") wiz.dataset.fillMissing = "";
     const ms = list();
     const qIndex = ms.findIndex((m) => m.id === key);
     countEl.textContent = qIndex > -1 ? qIndex + 1 + " of " + ms.length : key === "review" ? "Review" : "";
@@ -7190,8 +7207,8 @@ function refreshMeasHub() {}
       [
         ["Copy or print this list.", "Use the buttons below. Or just show this screen."],
         ["Go to " + who + ".", "Wear or bring a suit that fits you well."],
-        ["Have them measure you.", "They write a number in cm next to each item."],
-        ["Come back on this phone.", "Tap \u201cEnter my measurements\u201d and type each number. Your design is saved for 60 days."],
+        ["Have them measure you.", "They type each number in cm in the boxes below, or write it on the list."],
+        ["Typed in here? Tap \u201cUse these measurements\u201d.", "On paper? Come back on this phone and tap \u201cEnter my measurements\u201d. Your design is saved for 60 days."],
       ].forEach(([b, t]) => {
         const li = document.createElement("li");
         li.append(el("b", "", b), el("span", "", t));
@@ -7200,7 +7217,14 @@ function refreshMeasHub() {}
       page.append(el("p", "tc-steps-title", "What to do"), steps);
       renderTailorChecklist();
       if (checklistEl) page.appendChild(checklistEl);
-      setNext("Next &rarr;");
+      // Numbers typed into the list are the measurements: once any are in,
+      // Next skips the re-entry and goes to what's still missing, then review.
+      const sync = () => {
+        const n = tailorTyped();
+        setNext(n ? "Use these measurements &rarr;" : "Next &rarr;", n > 0 && !list().some((m) => m.part !== "body" && !isDone(m)));
+      };
+      sync();
+      tailorTypedSync = sync;
       return;
     }
     if (key === "pro-ready") {
@@ -7332,10 +7356,24 @@ function refreshMeasHub() {}
       estBtn.click(); // fills every field (handler in the estimator code)
       if (estPanel) estPanel.hidden = false;
     }
+    if (step > 0 && key === "pro-bring" && tailorTyped()) {
+      wiz.dataset.fillMissing = "1";
+      idx = nextMissing(null);
+      saveDraft();
+      render();
+      return;
+    }
     if (step > 0 && !currentFieldOk()) return;
+    if (step > 0 && wiz.dataset.fillMissing === "1" && list().some((m) => m.id === key)) {
+      idx = nextMissing(key);
+      saveDraft();
+      render();
+      return;
+    }
     if (step > 0 && key === "review") {
       const firstMissing = list().find((m) => !isDone(m));
       if (firstMissing) {
+        wiz.dataset.fillMissing = "1";
         idx = pages.indexOf(firstMissing.id);
         render();
         return;
@@ -7356,6 +7394,9 @@ function refreshMeasHub() {}
       render();
       return;
     }
+    // Back from the first measurement skips "Got your numbers?" when the
+    // numbers were typed into the tailor list.
+    if (step < 0 && pages[idx - 1] === "pro-ready" && tailorTyped()) step = -2;
     idx = Math.max(0, Math.min(pages.length - 1, idx + step));
     saveDraft();
     render();
@@ -7365,6 +7406,7 @@ function refreshMeasHub() {}
     if (measWizOpen) return;
     measWizOpen = true;
     wiz.dataset.returnToReview = "";
+    wiz.dataset.fillMissing = "";
     const ms = list();
     const anyDone = ms.some(isDone);
     if (measuredBy && !wiz.dataset.route) {
