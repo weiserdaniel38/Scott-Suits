@@ -8083,13 +8083,148 @@ function renderTailorChecklist() {
     setTimeout(() => (copyBtn.textContent = "Copy list"), 2500);
   });
   const printBtn = box.querySelector(".tc-print");
-  if (printBtn) printBtn.addEventListener("click", () => printTailorSheet(box));
+  if (printBtn) {
+    printBtn.addEventListener("click", () => printTailorSheet(box, printBtn));
+    if (tcPrintUnsupported()) tcLoadPdfLib().catch(() => {});
+  }
 }
 
 // Prints only the tailor's list: a clean black-on-white page with the
 // numbered items and ___ cm blanks. Everything else on the page is hidden
 // by the print rules in style.css while body has .tc-printing.
-function printTailorSheet(box) {
+// iPhone home-screen apps (and some in-app browsers) ignore window.print(),
+// so there we make a PDF of the same list and open the share sheet, whose
+// first row has Print. The PDF library is loaded when the page is shown.
+var TC_JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+var tcPdfLib = null;
+function tcPrintUnsupported() {
+  const ua = navigator.userAgent || "";
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const standalone = navigator.standalone === true || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  const inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|TikTok|GSA\//.test(ua);
+  return (ios && standalone) || inApp || typeof window.print !== "function";
+}
+function tcLoadPdfLib() {
+  if (tcPdfLib) return tcPdfLib;
+  tcPdfLib = new Promise((resolve, reject) => {
+    if (window.jspdf && window.jspdf.jsPDF) return resolve(window.jspdf.jsPDF);
+    const sc = document.createElement("script");
+    sc.src = TC_JSPDF_URL;
+    sc.async = true;
+    sc.onload = () => (window.jspdf && window.jspdf.jsPDF ? resolve(window.jspdf.jsPDF) : reject(new Error("no jsPDF")));
+    sc.onerror = () => {
+      tcPdfLib = null;
+      reject(new Error("jsPDF failed to load"));
+    };
+    document.head.appendChild(sc);
+  });
+  return tcPdfLib;
+}
+function tcBuildPdf(JsPDF, box) {
+  const doc = new JsPDF({ unit: "pt", format: "letter" });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 36;
+  let y = M + 10;
+  const ensure = (h) => {
+    if (y + h > H - M) {
+      doc.addPage();
+      y = M + 10;
+    }
+  };
+  doc.setFont("helvetica", "bold").setFontSize(20).text(SITE_BRAND.name, M, y);
+  y += 16;
+  doc.setFont("helvetica", "normal").setFontSize(9).setCharSpace(1.5).text("SUIT MEASUREMENTS", M, y);
+  doc.setCharSpace(0);
+  y += 10;
+  doc.setLineWidth(1.5).line(M, y, W - M, y);
+  y += 20;
+  doc.setFont("helvetica", "bold").setFontSize(9).text("FOR THE TAILOR", M, y);
+  y += 14;
+  const note = "Please measure for a suit that fits well (finished suit sizes, not tight body measurements). All in centimeters. The factory adds nothing.";
+  doc.setFont("helvetica", "normal").setFontSize(10);
+  const noteLines = doc.splitTextToSize(note, W - 2 * M);
+  doc.text(noteLines, M, y);
+  y += noteLines.length * 13 + 4;
+  const blankW = 90;
+  box.querySelectorAll(".tc-list > li").forEach((li) => {
+    if (li.classList.contains("tailor-checklist-part")) {
+      ensure(30);
+      y += 4;
+      doc.setFont("helvetica", "bold").setFontSize(9).text(li.textContent.trim().toUpperCase(), M, y);
+      y += 5;
+      doc.setLineWidth(0.8).line(M, y, W - M, y);
+      y += 16;
+      return;
+    }
+    const num = (li.querySelector(".tc-num") || {}).textContent || "";
+    const nameEl = li.querySelector(".tailor-checklist-name");
+    const hintEl = nameEl && nameEl.querySelector("small");
+    const hint = hintEl ? hintEl.textContent.trim() : "";
+    const label = nameEl ? nameEl.firstChild.textContent.trim() : "";
+    doc.setFont("helvetica", "normal").setFontSize(8.5);
+    const hintLines = hint ? doc.splitTextToSize(hint, W - 2 * M - 30 - blankW - 30) : [];
+    const rowH = 13 + hintLines.length * 11 + 2;
+    ensure(rowH);
+    doc.setLineWidth(0.8).circle(M + 8, y - 4, 8);
+    doc.setFont("helvetica", "bold").setFontSize(8).text(num, M + 8, y - 1, { align: "center" });
+    doc.setFontSize(11).text(label, M + 26, y);
+    if (hintLines.length) {
+      doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(70).text(hintLines, M + 26, y + 13);
+      doc.setTextColor(0);
+    }
+    const lineY = y + rowH - 6;
+    doc.setLineWidth(0.8).line(W - M - blankW - 20, lineY, W - M - 20, lineY);
+    doc.setFont("helvetica", "normal").setFontSize(10).text("cm", W - M - 15, lineY);
+    y += rowH;
+    doc.setDrawColor(190).setLineWidth(0.5).line(M, y, W - M, y);
+    doc.setDrawColor(0);
+    y += 13;
+  });
+  return doc.output("blob");
+}
+function tcSharePdf(box, btn) {
+  const fail = () => {
+    btn.textContent = "Couldn’t print";
+    setTimeout(() => (btn.textContent = "Print"), 2500);
+  };
+  const go = (JsPDF) => {
+    let blob;
+    try {
+      blob = tcBuildPdf(JsPDF, box);
+    } catch (e) {
+      return fail();
+    }
+    const name = SITE_BRAND.name.replace(/[^A-Za-z0-9]+/g, "-") + "-measurements.pdf";
+    const file = typeof File === "function" ? new File([blob], name, { type: "application/pdf" }) : null;
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: SITE_BRAND.name + " suit measurements" }).catch((e) => {
+        if (e && e.name !== "AbortError") window.open(URL.createObjectURL(blob), "_blank");
+      });
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+  // Built on the tap itself when the library is ready, so the share sheet
+  // is allowed to open.
+  if (window.jspdf && window.jspdf.jsPDF) return go(window.jspdf.jsPDF);
+  btn.textContent = "Preparing…";
+  tcLoadPdfLib()
+    .then((JsPDF) => {
+      btn.textContent = "Print";
+      go(JsPDF);
+    })
+    .catch(fail);
+}
+function printTailorSheet(box, btn) {
+  if (tcPrintUnsupported()) return tcSharePdf(box, btn);
   const sheet = box.querySelector(".tc-sheet");
   if (!sheet) return;
   let out = document.getElementById("tcPrintSheet");
@@ -8114,14 +8249,13 @@ function printTailorSheet(box) {
     window.removeEventListener("afterprint", done);
   };
   window.addEventListener("afterprint", done);
-  // Give the browser a moment to lay out the sheet before the print dialog.
-  setTimeout(() => {
-    try {
-      window.print();
-    } catch (e) {
-      done();
-    }
-  }, 60);
+  // Called right on the tap: iPhone Safari drops print() after a delay.
+  try {
+    window.print();
+  } catch (e) {
+    done();
+    tcSharePdf(box, btn);
+  }
 }
 
 function initTailorFinder() {
