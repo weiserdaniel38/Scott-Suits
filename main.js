@@ -8101,9 +8101,20 @@ function renderTailorChecklist() {
     const label = m.id === "back_jacket" ? "Jacket Length" : m.label;
     name.textContent = label;
     const how = m.hint || (typeof MEAS_WIZ_HINTS !== "undefined" && MEAS_WIZ_HINTS[m.id]);
-    if (how) {
+    // Every item gets its instruction, in bold, on its own line in
+    // parentheses (Daniel, 2026-11-09). Same text on screen, in print and
+    // in the copied list.
+    const extra = {
+      back_jacket: "Back of the collar seam down to the hem",
+      crotch: "FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband",
+      sleeve_length: "Shoulder to wrist, NOT from the neck",
+      body_sleeve: "Shoulder to wrist, NOT from the neck",
+      leg_length: "Outseam: top of waistband to hem",
+    }[m.id];
+    const tip = String(extra || how || "").trim().replace(/\.$/, "");
+    if (tip) {
       const hint = document.createElement("small");
-      hint.textContent = how;
+      hint.textContent = "(" + tip + ")";
       name.appendChild(hint);
     }
     name.insertBefore(document.createTextNode(":"), name.firstChild.nextSibling);
@@ -8135,18 +8146,14 @@ function renderTailorChecklist() {
     field.append(box2, document.createTextNode("cm"));
     li.append(num, name, field);
     list.appendChild(li);
-    // Every item gets its instruction, in bold (Daniel, 2026-11-09): real
-    // bold when pasted into Notes/Mail, bold letters in a plain text.
-    const extra = {
-      back_jacket: "Back of the collar seam down to the hem",
-      crotch: "FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband",
-      sleeve_length: "Shoulder to wrist, NOT from the neck",
-      body_sleeve: "Shoulder to wrist, NOT from the neck",
-      leg_length: "Outseam: top of waistband to hem",
-    }[m.id];
-    const tip = String(extra || how || "").trim().replace(/\.$/, "");
-    lines.push(n + ". " + label + (tip ? " \u2013 " + tcBoldText(tip) : "") + ": ");
-    htmlLines.push(n + ". " + tcEsc(label) + (tip ? " \u2013 <b>" + tcEsc(tip) + "</b>" : "") + ": ");
+    // Copied as "6. Jacket Length:" then "(instruction)" on the next line:
+    // real bold when pasted into Notes/Mail, bold letters in a plain text.
+    lines.push(n + ". " + label + ":");
+    htmlLines.push(n + ". " + tcEsc(label) + ":");
+    if (tip) {
+      lines.push("(" + tcBoldText(tip) + ")");
+      htmlLines.push("<b>(" + tcEsc(tip) + ")</b>");
+    }
   });
   lines.push("", "ALL MEASUREMENTS IN CENTIMETERS.");
   htmlLines.push("", "<b>ALL MEASUREMENTS IN CENTIMETERS.</b>");
