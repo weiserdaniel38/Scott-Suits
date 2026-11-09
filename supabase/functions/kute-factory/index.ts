@@ -251,7 +251,15 @@ async function factoryOrder(input: Record<string, unknown>) {
 // draft, no submit) until the order is paid. Admin "Place order without
 // payment" orders and S.W. Atelier requests (that storefront takes no
 // payment) are exempt.
+//
+// Also (Daniel, 2026-11-09): a suit added to the cart before measuring and
+// paid for without measurements is saved with measure_type 'pending'. It
+// can't go to the factory until the customer adds them in My Account
+// (order-measurements function). This applies to every order.
 function unpaidBlock(row: Record<string, unknown>): string | null {
+  if (String(row.measure_type || "") === "pending") {
+    return "This suit is waiting for the customer's measurements, so it can't go to the factory yet. It can be sent once they add them in My Account.";
+  }
   if (row.admin_no_payment) return null;
   if (String(row.brand || "scott") === "sw") return null;
   if (String(row.payment_status || "") === "paid") return null;
