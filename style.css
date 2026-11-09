@@ -2,7 +2,7 @@
   /* The same colors as r,g,b lists for the see-through tints, and the
      surface of inputs, swatches and cards, so a brand theme (brand.css)
      recolors every page. */
-  --brass-rgb:176,141,87;
+  --brass-rgb:125,46,61;
   --ivory-rgb:34,30,25;
   --ink-rgb:236,228,221;
   --surface:#fff;
@@ -10,8 +10,8 @@
   --ink:#ECE4DD;
   --ivory:#221E19;
   --ivory-dim:rgba(var(--ivory-rgb),0.62);
-  --brass:#B08D57;
-  --brass-light:#C9A467;
+  --brass:#7D2E3D;
+  --brass-light:#9C4D5B;
   --oxblood:#5C2430;
   --line: rgba(var(--ivory-rgb),0.14);
   --card-tint: rgba(var(--ivory-rgb),0.035);
@@ -1265,7 +1265,7 @@ nav{position:sticky;top:0;}
 
 /* Fabric step: "Same as Jacket" as a slim full-width banner (was a tall card with a blank image) */
 .designer-grid .fabric-palette-grid .opt-card.same-as-card{grid-column:1/-1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:12px;aspect-ratio:auto;height:54px;padding:0 14px;border-radius:4px;background:#e4dccd;color:#1c1814;overflow:hidden;box-shadow:none;border:1px solid rgba(0,0,0,0.14);}
-.designer-grid .fabric-palette-grid .opt-card.same-as-card.selected{border:1.5px solid var(--brass,#b08d57);outline:1.5px solid var(--brass,#b08d57);outline-offset:1px;}
+.designer-grid .fabric-palette-grid .opt-card.same-as-card.selected{border:1.5px solid var(--brass,#7D2E3D);outline:1.5px solid var(--brass,#7D2E3D);outline-offset:1px;}
 .designer-grid .fabric-palette-grid .opt-card.same-as-card .opt-swatch{display:block;flex:0 0 auto;width:34px;height:34px;aspect-ratio:1/1;border-radius:3px;object-fit:cover;margin:0;}
 .designer-grid .fabric-palette-grid .opt-card.same-as-card .opt-swatch.same-as-placeholder{display:none;}
 .designer-grid .fabric-palette-grid .opt-card.same-as-card .opt-name{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;line-height:1.3;padding:0;text-align:left;}
@@ -1857,7 +1857,7 @@ body:not(.designing) #suitTypeSection{display:none;}
 .studio-marker-dot::before{width:14px;height:1.8px;}
 .studio-marker-dot::after{width:1.8px;height:14px;}
 .studio-marker-dot{animation:studioPulse 2.8s ease-out infinite;}
-@keyframes studioPulse{0%{box-shadow:0 0 0 5px rgba(245,240,231,0.28),0 2px 10px rgba(0,0,0,0.38),0 0 0 5px rgba(201,164,103,0.5);}70%{box-shadow:0 0 0 5px rgba(245,240,231,0.28),0 2px 10px rgba(0,0,0,0.38),0 0 0 16px rgba(201,164,103,0);}100%{box-shadow:0 0 0 5px rgba(245,240,231,0.28),0 2px 10px rgba(0,0,0,0.38),0 0 0 5px rgba(201,164,103,0);}}
+@keyframes studioPulse{0%{box-shadow:0 0 0 5px rgba(245,240,231,0.28),0 2px 10px rgba(0,0,0,0.38),0 0 0 5px rgba(156,77,91,0.5);}70%{box-shadow:0 0 0 5px rgba(245,240,231,0.28),0 2px 10px rgba(0,0,0,0.38),0 0 0 16px rgba(156,77,91,0);}100%{box-shadow:0 0 0 5px rgba(245,240,231,0.28),0 2px 10px rgba(0,0,0,0.38),0 0 0 5px rgba(156,77,91,0);}}
 @media (prefers-reduced-motion: reduce){.studio-marker-dot{animation:none;}}
 .studio-marker:hover .studio-marker-dot,.studio-marker:focus-visible .studio-marker-dot{transform:scale(1.1);}
 .studio-marker.active .studio-marker-dot{background:var(--brass);border-color:#F5F0E7;}
@@ -2330,7 +2330,7 @@ body.order-done-view > .process{display:none !important;}
   --ivory:#F2EDE3;--ivory-rgb:242,237,227;--ivory-dim:rgba(242,237,227,0.66);--ink:#0f0d0b;--ink-rgb:15,13,11;
   --surface:#1c1915;--surface-rgb:28,25,21;--line:rgba(242,237,227,0.14);--card-tint:rgba(242,237,227,0.05);
   max-width:none;width:100%;max-height:none;height:100%;border-radius:0;color:var(--ivory);
-  background:radial-gradient(120% 70% at 50% 0%,rgba(176,141,87,0.22),rgba(176,141,87,0) 60%),#0f0d0b;
+  background:radial-gradient(120% 70% at 50% 0%,rgba(125,46,61,0.22),rgba(125,46,61,0) 60%),#0f0d0b;
   padding:calc(18px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
   animation:bs-fade .35s ease both;}
 .bs-sheet.bs-full .bs-card>*{width:100%;max-width:560px;margin-left:auto;margin-right:auto;}
