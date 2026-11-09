@@ -7993,6 +7993,22 @@ function buildTailorCard(t, miles) {
 // type and only what the factory requires, so whatever the tailor writes
 // down can be typed straight into the "Finished suit sizes" boxes. Rebuilt
 // by renderMeasurementFields() whenever the suit type changes.
+function tcEsc(t) {
+  return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+// Turns A-Z, a-z and 0-9 into Unicode bold sans letters, so the
+// instructions stay bold in a text message where formatting is lost.
+function tcBoldText(t) {
+  return Array.from(String(t))
+    .map((c) => {
+      const k = c.codePointAt(0);
+      if (k >= 65 && k <= 90) return String.fromCodePoint(0x1d5d4 + k - 65);
+      if (k >= 97 && k <= 122) return String.fromCodePoint(0x1d5ee + k - 97);
+      if (k >= 48 && k <= 57) return String.fromCodePoint(0x1d7ec + k - 48);
+      return c;
+    })
+    .join("");
+}
 function renderTailorChecklist() {
   const box = document.getElementById("tailorChecklist");
   if (!box) return;
@@ -8004,14 +8020,15 @@ function renderTailorChecklist() {
     '<p class="tc-copied" hidden>Copied. Paste it into a text or a note, or just show this screen.</p>' +
     '<div class="tc-sheet">' +
     '<p class="tc-title">For the tailor</p>' +
-    '<p class="tc-note">Please measure for a <b>suit that fits well</b> (finished suit sizes, not tight body measurements). <b>All in centimeters.</b> The factory adds nothing.</p>' +
+    '<p class="tc-note">Please measure for a <b>suit that fits well</b>. <b>Finished suit sizes, not tight body measurements.</b> <b>All in centimeters.</b> The factory adds nothing.</p>' +
     '<ol class="tailor-checklist-list tc-list"></ol>' +
     "</div>";
   const lines = [
     SITE_BRAND.name + " suit measurements",
     "",
-    "FOR THE TAILOR: please measure for a suit that fits well (finished suit sizes, not tight body measurements). ALL IN CENTIMETERS. The factory adds nothing.",
+    "FOR THE TAILOR: please measure for a suit that fits well. Finished suit sizes, not tight body measurements. ALL IN CENTIMETERS. The factory adds nothing.",
   ];
+  const htmlLines = lines.map(tcEsc);
   const list = box.querySelector(".tc-list");
   let lastPart = null;
   let n = 0;
@@ -8020,6 +8037,7 @@ function renderTailorChecklist() {
     const part = isPantsOnlyType(currentSuitType) && m.part === "jacket" ? "pants" : m.part;
     if (part !== lastPart) {
       lines.push("", measurePartHeading(part).toUpperCase());
+      htmlLines.push("", "<b>" + tcEsc(measurePartHeading(part).toUpperCase()) + "</b>");
       const h = document.createElement("li");
       h.className = "tailor-checklist-part";
       h.textContent = measurePartHeading(part);
@@ -8042,25 +8060,67 @@ function renderTailorChecklist() {
       hint.textContent = how;
       name.appendChild(hint);
     }
-    const blank = document.createElement("span");
-    blank.className = "tc-blank";
-    blank.textContent = "___ cm";
-    li.append(num, name, blank);
+    name.insertBefore(document.createTextNode(":"), name.firstChild.nextSibling);
+    // The tailor types the number right here. It goes straight into the
+    // real measurement box, so nothing needs typing again later.
+    const field = document.createElement("label");
+    field.className = "tc-field";
+    const box2 = document.createElement("input");
+    box2.type = "text";
+    box2.inputMode = "decimal";
+    box2.className = "tc-input";
+    box2.setAttribute("aria-label", label + " in cm");
+    const real = document.getElementById("m_" + m.id);
+    if (real && real.value) {
+      box2.value = real.value;
+      box2.setAttribute("value", real.value);
+    }
+    box2.addEventListener("input", () => {
+      const v = box2.value.replace(",", ".").replace(/[^0-9.]/g, "");
+      if (v !== box2.value) box2.value = v;
+      box2.setAttribute("value", v);
+      const target = document.getElementById("m_" + m.id);
+      if (target) {
+        target.value = v;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        target.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    field.append(box2, document.createTextNode("cm"));
+    li.append(num, name, field);
     list.appendChild(li);
-    lines.push(n + ". " + label +
-      (m.id === "back_jacket" ? " (back of the collar seam down to the hem)" : "") +
-      (m.id === "crotch" ? " (FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband)" : "") +
-      (m.id === "sleeve_length" || m.id === "body_sleeve" ? " (shoulder to wrist, NOT from the neck)" : "") +
-      (m.id === "leg_length" ? " (outseam: top of waistband to hem)" : "") + ": ____ cm");
+    // Every item gets its instruction, in bold (Daniel, 2026-11-09): real
+    // bold when pasted into Notes/Mail, bold letters in a plain text.
+    const extra = {
+      back_jacket: "Back of the collar seam down to the hem",
+      crotch: "FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband",
+      sleeve_length: "Shoulder to wrist, NOT from the neck",
+      body_sleeve: "Shoulder to wrist, NOT from the neck",
+      leg_length: "Outseam: top of waistband to hem",
+    }[m.id];
+    const tip = String(extra || how || "").trim().replace(/\.$/, "");
+    lines.push(n + ". " + label + (tip ? " \u2013 " + tcBoldText(tip) : "") + ": ");
+    htmlLines.push(n + ". " + tcEsc(label) + (tip ? " \u2013 <b>" + tcEsc(tip) + "</b>" : "") + ": ");
   });
   lines.push("", "ALL MEASUREMENTS IN CENTIMETERS.");
+  htmlLines.push("", "<b>ALL MEASUREMENTS IN CENTIMETERS.</b>");
   const text = lines.join("\n");
+  const html = htmlLines.join("<br>");
   const copyBtn = box.querySelector(".tc-copy");
   const copied = box.querySelector(".tc-copied");
   copyBtn.addEventListener("click", async () => {
     let ok = false;
     try {
-      await navigator.clipboard.writeText(text);
+      if (typeof ClipboardItem === "function" && navigator.clipboard.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": new Blob([text], { type: "text/plain" }),
+            "text/html": new Blob([html], { type: "text/html" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
       ok = true;
     } catch (e) {
       // Older browsers: copy through a hidden text box instead.
@@ -8141,7 +8201,7 @@ function tcBuildPdf(JsPDF, box) {
   y += 20;
   doc.setFont("helvetica", "bold").setFontSize(9).text("FOR THE TAILOR", M, y);
   y += 14;
-  const note = "Please measure for a suit that fits well (finished suit sizes, not tight body measurements). All in centimeters. The factory adds nothing.";
+  const note = "Please measure for a suit that fits well. Finished suit sizes, not tight body measurements. All in centimeters. The factory adds nothing.";
   doc.setFont("helvetica", "normal").setFontSize(10);
   const noteLines = doc.splitTextToSize(note, W - 2 * M);
   doc.text(noteLines, M, y);
@@ -8161,8 +8221,9 @@ function tcBuildPdf(JsPDF, box) {
     const nameEl = li.querySelector(".tailor-checklist-name");
     const hintEl = nameEl && nameEl.querySelector("small");
     const hint = hintEl ? hintEl.textContent.trim() : "";
-    const label = nameEl ? nameEl.firstChild.textContent.trim() : "";
-    doc.setFont("helvetica", "normal").setFontSize(8.5);
+    const label = nameEl ? nameEl.firstChild.textContent.trim() + ":" : "";
+    const typed = ((li.querySelector(".tc-input") || {}).value || "").trim();
+    doc.setFont("helvetica", "bold").setFontSize(8.5);
     const hintLines = hint ? doc.splitTextToSize(hint, W - 2 * M - 30 - blankW - 30) : [];
     const rowH = 13 + hintLines.length * 11 + 2;
     ensure(rowH);
@@ -8170,11 +8231,11 @@ function tcBuildPdf(JsPDF, box) {
     doc.setFont("helvetica", "bold").setFontSize(8).text(num, M + 8, y - 1, { align: "center" });
     doc.setFontSize(11).text(label, M + 26, y);
     if (hintLines.length) {
-      doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(70).text(hintLines, M + 26, y + 13);
+      doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(40).text(hintLines, M + 26, y + 13);
       doc.setTextColor(0);
     }
     const lineY = y + rowH - 6;
-    doc.setLineWidth(0.8).line(W - M - blankW - 20, lineY, W - M - 20, lineY);
+    if (typed) doc.setFont("helvetica", "bold").setFontSize(12).text(typed, W - M - 22, lineY, { align: "right" });
     doc.setFont("helvetica", "normal").setFontSize(10).text("cm", W - M - 15, lineY);
     y += rowH;
     doc.setDrawColor(190).setLineWidth(0.5).line(M, y, W - M, y);
