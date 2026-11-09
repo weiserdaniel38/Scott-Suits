@@ -2712,15 +2712,12 @@ body.designing .mock-trust,body.order-done-view .mock-trust{display:none;}
 
 /* Fabric step hint: tap a tile to see the real cloth (2026-11-08). */
 /* Fabric tap hint, stronger (Daniel 2026-11-09: "make even more obvious"):
-   burgundy-edged banner with a round icon that pulses a few times, plus a
-   small magnifier in the corner of every fabric tile. */
+   burgundy-edged banner with a round icon that pulses a few times.
+   Tile corner magnifiers removed per Daniel 2026-11-09. */
 .fabric-tap-hint{display:flex;align-items:center;gap:12px;margin:0 0 16px;padding:12px 14px;border:1.5px solid rgba(var(--brass-rgb),0.55);border-radius:12px;background:rgba(var(--brass-rgb),0.07);color:var(--ivory);line-height:1.3;}
 .fabric-tap-hint strong{display:block;font-size:16px;font-weight:700;}
 .fabric-tap-hint small{display:block;margin-top:2px;font-size:13px;color:var(--ivory-dim);}
 .fabric-tap-hint-icon{flex:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--brass);color:#fff;animation:fabricTapPulse 1.6s ease-out 0.4s 3;}
 .fabric-tap-hint-icon svg{display:block;}
 @keyframes fabricTapPulse{0%{box-shadow:0 0 0 0 rgba(var(--brass-rgb),0.55);}70%{box-shadow:0 0 0 12px rgba(var(--brass-rgb),0);}100%{box-shadow:0 0 0 0 rgba(var(--brass-rgb),0);}}
-.designer-grid .fabric-palette-grid .opt-card.fabric-tile{position:relative;}
-.designer-grid .fabric-palette-grid .opt-card.fabric-tile::before{content:"";position:absolute;top:4px;right:4px;width:11px;height:11px;background:currentColor;opacity:.75;pointer-events:none;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5' fill='none' stroke='black' stroke-width='2.6'/%3E%3Cpath d='M15.5 15.5L21 21' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5' fill='none' stroke='black' stroke-width='2.6'/%3E%3Cpath d='M15.5 15.5L21 21' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;}
-@media(min-width:700px){.designer-grid .fabric-palette-grid .opt-card.fabric-tile::before{width:13px;height:13px;top:6px;right:6px;}}
-@media(prefers-reduced-motion:reduce){.fabric-tap-hint-icon{animation:none;}}
+@media(min-width:700px){@media(prefers-reduced-motion:reduce){.fabric-tap-hint-icon{animation:none;}}
