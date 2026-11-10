@@ -2040,7 +2040,7 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos, toMeasure] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos, toMeasure, labels] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
@@ -2052,6 +2052,7 @@ async function loadAdminOrders() {
       client.rpc("admin_order_factory"),
       client.rpc("admin_order_promos"),
       adminPendingMeasurements(),
+      client.rpc("admin_order_labels"),
     ]);
     adminMeasurePending = toMeasure;
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
@@ -2070,6 +2071,11 @@ async function loadAdminOrders() {
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!promos.error && promos.data) promos.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    // Shipping labels bought from here (supabase/sql/40, shipping-label), oldest first.
+    if (labels && !labels.error && labels.data) labels.data.slice().reverse().forEach((x) => {
+      const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
+      (p.labels = p.labels || []).push(x);
+    });
     // Each suit's fabric(s), suit picture and factory order, shown on its
     // suit card in the order row (supabase/sql/27, 28 and 30).
     const pics = {};
@@ -2906,6 +2912,7 @@ function adminOrderRow(o) {
     '<div class="admin-order-body"><dl class="admin-order-info"></dl>' +
     '<div class="admin-order-manage"><span class="admin-order-label">Order</span><div class="admin-ship-actions">' +
     '<button type="button" class="admin-ship-factory admin-ship-send">Send to factory</button>' +
+    '<button type="button" class="admin-ship-factory admin-ship-label">Shipping label</button>' +
     '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
     '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div></div></div>';
   // Customer-typed text goes in with textContent, never as HTML.
@@ -2952,6 +2959,24 @@ function adminOrderRow(o) {
     factoryPanel = adminFactoryPanel(o);
     row.querySelector(".admin-order-manage").appendChild(factoryPanel);
   });
+  // "Shipping label": rates for the order's address, then Buy label (Daniel,
+  // 2026-11-10: automate shipping). Not for in-store pickup.
+  const labelBtn = row.querySelector(".admin-ship-label");
+  if (o.fulfillment === "pickup") labelBtn.remove();
+  else {
+    const bought = (o.labels || []).filter((l) => l.status !== "refunded" && !l.test_mode);
+    if (bought.length) labelBtn.textContent = "Shipping label \u2713";
+    let labelPanel = null;
+    labelBtn.addEventListener("click", () => {
+      if (labelPanel) {
+        labelPanel.remove();
+        labelPanel = null;
+        return;
+      }
+      labelPanel = adminLabelPanel(o, labelBtn);
+      row.querySelector(".admin-order-manage").appendChild(labelPanel);
+    });
+  }
   const deleteBtn = row.querySelector(".admin-ship-delete");
   deleteBtn.addEventListener("click", async () => {
     const name = o.customer_name || "No name";
@@ -2960,7 +2985,6 @@ function adminOrderRow(o) {
       "\nOrder " + o.order_id + "\n\nThis can\u2019t be undone.";
     if (!window.confirm(msg)) return;
     deleteBtn.disabled = true;
-    saveBtn.disabled = true;
     result.hidden = false;
     result.textContent = "Deleting...";
     try {
@@ -2976,10 +3000,241 @@ function adminOrderRow(o) {
       console.error(err);
       result.textContent = "Couldn\u2019t delete: " + (err.message || err);
       deleteBtn.disabled = false;
-      saveBtn.disabled = false;
     }
   });
   return row;
+}
+
+// ---- Admin: shipping labels (shipping-label edge function) ----
+// Opens with rates for one box (15x12x10 in, 3.25 lb a suit, Daniel's real
+// box) to the order's address, cheapest picked. Size and weight can be
+// changed and quoted again. Buy label asks first, then saves the label, its
+// real cost and tracking on the order, marks it "Shipped to you" and emails
+// the customer. Nothing is bought without that tap.
+const LABEL_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/shipping-label" : "";
+async function callLabelFn(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+  const res = await fetch(LABEL_FN_URL, { method: "POST", headers, body: JSON.stringify(payload) });
+  const r = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const e = new Error(r.error || "error " + res.status);
+    e.data = r;
+    throw e;
+  }
+  return r;
+}
+function labelMoney(n) {
+  return "$" + Number(n || 0).toFixed(2);
+}
+function adminLabelPanel(o, labelBtn) {
+  const panel = document.createElement("div");
+  panel.className = "admin-label";
+  panel.innerHTML =
+    '<div class="admin-label-bought"></div>' +
+    '<p class="admin-label-to account-section-note"></p>' +
+    '<div class="admin-label-box">' +
+    '<label>Box (in)<span><input type="number" inputmode="decimal" step="0.5" min="1" class="lb-l" aria-label="Length">×' +
+    '<input type="number" inputmode="decimal" step="0.5" min="1" class="lb-w" aria-label="Width">×' +
+    '<input type="number" inputmode="decimal" step="0.5" min="1" class="lb-h" aria-label="Height"></span></label>' +
+    '<label>Weight (lb)<input type="number" inputmode="decimal" step="0.1" min="0.1" class="lb-lb"></label>' +
+    '<button type="button" class="admin-ship-factory lb-quote">Get rates</button></div>' +
+    '<div class="admin-label-rates"></div>' +
+    '<div class="admin-ship-actions"><button type="button" class="btn-primary lb-buy" hidden>Buy label</button></div>' +
+    '<p class="admin-label-msg" hidden></p>' +
+    '<details class="admin-label-hand"><summary>Bought the label somewhere else? Enter tracking</summary>' +
+    '<div class="admin-label-box"><label>Carrier<select class="lb-carrier"><option>USPS</option><option>UPS</option><option>FedEx</option><option>DHL</option><option>Other</option></select></label>' +
+    '<label>Tracking number<input type="text" class="lb-track" autocomplete="off" spellcheck="false"></label>' +
+    '<button type="button" class="btn-primary lb-hand-save">Save and email customer</button></div>' +
+    '<p class="admin-label-hand-msg account-section-note" hidden></p></details>';
+  const $ = (c) => panel.querySelector(c);
+  const msg = $(".admin-label-msg");
+  const say = (t) => { msg.hidden = !t; msg.textContent = t || ""; };
+  const ratesBox = $(".admin-label-rates");
+  const buyBtn = $(".lb-buy");
+  const quoteBtn = $(".lb-quote");
+  let rates = [];
+  let mode = "";
+  let labels = (o.labels || []).slice();
+
+  const showBought = () => {
+    const box = $(".admin-label-bought");
+    box.innerHTML = "";
+    labels.filter((l) => l.status !== "refunded").forEach((l) => {
+      const line = document.createElement("div");
+      line.className = "admin-label-line";
+      line.innerHTML = '<span></span><a class="admin-ship-factory" target="_blank" rel="noopener">Print label</a>' +
+        '<button type="button" class="admin-ship-delete lb-refund">Refund</button>';
+      line.querySelector("span").textContent =
+        (l.test_mode ? "[TEST] " : "") + [l.carrier, l.service].filter(Boolean).join(" ") + " · " + labelMoney(l.cost_usd) +
+        " · " + (l.tracking_number || "no tracking") + (l.status === "refund_pending" ? " · refund pending" : "");
+      const a = line.querySelector("a");
+      if (l.label_url) a.href = l.label_url;
+      else a.remove();
+      const rf = line.querySelector(".lb-refund");
+      if (l.status !== "bought" || !l.id) rf.remove();
+      else rf.addEventListener("click", async () => {
+        if (!window.confirm("Refund this " + (l.carrier || "") + " label (" + labelMoney(l.cost_usd) + ")?\n\nOnly for a label that was never used. The order goes back to “Final inspection with us”.")) return;
+        rf.disabled = true;
+        say("Asking Shippo for the refund...");
+        try {
+          const r = await callLabelFn({ action: "refund", label_id: l.id });
+          l.status = r.status;
+          say(r.status === "refunded" ? "Refunded." : "Refund requested. Shippo usually finishes it within a few days.");
+          showBought();
+        } catch (err) {
+          rf.disabled = false;
+          say("Couldn’t refund: " + (err.message || err));
+        }
+      });
+      box.appendChild(line);
+    });
+    if (o.shipping_usd != null && labels.some((l) => l.status !== "refunded" && !l.test_mode)) {
+      const paid = document.createElement("p");
+      paid.className = "account-section-note";
+      paid.textContent = "Customer paid " + labelMoney(o.shipping_usd) + " for shipping.";
+      box.appendChild(paid);
+    }
+  };
+
+  const showRates = () => {
+    ratesBox.innerHTML = "";
+    rates.slice(0, 6).forEach((r, i) => {
+      const lab = document.createElement("label");
+      lab.className = "admin-label-rate";
+      lab.innerHTML = '<input type="radio" name="lbrate-' + escapeAttr(o.order_id) + '"><span></span><b></b>';
+      lab.querySelector("input").value = r.id;
+      lab.querySelector("input").checked = i === 0;
+      lab.querySelector("span").textContent = r.carrier + " " + r.service + (r.days ? " · about " + r.days + (r.days === 1 ? " day" : " days") : "") + (i === 0 ? " · cheapest" : "");
+      lab.querySelector("b").textContent = labelMoney(r.amount);
+      lab.querySelector("input").addEventListener("change", setBuy);
+      ratesBox.appendChild(lab);
+    });
+    if (!rates.length) ratesBox.innerHTML = '<p class="account-section-note">No rates came back for this package.</p>';
+    setBuy();
+  };
+  function picked() {
+    const el = ratesBox.querySelector("input:checked");
+    return el ? rates.find((r) => r.id === el.value) : null;
+  }
+  function setBuy() {
+    const r = picked();
+    buyBtn.hidden = !r;
+    if (r) buyBtn.textContent = (mode === "test" ? "Buy TEST label " : "Buy label ") + labelMoney(r.amount);
+  }
+
+  const quote = async () => {
+    quoteBtn.disabled = true;
+    buyBtn.hidden = true;
+    say("Getting rates...");
+    try {
+      const num = (c) => Number($(c).value) || undefined;
+      const r = await callLabelFn({ action: "quote", order_id: o.order_id, length: num(".lb-l"), width: num(".lb-w"), height: num(".lb-h"), weight: num(".lb-lb") });
+      mode = r.mode;
+      rates = r.rates || [];
+      if (r.labels) labels = r.labels;
+      $(".lb-l").value = r.parcel.length;
+      $(".lb-w").value = r.parcel.width;
+      $(".lb-h").value = r.parcel.height;
+      $(".lb-lb").value = r.parcel.weight;
+      $(".admin-label-to").textContent = "To: " + r.address + (r.address_ok ? "" : " ⚠ Shippo couldn’t confirm this address" + (r.address_notes && r.address_notes.length ? ": " + r.address_notes.join("; ") : "") + ". Check it before buying.");
+      say(r.mode === "test" ? "Shippo is in TEST mode: labels are free samples and nothing is sent to the customer." : "");
+      showBought();
+      showRates();
+    } catch (err) {
+      say("Couldn’t get rates: " + (err.message || err));
+    } finally {
+      quoteBtn.disabled = false;
+    }
+  };
+  quoteBtn.addEventListener("click", quote);
+
+  buyBtn.addEventListener("click", async () => {
+    const r = picked();
+    if (!r) return;
+    const has = labels.filter((l) => l.status !== "refunded" && (mode === "test") === !!l.test_mode);
+    if (!window.confirm(
+      "Buy a " + r.carrier + " " + r.service + " label for " + labelMoney(r.amount) + "?\n\n" +
+      (o.customer_name || "Customer") + " · " + $(".lb-l").value + "×" + $(".lb-w").value + "×" + $(".lb-h").value + " in, " + $(".lb-lb").value + " lb" +
+      (has.length ? "\n\nThis order already has a label. This buys a second one." : "") +
+      (mode === "test" ? "\n\nTest mode: free sample label." : "\n\nYour Shippo account is charged. The customer is emailed the tracking number and the order is marked Shipped.")
+    )) return;
+    buyBtn.disabled = true;
+    quoteBtn.disabled = true;
+    say("Buying the label...");
+    try {
+      const b = await callLabelFn({ action: "buy", order_id: o.order_id, rate_id: r.id, again: has.length > 0 });
+      labels.push(Object.assign({ id: null }, b));
+      rates = [];
+      showRates();
+      showBought();
+      const n = b.notified;
+      const sent = b.test_mode ? "" : !n ? "" : n.email && n.email.ok ? (n.live ? " Customer emailed the tracking." : " Test mode: the email went to you, not the customer.") : " The email didn’t go out" + (n.error ? ": " + n.error : "") + ".";
+      say("Label bought: " + b.carrier + " " + b.tracking_number + " (" + labelMoney(b.cost_usd) + ")." + (b.test_mode ? "" : " Order marked Shipped to you.") + sent + " Tap Print label.");
+      if (!b.test_mode) {
+        labelBtn.textContent = "Shipping label ✓";
+        const badge = panel.closest(".admin-ship-row") && panel.closest(".admin-ship-row").querySelector(".admin-ship-badge");
+        if (badge) badge.textContent = shippingLabel("shipped");
+      }
+      if (b.label_url) window.open(b.label_url, "_blank", "noopener");
+    } catch (err) {
+      say("Couldn’t buy the label: " + (err.message || err));
+    } finally {
+      buyBtn.disabled = false;
+      quoteBtn.disabled = false;
+    }
+  });
+
+  // Tracking from a label bought by hand (Shippo app, post office): saved on
+  // the order as "Shipped to you" and the customer gets the shipped email
+  // with the tracking link (send-shipping-update), same as a label bought here.
+  const hand = $(".admin-label-hand");
+  const handMsg = $(".admin-label-hand-msg");
+  const handSay = (t) => { handMsg.hidden = !t; handMsg.textContent = t || ""; };
+  if (o.tracking_number) {
+    $(".lb-track").value = o.tracking_number;
+    const c = $(".lb-carrier");
+    if (o.tracking_carrier) c.value = Array.from(c.options).some((x) => x.value === o.tracking_carrier) ? o.tracking_carrier : "Other";
+    hand.open = !(o.labels || []).some((l) => l.tracking_number === o.tracking_number);
+    handSay("Saved on the order: " + (o.tracking_carrier || "") + " " + o.tracking_number + ".");
+  }
+  $(".lb-hand-save").addEventListener("click", async () => {
+    const carrier = $(".lb-carrier").value;
+    const tracking = $(".lb-track").value.replace(/\s+/g, "");
+    if (!tracking) return handSay("Type the tracking number first.");
+    if (!window.confirm("Mark " + (o.customer_name || "this order") + " as Shipped with " + carrier + " " + tracking + " and email the customer the tracking link?")) return;
+    const btn = $(".lb-hand-save");
+    btn.disabled = true;
+    handSay("Saving...");
+    try {
+      const { error } = await getSupabase().rpc("admin_update_shipping", { p_order_id: o.order_id, p_status: "shipped", p_carrier: carrier, p_tracking: tracking });
+      if (error) throw error;
+      o.tracking_carrier = carrier;
+      o.tracking_number = tracking;
+      o.shipping_status = "shipped";
+      const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+      const res = await fetch(SUPABASE_URL + "/functions/v1/send-shipping-update", { method: "POST", headers, body: JSON.stringify({ order_id: o.order_id }) });
+      const n = await res.json().catch(() => ({}));
+      const row = panel.closest(".admin-ship-row");
+      const badge = row && row.querySelector(".admin-ship-badge");
+      if (badge) badge.textContent = shippingLabel("shipped");
+      handSay("Saved. " + (n.email && n.email.ok ? (n.live ? "Customer emailed the tracking link." : "Test mode: the email went to you, not the customer.") : "The email didn\u2019t go out" + (n.error ? ": " + n.error : n.email && n.email.detail ? ": " + n.email.detail : "") + "."));
+    } catch (err) {
+      handSay("Couldn\u2019t save: " + (err.message || err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Daniel's box for 2 suits + hangers (2026-11-10): 15x12x10 in, 6 lb 8 oz.
+  $(".lb-l").value = 15;
+  $(".lb-w").value = 12;
+  $(".lb-h").value = 10;
+  $(".lb-lb").value = Math.max(1, Math.round(3.25 * (Number(o.suits) || 1) * 10) / 10);
+  showBought();
+  // An order that already has tracking doesn't fetch rates until asked.
+  if (o.tracking_number && o.shipping_status && SHIPPING_WITH_TRACKING.includes(o.shipping_status)) say("This order is already shipped. Tap Get rates for another label.");
+  else quote();
+  return panel;
 }
 
 // "Send to factory": one block per suit of the order. Height and weight

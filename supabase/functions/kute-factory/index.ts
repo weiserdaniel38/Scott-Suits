@@ -29,7 +29,8 @@
 //       order's shipping step forward to match and, when it moves, emails
 //       (and texts) the customer through send-shipping-update
 //   { action: "factory_status_all" }  factory_status for every suit still
-//       at the factory; run every hour by pg_cron (see
+//       at the factory, plus the carrier's tracking (Shippo) for orders
+//       shipped to the customer (out for delivery / delivered); run every hour by pg_cron (see
 //       supabase/sql/32_factory_status_hourly.sql), which signs in with the
 //       x-cron-token header and may run only this action
 //   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
@@ -457,7 +458,51 @@ async function factoryStatusAll() {
     if (out.ok) updated++;
     else failed++;
   }
-  return { ok: true, checked: rows.length, updated, failed };
+  const carriers = await carrierTrackingAll().catch((e) => ({ ok: false, error: String(e) }));
+  return { ok: true, checked: rows.length, updated, failed, carriers };
+}
+
+// Orders already shipped to the customer: asks Shippo where the parcel is
+// and moves the order to "Out for delivery" / "Delivered" (forward only),
+// emailing the customer at each move like the factory steps (Daniel,
+// 2026-11-10: automate shipping). Runs inside the hourly job. Needs a live
+// SHIPPO_API_KEY (a test key only tracks Shippo's fake numbers).
+const SHIPPO_CARRIER: Record<string, string> = { usps: "usps", ups: "ups", fedex: "fedex", dhl: "dhl_express" };
+export function trackStage(t: Record<string, any>): string {
+  const st = t && t.tracking_status;
+  if (!st) return "";
+  if (st.status === "DELIVERED") return "delivered";
+  const sub = String((st.substatus && st.substatus.code) || "").toLowerCase();
+  if (sub === "out_for_delivery" || /out for delivery/i.test(String(st.status_details || ""))) return "out_for_delivery";
+  return "";
+}
+async function carrierTrackingAll() {
+  const key = env("SHIPPO_API_KEY");
+  if (!key || key.startsWith("shippo_test_")) return { ok: true, skipped: "no live Shippo key" };
+  const { data, error } = await supabase.from("orders").select("order_id, shipping_status, tracking_carrier, tracking_number")
+    .in("shipping_status", ["shipped", "out_for_delivery"]).not("tracking_number", "is", null).limit(500);
+  if (error) throw new Error(error.message);
+  const seen = new Map<string, Record<string, any>>();
+  for (const r of data || []) if (!seen.has(String(r.order_id))) seen.set(String(r.order_id), r);
+  let moved = 0, failed = 0;
+  for (const r of seen.values()) {
+    const carrier = SHIPPO_CARRIER[String(r.tracking_carrier || "").toLowerCase()];
+    if (!carrier) continue;
+    try {
+      const res = await fetch("https://api.goshippo.com/tracks/" + carrier + "/" + encodeURIComponent(String(r.tracking_number).replace(/\s+/g, "")), {
+        headers: { authorization: "ShippoToken " + key },
+      });
+      if (!res.ok) { failed++; continue; }
+      const stage = trackStage(await res.json());
+      if (!stage || SHIPPING_ORDER.indexOf(stage) <= SHIPPING_ORDER.indexOf(String(r.shipping_status || ""))) continue;
+      await supabase.from("orders").update({ shipping_status: stage, shipping_updated_at: new Date().toISOString() }).eq("order_id", r.order_id);
+      await notifyCustomer(String(r.order_id));
+      moved++;
+    } catch {
+      failed++;
+    }
+  }
+  return { ok: true, tracked: seen.size, moved, failed };
 }
 
 // Stock of every fabric on the live site, saved as suit-images/fabric-stock.json
