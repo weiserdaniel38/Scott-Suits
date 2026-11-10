@@ -8267,15 +8267,46 @@ document.getElementById("continueFromPreviewBtn").addEventListener("click", () =
   goToStep(previewSection, measurementsSection);
 });
 // "Add to cart" on the Preview page: the suit goes in the cart now and the
-// customer goes to checkout, where the suits still needing measurements are
-// listed (renderCheckoutMeasureNotice).
+// customer STAYS on the Preview (Daniel, 2026-11-10: "don't leave the
+// preview page"). The button turns into "Added to cart" with a View cart
+// link; checkout lists the suits still needing measurements
+// (renderCheckoutMeasureNotice). Tapping again just updates the same cart
+// item (pendingCommitIndex), never a copy.
 function addToCartMeasureLater() {
   if (!commitCurrentSuitToCart({ measureLater: true })) return;
-  goToStep(previewSection, personalInfoSection);
+  syncPreviewCartButton(true);
+  const badge = document.getElementById("cartBadge");
+  if (badge) {
+    badge.classList.remove("cart-badge-pop");
+    void badge.offsetWidth;
+    badge.classList.add("cart-badge-pop");
+  }
+}
+// Shows "Added to cart" while the suit on the Preview is in the cart
+// unchanged; back to "Add to cart" once the design is changed after adding.
+function syncPreviewCartButton(justAdded) {
+  const btn = document.getElementById("addToCartFromPreviewBtn");
+  const note = document.getElementById("previewCartNote");
+  const done = document.getElementById("previewCartDone");
+  if (!btn) return;
+  const inCart = !!justAdded || (pendingCommitIndex !== null && !!cartItems[pendingCommitIndex] && !designerHasUnsavedWork());
+  btn.classList.toggle("is-added", inCart);
+  btn.innerHTML = inCart ? '<span aria-hidden="true">\u2713</span> Added to cart' : "Add to cart";
+  if (note) note.hidden = inCart;
+  if (done) done.hidden = !inCart;
 }
 const addToCartFromPreviewBtn = document.getElementById("addToCartFromPreviewBtn");
 if (addToCartFromPreviewBtn) addToCartFromPreviewBtn.addEventListener("click", addToCartMeasureLater);
-
+const previewViewCartBtn = document.getElementById("previewViewCartBtn");
+if (previewViewCartBtn) {
+  previewViewCartBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById("cartDropdown");
+    const iconBtn = document.getElementById("cartIconBtn");
+    // The cart sits in the sticky nav, so it opens without scrolling away.
+    if (dropdown && dropdown.hidden && iconBtn) iconBtn.click();
+  });
+}
 document.getElementById("backToDesignerBtn").addEventListener("click", () => {
   if (orderMeasureTarget) return cancelOrderMeasurements();
   // Same as backToJacketBtn above -- Back resumes on the last tab you had
@@ -9490,6 +9521,8 @@ function cartItemTitle(item) {
 
 function renderCartBar() {
   renderCheckoutMeasureNotice();
+  // A suit removed from the cart while its Preview is open goes back to "Add to cart".
+  try { syncPreviewCartButton(); } catch (e) { /* before the cart state exists */ }
   const cartBadge = document.getElementById("cartBadge");
   const cartBarCount = document.getElementById("cartBarCount");
   const cartBarTotal = document.getElementById("cartBarTotal");
@@ -11041,6 +11074,7 @@ function buildSelectionsReview(card) {
 
 // Top of the Measurements step: "See your suit before you order".
 async function updateDesignPreviewPanel() {
+  if (typeof syncPreviewCartButton === "function") syncPreviewCartButton();
   const box = document.getElementById("designPreview");
   if (!box) return;
   if (!(await suitImagesReady())) {
