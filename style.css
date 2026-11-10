@@ -2182,12 +2182,19 @@ body.order-done-view > .process{display:none !important;}
   .designer-grid .fabric-palette-grid .mono-on-backdrop .mono-sample{font-size:calc(20px * var(--mono-scale,1));}
   .designer-grid .fabric-palette-grid .mono-on-backdrop .opt-name{font-size:8.5px;}
 }
-/* Admin: client fabric lists */
-.cf-admin-picker{max-height:280px;overflow-y:auto;border:1px solid var(--line);padding:6px 10px;display:flex;flex-direction:column;}
-.cf-admin-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:14px;cursor:pointer;color:var(--ivory);}
-.cf-admin-row input{width:18px;height:18px;flex:none;}
-.cf-admin-chip{width:28px;height:28px;flex:none;background-size:cover;background-position:center;border:1px solid var(--line);}
-.opt-grid .own-fabrics-heading{grid-column:1 / -1;}
+/* Admin: fabric search */
+.fs-field{margin:4px 0 12px;}
+.fs-field input{font-size:16px;}
+.fs-results{display:flex;flex-direction:column;gap:10px;}
+.fs-card{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(var(--surface-rgb),0.6);}
+.fs-photo{flex:0 0 72px;width:72px;height:72px;border:1px solid var(--line);border-radius:9px;background-size:cover;background-position:center;cursor:zoom-in;padding:0;}
+.fs-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.fs-name{font-size:15.5px;font-weight:700;color:var(--ivory);}
+.fs-price{font-size:14px;font-weight:600;color:var(--brass);}
+.fs-meta{font-size:13px;color:var(--ivory-dim);}
+.fs-meta.fs-low{color:#a33a3a;font-weight:600;}
+.fs-code{font-size:12.5px;color:var(--ivory-dim);letter-spacing:.02em;overflow-wrap:anywhere;}
+body:has(#accountOverlay.open) .lightbox{z-index:180;}
 
 /* ---- Build From a Photo (photo-suit.js) ---- */
 .suit-type-photo{display:flex;align-items:center;gap:14px;width:100%;max-width:640px;margin:18px auto 0;padding:14px 18px;background:rgba(var(--surface-rgb),0.85);border:1px solid rgba(var(--brass-rgb),0.45);border-radius:16px;font-family:inherit;color:var(--ivory);text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;}
