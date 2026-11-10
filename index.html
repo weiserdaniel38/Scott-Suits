@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261109profileone">
+<link rel="stylesheet" href="./style.css?v=20261110forgotpw">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261104readable"></script>
 <link rel="stylesheet" href="./brand.css?v=20261026fabricphotos">
@@ -946,10 +946,45 @@
           <div class="measure-input-wrap"><input type="password" id="loginPasswordInput" placeholder="Your password" autocomplete="current-password"></div>
         </div>
         <button type="submit" class="btn-primary" id="loginSubmitBtn">Log In</button>
+        <p class="forgot-pw-row"><button type="button" class="meas-reset-link" id="forgotPasswordBtn">Forgot password?</button></p>
+      </form>
+
+      <!-- Forgot password: emails a link (send-password-reset edge function)
+           that brings the customer back to set a new password. -->
+      <form class="account-form" id="resetRequestForm" hidden>
+        <h3 class="reset-pw-title">Reset your password</h3>
+        <p class="reset-pw-note">Enter the email you signed up with and we'll send you a link to set a new password.</p>
+        <div class="measure-field">
+          <label for="resetEmailInput">Email address</label>
+          <div class="measure-input-wrap"><input type="email" id="resetEmailInput" placeholder="you@example.com" autocomplete="email"></div>
+        </div>
+        <button type="submit" class="btn-primary" id="resetSubmitBtn">Send Reset Link</button>
+        <p class="forgot-pw-row"><button type="button" class="meas-reset-link" id="resetBackBtn">Back to log in</button></p>
       </form>
 
       <p class="account-status-msg" id="accountStatusMsg" hidden></p>
       <p class="acc-guest-note">An account is optional. You can always order as a guest.</p>
+    </div>
+
+    <!-- Shown after the customer opens the reset link from their email. -->
+    <div id="accountRecoveryView" hidden>
+      <form class="account-form" id="newPasswordForm">
+        <h3 class="reset-pw-title">Set a new password</h3>
+        <div class="measure-field">
+          <label for="newPasswordInput">New password</label>
+          <div class="measure-input-wrap"><input type="password" id="newPasswordInput" placeholder="At least 6 characters" autocomplete="new-password"></div>
+        </div>
+        <div class="measure-field">
+          <label for="newPasswordConfirmInput">Confirm new password</label>
+          <div class="measure-input-wrap"><input type="password" id="newPasswordConfirmInput" placeholder="Type it again" autocomplete="new-password"></div>
+        </div>
+        <button type="submit" class="btn-primary" id="newPasswordSubmitBtn">Save Password</button>
+      </form>
+      <div id="newPasswordDone" hidden>
+        <p class="reset-pw-note">Your password has been updated.</p>
+        <button type="button" class="btn-primary" id="newPasswordContinueBtn">Continue</button>
+      </div>
+      <p class="account-status-msg" id="recoveryStatusMsg" hidden></p>
     </div>
 
     <div id="accountLoggedInView" hidden>
@@ -1136,7 +1171,7 @@
 <script src="./catalog.js?v=20261109unlined"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261109profileone"></script>
+<script src="./main.js?v=20261110forgotpw"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261104dark"; document.body.appendChild(bsS); }</script>
