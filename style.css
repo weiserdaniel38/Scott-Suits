@@ -2971,3 +2971,10 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 .pw-eye{flex:none;background:none;border:none;padding:6px;margin-right:-6px;color:var(--ivory-dim);cursor:pointer;display:flex;align-items:center;}
 .pw-eye:hover,.pw-eye[aria-pressed="true"]{color:var(--brass);}
 .pw-eye svg{width:20px;height:20px;display:block;}
+
+/* At the tailor page: "Saved to your account automatically" line, kept in
+   view at the bottom while the list scrolls. */
+.tc-autosave{position:sticky;bottom:0;margin:14px 0 0;padding:10px 12px;border-radius:10px;background:var(--ink);box-shadow:0 -6px 14px rgba(0,0,0,.06);font:500 14px 'Inter',sans-serif;color:var(--ivory-dim);text-align:center;}
+.tc-autosave[data-state="ok"]{color:#2f6b3a;}
+.tc-autosave[data-state="warn"]{color:#9a4a2a;}
+@media print{.tc-autosave{display:none !important;}}
