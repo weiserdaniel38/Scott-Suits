@@ -2932,6 +2932,7 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 @keyframes cartBadgePop{0%{transform:scale(1);}40%{transform:scale(1.45);}100%{transform:scale(1);}}
 @media(max-width:400px){.preview-add-cart{width:100%;min-width:0;}}
 .cart-item-need{font-size:12px;font-weight:600;color:var(--brass);}
+.cart-item-saved-meas{font-size:12px;font-weight:500;color:var(--ivory-dim);}
 .cart-item-measure{align-self:flex-start;margin-top:2px;padding:5px 12px;background:none;border:1px solid var(--brass);border-radius:999px;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;color:var(--brass);cursor:pointer;}
 .cart-item-measure:hover{background:rgba(var(--brass-rgb),0.12);}
 .checkout-measure-notice{margin:0 0 22px;padding:16px 18px;border:1.5px solid rgba(var(--brass-rgb),0.55);border-radius:14px;background:rgba(var(--brass-rgb),0.05);}

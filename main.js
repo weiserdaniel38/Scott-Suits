@@ -1502,7 +1502,7 @@ function updateAccountUI() {
   if (saveMeasurementsToggleWrap) saveMeasurementsToggleWrap.hidden = !loggedIn;
 
   const hasSaved = !!(currentProfile && currentProfile.measurements && Object.keys(currentProfile.measurements).length);
-  if (savedMeasurementsBanner) savedMeasurementsBanner.hidden = !(loggedIn && hasSaved);
+  if (savedMeasurementsBanner) savedMeasurementsBanner.hidden = !(loggedIn && hasSaved) || designerShowsSavedMeasurements();
   if (savedMeasurementsEmail) savedMeasurementsEmail.textContent = customerDisplayName();
   // Can run before the cart code below has loaded.
   try {
@@ -1534,6 +1534,7 @@ async function loadProfile() {
     renderProfileMeasureGrid(shown.values, shown.mode);
     updateAccountUI();
     syncMeasToAccount();
+    applySavedMeasurementDefaults();
   } catch (err) {
     console.error(err);
   }
@@ -1846,6 +1847,7 @@ function resetDesignerForNewSuit() {
   });
   pendingCommitIndex = null;
   editingCartIndex = null;
+  savedFillDeclined = false;
 }
 
 async function reorderPastOrder(orderId, suitNumber, btn) {
@@ -4071,18 +4073,116 @@ if (clearProfileMeasurementsBtn) {
 const useSavedMeasurementsBtn = document.getElementById("useSavedMeasurementsBtn");
 if (useSavedMeasurementsBtn) {
   useSavedMeasurementsBtn.addEventListener("click", () => {
-    if (!currentProfile || !currentProfile.measurements) return;
-    applyMeasureExtras(currentProfile.measurements);
-    MEASUREMENTS.forEach((m) => {
-      const el = document.getElementById("m_" + m.id);
-      const val = currentProfile.measurements[m.id];
-      if (el && val !== undefined && val !== null) el.value = val;
-    });
-    saveDraft();
+    if (!fillDesignerFromSaved(true)) return;
+    refreshMeasHub();
     if (measureGrid) {
       smoothScrollWindowTo(window.scrollY + measureGrid.getBoundingClientRect().top - 20 - getNavClearance());
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Saved measurements are the default (Daniel 2026-11-10). A signed-in
+// customer with measurements saved to their account gets them on every suit
+// without asking: suits added to the cart before measuring take them (no
+// "Measurements needed"), and the Measurements page opens already filled in,
+// with "Measure again" to start over. Signed out, or nothing saved: as before.
+// Never while the admin edits a customer's order.
+// ---------------------------------------------------------------------------
+var savedFillDeclined = false; // "Measure again" / "Clear measurements" on this suit
+var savedFillBusy = false; // filling rebuilds the fields, which re-renders this page
+function savedProfileMeasurements() {
+  if (!currentUser || adminEditState || !currentProfile || !currentProfile.measurements) return null;
+  const saved = currentProfile.measurements;
+  return MEASUREMENTS.some((m) => saved[m.id] > 0) ? saved : null;
+}
+// The saved set as a cart suit's measurements, only when it covers every
+// measurement this suit type needs (within range); else null.
+function savedMeasurementsFor(type) {
+  const saved = savedProfileMeasurements();
+  if (!saved) return null;
+  const mode = saved.measure_type === "body" ? "body" : "finished";
+  const needed = MEASUREMENTS.filter(
+    (m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, type)
+  );
+  if (!needed.length || needed.some((m) => !(saved[m.id] > 0) || !measureInRange(m, saved[m.id]))) return null;
+  const out = { measure_type: mode };
+  needed.forEach((m) => (out[m.id] = saved[m.id]));
+  if (mode === "body") {
+    if (!isPantsOnlyType(type)) out.jacket_fit = saved.jacket_fit || "Regular";
+    if (!isJacketOnlyType(type)) out.pants_fit = saved.pants_fit || "Regular";
+  }
+  return out;
+}
+function designerMeasurementsEmpty() {
+  return activeMeasurements().every((m) => {
+    const el = document.getElementById("m_" + m.id);
+    return !el || el.value === "";
+  });
+}
+// Fills the Measurements page from the saved set. Without force, only into
+// a suit with nothing typed yet that the customer hasn't chosen to re-measure.
+function fillDesignerFromSaved(force) {
+  const saved = savedProfileMeasurements();
+  if (!saved) return false;
+  if (savedFillBusy) return false;
+  if (!force && (savedFillDeclined || !designerMeasurementsEmpty())) return false;
+  savedFillBusy = true;
+  try {
+    applyMeasureExtras(saved);
+    activeMeasurements().forEach((m) => {
+      const el = document.getElementById("m_" + m.id);
+      const val = saved[m.id];
+      if (el && val !== undefined && val !== null) el.value = val;
+    });
+  } finally {
+    savedFillBusy = false;
+  }
+  savedFillDeclined = false;
+  saveDraft();
+  return true;
+}
+// True while every measurement on the page is the saved one.
+function designerShowsSavedMeasurements() {
+  try {
+    const saved = savedProfileMeasurements();
+    if (!saved || (saved.measure_type === "body" ? "body" : "finished") !== measureMode) return false;
+    const ms = activeMeasurements();
+    return ms.length > 0 && ms.every((m) => {
+      const el = document.getElementById("m_" + m.id);
+      return el && el.value !== "" && saved[m.id] !== undefined && parseFloat(el.value) === Number(saved[m.id]);
+    });
+  } catch (e) {
+    return false;
+  }
+}
+// Cart suits waiting for measurements take the saved set. True if any did.
+function fillPendingCartFromSaved() {
+  if (!savedProfileMeasurements() || typeof cartItems === "undefined") return false;
+  let changed = false;
+  cartItems.forEach((item, i) => {
+    if (!itemNeedsMeasurements(item)) return;
+    const m = savedMeasurementsFor(item.type);
+    if (!m) return;
+    item.measurements = m;
+    item.savedMeasurements = true;
+    changed = true;
+    // The suit open in the designer gets them on its Measurements page too.
+    if (i === pendingCommitIndex && designerMeasurementsEmpty() && !savedFillDeclined) fillDesignerFromSaved(true);
+  });
+  return changed;
+}
+// After the account's saved measurements load or change.
+function applySavedMeasurementDefaults() {
+  try {
+    if (fillPendingCartFromSaved()) {
+      renderCartBar();
+      saveDraft();
+    }
+    if (measurementsSection.classList.contains("active")) renderMeasureChrome();
+  } catch (e) {
+    // the cart or designer isn't ready yet; renderCartBar/renderMeasureChrome catch up
+  }
 }
 
 // Auth state is tracked entirely through Supabase's own listener, which
@@ -7317,6 +7417,7 @@ function renderMeasureChrome() {
   const priceEl = document.getElementById("measPrice");
   const src = document.getElementById(!hasPantsStep() ? "totalPrice" : "pantsTotalPrice");
   if (priceEl && src) priceEl.textContent = src.textContent;
+  fillDesignerFromSaved(false);
   if (typeof refreshMeasHub === "function") refreshMeasHub();
 }
 
@@ -8003,13 +8104,40 @@ function refreshMeasHub() {}
     render();
   });
 
+  // Signed in with saved measurements already filled in: start over from
+  // the "How would you like to be measured?" page with empty fields.
+  const againBtn = el("button", "meas-hub-other", "Measure again");
+  againBtn.type = "button";
+  againBtn.hidden = true;
+  otherWayBtn.after(againBtn);
+  againBtn.addEventListener("click", () => {
+    savedFillDeclined = true;
+    measureStash = {};
+    activeMeasurements().forEach((m) => {
+      const f = document.getElementById("m_" + m.id);
+      if (f) f.value = "";
+    });
+    delete wiz.dataset.route;
+    delete wiz.dataset.branch;
+    saveDraft();
+    refreshMeasHub();
+    open();
+    idx = 0;
+    render();
+  });
+
   refreshMeasHub = function () {
     const ms = list();
     const done = ms.filter(isDone).length;
     const all = done === ms.length;
+    const fromSaved = all && designerShowsSavedMeasurements();
+    if (savedMeasurementsBanner) savedMeasurementsBanner.hidden = !savedProfileMeasurements() || fromSaved;
+    againBtn.hidden = !fromSaved;
     if (statusEl) {
       statusEl.innerHTML = "";
-      if (!done && measuredBy) {
+      if (fromSaved) {
+        statusEl.append(el("b", "", "Using your saved measurements"), el("span", "", "From your account. Tap any one to change it, or measure again."));
+      } else if (!done && measuredBy) {
         statusEl.append(el("b", "", "Got your tailor's numbers?"), el("span", "", "Measured by " + measuredBy + ". Tap below and type in each number they wrote, one at a time."));
       } else if (!done) {
         statusEl.append(el("b", "", "Let's get your measurements"), el("span", "", "Have a pro measure you, start from your usual size, or enter your own."));
@@ -8429,6 +8557,7 @@ if (addAnotherSuitBtn) {
     // (see samePreviousMeasurementsBanner / updateSamePreviousMeasurementsBanner)
     // instead of retyping everything.
     measureStash = {};
+    savedFillDeclined = false;
     clearBodyScan();
     MEASUREMENTS.forEach((m) => {
       const el = document.getElementById("m_" + m.id);
@@ -9520,6 +9649,8 @@ function cartItemTitle(item) {
 }
 
 function renderCartBar() {
+  // Signed in with saved measurements: suits waiting for them take them.
+  if (fillPendingCartFromSaved()) setTimeout(saveDraft, 0);
   renderCheckoutMeasureNotice();
   // A suit removed from the cart while its Preview is open goes back to "Add to cart".
   try { syncPreviewCartButton(); } catch (e) { /* before the cart state exists */ }
@@ -9578,6 +9709,11 @@ function renderCartBar() {
       need.className = "cart-item-need";
       need.textContent = "Measurements needed";
       row.querySelector(".cart-item-info").append(need, measureBtn);
+    } else if (item.savedMeasurements) {
+      const ok = document.createElement("span");
+      ok.className = "cart-item-saved-meas";
+      ok.textContent = "Your saved measurements";
+      row.querySelector(".cart-item-info").appendChild(ok);
     }
     if (i === editingCartIndex) row.classList.add("editing");
     const editBtn = row.querySelector(".cart-item-edit");
@@ -9686,6 +9822,7 @@ const resetMeasurementsBtn = document.getElementById("resetMeasurementsBtn");
 if (resetMeasurementsBtn) {
   resetMeasurementsBtn.addEventListener("click", () => {
     measureStash = {};
+    savedFillDeclined = true;
     clearBodyScan();
     activeMeasurements().forEach((m) => {
       const el = document.getElementById("m_" + m.id);
@@ -9874,6 +10011,7 @@ function loadCartItemIntoDesigner(index, toMeasurements) {
     const el = document.getElementById("m_" + m.id);
     if (el && item.measurements && item.measurements[m.id] !== undefined) el.value = item.measurements[m.id];
   });
+  savedFillDeclined = false;
   window.__bodyScan = item.bodyScan || null;
   measuredBy = item.measuredBy || null;
   designPreview = null;
@@ -10174,8 +10312,9 @@ function commitCurrentSuitToCart(opts) {
   const editedItem = pendingCommitIndex !== null ? cartItems[pendingCommitIndex] : null;
   const keepOwn = !!editedItem && !itemNeedsMeasurements(editedItem) && !missingMeasurements.length && !outOfRange.length;
   const measureLater = !!(opts && opts.measureLater) && !keepOwn;
+  const savedForLater = measureLater ? savedMeasurementsFor(currentSuitType) : null;
   if (measureLater) {
-    measurementValues = { measure_type: MEASUREMENTS_PENDING };
+    measurementValues = savedForLater || { measure_type: MEASUREMENTS_PENDING };
     missingMeasurements = [];
     outOfRange = [];
   }
@@ -10206,6 +10345,8 @@ function commitCurrentSuitToCart(opts) {
     // Partner tailor(s) the customer chose to be measured by, if any.
     measuredBy: measuredBy || null,
   };
+  // Took the account's saved measurements (shown on the cart row).
+  if (savedForLater || designerShowsSavedMeasurements()) item.savedMeasurements = true;
   if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
     // A suit of an order the admin is editing stays tied to its order row.
     const prev = cartItems[pendingCommitIndex];
