@@ -2952,3 +2952,11 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 /* Saved Measurements in My Account: finished sizes or body, one set. */
 .profile-measure-mode{grid-column:1/-1;margin-bottom:6px;}
 @media(max-width:600px){.measure-mode-pick.profile-measure-mode{grid-template-columns:1fr 1fr;}.profile-measure-mode .measure-mode-btn b{font-size:14px;}}
+
+/* Forgot password (2026-11-10) */
+.forgot-pw-row{text-align:center;margin:16px 0 0;}
+#accountOverlay .reset-pw-title{text-align:center;margin:4px 0 8px;}
+.reset-pw-note{color:var(--ivory-dim);font-size:14px;line-height:1.6;text-align:center;margin:0 auto 20px;max-width:340px;}
+#newPasswordDone .btn-primary{width:100%;justify-content:center;}
+#accountOverlay .account-tabs[hidden]{display:none;}
+#accountRecoveryView .reset-pw-title{margin:10px 0 20px;}

@@ -1252,6 +1252,8 @@ const accountStatusMsg = document.getElementById("accountStatusMsg");
 const accountIntro = document.getElementById("accountIntro");
 const ACCOUNT_INTRO_DEFAULT = accountIntro ? accountIntro.textContent : "";
 let openAccountOverlay = null;
+// True while the customer is setting a new password from a reset link.
+let passwordRecoveryMode = false;
 let closeAccountOverlay = null;
 let pendingSignInAction = null;
 const accountNameDisplay = document.getElementById("accountNameDisplay");
@@ -1411,8 +1413,12 @@ function updateWelcomeGreeting() {
 // "save to profile" checkbox there. Called any time either changes.
 function updateAccountUI() {
   const loggedIn = !!currentUser;
-  if (accountLoggedOutView) accountLoggedOutView.hidden = loggedIn;
-  if (accountLoggedInView) accountLoggedInView.hidden = !loggedIn;
+  // While setting a new password from a reset link, only that form shows.
+  const recovery = passwordRecoveryMode;
+  if (accountLoggedOutView) accountLoggedOutView.hidden = loggedIn || recovery;
+  if (accountLoggedInView) accountLoggedInView.hidden = !loggedIn || recovery;
+  const recoveryView = document.getElementById("accountRecoveryView");
+  if (recoveryView) recoveryView.hidden = !recovery;
   if (accountBadge) accountBadge.hidden = !loggedIn;
   if (accountNameDisplay) accountNameDisplay.textContent = customerDisplayName();
   updateWelcomeGreeting();
@@ -3507,6 +3513,11 @@ async function prefillContactDetails() {
     if (accountStatusMsg) hideAccountStatus(accountStatusMsg);
     if (signupForm) signupForm.reset();
     if (loginForm) loginForm.reset();
+    if (typeof hideResetRequest === "function") hideResetRequest();
+    if (passwordRecoveryMode) {
+      passwordRecoveryMode = false;
+      updateAccountUI();
+    }
     const savedMeasurements = document.getElementById("savedMeasurementsSection");
     if (savedMeasurements) savedMeasurements.open = false;
     const pastOrders = document.getElementById("pastOrdersSection");
@@ -3582,6 +3593,7 @@ if (showSignupTabBtn && showLoginTabBtn && signupForm && loginForm) {
   function showSignupTab() {
     signupForm.hidden = false;
     loginForm.hidden = true;
+    hideResetRequest();
     showSignupTabBtn.classList.add("active");
     showLoginTabBtn.classList.remove("active");
     showSignupTabBtn.setAttribute("aria-selected", "true");
@@ -3591,6 +3603,7 @@ if (showSignupTabBtn && showLoginTabBtn && signupForm && loginForm) {
   function showLoginTab() {
     signupForm.hidden = true;
     loginForm.hidden = false;
+    hideResetRequest();
     showSignupTabBtn.classList.remove("active");
     showLoginTabBtn.classList.add("active");
     showSignupTabBtn.setAttribute("aria-selected", "false");
@@ -3729,6 +3742,135 @@ if (loginForm) {
   });
 }
 
+// ---- Forgot password (Daniel, 2026-11-10) ----
+// "Forgot password?" under Log In swaps the tabs for a one-field form that
+// asks the send-password-reset edge function to email a reset link (sent
+// through Resend, not Supabase's tiny built-in mailer). The link signs the
+// customer back in for recovery; onAuthStateChange sees PASSWORD_RECOVERY
+// and the popup shows "Set a new password" until they save one.
+const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+const resetRequestForm = document.getElementById("resetRequestForm");
+const resetEmailInput = document.getElementById("resetEmailInput");
+const resetSubmitBtn = document.getElementById("resetSubmitBtn");
+const resetBackBtn = document.getElementById("resetBackBtn");
+const accountTabsRow = document.querySelector("#accountLoggedOutView .account-tabs");
+const newPasswordForm = document.getElementById("newPasswordForm");
+const newPasswordInput = document.getElementById("newPasswordInput");
+const newPasswordConfirmInput = document.getElementById("newPasswordConfirmInput");
+const newPasswordSubmitBtn = document.getElementById("newPasswordSubmitBtn");
+const newPasswordDone = document.getElementById("newPasswordDone");
+const newPasswordContinueBtn = document.getElementById("newPasswordContinueBtn");
+const recoveryStatusMsg = document.getElementById("recoveryStatusMsg");
+
+function showResetRequest() {
+  if (!resetRequestForm) return;
+  if (loginForm) loginForm.hidden = true;
+  if (signupForm) signupForm.hidden = true;
+  if (accountTabsRow) accountTabsRow.hidden = true;
+  resetRequestForm.hidden = false;
+  hideAccountStatus(accountStatusMsg);
+  if (resetEmailInput && loginEmailInput && !resetEmailInput.value) resetEmailInput.value = (loginEmailInput.value || "").trim();
+  if (resetEmailInput) resetEmailInput.focus();
+}
+function hideResetRequest() {
+  if (resetRequestForm) resetRequestForm.hidden = true;
+  if (accountTabsRow) accountTabsRow.hidden = false;
+}
+if (forgotPasswordBtn) forgotPasswordBtn.addEventListener("click", showResetRequest);
+if (resetBackBtn) {
+  resetBackBtn.addEventListener("click", () => {
+    hideResetRequest();
+    if (showLoginTabBtn) showLoginTabBtn.click();
+  });
+}
+if (resetRequestForm) {
+  resetRequestForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = (resetEmailInput.value || "").trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showAccountStatus(accountStatusMsg, "Please enter a valid email address.");
+      return;
+    }
+    if (!isSupabaseConfigured()) {
+      showAccountStatus(accountStatusMsg, "Accounts aren't set up yet -- check back soon.");
+      return;
+    }
+    resetSubmitBtn.disabled = true;
+    resetSubmitBtn.textContent = "Sending...";
+    try {
+      const res = await fetch(SUPABASE_URL + "/functions/v1/send-password-reset", {
+        method: "POST",
+        headers: { "content-type": "application/json", apikey: SUPABASE_ANON_KEY, authorization: "Bearer " + SUPABASE_ANON_KEY },
+        body: JSON.stringify({ email, redirectTo: window.location.origin + window.location.pathname }),
+      });
+      if (!res.ok) throw new Error("send failed");
+      showAccountStatus(accountStatusMsg, "If an account exists for " + email + ", we've sent a link to set a new password. It can take a minute to arrive, so check your spam folder too.");
+    } catch (err) {
+      showAccountStatus(accountStatusMsg, "We couldn't send the email right now. Please try again in a few minutes.");
+    } finally {
+      resetSubmitBtn.disabled = false;
+      resetSubmitBtn.textContent = "Send Reset Link";
+    }
+  });
+}
+
+function enterPasswordRecovery() {
+  passwordRecoveryMode = true;
+  if (newPasswordForm) {
+    newPasswordForm.reset();
+    newPasswordForm.hidden = false;
+  }
+  if (newPasswordDone) newPasswordDone.hidden = true;
+  hideAccountStatus(recoveryStatusMsg);
+  updateAccountUI();
+  if (openAccountOverlay && accountOverlay && !accountOverlay.classList.contains("open")) openAccountOverlay(accountIconBtn);
+}
+function leavePasswordRecovery() {
+  passwordRecoveryMode = false;
+  updateAccountUI();
+}
+if (newPasswordForm) {
+  newPasswordForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pw = newPasswordInput.value || "";
+    const pw2 = newPasswordConfirmInput.value || "";
+    if (pw.length < 6) {
+      showAccountStatus(recoveryStatusMsg, "Password must be at least 6 characters.");
+      return;
+    }
+    if (pw !== pw2) {
+      showAccountStatus(recoveryStatusMsg, "The two passwords don't match.");
+      return;
+    }
+    newPasswordSubmitBtn.disabled = true;
+    newPasswordSubmitBtn.textContent = "Saving...";
+    try {
+      const { error } = await getSupabase().auth.updateUser({ password: pw });
+      if (error) {
+        const msg = String(error.message || "").toLowerCase();
+        showAccountStatus(
+          recoveryStatusMsg,
+          msg.includes("different from the old")
+            ? "Please choose a password different from your old one."
+            : msg.includes("session") || msg.includes("jwt")
+              ? "That reset link has expired. Tap Forgot password? again to get a new one."
+              : friendlyAuthError(error)
+        );
+      } else {
+        hideAccountStatus(recoveryStatusMsg);
+        newPasswordForm.hidden = true;
+        if (newPasswordDone) newPasswordDone.hidden = false;
+      }
+    } catch (err) {
+      showAccountStatus(recoveryStatusMsg, err.message);
+    } finally {
+      newPasswordSubmitBtn.disabled = false;
+      newPasswordSubmitBtn.textContent = "Save Password";
+    }
+  });
+}
+if (newPasswordContinueBtn) newPasswordContinueBtn.addEventListener("click", leavePasswordRecovery);
+
 if (accountLogoutBtn) {
   accountLogoutBtn.addEventListener("click", async () => {
     try {
@@ -3848,7 +3990,7 @@ if (useSavedMeasurementsBtn) {
   const code = params.get("error_code") || "";
   const message =
     code === "otp_expired"
-      ? "That confirmation link has expired or was already used. Try logging in -- if that doesn't work, create your account again to get a fresh link."
+      ? "That link has expired or was already used. Try logging in, or tap Forgot password? to get a new link."
       : params.get("error_description") || "That link didn't work. Please try again.";
   history.replaceState(null, "", window.location.pathname + window.location.search);
   if (accountIconBtn) accountIconBtn.click();
@@ -3860,6 +4002,12 @@ if (isSupabaseConfigured()) {
   try {
     getSupabase().auth.onAuthStateChange((event, session) => {
       currentUser = session ? session.user : null;
+      if (event === "PASSWORD_RECOVERY" && currentUser) {
+        // Defer so the rest of this file (overlay helpers) has loaded.
+        setTimeout(enterPasswordRecovery, 0);
+      } else if (!currentUser && passwordRecoveryMode) {
+        passwordRecoveryMode = false;
+      }
       refreshAccountData();
       if (currentUser && pendingSignInAction) {
         const action = pendingSignInAction;
