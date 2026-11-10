@@ -3465,6 +3465,7 @@ if (shippingLiveToggle) {
 
 function refreshAccountData() {
   updateAccountUI();
+  try { cloudCartOnAuth(); } catch (e) { /* before the cloud cart code has loaded */ }
   loadProfile();
   loadOrderHistory();
   refreshAdminStatus();
@@ -9521,6 +9522,8 @@ function cartItemTitle(item) {
 
 function renderCartBar() {
   renderCheckoutMeasureNotice();
+  // Signed in: the change is saved to the account for their other devices.
+  try { scheduleCloudCartSync(); } catch (e) { /* before the cloud cart code has loaded */ }
   // A suit removed from the cart while its Preview is open goes back to "Add to cart".
   try { syncPreviewCartButton(); } catch (e) { /* before the cart state exists */ }
   const cartBadge = document.getElementById("cartBadge");
@@ -10205,6 +10208,9 @@ function commitCurrentSuitToCart(opts) {
     bodyScan: !measureLater && measureMode === "body" && window.__bodyScan ? window.__bodyScan : null,
     // Partner tailor(s) the customer chose to be measured by, if any.
     measuredBy: measuredBy || null,
+    // Same suit on every device of a signed-in customer (cloud cart).
+    cartId: newCartId(),
+    savedAt: Date.now(),
   };
   if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
     // A suit of an order the admin is editing stays tied to its order row.
@@ -10213,6 +10219,7 @@ function commitCurrentSuitToCart(opts) {
       item.adminRowId = prev.adminRowId;
       item.adminSuitNumber = prev.adminSuitNumber;
     }
+    if (prev && prev.cartId) item.cartId = prev.cartId;
     cartItems[pendingCommitIndex] = item;
   } else {
     cartItems.push(item);
@@ -12023,6 +12030,214 @@ handleStripeReturn();
 updateAdminEditUI();
 updateNavActionButtons();
 updateProcessBar();
+
+// ---------------------------------------------------------------------------
+// CART ON EVERY DEVICE (Daniel, 2026-11-10): a signed-in customer's cart is
+// kept on their account (profiles.cart, supabase/sql/39_profile_cart.sql),
+// so a suit added on the phone shows up on the PC and the other way round.
+// Signed-out visitors keep the cart in this tab only, as before; signing in
+// adds it to the account's cart. Each suit carries a cartId and savedAt.
+// Merging: a suit only one side has is new there (kept) unless this tab had
+// already seen it in the account (then it was removed somewhere: dropped);
+// a suit both sides have keeps the newer copy. Never while the admin edits
+// a customer's order, and not before this page has read its own draft back.
+// ---------------------------------------------------------------------------
+var CLOUD_CART_SYNC_KEY = "scottSuitsCartSync";
+var CLOUD_CART_PHOTO_MAX = 1500000; // a bigger lining photo stays on this device
+var cloudCartPageReady = false;
+var cloudCartOff = false; // the account has no cart column yet
+var cloudCartUserId = null; // whose account this tab last synced with
+var cloudCartSyncedIds = [];
+var cloudCartLastSig = null;
+var cloudCartTimer = null;
+var cloudCartBusy = false;
+var cloudCartAgain = false;
+var cloudCartLastPull = 0;
+var cloudCartApplying = false;
+
+function newCartId() {
+  return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function ensureCartIds() {
+  cartItems.forEach((it) => {
+    if (!it) return;
+    if (!it.cartId) it.cartId = newCartId();
+    if (!it.savedAt) it.savedAt = Date.now();
+  });
+}
+function readCloudCartSync() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(CLOUD_CART_SYNC_KEY) || "null");
+    if (s && s.userId) {
+      cloudCartUserId = s.userId;
+      cloudCartSyncedIds = Array.isArray(s.ids) ? s.ids : [];
+    }
+  } catch (e) {
+    // start fresh
+  }
+}
+function writeCloudCartSync() {
+  try {
+    if (cloudCartUserId) sessionStorage.setItem(CLOUD_CART_SYNC_KEY, JSON.stringify({ userId: cloudCartUserId, ids: cloudCartSyncedIds }));
+    else sessionStorage.removeItem(CLOUD_CART_SYNC_KEY);
+  } catch (e) {
+    // not fatal
+  }
+}
+function cloudCartItem(it) {
+  const c = Object.assign({}, it);
+  if (c.liningPhoto && String(c.liningPhoto).length > CLOUD_CART_PHOTO_MAX) delete c.liningPhoto;
+  return c;
+}
+function cloudCartSignature(items) {
+  return JSON.stringify((items || []).map((it) => [it.cartId, it.savedAt]));
+}
+function cloudCartCanSync() {
+  return cloudCartPageReady && !cloudCartOff && !!currentUser && !adminEditState && isSupabaseConfigured();
+}
+// Any change to the cart (renderCartBar) saves it to the account shortly after.
+function scheduleCloudCartSync(delay) {
+  if (cloudCartApplying || !cloudCartCanSync()) return;
+  ensureCartIds();
+  if (delay !== 0 && cloudCartUserId === currentUser.id && cloudCartSignature(cartItems) === cloudCartLastSig) return;
+  clearTimeout(cloudCartTimer);
+  cloudCartTimer = setTimeout(syncCloudCart, delay === undefined ? 700 : delay);
+}
+function mergeCarts(local, remote, knownIds) {
+  const known = new Set(knownIds || []);
+  const remoteById = new Map();
+  remote.forEach((it) => { if (it && it.cartId) remoteById.set(it.cartId, it); });
+  const localIds = new Set(local.map((it) => it.cartId));
+  const out = [];
+  local.forEach((it) => {
+    const r = remoteById.get(it.cartId);
+    if (r) {
+      // A lining photo too big for the account stays with this device's copy.
+      const pick = (r.savedAt || 0) > (it.savedAt || 0) ? Object.assign({}, r) : it;
+      if (!pick.liningPhoto && it.liningPhoto && (pick.savedAt || 0) === (it.savedAt || 0)) pick.liningPhoto = it.liningPhoto;
+      out.push(pick);
+    } else if (!known.has(it.cartId)) {
+      out.push(it); // added here, not in the account yet
+    } // else: removed on another device
+  });
+  remote.forEach((it) => {
+    if (!it || !it.cartId || localIds.has(it.cartId)) return;
+    if (!known.has(it.cartId)) out.push(Object.assign({}, it)); // added on another device
+    // else: removed here
+  });
+  return out;
+}
+async function syncCloudCart() {
+  clearTimeout(cloudCartTimer);
+  cloudCartTimer = null;
+  if (!cloudCartCanSync()) return;
+  if (cloudCartBusy) {
+    cloudCartAgain = true;
+    return;
+  }
+  cloudCartBusy = true;
+  const user = currentUser;
+  try {
+    ensureCartIds();
+    // A different account in this tab: its cart starts fresh (sign-in adds this tab's suits).
+    if (cloudCartUserId !== user.id) {
+      cloudCartUserId = user.id;
+      cloudCartSyncedIds = [];
+    }
+    const client = getSupabase();
+    const { data, error } = await client.from("profiles").select("cart").eq("id", user.id).maybeSingle();
+    if (error) {
+      if (error.code === "42703" || /cart/.test(error.message || "")) cloudCartOff = true;
+      else console.error("Couldn't read the saved cart:", error);
+      return;
+    }
+    if (!currentUser || currentUser.id !== user.id || adminEditState) return;
+    cloudCartLastPull = Date.now();
+    const remote = data && data.cart && Array.isArray(data.cart.items) ? data.cart.items : [];
+    ensureCartIds();
+    const merged = mergeCarts(cartItems, remote, cloudCartSyncedIds);
+    const mergedSig = cloudCartSignature(merged);
+    if (mergedSig !== cloudCartSignature(cartItems)) applyCloudCart(merged);
+    if (mergedSig !== cloudCartSignature(remote)) {
+      const { error: upErr } = await client.from("profiles").upsert({
+        id: user.id,
+        email: user.email,
+        cart: { items: merged.map(cloudCartItem), savedAt: new Date().toISOString() },
+      });
+      if (upErr) {
+        if (upErr.code === "42703" || upErr.code === "PGRST204") cloudCartOff = true;
+        else console.error("Couldn't save the cart to the account:", upErr);
+        return;
+      }
+    }
+    cloudCartSyncedIds = merged.map((it) => it.cartId);
+    cloudCartLastSig = mergedSig;
+    writeCloudCartSync();
+  } catch (err) {
+    console.error(err);
+  } finally {
+    cloudCartBusy = false;
+    if (cloudCartAgain) {
+      cloudCartAgain = false;
+      scheduleCloudCartSync(0);
+    }
+  }
+}
+// Puts the merged cart on screen, keeping the suit open in the designer
+// (and the one being edited) pointed at the same suit.
+function applyCloudCart(items) {
+  const idAt = (i) => (i !== null && cartItems[i] ? cartItems[i].cartId : null);
+  const pendingId = idAt(pendingCommitIndex);
+  const editingId = idAt(editingCartIndex);
+  cartItems = items;
+  const indexOf = (id) => {
+    if (!id) return null;
+    const n = cartItems.findIndex((it) => it.cartId === id);
+    return n === -1 ? null : n;
+  };
+  pendingCommitIndex = indexOf(pendingId);
+  editingCartIndex = editingId && indexOf(editingId) === pendingCommitIndex ? pendingCommitIndex : null;
+  cloudCartApplying = true;
+  try {
+    renderCartBar();
+    updateOrderSummaryUI();
+    updateProcessBar();
+    saveDraft();
+  } finally {
+    cloudCartApplying = false;
+  }
+}
+// Called on every sign-in state change (refreshAccountData).
+function cloudCartOnAuth() {
+  if (!currentUser) {
+    // Signed out: the account's suits leave this browser (they stay saved
+    // on the account). Suits added while signed out were never in it.
+    if (cloudCartUserId) {
+      const known = new Set(cloudCartSyncedIds);
+      const kept = cartItems.filter((it) => !known.has(it.cartId));
+      cloudCartUserId = null;
+      cloudCartSyncedIds = [];
+      cloudCartLastSig = null;
+      writeCloudCartSync();
+      if (kept.length !== cartItems.length && !adminEditState) applyCloudCart(kept);
+    }
+    return;
+  }
+  scheduleCloudCartSync(0);
+}
+// Coming back to the tab (or the app) picks up changes made elsewhere.
+function cloudCartOnReturn() {
+  if (document.visibilityState === "hidden") return;
+  if (Date.now() - cloudCartLastPull < 4000) return;
+  scheduleCloudCartSync(0);
+}
+document.addEventListener("visibilitychange", cloudCartOnReturn);
+window.addEventListener("focus", cloudCartOnReturn);
+window.addEventListener("pageshow", (e) => { if (e.persisted) cloudCartOnReturn(); });
+
+readCloudCartSync();
+cloudCartPageReady = true;
+if (currentUser) scheduleCloudCartSync(0);
 
 // The hero "Start Designing" button always means "take me to the suit-type
 // choice", even if a saved draft currently has a later step showing
