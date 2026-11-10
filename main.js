@@ -3742,6 +3742,38 @@ if (loginForm) {
   });
 }
 
+// Eye button on every password box in the account popup (Daniel,
+// 2026-11-10): tap to show what was typed, tap again to hide it.
+(function () {
+  const EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7c2 0 3.7.7 5.1 1.6M22 12s-3.6 7-10 7c-2 0-3.7-.7-5.1-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
+  document.querySelectorAll('#accountOverlay .measure-input-wrap input[type="password"]').forEach((input) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pw-eye";
+    btn.setAttribute("aria-label", "Show password");
+    btn.setAttribute("aria-pressed", "false");
+    btn.innerHTML = EYE;
+    btn.addEventListener("click", () => {
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      btn.innerHTML = show ? EYE_OFF : EYE;
+      btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      btn.setAttribute("aria-pressed", show ? "true" : "false");
+    });
+    // Hide again whenever the form is cleared (popup closed, signed in).
+    if (input.form) {
+      input.form.addEventListener("reset", () => {
+        input.type = "password";
+        btn.innerHTML = EYE;
+        btn.setAttribute("aria-label", "Show password");
+        btn.setAttribute("aria-pressed", "false");
+      });
+    }
+    input.parentNode.appendChild(btn);
+  });
+})();
+
 // ---- Forgot password (Daniel, 2026-11-10) ----
 // "Forgot password?" under Log In swaps the tabs for a one-field form that
 // asks the send-password-reset edge function to email a reset link (sent
