@@ -1343,6 +1343,83 @@ function profileMeasurementsOutOfRange(values) {
     .map((m) => measurePartLabel(m) + " (" + measureRangeText(m) + ")");
 }
 
+// AUTOSAVE (Daniel, 2026-11-10: measurements typed into a customer's
+// account were lost). The box used to save only on "Save Measurements", and
+// every sign-in refresh redrew it from the server, wiping anything typed.
+// Now every keystroke is kept on this phone at once (per account), and saved
+// to the account a moment after typing stops. Out-of-range numbers stay on
+// the phone until they're fixed.
+const PROFILE_MEAS_DRAFT_KEY = "scottSuitsProfileMeasDraft";
+let profileMeasSaveTimer = null;
+function readProfileMeasDraft() {
+  if (!currentUser) return null;
+  try {
+    const d = JSON.parse(localStorage.getItem(PROFILE_MEAS_DRAFT_KEY) || "null");
+    if (!d || d.userId !== currentUser.id || !d.values) return null;
+    if (Date.now() - (d.savedAt || 0) > 60 * 24 * 3600 * 1000) return null;
+    return d;
+  } catch (e) {
+    return null;
+  }
+}
+function clearProfileMeasDraft() {
+  try {
+    localStorage.removeItem(PROFILE_MEAS_DRAFT_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+// Saved values with anything still only on this phone laid over them.
+function profileMeasWithDraft(saved) {
+  const draft = readProfileMeasDraft();
+  if (!draft) return { values: saved, mode: null };
+  return { values: Object.assign({}, saved || {}, draft.values), mode: draft.mode || null };
+}
+function keepProfileMeasDraft() {
+  if (!currentUser || !profileMeasureGrid) return;
+  const values = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("pm_" + m.id);
+    if (el && el.value !== "") values[m.id] = el.value;
+  });
+  try {
+    localStorage.setItem(PROFILE_MEAS_DRAFT_KEY, JSON.stringify({ userId: currentUser.id, savedAt: Date.now(), mode: profileMeasureMode, values: values }));
+  } catch (e) {
+    // storage unavailable: the account save below still runs
+  }
+}
+async function autosaveProfileMeasurements() {
+  clearTimeout(profileMeasSaveTimer);
+  profileMeasSaveTimer = null;
+  if (!currentUser) return;
+  const values = collectProfileMeasurements();
+  const outOfRange = profileMeasurementsOutOfRange(values);
+  MEASUREMENTS.forEach((m) => {
+    if (values[m.id] !== undefined && !measureInRange(m, values[m.id])) delete values[m.id];
+  });
+  if (!MEASUREMENTS.some((m) => values[m.id] !== undefined)) return;
+  const ok = await saveProfileMeasurements(values);
+  if (ok && !outOfRange.length) clearProfileMeasDraft();
+  showAccountStatus(
+    profileMeasurementsStatusMsg,
+    !ok
+      ? "Not saved to the account yet (kept on this phone). Check your connection."
+      : outOfRange.length
+        ? "Saved, except: " + outOfRange.join(", ") + "."
+        : "Saved automatically."
+  );
+}
+if (profileMeasureGrid) {
+  const onProfileMeasTyped = (e) => {
+    if (!e.target || !e.target.closest("input, select")) return;
+    keepProfileMeasDraft();
+    clearTimeout(profileMeasSaveTimer);
+    profileMeasSaveTimer = setTimeout(autosaveProfileMeasurements, 1200);
+  };
+  profileMeasureGrid.addEventListener("input", onProfileMeasTyped);
+  profileMeasureGrid.addEventListener("change", onProfileMeasTyped);
+}
+
 // Prefers the name collected at signup (available immediately off the
 // session's own user object, in user_metadata -- no profile row fetch
 // needed) over the profiles table's copy of it, over falling back to email
@@ -1453,7 +1530,8 @@ async function loadProfile() {
       return;
     }
     currentProfile = data || null;
-    renderProfileMeasureGrid(currentProfile ? currentProfile.measurements : null);
+    const shown = profileMeasWithDraft(currentProfile ? currentProfile.measurements : null);
+    renderProfileMeasureGrid(shown.values, shown.mode);
     updateAccountUI();
     syncMeasToAccount();
   } catch (err) {
@@ -3925,7 +4003,9 @@ if (saveProfileMeasurementsBtn) {
       saveProfileMeasurementsBtn.textContent = "Save Measurements";
       return;
     }
+    clearTimeout(profileMeasSaveTimer);
     const ok = await saveProfileMeasurements(values);
+    if (ok) clearProfileMeasDraft();
     showAccountStatus(
       profileMeasurementsStatusMsg,
       ok ? "Saved." : "Something went wrong saving your measurements -- please try again."
@@ -3956,6 +4036,8 @@ async function clearProfileMeasurements() {
     return false;
   }
   currentProfile = Object.assign({}, currentProfile, { measurements: {} });
+  clearTimeout(profileMeasSaveTimer);
+  clearProfileMeasDraft();
   try {
     localStorage.removeItem(MEASURE_FIRST_KEY);
   } catch (e) {
@@ -11559,7 +11641,102 @@ try {
   // ignore
 }
 
+// AUTOSAVE for the measurements flow (Daniel, 2026-11-10). The draft above
+// lives in this tab only (sessionStorage), so a closed tab lost every typed
+// number. Now the numbers are also kept on this phone (localStorage, 60
+// days, given back to a visit that has none of its own), and a signed-in
+// customer's go to their account a moment after typing stops. Never for
+// the admin's own account or while the admin edits a customer's order.
+const MEAS_BACKUP_KEY = "scottSuitsMeasBackup";
+let measBackupReady = false; // nothing is written until the page has read it back
+let measProfileTimer = null;
+function keepMeasBackup() {
+  if (!measBackupReady) return;
+  const values = currentMeasValues();
+  try {
+    if (MEASUREMENTS.some((m) => values[m.id] !== undefined)) {
+      localStorage.setItem(MEAS_BACKUP_KEY, JSON.stringify({ savedAt: Date.now(), values: values, measuredBy: measuredBy || null }));
+    } else {
+      localStorage.removeItem(MEAS_BACKUP_KEY);
+    }
+  } catch (e) {
+    // storage unavailable
+  }
+  scheduleMeasProfileSave();
+}
+function applyMeasBackup() {
+  measBackupReady = true;
+  let saved = null;
+  try {
+    saved = JSON.parse(localStorage.getItem(MEAS_BACKUP_KEY) || "null");
+  } catch (e) {
+    saved = null;
+  }
+  if (!saved || !saved.values) return;
+  if (Date.now() - (saved.savedAt || 0) > 60 * 24 * 3600 * 1000) {
+    try { localStorage.removeItem(MEAS_BACKUP_KEY); } catch (e) { /* ignore */ }
+    return;
+  }
+  const anyFilled = MEASUREMENTS.some((m) => {
+    const el = document.getElementById("m_" + m.id);
+    return el && el.value !== "";
+  });
+  if (anyFilled) return;
+  applyMeasureExtras(saved.values);
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("m_" + m.id);
+    if (el && saved.values[m.id] !== undefined && saved.values[m.id] !== null) el.value = saved.values[m.id];
+  });
+  if (!measuredBy && saved.measuredBy) measuredBy = saved.measuredBy;
+  if (typeof refreshMeasHub === "function") refreshMeasHub();
+}
+function clearMeasBackup() {
+  clearTimeout(measProfileTimer);
+  measProfileTimer = null;
+  try {
+    localStorage.removeItem(MEAS_BACKUP_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+function measProfileSaveAllowed() {
+  return !!(currentUser && !currentIsAdmin && !adminEditState &&
+    (!saveMeasurementsToProfileCheckbox || saveMeasurementsToProfileCheckbox.checked));
+}
+function scheduleMeasProfileSave() {
+  if (!measProfileSaveAllowed()) return;
+  clearTimeout(measProfileTimer);
+  measProfileTimer = setTimeout(flushMeasProfileSave, 2000);
+}
+function flushMeasProfileSave() {
+  clearTimeout(measProfileTimer);
+  measProfileTimer = null;
+  if (!measProfileSaveAllowed()) return;
+  const values = currentMeasValues();
+  let any = false;
+  MEASUREMENTS.forEach((m) => {
+    if (values[m.id] === undefined) return;
+    const val = parseFloat(values[m.id]);
+    if (isNaN(val) || val <= 0 || !measureInRange(m, val)) delete values[m.id];
+    else {
+      values[m.id] = val;
+      any = true;
+    }
+  });
+  if (any) saveProfileMeasurements(values);
+}
+// Leaving the page or switching apps saves right away.
+function flushMeasAutosaves() {
+  if (measProfileTimer) flushMeasProfileSave();
+  if (profileMeasSaveTimer) autosaveProfileMeasurements();
+}
+window.addEventListener("pagehide", flushMeasAutosaves);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushMeasAutosaves();
+});
+
 function saveDraft() {
+  keepMeasBackup();
   if (typeof refreshMeasHub === "function" && !measWizOpen) refreshMeasHub();
   if (measureFirstPending) {
     saveMeasureFirst(false);
@@ -11637,6 +11814,7 @@ function saveDraft() {
 }
 
 function clearDraft() {
+  clearMeasBackup();
   try {
     localStorage.removeItem(TAILOR_RESUME_KEY);
     localStorage.removeItem(MEASURE_FIRST_KEY);
@@ -11797,9 +11975,14 @@ function resetDesignStarted() {
 }
 
 resumeTailorDraft();
-if (restoreDraft()) markDesignStarted();
+const hadTabDraft = restoreDraft();
+if (hadTabDraft) markDesignStarted();
 else if (hasMeasureFirst()) measureFirstPending = true;
 applyMeasureFirst();
+// A tab with its own draft already has its numbers; only a fresh visit
+// (closed tab, new tab) gets the phone copy back.
+if (hadTabDraft) measBackupReady = true;
+else applyMeasBackup();
 updateMeasureFirstBtn();
 handlePayPalReturn();
 handleStripeReturn();
