@@ -14,3 +14,4 @@
 - `functions/stripe-checkout/index.ts`: Stripe checkout. Opens Stripe's payment page for a saved order, confirms the payment with Stripe when the customer comes back, and removes the unpaid order if they cancel. Needs the `STRIPE_SECRET_KEY` secret; `STRIPE_WEBHOOK_SECRET` is optional.
 
 The website itself does not use these files; API keys live only in Supabase Edge Function secrets.
+- `functions/shipping-label/index.ts` + `sql/40_shipping_labels.sql`: admin "Shipping label" in All Orders. Quotes Shippo rates for the order's address (one 15x12x10 in box, 3.25 lb a suit), buys the picked label only on the admin's tap, saves it with its real cost in `shipping_labels`, marks the order Shipped and emails the customer the tracking. Also refunds unused labels. The hourly kute-factory job then follows the carrier's tracking and moves shipped orders to Out for delivery / Delivered (emailing each step).
