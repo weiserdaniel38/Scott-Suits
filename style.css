@@ -2960,3 +2960,7 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 #newPasswordDone .btn-primary{width:100%;justify-content:center;}
 #accountOverlay .account-tabs[hidden]{display:none;}
 #accountRecoveryView .reset-pw-title{margin:10px 0 20px;}
+/* Show/hide password eye (2026-11-10) */
+.pw-eye{flex:none;background:none;border:none;padding:6px;margin-right:-6px;color:var(--ivory-dim);cursor:pointer;display:flex;align-items:center;}
+.pw-eye:hover,.pw-eye[aria-pressed="true"]{color:var(--brass);}
+.pw-eye svg{width:20px;height:20px;display:block;}
