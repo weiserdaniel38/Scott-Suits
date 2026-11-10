@@ -3583,6 +3583,11 @@ async function prefillContactDetails() {
   }
   function close() {
     pendingSignInAction = null;
+    const guestNote = document.querySelector(".acc-guest-note");
+    if (guestNote) guestNote.hidden = false;
+    // Closed without signing in: drop the Get measured first wish, unless
+    // they're off to confirm their email (the link brings them back to it).
+    if (!currentUser && !measureFirstAwaitEmail && typeof clearMeasureFirstSignIn === "function") clearMeasureFirstSignIn();
     if (accountIntro) accountIntro.textContent = ACCOUNT_INTRO_DEFAULT;
     accountOverlay.classList.remove("open");
     document.removeEventListener("keydown", onKeydown);
@@ -3779,6 +3784,7 @@ if (signupForm) {
         // the logged-in view; nothing else to do here.
         signupForm.reset();
       } else {
+        if (measureFirstSignInWanted()) measureFirstAwaitEmail = true;
         showAccountStatus(accountStatusMsg, "Account created -- check your email to confirm it, then log in.");
         signupForm.reset();
       }
@@ -4228,6 +4234,14 @@ if (isSupabaseConfigured()) {
         const action = pendingSignInAction;
         closeAccountOverlay();
         action();
+      } else if (currentUser && measureFirstSignInWanted()) {
+        // Back from Google or the confirm-email link after tapping
+        // Get measured first: open the measurements wizard now.
+        clearMeasureFirstSignIn();
+        setTimeout(() => {
+          if (closeAccountOverlay) closeAccountOverlay();
+          if (typeof openMeasureFirst === "function") openMeasureFirst();
+        }, 0);
       }
     });
   } catch (err) {
@@ -7641,7 +7655,9 @@ function refreshMeasHub() {}
   // page, or numbers from a tailor), a guest is asked to sign in so they
   // land in their account. "Keep on this phone only" skips it.
   function accountAsk() {
-    return !!((measureFirst || wiz.dataset.route === "pro") && isSupabaseConfigured());
+    // Measured first always starts signed in, so it never asks.
+    if (measureFirst) return false;
+    return !!(wiz.dataset.route === "pro" && isSupabaseConfigured());
   }
   // After the account page (or straight from review when signed in).
   // skipProfile: just signed in, so loadProfile() saves them once the
@@ -11795,8 +11811,48 @@ function updateMeasureFirstBtn() {
     if (txt) txt.textContent = label;
   }
 }
+// Getting measured first needs an account (Daniel, 2026-11-10): a guest
+// gets the sign-up box first and the wizard opens once they're signed in.
+// The wish is kept in localStorage for an hour so it survives Continue with
+// Google (leaves the page) and the confirm-your-email link.
+const MEASURE_FIRST_SIGNIN_KEY = "scottSuitsMeasureFirstSignIn";
+let measureFirstAwaitEmail = false;
+function measureFirstSignInWanted() {
+  try {
+    const t = Number(localStorage.getItem(MEASURE_FIRST_SIGNIN_KEY) || 0);
+    return t > 0 && Date.now() - t < 60 * 60 * 1000;
+  } catch (e) {
+    return false;
+  }
+}
+function clearMeasureFirstSignIn() {
+  measureFirstAwaitEmail = false;
+  try {
+    localStorage.removeItem(MEASURE_FIRST_SIGNIN_KEY);
+  } catch (e) {
+    // storage unavailable
+  }
+}
 function getMeasuredFirst() {
-  if (typeof openMeasureFirst === "function") openMeasureFirst();
+  if (typeof openMeasureFirst !== "function") return;
+  if (currentUser || !isSupabaseConfigured()) return openMeasureFirst();
+  try {
+    localStorage.setItem(MEASURE_FIRST_SIGNIN_KEY, String(Date.now()));
+  } catch (e) {
+    // storage unavailable: email/password sign-up still continues in place
+  }
+  requireSignIn(
+    document.getElementById("heroMeasureFirstBtn"),
+    "Create an account to get measured. Your measurements are saved to your profile, ready for every suit you design.",
+    () => {
+      clearMeasureFirstSignIn();
+      openMeasureFirst();
+    }
+  );
+  if (showSignupTabBtn) showSignupTabBtn.click();
+  // "An account is optional" doesn't fit here; it comes back on close.
+  const guestNote = document.querySelector(".acc-guest-note");
+  if (guestNote) guestNote.hidden = true;
 }
 window.getMeasuredFirst = getMeasuredFirst;
 // A new tab with no draft of its own picks up a customer who chose a tailor
