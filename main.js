@@ -7835,6 +7835,9 @@ function refreshMeasHub() {}
       page.append(el("p", "tc-steps-title", "What to do"), steps);
       renderTailorChecklist();
       if (checklistEl) page.appendChild(checklistEl);
+      measAutosaveNoteEl = el("p", "tc-autosave", measAutosaveIdleNote());
+      measAutosaveNoteEl.setAttribute("role", "status");
+      page.appendChild(measAutosaveNoteEl);
       // Numbers typed into the list are the measurements: once any are in,
       // Next skips the re-entry and goes to what's still missing, then review.
       const sync = () => {
@@ -11945,27 +11948,57 @@ function measProfileSaveAllowed() {
   return !!(currentUser && !currentIsAdmin && !adminEditState &&
     (!saveMeasurementsToProfileCheckbox || saveMeasurementsToProfileCheckbox.checked));
 }
-function scheduleMeasProfileSave() {
-  if (!measProfileSaveAllowed()) return;
-  clearTimeout(measProfileTimer);
-  measProfileTimer = setTimeout(flushMeasProfileSave, 2000);
+// The small "Saved ..." line on the At the tailor page (Daniel, 2026-11-10:
+// numbers typed there go to the account automatically, and the customer
+// should see that they did).
+var measAutosaveNoteEl = null;
+function setMeasAutosaveNote(text, state) {
+  const n = measAutosaveNoteEl;
+  if (!n || !n.isConnected) return;
+  n.textContent = text || "";
+  n.hidden = !text;
+  n.dataset.state = state || "";
 }
-function flushMeasProfileSave() {
+function measAutosaveIdleNote() {
+  if (measProfileSaveAllowed()) return "Numbers typed here save to your account automatically.";
+  if (currentUser) return "Numbers typed here are saved on this phone for 60 days.";
+  return "Numbers typed here are saved on this phone for 60 days. Sign in to keep them in your account.";
+}
+function scheduleMeasProfileSave() {
+  if (!measProfileSaveAllowed()) {
+    if (measAutosaveNoteEl && measAutosaveNoteEl.isConnected) setMeasAutosaveNote(measAutosaveIdleNote().replace("Numbers typed here are saved", "Saved"), "ok");
+    return;
+  }
+  clearTimeout(measProfileTimer);
+  setMeasAutosaveNote("Saving\u2026", "busy");
+  measProfileTimer = setTimeout(flushMeasProfileSave, 1200);
+}
+async function flushMeasProfileSave() {
   clearTimeout(measProfileTimer);
   measProfileTimer = null;
   if (!measProfileSaveAllowed()) return;
   const values = currentMeasValues();
   let any = false;
+  const off = [];
   MEASUREMENTS.forEach((m) => {
     if (values[m.id] === undefined) return;
     const val = parseFloat(values[m.id]);
-    if (isNaN(val) || val <= 0 || !measureInRange(m, val)) delete values[m.id];
-    else {
+    if (isNaN(val) || val <= 0 || !measureInRange(m, val)) {
+      if (!isNaN(val) && val > 0) off.push(m.id === "back_jacket" ? "Jacket Length" : m.label);
+      delete values[m.id];
+    } else {
       values[m.id] = val;
       any = true;
     }
   });
-  if (any) saveProfileMeasurements(values);
+  if (!any) {
+    setMeasAutosaveNote(off.length ? "Check " + off.join(", ") + ". That number looks off, so it's kept on this phone only." : "", "warn");
+    return;
+  }
+  const ok = await saveProfileMeasurements(values);
+  if (!ok) setMeasAutosaveNote("Not saved to your account yet (kept on this phone). Check your connection.", "warn");
+  else if (off.length) setMeasAutosaveNote("Saved to your account, except " + off.join(", ") + ". That number looks off.", "warn");
+  else setMeasAutosaveNote("\u2713 Saved to your account automatically.", "ok");
 }
 // Leaving the page or switching apps saves right away.
 function flushMeasAutosaves() {
