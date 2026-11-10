@@ -8423,6 +8423,10 @@ function syncPreviewCartButton(justAdded) {
   btn.innerHTML = inCart ? '<span aria-hidden="true">\u2713</span> Added to cart' : "Add to cart";
   if (note) note.hidden = inCart;
   if (done) done.hidden = !inCart;
+  // Not when the suit already took the account's saved measurements.
+  const measLine = document.getElementById("previewCartMeasLine");
+  const item = pendingCommitIndex !== null ? cartItems[pendingCommitIndex] : null;
+  if (measLine) measLine.hidden = !!(item && !itemNeedsMeasurements(item));
 }
 const addToCartFromPreviewBtn = document.getElementById("addToCartFromPreviewBtn");
 if (addToCartFromPreviewBtn) addToCartFromPreviewBtn.addEventListener("click", addToCartMeasureLater);
