@@ -3387,18 +3387,6 @@ const CLASSIC_SUIT_PRESET = {
 };
 
 // ---------------------------------------------------------------------
-// Per-customer fabric lists built into the site, used only until the
-// client_fabric_lists table (supabase/sql/36_client_fabric_lists.sql) is in
-// the database; after that, My Account > Client Fabric Lists is the place.
-// Key: SHA-256 of the account email in lower case (no email in the page).
-// fabrics: catalog fabric names; customers only ever see display names.
-// ---------------------------------------------------------------------
-const CLIENT_FABRIC_LISTS_BUILTIN = {
-  // Dovid's list (2026-11-01) was removed 2026-11-02: he is waiting for
-  // Rich Slate Blue to come back in stock instead.
-};
-
-// ---------------------------------------------------------------------
 // Customization levels (Daniel, 2026-11-07): after "Full Suit" or "Jacket
 // Only" the customer picks Minimal, Basic or Advanced.
 //   Minimal:  the Preset Suit's questions and answers, but any fabric on
