@@ -449,7 +449,8 @@ function layoutFor(jacketOnly: boolean, spec = ""): string {
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const cuffStyle = (spec.match(/^Sleeve Cuff Styles: (.+)$/m) || [])[1] || "";
   const lapelStyle = (spec.match(/^Lapel Style: (.+)$/m) || [])[1] || "";
-  const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")" : "";
+  const diamond = lapelStyle === "Diamond Lapel" ? " (" + DIAMOND_SHORT + ")"
+    : lapelStyle === "Arc Lapel" ? " (" + ARC_SHORT + ")" : "";
   const chestPocket = (spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || "";
   const chestNote = CHEST_NOT[chestPocket] ? " (chest pocket: " + CHEST_NOT[chestPocket] + ")" : "";
   const backPocket = (OPTION_LOOKS["Back Pocket Style"] || {})[(spec.match(/^Back Pocket Style: (.+)$/m) || [])[1] || ""];
@@ -534,6 +535,11 @@ const SLANT_VENT =
 const DIAMOND_SHORT =
   "both lapels are DIAMOND lapels, a cross between a shawl and a peak lapel: one continuous piece from the neck with no notch, like a shawl, coming to one sharp outward point in the upper third, like a peak, so each lapel is a tall kite shape";
 
+// The arc lapel in a few words, for the panel descriptions. With only the
+// option text the model drew an ordinary tapered shawl (Daniel, 2026-11-11).
+const ARC_SHORT =
+  "both lapels are ARC lapels: a shawl collar with no notch whose lapels stay WIDE almost all the way down and then curve round in a broad rounded U, like the bottom of a horseshoe, meeting at the single button; the lapels do NOT taper to a thin point at the button the way an ordinary shawl does";
+
 // What each lapel must NOT look like. Notch is here too: with nothing said,
 // the model drew double-breasted jackets with peak lapels.
 const LAPEL_NOT: Record<string, string> = {
@@ -542,7 +548,7 @@ const LAPEL_NOT: Record<string, string> = {
   "Semi-Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up; a small V-shaped notch separates the collar from the lapel.",
   "Semi-Peak Lapel": "It is NOT a full peak lapel: the point rises only slightly and does NOT reach up toward the collar or shoulder. It is NOT a notch lapel: the tip angles a little upward, not down.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT an ordinary tapered shawl: the bottom of each lapel is broad and rounded, not pointed.",
+  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT an ordinary tapered shawl: an ordinary shawl narrows steadily into a thin point at the button, but here each lapel keeps nearly its full width down to the lower chest and then rounds off in a broad U-shaped curve at the button, so the two lapels together outline a tall rounded horseshoe or oval.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
 };
 
@@ -893,7 +899,7 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
     const width = (spec.match(/^Lapel Width: (.+)$/m) || [])[1] || "";
     const widthLook = (OPTION_LOOKS["Lapel Width"] || {})[width];
     out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : "") +
-      (lapelStyle === "Diamond Lapel" ? " Draw both lapels in this exact shape in the front view and in every close-up that shows them." : ""));
+      (lapelStyle === "Diamond Lapel" || lapelStyle === "Arc Lapel" ? " Draw both lapels in this exact shape in the front view and in every close-up that shows them." : ""));
   }
   if (cuffCountText(spec)) out.push("- CUFF BUTTON COUNT: " + cuffCountText(spec) + ".");
   if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
@@ -1166,6 +1172,8 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
     } else if (r.label === "stitch reference") {
       const st = stitchChoice(spec);
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of ONE button seen face-on, showing the customer's chosen BUTTON STITCHING ("${st ? st.name : ""}"): the thick black lines are the thread between the four holes${st ? ": " + st.look : ""}. Sew every button on the suit with exactly this thread pattern, in the real button's own color and material and the given thread color; never draw a line-art button.`);
+    } else if (r.label === "lapel reference" && /^Lapel Style: Arc Lapel$/m.test(spec)) {
+      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ARC LAPEL: copy EXACTLY its outline on both lapels: a shawl collar with no notch, each lapel staying WIDE down the chest and ending in a broad rounded U-shaped curve at the single button, the two lapels together forming a tall rounded horseshoe; never the thin tapered point of an ordinary shawl. Keep the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
@@ -1547,7 +1555,10 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   // Diamond lapel: the catalog drawing alone kept coming out as a notch or
   // peak lapel, so show a bolder filled-in illustration instead (falls back
   // to the drawing if that file can't be loaded).
-  const lapelRefSrc = /^Lapel Style: Diamond Lapel$/m.test(spec) ? "./assets/jacket-lapelref-diamond.jpg" : "";
+  // Arc lapel: drew as a classic shawl with only the drawing, so it gets its
+  // own illustration too (scripts/lapelref_arc.py).
+  const lapelRefSrc = /^Lapel Style: Diamond Lapel$/m.test(spec) ? "./assets/jacket-lapelref-diamond.jpg"
+    : /^Lapel Style: Arc Lapel$/m.test(spec) ? "./assets/jacket-lapelref-arc.jpg" : "";
   // The lapel and cuff drawings go first: the model follows early images best.
   const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
   const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
