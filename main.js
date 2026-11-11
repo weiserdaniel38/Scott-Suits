@@ -11469,6 +11469,7 @@ async function updateDesignPreviewPanel() {
   box.hidden = false;
   // The finished picture gets a small "Review selections" link under it.
   let cancelBtn = null;
+  const isAdminHere = () => !!(currentIsAdmin || (currentUser && readCachedAdminId() === currentUser.id));
   const showImage = (url) => {
     ui.showImage(url);
     const media = ui.card.querySelector(".suit-preview-media");
@@ -11478,7 +11479,7 @@ async function updateDesignPreviewPanel() {
     media.append(note, buildSelectionsReview(ui.card));
     // Admin only: draw the same design again (to test the picture generator).
     // The server gives admins unlimited pictures; customers never see this.
-    if (currentIsAdmin || (currentUser && readCachedAdminId() === currentUser.id)) {
+    if (isAdminHere()) {
       const again = document.createElement("button");
       again.type = "button";
       again.className = "admin-suit-redraw suit-preview-redraw";
@@ -11492,14 +11493,15 @@ async function updateDesignPreviewPanel() {
     ui.working(loadingKindForType(currentSuitType));
     // Admin redraw only: "Cancel redraw" stops waiting and puts the previous
     // picture back. (The server may still finish the drawing it started.)
-    if (preview.prev && preview.prev.url) {
+    if (isAdminHere() || (preview.prev && preview.prev.url)) {
+      const hasPrev = !!(preview.prev && preview.prev.url);
       const stop = document.createElement("button");
       stop.type = "button";
       stop.className = "admin-suit-redraw suit-preview-redraw suit-preview-cancel";
-      stop.textContent = "Cancel redraw (admin)";
+      stop.textContent = hasPrev ? "Cancel redraw (admin)" : "Cancel drawing (admin)";
       stop.addEventListener("click", () => {
         if (designPreview !== preview) return;
-        designPreview = { spec: preview.spec, photo: preview.photo, id: preview.prev.id, status: "done", url: preview.prev.url };
+        designPreview = hasPrev ? { spec: preview.spec, photo: preview.photo, id: preview.prev.id, status: "done", url: preview.prev.url } : null;
         saveDraft();
         updateDesignPreviewPanel();
       });
