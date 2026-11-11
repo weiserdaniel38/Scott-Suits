@@ -11514,6 +11514,7 @@ async function updateDesignPreviewPanel() {
       stop.textContent = hasPrev ? "Cancel redraw (admin)" : "Cancel drawing (admin)";
       stop.addEventListener("click", () => {
         if (designPreview !== preview) return;
+        cancelPreviewOnServer(preview.id);
         designPreview = hasPrev ? { spec: preview.spec, photo: preview.photo, id: preview.prev.id, status: "done", url: preview.prev.url } : null;
         saveDraft();
         updateDesignPreviewPanel();
@@ -11575,6 +11576,13 @@ async function updateDesignPreviewPanel() {
     ui.btn.textContent = "Generate My Suit";
     requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
   }
+}
+
+// Admin Cancel (button or page refresh): tell the server to stop drawing
+// more rounds for this preview. Pictures already being drawn still cost.
+function cancelPreviewOnServer(id) {
+  if (!id) return;
+  callSuitImageFn({ preview_cancel: id }).catch(() => {});
 }
 
 // The finished preview for the suit being committed to the cart, if the
@@ -12408,6 +12416,9 @@ function restoreDraft() {
     // Admin redraw: a refresh cancels it (Daniel, 2026-11-11). The previous
     // picture comes back; with none to go back to, the admin gets the
     // Generate button again. A customer's own drawing still resumes.
+    if (designPreview.status === "pending" && (designPreview.prev || readCachedAdminId())) {
+      cancelPreviewOnServer(designPreview.id);
+    }
     if (designPreview.status === "pending") {
       if (designPreview.prev) {
         designPreview = { spec: designPreview.spec, photo: designPreview.photo, id: designPreview.prev.id, status: "done", url: designPreview.prev.url };

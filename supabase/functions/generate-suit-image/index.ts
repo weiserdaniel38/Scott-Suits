@@ -1495,6 +1495,7 @@ async function drawChecked(
   prompt: string,
   images: { label: string; blob: Blob }[],
   spec: string,
+  cancelled: () => Promise<boolean> = async () => false,
 ): Promise<{ jpeg: Uint8Array | null; good: boolean }> {
   const n = cuffButtonCount(spec);
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
@@ -1523,6 +1524,12 @@ async function drawChecked(
       drawImage(prompt, images)
         .then(async (d) => {
           if (decided) return;
+          if (await cancelled()) {
+            decided = true;
+            clearTimeout(timer);
+            resolve(null);
+            return;
+          }
           const arc = wantArc ? await arcTipOk(d, arcRef) : null;
           const count = needCuff && !decided && arcRight(arc) ? await countCuff(d, jacketOnly) : null;
           results.push({ jpeg: d, count, arc });
@@ -1600,7 +1607,7 @@ async function claim(id: string, force: boolean) {
 // Draws one sheet and stores it; returns its public URL and the prompt used,
 // or null when no right sheet came out and another round should be tried
 // (lastRound false).
-async function drawSheet(raw: string, folder: string, name: string, lastRound = true): Promise<{ url: string; prompt: string } | null> {
+async function drawSheet(raw: string, folder: string, name: string, lastRound = true, cancelled: () => Promise<boolean> = async () => false): Promise<{ url: string; prompt: string } | null> {
   const { text: spec, swatches: allSwatches } = parseSpec(raw);
   // An unlined jacket shows no lining, so don't show the model a lining swatch.
   const unlined = /^Facing Style: No Lining/m.test(spec);
@@ -1690,7 +1697,9 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   const buttonPhoto = loaded.some((r) => r.label === "button");
   const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")), buttonPhoto);
   const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec, buttonPhoto);
-  const { jpeg, good } = await drawChecked(prompt, images, spec);
+  if (await cancelled()) return null;
+  const { jpeg, good } = await drawChecked(prompt, images, spec, cancelled);
+  if (await cancelled()) return null;
   if (!good && !lastRound) return null;
   if (!jpeg) throw new Error("No picture was drawn in time");
 
@@ -1728,8 +1737,17 @@ async function generatePreview(id: string, raw: string, round = 1) {
       .eq("id", id);
     if (error) console.error("Failed to update preview", id, error);
   };
+  const cancelled = async () => {
+    const { data } = await supabase.from("suit_previews").select("status").eq("id", id).maybeSingle();
+    return data?.status === "cancelled";
+  };
   try {
-    const r = await drawSheet(raw, "previews", id, round >= ROUNDS());
+    if (await cancelled()) return;
+    const r = await drawSheet(raw, "previews", id, round >= ROUNDS(), cancelled);
+    if (await cancelled()) {
+      console.log("Preview cancelled", id);
+      return;
+    }
     if (!r) {
       await set({ status: "pending" });
       await chainRound({ retry: "preview", id, round: round + 1 });
@@ -1738,6 +1756,7 @@ async function generatePreview(id: string, raw: string, round = 1) {
     const { url, prompt } = r;
     await set({ status: "done", image_url: url, image_prompt: prompt, image_error: null });
   } catch (err) {
+    if (await cancelled()) return;
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Suit preview failed for", id, msg);
     await set({ status: "failed", image_error: msg.slice(0, 1000) });
@@ -1843,6 +1862,7 @@ async function checkPreview(id: string): Promise<Response> {
   if (!data) return json({ error: "Not found" }, 404);
   let status = data.status;
   if (status === "pending" && Date.now() - Date.parse(data.updated_at) > STALE_PENDING_MS) status = "failed";
+  if (status === "cancelled") status = "failed";
   return json({ status, image_url: status === "done" ? data.image_url : null });
 }
 
@@ -1893,6 +1913,21 @@ Deno.serve(async (req) => {
   if (body?.preview) {
     if (!env("OPENAI_API_KEY")) return json({ status: "unavailable" }, 503);
     return startPreview(req, String(body?.visual_spec || "").trim());
+  }
+  // Admin "Cancel" on the preview page: no further drawing rounds for this
+  // preview. Pictures already being drawn are still billed by OpenAI.
+  if (body?.preview_cancel) {
+    const id = String(body.preview_cancel);
+    if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
+    const userId = await requestUserId(req);
+    if (!userId) return SIGN_IN_NEEDED();
+    const { data: row } = await supabase.from("suit_previews").select("user_id, status").eq("id", id).maybeSingle();
+    if (!row) return json({ error: "Not found" }, 404);
+    if (row.user_id !== userId && !(await isAdmin(userId))) return json({ error: "Not yours" }, 403);
+    if (row.status === "pending") {
+      await supabase.from("suit_previews").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", id).eq("status", "pending");
+    }
+    return json({ status: "cancelled" });
   }
   if (body?.preview_check) {
     const id = String(body.preview_check);
