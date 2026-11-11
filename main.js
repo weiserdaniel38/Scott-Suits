@@ -2211,11 +2211,100 @@ function renderFabricSearch() {
     box.appendChild(more);
   }
 }
+// "Search by photo": a picture of a swatch label goes to the admin-only
+// fabric-label edge function, which reads the Fabric No. (OpenAI), and the
+// codes it read are put in the search box. A misread 0/O, 1/I, 5/S, 8/B is
+// forgiven when matching against the site's codes.
+const FABRIC_LABEL_FN_URL = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL + "/functions/v1/fabric-label" : "";
+function fabricLabelLoose(s) {
+  return fabricSearchKey(s).replace(/O/g, "0").replace(/[IL]/g, "1").replace(/S/g, "5").replace(/B/g, "8").replace(/Z/g, "2");
+}
+// The site Fabric No. (or book number) each read code stands for.
+function fabricLabelToSiteCodes(read) {
+  const opts = JACKET_CATALOG.fabric.options;
+  const parts = opts.map((o) => o.name.split(".").map(fabricSearchKey));
+  const found = [];
+  const missing = [];
+  read.forEach((code) => {
+    const k = fabricSearchKey(code);
+    let hit = parts.find((p) => p.indexOf(k) !== -1);
+    if (!hit) hit = parts.find((p) => p.some((x) => fabricLabelLoose(x) === fabricLabelLoose(k)));
+    if (!hit && k.length >= 5) hit = parts.find((p) => p.some((x) => x.length >= 5 && (x.endsWith(k) || k.endsWith(x))));
+    if (hit) {
+      const site = hit.find((x) => x === k || fabricLabelLoose(x) === fabricLabelLoose(k)) || hit[hit.length - 1];
+      if (found.indexOf(site) === -1) found.push(site);
+    } else missing.push(k);
+  });
+  return { found, missing };
+}
+function shrinkPhotoForLabel(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("open"));
+      img.onload = () => {
+        const scale = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const g = c.getContext("2d");
+        g.fillStyle = "#fff";
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.88));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function fabricPhotoSay(text, ok) {
+  const el = document.getElementById("fabricSearchPhotoMsg");
+  if (!el) return;
+  el.hidden = !text;
+  el.textContent = text || "";
+  el.classList.toggle("promo-ok", !!ok);
+}
+async function searchFabricByPhoto(file) {
+  const btn = document.querySelector(".fs-photo-btn");
+  const input = document.getElementById("fabricSearchInput");
+  if (!file || !input) return;
+  if (!FABRIC_LABEL_FN_URL) return fabricPhotoSay("Photo search isn’t set up on this copy of the site.");
+  if (btn) btn.classList.add("fs-busy");
+  fabricPhotoSay("Reading the label...", true);
+  try {
+    const image = await shrinkPhotoForLabel(file);
+    const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+    const res = await fetch(FABRIC_LABEL_FN_URL, { method: "POST", headers, body: JSON.stringify({ image }) });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(r.error || "error " + res.status);
+    const read = (r.fabricNumbers || []).concat(r.fabricNumbers && r.fabricNumbers.length ? [] : r.otherNumbers || []);
+    if (!read.length) {
+      fabricPhotoSay("Couldn’t find a Fabric No. in that photo. Try closer, with the label flat and in focus.");
+      return;
+    }
+    const { found, missing } = fabricLabelToSiteCodes(read);
+    input.value = (found.length ? found : missing).join(" ");
+    renderFabricSearch();
+    let msg = "Read from photo: " + read.join(", ") + ".";
+    if (found.length && missing.length) msg += " Not on the site: " + missing.join(", ") + ".";
+    fabricPhotoSay(msg, true);
+  } catch (e) {
+    console.error(e);
+    fabricPhotoSay("Couldn’t read the photo right now (" + e.message + "). Type the code instead.");
+  } finally {
+    if (btn) btn.classList.remove("fs-busy");
+  }
+}
 (function () {
   const input = document.getElementById("fabricSearchInput");
   const section = document.getElementById("adminFabricSearchSection");
   if (!input || !section) return;
-  input.addEventListener("input", renderFabricSearch);
+  input.addEventListener("input", () => { fabricPhotoSay(""); renderFabricSearch(); });
+  const photo = document.getElementById("fabricSearchPhoto");
+  if (photo) photo.addEventListener("change", () => { const f = photo.files && photo.files[0]; photo.value = ""; searchFabricByPhoto(f); });
   section.addEventListener("toggle", () => {
     if (!section.open) return;
     renderFabricSearch();
