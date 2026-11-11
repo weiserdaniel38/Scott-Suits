@@ -1429,7 +1429,7 @@ async function countCuff(jpeg: Uint8Array, jacketOnly = false, question = CUFF_Q
 // null = the check itself failed (treated as fine).
 const ARC_QUESTION =
   "Image 1 is a reference illustration of the bottom of an ARC LAPEL: the two lighter grey lapels stay wide and each ends at the button in a wide BLUNT ROUNDED lobe, its outer edge bending round and running sideways into the button. " +
-  "Image 2 is a product sheet of a tailored jacket (image 3, if present, is its front view enlarged). Look at the front view of the jacket, at the lowest part of the two lapels, just above the top front button. Zoom in. Judge only the lapel shape, not color or fabric. " +
+  "Image 2 is a product sheet of a tailored jacket. Look at the front view of the jacket, at the lowest part of the two lapels, just above the top front button. Zoom in. Judge only the lapel shape, not color or fabric. " +
   "An ordinary SHAWL collar is the usual case: the lapel narrows steadily like a crescent and its outer edge runs as one long gently curved diagonal line into the front edge, ending in a thin tapered point at the button. " +
   "Measure: (a) width_ratio = the width of one lapel a short way above the top button (about one eighth of the lapel's length above it) divided by that lapel's greatest width; (b) final_direction = the direction of the last short stretch of the lapel's outer edge before the button: \"sideways\" (close to horizontal) or \"downward\" (a steep diagonal); (c) end_shape = \"blunt_round\" (a wide rounded lobe as in image 1) or \"tapered_point\". " +
   "Then lapel_end = \"arc\" only if the jacket clearly matches image 1 on all three; \"shawl\" for an ordinary shawl collar or whenever you are unsure; \"other\" for a notch lapel, a peak lapel or anything else. " +
@@ -1439,24 +1439,16 @@ async function dataUrl(bytes: Uint8Array, type = "image/jpeg"): Promise<string> 
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return "data:" + type + ";base64," + btoa(bin);
 }
-// The front view is the top-left panel of a jacket-only sheet; enlarged so the
-// checker sees the lapel ends at a useful size.
-async function frontCrop(jpeg: Uint8Array): Promise<Uint8Array | null> {
-  try {
-    const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
-    const im = await Image.decode(jpeg);
-    return await im.crop(0, 0, Math.round(im.width * 0.36), Math.round(im.height * 0.57)).encodeJPEG(92);
-  } catch {
-    return null;
-  }
-}
-async function arcTipOk(jpeg: Uint8Array, ref: Blob | null, jacketOnly: boolean): Promise<boolean | null> {
+// (An enlarged crop of the front view was also sent at first, but decoding
+// the sheet a second time per candidate ran the function out of CPU time and
+// no Arc picture finished. The whole sheet at high detail is enough.)
+let arcRefUrl = "";
+async function arcTipOk(jpeg: Uint8Array, ref: Blob | null): Promise<boolean | null> {
   const key = env("OPENAI_API_KEY");
   if (!key || !ref) return null;
   try {
-    const front = jacketOnly ? await frontCrop(jpeg) : null;
-    const pics = [await dataUrl(new Uint8Array(await ref.arrayBuffer()), ref.type || "image/jpeg"), await dataUrl(jpeg)]
-      .concat(front ? [await dataUrl(front)] : []);
+    if (!arcRefUrl) arcRefUrl = await dataUrl(new Uint8Array(await ref.arrayBuffer()), ref.type || "image/jpeg");
+    const pics = [arcRefUrl, await dataUrl(jpeg)];
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: "Bearer " + key },
@@ -1521,7 +1513,7 @@ async function drawChecked(
         .then(async (d) => {
           const [count, arc] = await Promise.all([
             needCuff ? countCuff(d, jacketOnly) : Promise.resolve(null),
-            wantArc ? arcTipOk(d, arcRef, jacketOnly) : Promise.resolve(null),
+            wantArc ? arcTipOk(d, arcRef) : Promise.resolve(null),
           ]);
           results.push({ jpeg: d, count, arc });
           if (cuffRight(count) && arcRight(arc)) {
