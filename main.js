@@ -12390,6 +12390,16 @@ function restoreDraft() {
       url: dp.url || null,
       prev: dp.prev && dp.prev.url ? dp.prev : null,
     };
+    // Admin redraw: a refresh cancels it (Daniel, 2026-11-11). The previous
+    // picture comes back; with none to go back to, the admin gets the
+    // Generate button again. A customer's own drawing still resumes.
+    if (designPreview.status === "pending") {
+      if (designPreview.prev) {
+        designPreview = { spec: designPreview.spec, photo: designPreview.photo, id: designPreview.prev.id, status: "done", url: designPreview.prev.url };
+      } else if (readCachedAdminId()) {
+        designPreview = null;
+      }
+    }
   }
 
   if (draft.bodyScan) window.__bodyScan = draft.bodyScan;
