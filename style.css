@@ -3122,4 +3122,10 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
   .designer-grid .opt-swatch{aspect-ratio:5/4;}
   .designer-grid .opt-card .opt-name{padding:6px 10px 8px;font-size:13px;}
   body:not(.designing) .hero-photo{height:clamp(120px, 20svh, 200px);}
+  #accountOverlay{padding:6px;}
+  #accountOverlay .account-panel{padding:22px 16px 14px;}
+  #accountOverlay h2{font-size:22px;}
+  #accountLoggedOutView .email-promise{margin-bottom:8px;}
+  #accountOverlay .account-divider{margin:8px 0;}
+  #accountOverlay .account-tabs{margin-bottom:8px;}
 }
