@@ -11475,6 +11475,16 @@ async function updateDesignPreviewPanel() {
     note.className = "suit-preview-disclaimer";
     note.textContent = "This picture is AI-generated and drawn as accurately as possible. Small details may differ, but your suit is made exactly to the selections you chose.";
     media.append(note, buildSelectionsReview(ui.card));
+    // Admin only: draw the same design again (to test the picture generator).
+    // The server gives admins unlimited pictures; customers never see this.
+    if (currentIsAdmin || (currentUser && readCachedAdminId() === currentUser.id)) {
+      const again = document.createElement("button");
+      again.type = "button";
+      again.className = "admin-suit-redraw suit-preview-redraw";
+      again.textContent = "Redraw picture (admin)";
+      again.addEventListener("click", () => { again.disabled = true; startDrawing(); });
+      media.appendChild(again);
+    }
   };
 
   const watch = (preview) => {

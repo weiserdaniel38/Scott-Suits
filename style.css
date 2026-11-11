@@ -572,6 +572,7 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-ship-delete:disabled{opacity:.5;cursor:default;}
 .admin-ship-result{flex-basis:100%;color:var(--brass);margin:0;}
 .admin-ship-factory,.admin-suit-redraw{background:none;border:1px solid var(--brass);color:var(--brass);padding:9px 16px;font:inherit;font-size:13px;cursor:pointer;}
+.suit-preview-redraw{display:block;margin:14px auto 0;}
 .admin-ship-factory:hover,.admin-suit-redraw:hover{background:var(--brass);color:#111;}
 .admin-ship-factory:disabled,.admin-suit-redraw:disabled,.admin-factory .btn-primary:disabled{opacity:.5;cursor:default;}
 .admin-factory{margin-top:14px;padding-top:12px;border-top:1px solid rgba(var(--surface-rgb),.12);}
