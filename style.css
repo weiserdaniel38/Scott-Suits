@@ -3129,3 +3129,51 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
   #accountOverlay .account-divider{margin:8px 0;}
   #accountOverlay .account-tabs{margin-bottom:8px;}
 }
+
+/* === PHONE: tailor pages of the measurements flow (Daniel, 2026-11-11:
+   "go through At the tailor and Choose a tailor too"). Shorter heading
+   block so the first tailor card, or the Copy/Print buttons and the start
+   of the list, are on the first screen. Lists still scroll. === */
+@media(max-width:600px){
+  .meas-wiz-page{padding:20px 18px 24px;}
+  .meas-wiz-eyebrow{margin-bottom:6px;}
+  .meas-wiz-q{font-size:27px;margin-bottom:8px;}
+  .meas-wiz-hint{font-size:14.5px;line-height:1.45;margin-bottom:16px;}
+  .meas-wiz-page .tailor-finder-form{margin-bottom:6px;}
+  .meas-wiz-page .tailor-finder-form .measure-field label{font-size:12.5px;}
+  .tailor-locate-btn{margin-top:4px;font-size:13.5px;}
+  .tailor-finder-msg{margin-top:8px;font-size:13px;}
+  .meas-wiz-page .tailor-results{gap:10px;margin-top:10px;}
+  .meas-wiz-page .tailor-card{padding:11px 13px 12px;gap:2px;font-size:13px;line-height:1.4;}
+  .tailor-card-head b{font-size:14.5px;}
+  .tailor-card a.tailor-card-map{margin-top:2px;font-size:12.5px;}
+  .tailor-card-choose{margin-top:8px;padding:9px 14px;font-size:13.5px;}
+  .meas-wiz-own{margin-top:14px;}
+  .tc-steps-title{margin-bottom:6px;}
+  .tc-steps{margin-bottom:12px;}
+  .tc-steps li{padding:0 0 7px 36px;font-size:14.5px;line-height:1.35;}
+  .tc-steps li::before{width:24px;height:24px;font:700 12.5px/24px 'Inter',sans-serif;}
+  .tc-steps span{font-size:13px;line-height:1.35;}
+  .tc-actions{margin-bottom:8px;}
+  .tc-copy{padding:12px 16px;font-size:15px;}
+  .tc-print{font-size:14px;padding:0 18px;}
+  .tc-sheet{padding:14px 14px 8px;}
+  .tc-note{font-size:14px;line-height:1.4;}
+  .tc-list .tailor-checklist-item{padding:9px 0;font-size:15px;}
+  .tc-list .tailor-checklist-name small{font-size:12px;}
+  .tc-autosave{margin-top:10px;padding:7px 10px;font-size:12.5px;line-height:1.3;}
+  .meas-wiz-nav{padding:9px 16px calc(10px + env(safe-area-inset-bottom,0px));}
+}
+
+/* === PHONE: preview page while the suit draws (Daniel, 2026-11-11: "the
+   button has to be centered and the warning shortened and repositioned").
+   Stacked and centered: clip, status line, one short note, then Cancel. === */
+@media(max-width:600px){
+  #designPreview.is-drawing .suit-preview-media{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;}
+  #designPreview.is-drawing .suit-preview-loading{width:120px;height:120px;margin:2px auto 10px;grid-row:auto;}
+  #designPreview.is-drawing .suit-preview-loading-text{width:100%;text-align:center;margin:0;}
+  #designPreview.is-drawing .suit-preview-loading-text strong{font-size:17px;}
+  #designPreview.is-drawing .suit-preview-wait-notice{display:inline-block;max-width:none;margin:8px auto 0;padding:7px 14px;border-radius:999px;font-size:13px;line-height:1.35;text-align:center;}
+  #designPreview.is-drawing .suit-preview-wait-notice strong{display:inline;}
+  #designPreview.is-drawing .suit-preview-cancel{margin-top:10px;}
+}
