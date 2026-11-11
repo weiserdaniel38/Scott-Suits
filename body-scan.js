@@ -790,7 +790,7 @@
     return '<div class="bs-clothes">' + CLOTHES.map(([part, items]) =>
       '<div class="bs-clothes-part">' + esc(part) + "</div>" +
       '<div class="bs-clothes-row">' + items.map(([label, file]) =>
-        '<div class="bs-cl"><img src="./assets/scan-clothes/' + file + '.webp?v=2" alt="" width="240" height="300">' + esc(label) + "</div>").join("") + "</div>").join("") +
+        '<div class="bs-cl"><img src="./assets/scan-clothes/' + file + '.webp?v=20261111burg" alt="" width="240" height="300">' + esc(label) + "</div>").join("") + "</div>").join("") +
       "</div>";
   }
 
@@ -814,11 +814,11 @@
       (msg ? '<p class="bs-alert">' + esc(msg) + "</p>" : "") +
       (pg.clothes ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" + clothesGrid() :
       pg.ready ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
-        '<div class="bs-ready">' + pg.ready.map((t) => '<div class="bs-ready-row"><img src="./assets/scan-clothes/' + t[0] + '.webp?v=1" alt="" width="200" height="160"><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>" :
+        '<div class="bs-ready">' + pg.ready.map((t) => '<div class="bs-ready-row"><img src="./assets/scan-clothes/' + t[0] + '.webp?v=20261111burg" alt="" width="200" height="160"><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>" :
       pg.tips ? '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>" +
         '<div class="bs-tips">' + pg.tips.map((t) => '<div class="bs-tip"><span class="bs-icon">' + ICON[t[0]] + '</span><div><b>' + esc(t[1]) + "</b><span>" + esc(t[2]) + "</span></div></div>").join("") + "</div>"
       : (pg.figs ? '<div class="bs-page-art bs-figs">' + poseSvg("front") + poseSvg("turn") + "</div>"
-        : pg.height ? '<div class="bs-page-art bs-height-art"><img src="./assets/scan-clothes/height-figure.webp?v=1" alt="" width="370" height="432"></div>'
+        : pg.height ? '<div class="bs-page-art bs-height-art"><img src="./assets/scan-clothes/height-figure.webp?v=20261111burg" alt="" width="370" height="432"></div>'
         : '<div class="bs-page-art"><span class="bs-icon">' + ICON[pg.icon] + "</span></div>") +
         '<h3 class="bs-page-title">' + esc(pg.title) + "</h3>") +
       (pg.sub ? '<p class="bs-page-sub">' + esc(pg.sub) + "</p>" : "") +
@@ -973,7 +973,7 @@
   // The two figures on the start screen (Daniel's ChatGPT drawings, gold
   // outlines on transparent).
   function poseSvg(kind) {
-    const src = kind === "front" ? "./assets/scan-figure-tpose.webp" : "./assets/scan-figure-turn.webp";
+    const src = kind === "front" ? "./assets/scan-figure-tpose.webp?v=20261111burg" : "./assets/scan-figure-turn.webp?v=20261111burg";
     return '<figure><img class="bs-pose-img" src="' + src + '" alt="" width="200" height="236">' + "<figcaption>" +
       (kind === "front" ? "1. Arms up" : "2. Turn around slowly") + "</figcaption></figure>";
   }
@@ -1632,7 +1632,7 @@
     if (!L) return;
     const t = performance.now() / 1000;
     const ok = state && (state.okSince || state.phase === "spin" || state.phase === "frontCapture");
-    const body = ok ? [226, 196, 141] : [215, 222, 235];
+    const body = ok ? [201, 154, 163] : [215, 222, 235];
     const since = state && state.flashAt ? performance.now() - state.flashAt : 1e9;
     const flash = since < 260 ? 1 - since / 260 : 0;
     // Face: around the nose, out to the ears.
@@ -1656,12 +1656,12 @@
         const face = Math.hypot(x - fx, y - fy) < fr;
         let a = Math.min(1, 0.92 * v + flash);
         const r = r0 * (0.55 + 0.45 * v) * (1 + 0.3 * flash);
-        // Face white, body gold, legs a lighter gold (MTailor shades by area).
-        let c = face || flash > 0.5 ? WHITE : y > hipY ? (ok ? [240, 218, 170] : body) : body;
+        // Face white, body light burgundy, legs lighter still (MTailor shades by area).
+        let c = face || flash > 0.5 ? WHITE : y > hipY ? (ok ? [226, 196, 201] : body) : body;
         if (parts && !face) {
           // Arm dots: above the shoulders or out past them. Leg dots: below the hips.
           const part = !parts.frame ? "frame" : (y < shY + gap || x < shL - gap || x > shR + gap) ? "arms" : y > hipY ? "legs" : "body";
-          if (parts[part]) c = y > hipY ? [240, 218, 170] : [226, 196, 141];
+          if (parts[part]) c = y > hipY ? [226, 196, 201] : [201, 154, 163];
           else { c = WHITE; a *= 0.45 + 0.55 * blink; }
         }
         ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")";
@@ -1671,7 +1671,7 @@
     ctx.restore();
     if (state && state.fxAt) drawMeasureFx(ctx, W, H, W / 22);
   }
-  // The "being measured" moment after the front capture: a gold line sweeps
+  // The "being measured" moment after the front capture: a light burgundy line sweeps
   // from head to feet, and as it passes each level a measurement line draws
   // out across the body (shoulders, chest, waist, hips, thighs), then they
   // all fade. About 2 seconds.
@@ -1704,8 +1704,8 @@
     // The sweeping line.
     if (sweep < 1) {
       const g = ctx.createLinearGradient(0, 0, W, 0);
-      g.addColorStop(0, "rgba(255,226,170,0)"); g.addColorStop(0.5, "rgba(255,226,170,0.95)"); g.addColorStop(1, "rgba(255,226,170,0)");
-      ctx.shadowColor = "rgba(201,164,103,0.9)"; ctx.shadowBlur = gap;
+      g.addColorStop(0, "rgba(236,208,213,0)"); g.addColorStop(0.5, "rgba(236,208,213,0.95)"); g.addColorStop(1, "rgba(236,208,213,0)");
+      ctx.shadowColor = "rgba(201,154,163,0.9)"; ctx.shadowBlur = gap;
       ctx.fillStyle = g; ctx.fillRect(0, sy - gap * 0.12, W, gap * 0.24);
       ctx.shadowBlur = 0;
     }
@@ -1716,10 +1716,10 @@
       const k = Math.min(1, passed);
       const cx = sh.x + (hp.x - sh.x) * Math.max(0, Math.min(1, (lv.y - sh.y) / (T || 1)));
       const half = lv.half * (1 - Math.pow(1 - k, 3));
-      ctx.strokeStyle = "rgba(255,226,170,0.95)";
+      ctx.strokeStyle = "rgba(236,208,213,0.95)";
       ctx.lineWidth = gap * 0.13;
       ctx.beginPath(); ctx.moveTo(cx - half, lv.y); ctx.lineTo(cx + half, lv.y); ctx.stroke();
-      ctx.fillStyle = "rgba(255,240,210,1)";
+      ctx.fillStyle = "rgba(248,232,235,1)";
       [cx - half, cx + half].forEach((x) => { ctx.beginPath(); ctx.arc(x, lv.y, gap * 0.22, 0, 6.283); ctx.fill(); });
     });
     ctx.restore();
@@ -1803,7 +1803,7 @@
   function showGreatJob() {
     openSheet('<div class="ps-body bs-intro bs-page bs-great">' +
       // Daniel's gold figure in a ring (no big gold circle, no double tick).
-      '<div class="bs-page-art"><img class="bs-great-art" src="./assets/scan-clothes/great-job.webp?v=1" alt="" width="430" height="435"></div>' +
+      '<div class="bs-page-art"><img class="bs-great-art" src="./assets/scan-clothes/great-job.webp?v=20261111burg" alt="" width="430" height="435"></div>' +
       '<h3 class="bs-page-title">Great job!</h3>' +
       '<p class="bs-page-sub">Last step: check your scan.</p>' +
       "</div>" +
@@ -1877,7 +1877,7 @@
     openSheet(head("Your Measurements") +
       '<div class="ps-body bs-results">' +
       // Daniel's "Scan complete" banner (2026-11-04), replacing the big gold circle.
-      '<div class="bs-done-badge"><img src="./assets/scan-clothes/scan-complete.webp?v=1" alt="" width="297" height="300"><span>Scan complete</span></div>' +
+      '<div class="bs-done-badge"><img src="./assets/scan-clothes/scan-complete.webp?v=20261111burg" alt="" width="297" height="300"><span>Scan complete</span></div>' +
       '<p class="bs-lead">Tap a number to change it.</p>' +
       warn.map((w) => '<p class="bs-alert">' + esc(w) + "</p>").join("") +
       '<div class="ps-group">Jacket</div>' + jacketRows +
