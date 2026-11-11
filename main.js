@@ -11327,7 +11327,7 @@ function buildSuitImageCard(labelText) {
       const notice = document.createElement("p");
       notice.className = "suit-preview-wait-notice";
       notice.setAttribute("role", "status");
-      notice.innerHTML = "<strong>Please don't refresh or click anywhere</strong> while your suit is being drawn.";
+      notice.innerHTML = "<strong>Please stay on this page.</strong>";
       media.append(video, caption, notice);
       video.play().catch(() => {});
     },
