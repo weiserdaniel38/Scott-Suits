@@ -171,7 +171,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Semi-Notch Lapel": "semi-notch lapel: like a classic notch lapel, but the notch between collar and lapel is a SMALL, shallow V and the lapel tip points straight out sideways (level, not down), sitting close under the collar",
     "Semi-Peak Lapel": "semi-peak lapel: a softer, shorter peak; the lapel's upper edge rises slightly UPWARD to a modest point that stays well below the collar, with a clear open gap between point and collar (less dramatic than a full peak lapel)",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
-    "Arc Lapel": "arc lapel (an arc-bottom shawl collar): like a SHAWL, collar and lapel are one continuous smoothly rounded piece from the back of the neck down, with NO notch, NO peak and NO corner; but each lapel stays WIDE all the way down and its outer edge curves round in a broad, soft U-shaped arc at the BOTTOM where the two lapels meet at the top button, instead of tapering to a narrow point like an ordinary shawl, so the lapels together form a rounded horseshoe shape. A thin horizontal seam line crosses the collar at the back of the neck",
+    "Arc Lapel": "arc lapel (an arc-bottom shawl collar): like a SHAWL, collar and lapel are one continuous smooth piece from the back of the neck down, with NO notch, NO peak and NO corner. It is a shawl collar with no notch whose opening is a deep V: the outer edge of each lapel runs in a long, almost straight diagonal from the shoulder down to the single button, narrowing gradually but staying fairly wide, and only right above the button does it make one small tight curve inward, like the hook of a letter J, so each lapel ends in a small blunt ROUNDED tip instead of a sharp point. The two small rounded tips meet at the top button. The lapels do NOT form a U, oval or horseshoe and do NOT bulge outward. A thin horizontal seam line crosses the collar at the back of the neck",
     "Diamond Lapel": "diamond lapel, a cross between a shawl collar and a peak lapel: like a SHAWL, collar and lapel are one continuous piece starting right at the back of the neck, with NO notch, gap or step between them; like a PEAK lapel, it has one SHARP pointed corner. From the neck the edge runs in a straight line down and OUTWARD to that sharp point in the UPPER third of the lapel (about level with the chest pocket), then a much longer straight edge runs back INWARD to where the lapels meet at the top button, so each lapel is a tall kite shape. Both lapels are identical mirror images; the lapel is no wider than the chosen lapel width",
   },
   "Lapel Width": {
@@ -538,7 +538,7 @@ const DIAMOND_SHORT =
 // The arc lapel in a few words, for the panel descriptions. With only the
 // option text the model drew an ordinary tapered shawl (Daniel, 2026-11-11).
 const ARC_SHORT =
-  "both lapels are ARC lapels: a shawl collar with no notch whose lapels stay WIDE almost all the way down and then curve round in a broad rounded U, like the bottom of a horseshoe, meeting at the single button; the lapels do NOT taper to a thin point at the button the way an ordinary shawl does";
+  "both lapels are ARC lapels: a shawl collar with no notch whose opening is a deep V: the outer edge of each lapel runs in a long, almost straight diagonal from the shoulder down to the single button, narrowing gradually but staying fairly wide, and only right above the button does it make one small tight curve inward, like the hook of a letter J, so each lapel ends in a small blunt ROUNDED tip instead of a sharp point; never a U or horseshoe shape";
 
 // What each lapel must NOT look like. Notch is here too: with nothing said,
 // the model drew double-breasted jackets with peak lapels.
@@ -548,7 +548,7 @@ const LAPEL_NOT: Record<string, string> = {
   "Semi-Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up; a small V-shaped notch separates the collar from the lapel.",
   "Semi-Peak Lapel": "It is NOT a full peak lapel: the point rises only slightly and does NOT reach up toward the collar or shoulder. It is NOT a notch lapel: the tip angles a little upward, not down.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT an ordinary tapered shawl: an ordinary shawl narrows steadily into a thin point at the button, but here each lapel keeps nearly its full width down to the lower chest and then rounds off in a broad U-shaped curve at the button, so the two lapels together outline a tall rounded horseshoe or oval.",
+  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT an ordinary shawl that tapers to a thin sharp point: each lapel ends at the button in a small blunt rounded tip. It is NOT a U, oval or horseshoe: the opening is a V and only the last short bit of each lapel edge curves.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
 };
 
@@ -1173,7 +1173,7 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       const st = stitchChoice(spec);
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of ONE button seen face-on, showing the customer's chosen BUTTON STITCHING ("${st ? st.name : ""}"): the thick black lines are the thread between the four holes${st ? ": " + st.look : ""}. Sew every button on the suit with exactly this thread pattern, in the real button's own color and material and the given thread color; never draw a line-art button.`);
     } else if (r.label === "lapel reference" && /^Lapel Style: Arc Lapel$/m.test(spec)) {
-      lines.push(`Image ${n++} is a reference illustration of the customer's chosen ARC LAPEL: copy EXACTLY its outline on both lapels: a shawl collar with no notch, each lapel staying WIDE down the chest and ending in a broad rounded U-shaped curve at the single button, the two lapels together forming a tall rounded horseshoe; never the thin tapered point of an ordinary shawl. Keep the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
+      lines.push(`Image ${n++} is a black-and-white line drawing of the customer's chosen ARC LAPEL (the drawing shown on the website): copy EXACTLY the outline of both lapels: a shawl collar with no notch whose opening is a deep V: the outer edge of each lapel runs in a long, almost straight diagonal from the shoulder down to the single button, narrowing gradually but staying fairly wide, and only right above the button does it make one small tight curve inward, like the hook of a letter J, so each lapel ends in a small blunt ROUNDED tip instead of a sharp point. Copy only the lapel shape, not the drawing's pockets, seams or line-art look. Keep the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
@@ -1555,8 +1555,8 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   // Diamond lapel: the catalog drawing alone kept coming out as a notch or
   // peak lapel, so show a bolder filled-in illustration instead (falls back
   // to the drawing if that file can't be loaded).
-  // Arc lapel: drew as a classic shawl with only the drawing, so it gets its
-  // own illustration too (scripts/lapelref_arc.py).
+  // Arc lapel: drew as a classic shawl, so it gets a larger copy of Daniel's
+  // own arc drawing (the one on the Lapel Style card), pockets removed.
   const lapelRefSrc = /^Lapel Style: Diamond Lapel$/m.test(spec) ? "./assets/jacket-lapelref-diamond.jpg"
     : /^Lapel Style: Arc Lapel$/m.test(spec) ? "./assets/jacket-lapelref-arc.jpg" : "";
   // The lapel and cuff drawings go first: the model follows early images best.

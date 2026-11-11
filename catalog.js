@@ -32,7 +32,7 @@ const JACKET_CATALOG = {
       // Arc Lapel (Daniel's drawing, 2026-11-04): a shawl whose lapels end in
       // a wide rounded U at the bottom instead of a point. Factory "Arc bottom
       // shawl" 00F2. Treated like the Shawl for the lapel buttonhole (none).
-      { name: "Arc Lapel", factoryCode: "00F2", img: "./assets/jacket-collar-new-arc-v4.jpg" },
+      { name: "Arc Lapel", factoryCode: "00F2", img: "./assets/jacket-collar-new-arc-v5.jpg" },
     ],
   },
   lapelwidth: {
