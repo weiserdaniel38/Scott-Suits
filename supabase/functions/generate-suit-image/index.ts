@@ -1510,18 +1510,24 @@ async function drawChecked(
   const stitchOk = (c: Count | null) => !wantStitch || !!c && c.stitch === wantStitch;
   const cuffRight = (c: Count | null) => !needCuff || !!c && c.buttons === n && c.buttonholes === n && !c.loose && stitchOk(c);
   const arcRight = (a: boolean | null) => !wantArc || a !== false;
+  // CPU is tight (the function is stopped after about 2 s of CPU, and
+  // decoding a sheet for the cuff crop is the heavy part), so: once a winner
+  // is found the other candidates are not checked, and for an Arc lapel the
+  // cheap lapel check runs first and the cuff is only counted on sheets that
+  // passed it. Two Arc drawings at once ran out of CPU on 2026-11-11.
+  let decided = false;
   const winner = await new Promise<Uint8Array | null>((resolve) => {
     let left = tries;
-    const timer = setTimeout(() => resolve(null), Number(env("ROUND_BUDGET_MS", "125000")));
+    const timer = setTimeout(() => { decided = true; resolve(null); }, Number(env("ROUND_BUDGET_MS", "125000")));
     for (let t = 0; t < tries; t++) {
       drawImage(prompt, images)
         .then(async (d) => {
-          const [count, arc] = await Promise.all([
-            needCuff ? countCuff(d, jacketOnly) : Promise.resolve(null),
-            wantArc ? arcTipOk(d, arcRef) : Promise.resolve(null),
-          ]);
+          if (decided) return;
+          const arc = wantArc ? await arcTipOk(d, arcRef) : null;
+          const count = needCuff && !decided && arcRight(arc) ? await countCuff(d, jacketOnly) : null;
           results.push({ jpeg: d, count, arc });
-          if (cuffRight(count) && arcRight(arc)) {
+          if (!decided && cuffRight(count) && arcRight(arc)) {
+            decided = true;
             clearTimeout(timer);
             resolve(d);
           }
