@@ -2674,13 +2674,13 @@ function adminRedrawOverlay(suitBox, had) {
   const video = document.createElement("video");
   video.className = "admin-redraw-video";
   const clip = SITE_BRAND.loadingVideo || "./assets/suit-loading-thread";
-  [[clip + ".mp4", "video/mp4"], [clip + ".webm", "video/webm"]].forEach(([src, type]) => {
+  [[clip + ".mp4?v=20261111accent", "video/mp4"], [clip + ".webm?v=20261111accent", "video/webm"]].forEach(([src, type]) => {
     const source = document.createElement("source");
     source.src = src;
     source.type = type;
     video.appendChild(source);
   });
-  video.poster = clip + ".jpg";
+  video.poster = clip + ".jpg?v=20261111accent";
   video.autoplay = true;
   video.loop = true;
   video.muted = true;
@@ -11299,13 +11299,13 @@ function buildSuitImageCard(labelText) {
       video.className = "suit-preview-loading";
       // A brand can have its own recolored copy (brand.js loadingVideo).
       const clip = SITE_BRAND.loadingVideo || "./assets/suit-loading-thread";
-      [[clip + ".mp4", "video/mp4"], [clip + ".webm", "video/webm"]].forEach(([src, type]) => {
+      [[clip + ".mp4?v=20261111accent", "video/mp4"], [clip + ".webm?v=20261111accent", "video/webm"]].forEach(([src, type]) => {
         const source = document.createElement("source");
         source.src = src;
         source.type = type;
         video.appendChild(source);
       });
-      video.poster = clip + ".jpg";
+      video.poster = clip + ".jpg?v=20261111accent";
       video.autoplay = true;
       video.loop = true;
       video.muted = true;
