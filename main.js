@@ -11462,11 +11462,24 @@ async function updateDesignPreviewPanel() {
   box.innerHTML = "";
   const head = document.createElement("div");
   head.className = "suit-preview-head";
-  head.innerHTML = '<div class="hiw-eyebrow">Free preview</div><h3>See your suit before you order</h3><p>We draw your suit with the fabric, buttons, lining and thread you chose. It takes a few minutes, and you can keep going to your measurements while it draws.</p>';
+  // Daniel (2026-11-11, "way too crowded"): the page title already says
+  // "Preview your suit", so the card has no second heading, and this short
+  // line only shows next to the Generate button (hidden while drawing and
+  // once the picture is in; see .is-busy in style.css).
+  head.innerHTML = '<p>Free: we draw your suit with the fabric, buttons, lining and thread you chose. It takes a few minutes.</p>';
   box.appendChild(head);
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
   box.hidden = false;
+  box.classList.remove("is-busy", "is-drawing");
+  [["working", true, true], ["showImage", true, false], ["fail", false, false]].forEach(([fn, busy, drawing]) => {
+    const orig = ui[fn];
+    ui[fn] = (...args) => {
+      box.classList.toggle("is-busy", busy);
+      box.classList.toggle("is-drawing", drawing);
+      return orig.apply(ui, args);
+    };
+  });
   // The finished picture gets a small "Review selections" link under it.
   let cancelBtn = null;
   const isAdminHere = () => !!(currentIsAdmin || (currentUser && readCachedAdminId() === currentUser.id));
