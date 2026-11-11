@@ -3050,3 +3050,82 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 .tc-autosave[data-state="ok"]{color:#2f6b3a;}
 .tc-autosave[data-state="warn"]{color:#9a4a2a;}
 @media print{.tc-autosave{display:none !important;}}
+
+/* === PHONE: FIT ONE SCREEN (Daniel, 2026-11-11: no scrolling on a phone
+   unless a step really has more options than fit). Tighter header strip,
+   heading and cards on every designer step, a shorter hero on the home
+   page, and a compact sign-in sheet. Desktop untouched (all ≤600px). === */
+@media(max-width:600px){
+  /* nav: the logo grew to 72px while designing; 56px keeps it clear and
+     gives every step 16px more room */
+  body.designing .logo-mark{height:56px;}
+  body.designing .nav-inner{padding-top:5px;padding-bottom:5px;}
+  /* home: shorter photo and a tighter welcome card so Start Designing and
+     Get measured first sit above the fold on an iPhone SE too */
+  body:not(.designing) .hero-photo{height:clamp(140px, 24svh, 260px);}
+  body:not(.designing) .hero-text{padding:clamp(12px, 2svh, 24px) 20px clamp(24px, 6svh, 90px);}
+  body:not(.designing) .welcome-intro{padding:9px 12px 10px;margin-bottom:clamp(10px, 2svh, 20px);}
+  body:not(.designing) .welcome-intro-label{font-size:10px;margin-bottom:3px;}
+  body:not(.designing) .welcome-intro-title{font-size:18px;margin-bottom:3px;}
+  body:not(.designing) .welcome-intro p{font-size:13px;line-height:1.45;}
+  body:not(.designing) .hero h1{font-size:clamp(28px, 4svh, 36px);}
+  body:not(.designing) .hero-rule{margin:clamp(10px, 1.8svh, 20px) 0;}
+  body:not(.designing) .hero-cta{margin-top:clamp(12px, 2.4svh, 28px);gap:10px;}
+  /* designer steps: one compact strip (step · group · Review, progress,
+     cheer line), a smaller heading, shorter cards */
+  .designer{padding:6px 14px 32px;}
+  .wiz-head{padding:2px 2px 6px;}
+  .wiz-meta{margin-bottom:7px;}
+  .wiz-status{margin-top:5px;}
+  .wiz-cheer{font-size:13px;}
+  .wiz-cheer.celebrate{font-size:13px;}
+  .designer-grid .options{padding:4px 2px 20px;}
+  .designer-grid .options h3{font-size:24px;margin:2px 0 8px;}
+  .designer-grid .cat-description{font-size:13px;line-height:1.4;margin:0 0 10px;}
+  .designer-grid .options .sub{font-size:13px;margin-bottom:10px;}
+  .designer-grid .opt-grid{gap:10px;}
+  .designer-grid .opt-swatch{aspect-ratio:7/6;}
+  .designer-grid .opt-card .opt-name{padding:8px 11px 10px;font-size:14px;line-height:1.25;}
+  .opt-grid .opt-section-divider{margin:8px 0 0;padding-bottom:4px;}
+  .opt-grid .opt-section-divider:first-child{margin-top:0;}
+  .fabric-tap-hint{gap:10px;margin:0 0 10px;padding:8px 10px;}
+  .fabric-tap-hint strong{font-size:14px;}
+  .fabric-tap-hint small{font-size:12px;margin-top:0;}
+  .fabric-tap-hint-icon{width:30px;height:30px;}
+  .wiz-bar{padding:8px 2px calc(8px + env(safe-area-inset-bottom,0px));margin-top:4px;}
+  /* sign-in / create account sheet: fits without scrolling */
+  #accountOverlay{padding:10px 10px;}
+  #accountOverlay .account-panel{padding:26px 18px 18px;}
+  #accountOverlay h2{font-size:24px;margin:0 0 4px;}
+  #accountLoggedOutView .account-intro{margin-bottom:12px;}
+  #accountLoggedOutView .email-promise{font-size:12.5px;line-height:1.4;margin:0 0 12px;}
+  #accountOverlay .btn-google{padding:11px 14px;}
+  #accountOverlay .account-divider{margin:12px 0;}
+  #accountOverlay .account-tabs{margin-bottom:12px;}
+  #accountOverlay .account-tab{padding:8px 10px;}
+  #accountOverlay .account-form .measure-field{margin-bottom:10px;}
+  #accountOverlay .account-form .measure-field label{margin-bottom:4px;}
+  /* checkout: ship / pick up choice takes less room */
+  .fulfill-choice{gap:8px;margin-bottom:14px;}
+  .fulfill-option{padding:10px 12px 10px 40px;}
+  .fulfill-option input{top:12px;left:14px;}
+}
+/* Short phones (iPhone SE, or a tall phone with the browser bars open):
+   one more notch tighter so a 4-option step still shows two rows. */
+@media(max-width:600px) and (max-height:720px){
+  body.designing .logo-mark{height:48px;}
+  .wiz-status{margin-top:3px;}
+  .wiz-cheer,.wiz-cheer.celebrate,.wiz-pct{font-size:12px;}
+  .wiz-meta{margin-bottom:6px;}
+  .designer-grid .options h3{font-size:21px;margin:0 0 6px;}
+  .designer-grid .opt-grid{gap:8px;}
+  .designer-grid .opt-swatch{aspect-ratio:5/4;}
+  .designer-grid .opt-card .opt-name{padding:6px 10px 8px;font-size:13px;}
+  body:not(.designing) .hero-photo{height:clamp(120px, 20svh, 200px);}
+  #accountOverlay{padding:6px;}
+  #accountOverlay .account-panel{padding:22px 16px 14px;}
+  #accountOverlay h2{font-size:22px;}
+  #accountLoggedOutView .email-promise{margin-bottom:8px;}
+  #accountOverlay .account-divider{margin:8px 0;}
+  #accountOverlay .account-tabs{margin-bottom:8px;}
+}
