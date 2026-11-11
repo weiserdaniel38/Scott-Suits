@@ -1356,7 +1356,7 @@ async function drawImage(prompt: string, images: { label: string; blob: Blob }[]
 // The image model sometimes draws one cuff button or buttonhole too many
 // (five chosen, six drawn, or a sixth slit above the top button), whatever the
 // prompt says: in about 30 test sheets of one suit only a third were right. So the sheet
-// is drawn IMAGE_CANDIDATES times at once (default 4) and a vision model
+// could be drawn IMAGE_PICTURES times at once (default now 1, see drawChecked) and a vision model
 // (CHECK_MODEL, default gpt-5.2: in those tests it never passed a wrong cuff;
 // gpt-5 and gpt-5.5 did) counts the buttons and slits on a crop of the cuff
 // close-up. The first sheet with the right count is kept (see drawChecked).
@@ -1485,10 +1485,10 @@ async function arcTipOk(jpeg: Uint8Array, ref: Blob | null): Promise<boolean | n
   }
 }
 
-// Each round draws IMAGE_CANDIDATES sheets at once and counts each cuff as it
+// Each round draws IMAGE_PICTURES sheets at once and counts each cuff as it
 // arrives, keeping the first that is right. The free plan stops a function
 // after 150 seconds, so a round gives up after ROUND_BUDGET_MS; if none was
-// right and rounds are left (IMAGE_ROUNDS, default 2), the caller starts a
+// right and rounds are left (IMAGE_RETRY_ROUNDS, default 1), the caller starts a
 // fresh round in a new function call (chainRound). good=false means the
 // returned sheet is only the best wrong one (or null if none was drawn).
 async function drawChecked(
@@ -1501,7 +1501,10 @@ async function drawChecked(
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const needCuff = !!n && !/button ?less/i.test(cuff);
   const wantArc = /^Lapel Style: Arc Lapel$/m.test(spec);
-  const tries = needCuff || wantArc ? Math.max(1, Math.min(4, Number(env("IMAGE_CANDIDATES", "4")) || 1)) : 1;
+  // Daniel 2026-11-11: 4 pictures per drawing (+4 more on a retry round) cost
+  // "a fortune", so by default ONE picture is drawn and kept, with no checks or
+  // extra rounds. IMAGE_PICTURES (1-4) turns the checked tries back on.
+  const tries = needCuff || wantArc ? Math.max(1, Math.min(4, Number(env("IMAGE_PICTURES", "1")) || 1)) : 1;
   if (tries === 1) return { jpeg: await drawImage(prompt, images), good: true };
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const arcRef = images.find((r) => r.label === "lapel tip reference")?.blob || null;
@@ -1562,7 +1565,7 @@ async function drawChecked(
   return { jpeg: best ? best.jpeg : null, good: false };
 }
 
-const ROUNDS = () => Math.max(1, Math.min(3, Number(env("IMAGE_ROUNDS", "2")) || 1));
+const ROUNDS = () => Math.max(1, Math.min(3, Number(env("IMAGE_RETRY_ROUNDS", "1")) || 1));
 
 // Starts the next drawing round in a fresh call of this function (its own
 // 150 seconds), authorised by the service key the runtime provides.
