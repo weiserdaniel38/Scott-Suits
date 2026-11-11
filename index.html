@@ -1015,8 +1015,14 @@
            (supabase/sql/34_promo_codes.sql). -->
       <details class="account-collapse" id="adminFabricSearchSection" hidden>
         <summary><h3>Fabric Search</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
-        <p class="account-section-note">Only you see this (shop admin). Type the Fabric No. from a swatch label, a book number or a site name. Tap a photo to see it up close.</p>
+        <p class="account-section-note">Only you see this (shop admin). Type the Fabric No. from a swatch label, a book number or a site name, or search by a photo of the label. Tap a fabric photo to see it up close.</p>
         <div class="measure-field fs-field"><label for="fabricSearchInput">Search fabrics</label><div class="measure-input-wrap"><input type="search" id="fabricSearchInput" placeholder="e.g. DBV5315 or navy flannel" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="search"></div></div>
+        <div class="fs-photo-row">
+          <label class="btn-ghost fs-photo-btn" for="fabricSearchPhoto"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/></svg> Search by photo</label>
+          <input type="file" id="fabricSearchPhoto" accept="image/*" hidden>
+          <span class="fs-photo-hint">Snap a swatch label, it reads the Fabric No.</span>
+        </div>
+        <p class="account-status-msg fs-photo-msg" id="fabricSearchPhotoMsg" hidden></p>
         <div id="fabricSearchResults" class="fs-results brand-keep" aria-live="polite"></div>
       </details>
 

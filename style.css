@@ -2212,6 +2212,11 @@ body.order-done-view > .process{display:none !important;}
 .fs-meta.fs-low{color:#a33a3a;font-weight:600;}
 .fs-code{font-size:12.5px;color:var(--ivory-dim);letter-spacing:.02em;overflow-wrap:anywhere;}
 body:has(#accountOverlay.open) .lightbox{z-index:180;}
+.fs-photo-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:-2px 0 12px;}
+.fs-photo-btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;}
+.fs-photo-btn.fs-busy{opacity:.6;pointer-events:none;}
+.fs-photo-hint{font-size:12.5px;color:var(--ivory-dim);}
+.fs-photo-msg{margin:0 0 10px;text-align:left;}
 
 /* ---- Build From a Photo (photo-suit.js) ---- */
 .suit-type-photo{display:flex;align-items:center;gap:14px;width:100%;max-width:640px;margin:18px auto 0;padding:14px 18px;background:rgba(var(--surface-rgb),0.85);border:1px solid rgba(var(--brass-rgb),0.45);border-radius:16px;font-family:inherit;color:var(--ivory);text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;}
