@@ -1496,6 +1496,7 @@ async function drawChecked(
   images: { label: string; blob: Blob }[],
   spec: string,
   cancelled: () => Promise<boolean> = async () => false,
+  lastRound = true,
 ): Promise<{ jpeg: Uint8Array | null; good: boolean }> {
   const n = cuffButtonCount(spec);
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
@@ -1505,7 +1506,11 @@ async function drawChecked(
   // "a fortune", so by default ONE picture is drawn and kept, with no checks or
   // extra rounds. IMAGE_PICTURES (1-4) turns the checked tries back on.
   const tries = needCuff || wantArc ? Math.max(1, Math.min(4, Number(env("IMAGE_PICTURES", "1")) || 1)) : 1;
-  if (tries === 1) return { jpeg: await drawImage(prompt, images), good: true };
+  // One picture and nothing to check, or the last round: keep it as drawn.
+  // Otherwise even a single picture is checked (about a cent), so a wrong one
+  // makes the caller draw ONE more in the next round (Daniel 2026-11-11:
+  // "make it accurate with only one draw").
+  if ((!needCuff && !wantArc) || (tries === 1 && lastRound)) return { jpeg: await drawImage(prompt, images), good: true };
   const jacketOnly = /^Suit type: Jacket only/m.test(spec);
   const arcRef = images.find((r) => r.label === "lapel tip reference")?.blob || null;
   const results: { jpeg: Uint8Array; count: Count | null; arc: boolean | null }[] = [];
@@ -1565,7 +1570,7 @@ async function drawChecked(
   return { jpeg: best ? best.jpeg : null, good: false };
 }
 
-const ROUNDS = () => Math.max(1, Math.min(3, Number(env("IMAGE_RETRY_ROUNDS", "1")) || 1));
+const ROUNDS = () => Math.max(1, Math.min(3, Number(env("IMAGE_RETRY_ROUNDS", "2")) || 1));
 
 // Starts the next drawing round in a fresh call of this function (its own
 // 150 seconds), authorised by the service key the runtime provides.
@@ -1701,7 +1706,7 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")), buttonPhoto);
   const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec, buttonPhoto);
   if (await cancelled()) return null;
-  const { jpeg, good } = await drawChecked(prompt, images, spec, cancelled);
+  const { jpeg, good } = await drawChecked(prompt, images, spec, cancelled, lastRound);
   if (await cancelled()) return null;
   if (!good && !lastRound) return null;
   if (!jpeg) throw new Error("No picture was drawn in time");
