@@ -11468,6 +11468,7 @@ async function updateDesignPreviewPanel() {
   box.appendChild(ui.card);
   box.hidden = false;
   // The finished picture gets a small "Review selections" link under it.
+  let cancelBtn = null;
   const showImage = (url) => {
     ui.showImage(url);
     const media = ui.card.querySelector(".suit-preview-media");
@@ -11482,15 +11483,32 @@ async function updateDesignPreviewPanel() {
       again.type = "button";
       again.className = "admin-suit-redraw suit-preview-redraw";
       again.textContent = "Redraw picture (admin)";
-      again.addEventListener("click", () => { again.disabled = true; startDrawing(); });
+      again.addEventListener("click", () => { again.disabled = true; startDrawing(designPreview && designPreview.status === "done" ? { id: designPreview.id, url: designPreview.url } : null); });
       media.appendChild(again);
     }
   };
 
   const watch = (preview) => {
     ui.working(loadingKindForType(currentSuitType));
+    // Admin redraw only: "Cancel redraw" stops waiting and puts the previous
+    // picture back. (The server may still finish the drawing it started.)
+    if (preview.prev && preview.prev.url) {
+      const stop = document.createElement("button");
+      stop.type = "button";
+      stop.className = "admin-suit-redraw suit-preview-redraw suit-preview-cancel";
+      stop.textContent = "Cancel redraw (admin)";
+      stop.addEventListener("click", () => {
+        if (designPreview !== preview) return;
+        designPreview = { spec: preview.spec, photo: preview.photo, id: preview.prev.id, status: "done", url: preview.prev.url };
+        saveDraft();
+        updateDesignPreviewPanel();
+      });
+      box.appendChild(stop);
+      cancelBtn = stop;
+    }
     pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
       if (designPreview !== preview) return;
+      if (cancelBtn) { cancelBtn.remove(); cancelBtn = null; }
       preview.status = r.status === "done" ? "done" : "failed";
       if (r.status === "done") preview.url = r.url;
       saveDraft();
@@ -11508,7 +11526,8 @@ async function updateDesignPreviewPanel() {
   }
 
   ui.btn.addEventListener("click", () => requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing));
-  async function startDrawing() {
+  async function startDrawing(prev) {
+    prev = prev && prev.url ? prev : null;
     ui.working(loadingKindForType(currentSuitType));
     // On a phone, bring the whole card (video and caption) into view.
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
@@ -11526,7 +11545,7 @@ async function updateDesignPreviewPanel() {
       if (start.status === 401) return signInAgain();
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
-      designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null };
+      designPreview = { spec, photo: liningPhoto, id: start.data.preview_id, status: "pending", url: null, prev };
       saveDraft();
       watch(designPreview);
     } catch (e) {
@@ -12271,7 +12290,7 @@ function saveDraft() {
       // so a reload shows that same picture instead of offering a new one.
       // The lining photo itself is saved with the photos below.
       designPreview: designPreview && designPreview.status !== "failed"
-        ? { spec: designPreview.spec, hasPhoto: !!designPreview.photo, id: designPreview.id, status: designPreview.status, url: designPreview.url }
+        ? { spec: designPreview.spec, hasPhoto: !!designPreview.photo, id: designPreview.id, status: designPreview.status, url: designPreview.url, prev: designPreview.prev || null }
         : null,
     };
     sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -12369,6 +12388,7 @@ function restoreDraft() {
       id: dp.id,
       status: dp.status === "done" && dp.url ? "done" : "pending",
       url: dp.url || null,
+      prev: dp.prev && dp.prev.url ? dp.prev : null,
     };
   }
 
