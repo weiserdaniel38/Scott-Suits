@@ -1501,7 +1501,11 @@ async function drawChecked(
   const n = cuffButtonCount(spec);
   const cuff = (spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "";
   const needCuff = !!n && !/button ?less/i.test(cuff);
-  const wantArc = /^Lapel Style: Arc Lapel$/m.test(spec);
+  // Arc lapel check OFF (2026-11-11): since the bottom-closure photo
+  // reference (#555) the pictures show the rounded closure, but the vision
+  // check still called most of them a plain shawl, so it only caused slow,
+  // paid redraws. ARC_CHECK=true turns it back on.
+  const wantArc = env("ARC_CHECK", "") === "true" && /^Lapel Style: Arc Lapel$/m.test(spec);
   // Daniel 2026-11-11: 4 pictures per drawing (+4 more on a retry round) cost
   // "a fortune", so by default ONE picture is drawn and kept, with no checks or
   // extra rounds. IMAGE_PICTURES (1-4) turns the checked tries back on.
