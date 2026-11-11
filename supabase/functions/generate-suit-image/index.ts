@@ -171,7 +171,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Semi-Notch Lapel": "semi-notch lapel: like a classic notch lapel, but the notch between collar and lapel is a SMALL, shallow V and the lapel tip points straight out sideways (level, not down), sitting close under the collar",
     "Semi-Peak Lapel": "semi-peak lapel: a softer, shorter peak; the lapel's upper edge rises slightly UPWARD to a modest point that stays well below the collar, with a clear open gap between point and collar (less dramatic than a full peak lapel)",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
-    "Arc Lapel": "arc lapel (an arc-bottom shawl collar): like a SHAWL, collar and lapel are one continuous smooth piece from the back of the neck down, with NO notch, NO peak and NO corner. It is a shawl collar with no notch whose opening is a deep V, but each lapel is a WIDE band shaped like a long TONGUE with a BLUNT ROUNDED END, not like a tapering crescent. At its widest each lapel reaches about a third of the way from the center front to the armhole, clearly wider than an ordinary shawl collar, and it keeps nearly all of that width down to the button: just above the top button it is still at least three quarters as wide as at its widest point. Only in the last short stretch does the lapel's outer edge turn through a tight round bend (like the end of a tongue or a butter knife) and run almost SIDEWAYS, close to horizontal, in to the top button. So the two lapels end side by side as two wide rounded lobes that meet at the button, and the outer edges of the two lapels together draw a wide round-bottomed shape that dips to a small point at the button, like the bottom of a heart turned upside down or a curly bracket lying on its side. The lapel's outer edge does NOT run as one long diagonal line into the jacket's front edge and the lapel does NOT taper to a thin point. The lapels do NOT form a U, oval or horseshoe and do NOT bulge outward. A thin horizontal seam line crosses the collar at the back of the neck",
+    "Arc Lapel": "arc lapel (an arc-bottom shawl collar): like a SHAWL, collar and lapel are one continuous smooth piece from the back of the neck down, with NO notch, NO peak and NO corner. It is a shawl collar with no notch whose opening is a deep V, but each lapel is shaped like a long TONGUE with a BLUNT ROUNDED END, not like a tapering crescent. Only in the last short stretch does the lapel's outer edge turn through a tight round bend (like the end of a tongue or a butter knife) and run almost SIDEWAYS, close to horizontal, in to the top button. So the two lapels end side by side as two wide rounded lobes that meet at the button, and the outer edges of the two lapels together draw a wide round-bottomed shape that dips to a small point at the button, like the bottom of a heart turned upside down or a curly bracket lying on its side. The lapel's outer edge does NOT run as one long diagonal line into the jacket's front edge and the lapel does NOT taper to a thin point. The lapels do NOT form a U, oval or horseshoe and do NOT bulge outward. A thin horizontal seam line crosses the collar at the back of the neck",
     "Diamond Lapel": "diamond lapel, a cross between a shawl collar and a peak lapel: like a SHAWL, collar and lapel are one continuous piece starting right at the back of the neck, with NO notch, gap or step between them; like a PEAK lapel, it has one SHARP pointed corner. From the neck the edge runs in a straight line down and OUTWARD to that sharp point in the UPPER third of the lapel (about level with the chest pocket), then a much longer straight edge runs back INWARD to where the lapels meet at the top button, so each lapel is a tall kite shape. Both lapels are identical mirror images; the lapel is no wider than the chosen lapel width",
   },
   "Lapel Width": {
@@ -537,14 +537,13 @@ const DIAMOND_SHORT =
 
 // The arc lapel in a few words, for the panel descriptions. With only the
 // option text the model drew an ordinary tapered shawl (Daniel, 2026-11-11).
-// What the Arc lapel looks like in Daniel's reference photo (2026-11-11: "it
-// doesn't match the Tom Ford lapel which it is"). The drawn references gave
-// a narrow classic shawl every time.
-const ARC_PHOTO_LOOK =
-  "each lapel is a WIDE band, about a third of the way from the center front to the armhole at its widest, much wider than on an ordinary shawl collar; it keeps nearly ALL of that width all the way down to just above the top button; only there does its outer edge curve round in a full, generous rounded end and sweep in to the button, so each lapel ends in a broad rounded lobe, not a point. The two wide lapels frame a deep V-shaped opening.";
+// The bottom closure of the arc lapel, from Daniel's reference photo
+// (2026-11-11: "make sure it only focuses on the bottom closure").
+const ARC_CLOSURE_LOOK =
+  "each lapel ends in a soft ROUNDED bottom, like the end of a spoon, instead of a point; the lapel's outer edge rounds off just above the button and curls in toward the button in a smooth S-shaped curve, so the lapel edge visibly turns and meets the front edge at the button instead of running straight down into it.";
 
 const ARC_SHORT =
-  "both lapels are ARC lapels, NOT plain shawl lapels: a shawl collar with no notch whose opening is a deep V, but each lapel is a WIDE band shaped like a long TONGUE with a BLUNT ROUNDED END, not like a tapering crescent. At its widest each lapel reaches about a third of the way from the center front to the armhole, clearly wider than an ordinary shawl collar, and it keeps nearly all of that width down to the button: just above the top button it is still at least three quarters as wide as at its widest point. Only in the last short stretch does the lapel's outer edge turn through a tight round bend (like the end of a tongue or a butter knife) and run almost SIDEWAYS, close to horizontal, in to the top button. So the two lapels end side by side as two wide rounded lobes that meet at the button, and the outer edges of the two lapels together draw a wide round-bottomed shape that dips to a small point at the button, like the bottom of a heart turned upside down or a curly bracket lying on its side. The lapel's outer edge does NOT run as one long diagonal line into the jacket's front edge and the lapel does NOT taper to a thin point";
+  "both lapels are ARC lapels, NOT plain shawl lapels: a shawl collar with no notch whose opening is a deep V, but each lapel is shaped like a long TONGUE with a BLUNT ROUNDED END, not like a tapering crescent. Only in the last short stretch does the lapel's outer edge turn through a tight round bend (like the end of a tongue or a butter knife) and run almost SIDEWAYS, close to horizontal, in to the top button. So the two lapels end side by side as two wide rounded lobes that meet at the button, and the outer edges of the two lapels together draw a wide round-bottomed shape that dips to a small point at the button, like the bottom of a heart turned upside down or a curly bracket lying on its side. The lapel's outer edge does NOT run as one long diagonal line into the jacket's front edge and the lapel does NOT taper to a thin point";
 
 // What each lapel must NOT look like. Notch is here too: with nothing said,
 // the model drew double-breasted jackets with peak lapels.
@@ -554,7 +553,7 @@ const LAPEL_NOT: Record<string, string> = {
   "Semi-Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up; a small V-shaped notch separates the collar from the lapel.",
   "Semi-Peak Lapel": "It is NOT a full peak lapel: the point rises only slightly and does NOT reach up toward the collar or shoulder. It is NOT a notch lapel: the tip angles a little upward, not down.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
-  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT a narrow shawl collar: the lapels are WIDE bands. It is NOT a plain shawl collar: on a plain shawl the lapel edge glides smoothly and invisibly into the front edge in one unbroken line and the lapel narrows steadily to a thin sharp point; that is WRONG here. Here each lapel stays wide (at least two thirds of its full width just above the top button) and ENDS VISIBLY at the button in a blunt rounded end, like the end of a tongue, its edge bending round and running sideways into the button. It is NOT a U, oval or horseshoe: the opening is a V and only the last short bit of each lapel edge curves.",
+  "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT a plain shawl collar: on a plain shawl the lapel edge glides smoothly and invisibly into the front edge in one unbroken line and the lapel narrows steadily to a thin sharp point; that is WRONG here. Here each lapel ENDS VISIBLY at the button in a blunt rounded end, like the end of a tongue, its edge bending round and running sideways into the button. It is NOT a U, oval or horseshoe: the opening is a V and only the last short bit of each lapel edge curves.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
 };
 
@@ -904,7 +903,7 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
   if (lapel) {
     const width = (spec.match(/^Lapel Width: (.+)$/m) || [])[1] || "";
     const widthLook = (OPTION_LOOKS["Lapel Width"] || {})[width];
-    out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + (lapelStyle === "Arc Lapel" ? ", and an arc lapel keeps nearly that full width down to the button, so it looks noticeably wider and fuller than an ordinary shawl collar" : "") + "." : "") +
+    out.push("- LAPEL: " + lapel + ". " + (LAPEL_NOT[lapelStyle] || "") + (widthLook ? " Lapel width: " + widthLook + "." : "") +
       (lapelStyle === "Diamond Lapel" || lapelStyle === "Arc Lapel" ? " Draw both lapels in this exact shape in the front view and in every close-up that shows them." : ""));
   }
   if (cuffCountText(spec)) out.push("- CUFF BUTTON COUNT: " + cuffCountText(spec) + ".");
@@ -1179,9 +1178,9 @@ function refsNote(refs: { label: string }[], withLayout: boolean, spec = ""): st
       const st = stitchChoice(spec);
       lines.push(`Image ${n++} is a black-and-white catalog line drawing of ONE button seen face-on, showing the customer's chosen BUTTON STITCHING ("${st ? st.name : ""}"): the thick black lines are the thread between the four holes${st ? ": " + st.look : ""}. Sew every button on the suit with exactly this thread pattern, in the real button's own color and material and the given thread color; never draw a line-art button.`);
     } else if (r.label === "lapel reference" && /^Lapel Style: Arc Lapel$/m.test(spec)) {
-      lines.push(`Image ${n++} is a PHOTO of a real jacket with exactly the customer's chosen ARC LAPEL. Copy the SHAPE and PROPORTIONS of its two lapels as closely as you can: ${ARC_PHOTO_LOOK} Copy ONLY the lapel outline and width. The lapels in this photo are shiny black satin on a black tuxedo: do NOT copy the satin, the shine, the black color, the single button, the pockets or anything else from it. Here the lapels are the suit's own fabric, same color and texture as the jacket, and the buttons, pockets and everything else follow the customer's choices below. Render it photorealistically and show this lapel shape in the front view and in any lapel close-up.`);
+      lines.push(`Image ${n++} is a flat grey illustration of the customer's chosen ARC LAPEL (dark grey = the jacket, LIGHTER grey = the two lapels, white = the shirt opening): copy EXACTLY the outline of the two lighter grey lapels: a shawl collar with no notch whose opening is a deep V, but each lapel is shaped like a long TONGUE with a BLUNT ROUNDED END, not like a tapering crescent. Only in the last short stretch does the lapel's outer edge turn through a tight round bend (like the end of a tongue or a butter knife) and run almost SIDEWAYS, close to horizontal, in to the top button. So the two lapels end side by side as two wide rounded lobes that meet at the button, and the outer edges of the two lapels together draw a wide round-bottomed shape that dips to a small point at the button, like the bottom of a heart turned upside down or a curly bracket lying on its side. The lapel's outer edge does NOT run as one long diagonal line into the jacket's front edge and the lapel does NOT taper to a thin point. Look at the bottom of the drawing, where the two lapels end at the button: that rounded bottom corner on each lapel is the whole point of this style and MUST be clearly visible in the picture. Copy only the lapel shape, not the illustration's flat grey look, its colors, its pockets or its button count. Keep the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "lapel tip reference") {
-      lines.push(`Image ${n++} is a flat grey illustration (dark grey = jacket, lighter grey = lapels) of the BOTTOM of the arc lapel, enlarged, where the two lapels end at the top button. Copy this detail EXACTLY on the jacket: each lapel is still wide here, and its bold outer edge bends round and runs sideways into the button, so each lapel ends in a wide blunt rounded lobe; the lapel must NOT taper to a thin point and its edge must NOT continue as one diagonal line into the front edge as on a plain shawl collar. Show these two rounded lobes clearly in the front view and in the lapel close-up.`);
+      lines.push(`Image ${n++} is a close-up PHOTO of the BOTTOM CLOSURE of a real arc lapel: the spot where the two lapels end at the top button. This bottom closure is the ONLY thing to copy from it: ${ARC_CLOSURE_LOOK} Copy only how the lapels END and close at the button. Do NOT copy the lapel width, the satin, the shine, the black color or the button from this photo; the lapel width, fabric, colors and buttons follow the customer's choices below. Show this closure clearly in the front view and in the lapel close-up.`);
     } else if (r.label === "lapel reference") {
       lines.push(`Image ${n++} is a reference illustration of the customer's chosen DIAMOND LAPEL: copy EXACTLY its outline on both lapels: one continuous piece from the neck with no notch (like a shawl) coming to one sharp outward point in the upper third (like a peak), a tall kite shape, keeping the lapel width given below. Use the suit's own fabric and colors, render it photorealistically, and show it in the front view and in any lapel close-up.`);
     } else if (r.label === "cuff reference") {
@@ -1434,12 +1433,12 @@ async function countCuff(jpeg: Uint8Array, jacketOnly = false, question = CUFF_Q
 // asks for the shape in measurable terms and only a clear arc passes.
 // null = the check itself failed (treated as fine).
 const ARC_QUESTION =
-  "Image 1 is a reference illustration of the bottom of an ARC LAPEL: the two lighter grey lapels stay wide and each ends at the button in a wide BLUNT ROUNDED lobe, its outer edge bending round and running sideways into the button. " +
+  "Image 1 is a close-up photo of the bottom closure of an ARC LAPEL (on a black satin tuxedo; ignore color and shine): each lapel ends at the button in a BLUNT ROUNDED end, its outer edge rounding off and curling in toward the button instead of running straight down into it. Judge ONLY this bottom closure, not the lapel width higher up. " +
   "Image 2 is a product sheet of a tailored jacket. Look at the front view of the jacket, at the lowest part of the two lapels, just above the top front button. Zoom in. Judge only the lapel shape, not color or fabric. " +
   "An ordinary SHAWL collar is the usual case: the lapel narrows steadily like a crescent and its outer edge runs as one long gently curved diagonal line into the front edge, ending in a thin tapered point at the button. " +
-  "Measure: (w) chest_fraction = the widest width of one lapel divided by the distance, at that same height, from the center front line to the armhole seam (an ordinary shawl is about 0.2, a true arc lapel about 0.35); (a) width_ratio = the width of one lapel a short way above the top button (about one eighth of the lapel's length above it) divided by that lapel's greatest width; (b) final_direction = the direction of the last short stretch of the lapel's outer edge before the button: \"sideways\" (close to horizontal) or \"downward\" (a steep diagonal); (c) end_shape = \"blunt_round\" (a wide rounded lobe as in image 1) or \"tapered_point\". " +
-  "Then lapel_end = \"arc\" only if the jacket clearly matches image 1 on all of these, including WIDE lapels; \"shawl\" for an ordinary shawl collar or whenever you are unsure; \"other\" for a notch lapel, a peak lapel or anything else. " +
-  "Reply only as JSON: {\"what_i_see\": \"...\", \"chest_fraction\": <0 to 1>, \"width_ratio\": <0 to 1>, \"final_direction\": \"sideways|downward\", \"end_shape\": \"blunt_round|tapered_point\", \"lapel_end\": \"arc|shawl|other\"}";
+  "Measure: (a) width_ratio = the width of one lapel a short way above the top button (about one eighth of the lapel's length above it) divided by that lapel's greatest width; (b) final_direction = the direction of the last short stretch of the lapel's outer edge before the button: \"sideways\" (close to horizontal) or \"downward\" (a steep diagonal); (c) end_shape = \"blunt_round\" (a wide rounded lobe as in image 1) or \"tapered_point\". " +
+  "Then lapel_end = \"arc\" only if the jacket clearly matches image 1 on (b) and (c), whatever the lapel width; \"shawl\" for an ordinary shawl collar or whenever you are unsure; \"other\" for a notch lapel, a peak lapel or anything else. " +
+  "Reply only as JSON: {\"what_i_see\": \"...\", \"width_ratio\": <0 to 1>, \"final_direction\": \"sideways|downward\", \"end_shape\": \"blunt_round|tapered_point\", \"lapel_end\": \"arc|shawl|other\"}";
 async function dataUrl(bytes: Uint8Array, type = "image/jpeg"): Promise<string> {
   let bin = "";
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -1477,10 +1476,9 @@ async function arcTipOk(jpeg: Uint8Array, ref: Blob | null): Promise<boolean | n
     console.log("Arc lapel check:", JSON.stringify(out).slice(0, 500));
     const end = String(out.lapel_end || "").toLowerCase().trim();
     if (!end) return null;
-    const ratio = Number(out.width_ratio);
-    const chest = Number(out.chest_fraction);
-    return end === "arc" && String(out.end_shape || "").includes("blunt") && String(out.final_direction || "").includes("side") &&
-      (!Number.isFinite(ratio) || ratio >= 0.6) && (!Number.isFinite(chest) || chest >= 0.27);
+    // Only the bottom closure counts (Daniel): the width higher up is the
+    // customer's Lapel Width choice, so width_ratio is logged, not required.
+    return end === "arc" && String(out.end_shape || "").includes("blunt") && String(out.final_direction || "").includes("side");
   } catch (e) {
     console.warn("Arc check failed", e);
     return null;
@@ -1637,7 +1635,7 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   // Arc lapel: drew as a classic shawl, so it gets a larger copy of Daniel's
   // own arc drawing (the one on the Lapel Style card), pockets removed.
   const lapelRefSrc = /^Lapel Style: Diamond Lapel$/m.test(spec) ? "./assets/jacket-lapelref-diamond.jpg"
-    : /^Lapel Style: Arc Lapel$/m.test(spec) ? "./assets/jacket-lapelref-arc-photo.jpg" : "";
+    : /^Lapel Style: Arc Lapel$/m.test(spec) ? "./assets/jacket-lapelref-arc-v3.jpg" : "";
   // The lapel and cuff drawings go first: the model follows early images best.
   const FIRST = ["style Lapel Style", "style Buttons On Sleeve Cuff", "style Sleeve Cuff Styles"];
   const rank = (r: Ref) => (FIRST.includes(r.label) ? FIRST.indexOf(r.label) : FIRST.length);
@@ -1651,7 +1649,7 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   const hipRefSrc = HIP_REF[(spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || ""];
   const hipRef: Ref[] = hipRefSrc ? [{ label: "hip pocket reference", src: hipRefSrc }] : [];
   const arcTipRef: Ref[] = /^Lapel Style: Arc Lapel$/m.test(spec)
-    ? [{ label: "lapel tip reference", src: "./assets/jacket-lapelref-arc-tip-v2.jpg" }]
+    ? [{ label: "lapel tip reference", src: "./assets/jacket-lapelref-arc-closure.jpg" }]
     : [];
   const chestRefSrc = CHEST_REF[(spec.match(/^Chest Pocket: (.+)$/m) || [])[1] || ""];
   const chestRef: Ref[] = chestRefSrc ? [{ label: "chest pocket reference", src: chestRefSrc }] : [];
