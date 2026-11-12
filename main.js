@@ -3675,6 +3675,7 @@ function adminFactorySuit(suit, count, stateEl) {
     '<button type="button" class="admin-ship-factory fac-status">Factory status</button>' +
     '<button type="button" class="btn-primary fac-submit" hidden>Submit to factory</button>' +
     "</div>" +
+    '<button type="button" class="admin-fac-redraft" hidden>Deleted at the factory? Save a new draft</button>' +
     '<pre class="admin-factory-out" hidden></pre>';
   box.querySelector("b").textContent = (count > 1 ? "Suit " + suit.suit_number + " \u00b7 " : "") + (suit.suit_type === "jacket_only" ? "Jacket only" : suit.suit_type === "pants_only" ? "Pants only" : "Full suit");
   if (stateEl) box.querySelector(".admin-factory-head").remove();
@@ -3683,6 +3684,7 @@ function adminFactorySuit(suit, count, stateEl) {
   const draftBtn = box.querySelector(".fac-draft");
   const statusBtn = box.querySelector(".fac-status");
   const submitBtn = box.querySelector(".fac-submit");
+  const redraftBtn = box.querySelector(".admin-fac-redraft");
   const buttons = box.querySelectorAll("button");
   const showState = () => {
     state.textContent = adminFactorySuitState(suit, !!stateEl);
@@ -3692,6 +3694,9 @@ function adminFactorySuit(suit, count, stateEl) {
     draftBtn.textContent = suit.factory_order_no ? "Update draft at factory" : "Save draft at factory";
     // Submitted (no longer a draft): the factory won't take changes from here.
     draftBtn.hidden = !!suit.factory_order_no && FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
+    // The factory's API can't tell that a draft was deleted from My Cart on
+    // its site (it still says "Stay Payments"), so the admin says so here.
+    redraftBtn.hidden = !suit.factory_order_no || FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
 
   };
   showState();
@@ -3741,6 +3746,36 @@ function adminFactorySuit(suit, count, stateEl) {
       );
     })
   );
+  redraftBtn.addEventListener("click", () => {
+    if (!window.confirm(
+      "Did you delete draft " + suit.factory_order_no + " from My Cart on the factory site?\n\n" +
+      "This saves this suit as a NEW draft at the factory. If the old draft is still there, the factory refuses it and nothing changes."
+    )) return;
+    run("Saving a new draft at the factory...", async () => {
+      let r = await callKuteFn({ action: "factory_redraft", id: suit.id });
+      if (r.blocking) return lines("Not sent. Fix first:", r.blocking) + lines("Also check:", r.warnings);
+      if (!r.ok && r.needsNewRef) {
+        // The factory's duplicate check still counts a deleted draft.
+        if (!window.confirm(
+          "The factory still counts " + r.ref + " as taken by draft " + suit.factory_order_no + ".\n\n" +
+          "Check My Cart on the factory site. Only if " + suit.factory_order_no + " is NOT there, tap OK to save this suit as a new draft under " + r.nextRef + "."
+        )) return "No new draft. Draft " + suit.factory_order_no + " is unchanged.";
+        r = await callKuteFn({ action: "factory_redraft", id: suit.id, newRef: true });
+      }
+      if (!r.ok) return "No new draft: " + r.error;
+      suit.factory_order_no = r.orderNo;
+      suit.factory_status = "Draft";
+      suit.factory_error = null;
+      suit.factory_delivery_date = r.deliveryDate || null;
+      showState();
+      return (
+        (r.sameNumber
+          ? "The factory kept the same number, " + r.orderNo + ". Check My Cart on the factory site.\n\n"
+          : "Saved as a new draft: factory order " + r.orderNo + " (was " + r.oldOrderNo + ")" + (r.ref ? ", reference " + r.ref : "") + ". Tap Submit to factory when it\u2019s ready.\n\n") +
+        lines("Check on the factory site:", r.warnings)
+      );
+    });
+  });
   submitBtn.addEventListener("click", () => {
     if (!window.confirm(
       "Submit factory order " + suit.factory_order_no + " for production?\n\n" +

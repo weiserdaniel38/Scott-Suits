@@ -14,6 +14,7 @@
 //   { action: "fabric", code: "DZZ0110" }   fabric photo, stock and price
 //   { action: "stock", code: "DZZ0110" }    fabric stock only
 //   { action: "status", orderNo: "..." }    production status + waybill
+//   { action: "size", orderNo: "..." }      the order's saved sizes
 //   { action: "factory_preview", id, height, heightUnit, weight, weightUnit }
 //       the factory order one suit (orders row id) would make, with
 //       warnings; nothing is sent
@@ -21,6 +22,11 @@
 //       on the factory site (submit is always false; the admin submits it
 //       there) and keeps the factory's order number on the row. Sending
 //       again updates the same draft.
+//   { action: "factory_redraft", id }  the admin deleted the suit's draft
+//       on the factory site: saves a NEW draft (old one must be a draft;
+//       the factory's duplicate check stops it if the old one is still there;
+//       with newRef: true, after the admin checked My Cart, it goes under
+//       the next reference SS-...-1B)
 //   { action: "factory_submit", id }  SUBMITS that suit's own saved draft
 //       for production (Daniel, 2026-11-03: submit from his phone). Only
 //       its own draft (same order number, still a draft at the factory) is
@@ -39,8 +45,10 @@
 //   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
 //       saves a TEST draft of that suit with some choices changed, to see
 //       which combinations the factory refuses; the row is not changed
-//   { action: "fabric_stock_all" }  checks the factory's stock (metres) of
-//       every fabric on the site and saves it as fabric-stock.json in the
+//   { action: "fabric_stock_all" }  checks the factory's stock (metres) and
+//       price per metre of every fabric on the site; copies the live prices
+//       into the admin-only shop_costs row (so "My Cost" and order profit
+//       match what the factory charges) and saves stock as fabric-stock.json in the
 //       public suit-images storage bucket, which the site reads to hide fabrics without enough cloth for a suit; run
 //       daily by pg_cron (supabase/sql/37_fabric_stock_daily.sql) with the
 //       same x-cron-token as factory_status_all (Daniel, 2026-11-01)
@@ -79,7 +87,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildFactoryOrder, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes, type SizeRanges } from "./order.ts";
+import { buildFactoryOrder, defaultFactoryRef, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes, type SizeRanges } from "./order.ts";
 
 const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
 const BASE = "https://platform.kutetailor.com/api";
@@ -325,6 +333,84 @@ async function saveDraft(input: Record<string, unknown>) {
   }
   await supabase.from("orders").update(update).eq("id", row.id);
   return { ok, orderNo: d.orderNo || row.factory_order_no || null, deliveryDate: d.deliveryDate || null, error: err, warnings };
+}
+
+// "Deleted at factory? Save a new draft" (Daniel, 2026-11-12). A draft
+// deleted from My Cart on the factory site still answers "Stay Payments" to
+// the status and size APIs, and saving over its number updates the deleted
+// copy, so nothing new shows in the cart. Only the admin knows it was
+// deleted, so this asks the factory for a NEW draft without the old number.
+// It never makes a second suit: the old order must still be a draft (never
+// submitted), and the factory's own duplicate check on the suit's reference
+// stops it if the old draft is really still there (no new reference is ever
+// made up, Daniel's rule 2026-10-26).
+// The suit's next factory reference after a deleted draft: SS-...-1 ->
+// SS-...-1B -> SS-...-1C.
+function nextRef(row: Record<string, unknown>): string {
+  const base = defaultFactoryRef(row);
+  const cur = String(row.factory_ref || "");
+  const m = cur.startsWith(base) ? /^([B-Y])$/.exec(cur.slice(base.length)) : null;
+  return base + (m ? String.fromCharCode(m[1].charCodeAt(0) + 1) : "B");
+}
+async function redraft(input: Record<string, unknown>) {
+  const { row, body, warnings, blocking } = await factoryOrder(input);
+  const oldNo = String(row.factory_order_no || "");
+  const unpaid = unpaidBlock(row);
+  if (unpaid) return { ok: false, error: unpaid, warnings };
+  if (blocking.length) return { ok: false, blocking, warnings };
+  if (!oldNo) return saveDraft(input);
+  const st = await kute("GET", "/order/status/" + encodeURIComponent(oldNo));
+  const sd = ((st.data || {}) as Record<string, any>).data || {};
+  if (st.httpStatus === 200 && sd.status && !DRAFT_STATUSES.includes(Number(sd.status))) {
+    return { ok: false, orderNo: oldNo, error: "Order " + oldNo + " is " + (sd.statusName || sd.status) + " at the factory, not a draft, so no new draft was made." };
+  }
+  body.orderNo = "";
+  body.submit = false; // never submit from here
+  const r = await kute("POST", "/order/saveOrder", {}, body);
+  const res = (r.data || {}) as Record<string, any>;
+  const d = res.data || {};
+  const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  const said = String(d.errorMessage || res.msg || res.message || "");
+  if (!ok && /duplicate customer/i.test(said)) {
+    // Tested 2026-11-12 (Nathan Friedman, DWNYP2611003): the factory's
+    // duplicate check still counts a draft deleted from My Cart. Only after
+    // the admin has looked at My Cart and confirmed the old draft is gone
+    // (newRef: true) is the suit saved under the next reference
+    // (SS-...-1B, -1C, ...), and that reference is kept for every later
+    // update and the submit.
+    if (!input.newRef) {
+      return { ok: false, orderNo: oldNo, needsNewRef: true, ref: body.customerNo, nextRef: nextRef(row),
+        error: "The factory still counts this suit (" + body.customerNo + ") under draft " + oldNo + "." };
+    }
+    body.customerNo = nextRef(row);
+    const cust = (body.customer || {}) as Record<string, unknown>;
+    cust.remark = String(cust.remark || "").replace(String(row.factory_ref || defaultFactoryRef(row)), String(body.customerNo));
+    const r2 = await kute("POST", "/order/saveOrder", {}, body);
+    const res2 = (r2.data || {}) as Record<string, any>;
+    const d2 = res2.data || {};
+    const ok2 = r2.httpStatus === 200 && String(res2.code) === "0" && !!d2.orderNo;
+    if (!ok2) {
+      return { ok: false, orderNo: oldNo, error: String(d2.errorMessage || res2.msg || res2.message || "factory said " + r2.httpStatus) + " (tried " + body.customerNo + ")" };
+    }
+    await supabase.from("orders").update({
+      factory_order_no: d2.orderNo, factory_ref: body.customerNo, factory_status: "Draft", factory_error: d2.errorMessage || null,
+      factory_delivery_date: d2.deliveryDate || null, factory_sent_at: new Date().toISOString(),
+    }).eq("id", row.id);
+    return { ok: true, orderNo: d2.orderNo, oldOrderNo: oldNo, ref: body.customerNo, deliveryDate: d2.deliveryDate || null, warnings };
+  }
+  if (!ok) {
+    return { ok: false, orderNo: oldNo, error: said || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300), warnings };
+  }
+  if (String(d.orderNo) === oldNo) {
+    // The factory kept the old number: treat it as the same draft.
+    await supabase.from("orders").update({ factory_error: null, factory_sent_at: new Date().toISOString(), factory_status: "Draft" }).eq("id", row.id);
+    return { ok: true, orderNo: oldNo, sameNumber: true, deliveryDate: d.deliveryDate || null, warnings };
+  }
+  await supabase.from("orders").update({
+    factory_order_no: d.orderNo, factory_status: "Draft", factory_error: d.errorMessage || null,
+    factory_delivery_date: d.deliveryDate || null, factory_sent_at: new Date().toISOString(),
+  }).eq("id", row.id);
+  return { ok: true, orderNo: d.orderNo, oldOrderNo: oldNo, deliveryDate: d.deliveryDate || null, warnings };
 }
 
 // Submit the suit's own saved draft for production (the factory's "edit,
@@ -620,6 +706,7 @@ async function fabricStockAll() {
   }
   const list = [...names];
   const rows: { code: string; metres: number | null; error: string | null; checked_at: string }[] = [];
+  const prices: Record<string, number> = {};
   let next = 0;
   const worker = async () => {
     while (next < list.length) {
@@ -633,6 +720,16 @@ async function fabricStockAll() {
         else error = String(r?.data?.message || "no stock figure").slice(0, 200);
       } catch (e) {
         error = String((e as Error).message || e).slice(0, 200);
+      }
+      // The factory's live price per metre (what it actually charges; the
+      // printed 26FW price lists are out of date for some fabrics).
+      try {
+        const f = (await kute("GET", "/fabric/fabric/queryFabric", { fabricCode: code })) as { data?: any };
+        const hit = ((f?.data?.data || []) as any[]).find((x) => String(x?.fabricCode || "").toUpperCase() === code.toUpperCase());
+        const pr = Number(hit?.price);
+        if (Number.isFinite(pr) && pr > 0) prices[name] = pr;
+      } catch {
+        // keep the saved price
       }
       rows.push({ code: name, metres, error, checked_at: new Date().toISOString() });
     }
@@ -649,7 +746,32 @@ async function fabricStockAll() {
     { upsert: true, contentType: "application/json", cacheControl: "300" });
   if (error) throw new Error("couldn't save fabric stock: " + error.message);
   const low = rows.filter((r) => r.metres !== null && r.metres < 4).map((r) => r.code + " " + r.metres + "m");
-  return { ok: true, checked: rows.length, failed: rows.filter((r) => r.metres === null).length, low };
+  const priceChanges = await savePrices(prices);
+  return { ok: true, checked: rows.length, failed: rows.filter((r) => r.metres === null).length, low, priceChanges };
+}
+
+// Copies the factory's live price per metre into the admin-only
+// factory_codes row list='shop_costs' (perMeter, keyed by the site's fabric
+// value) and returns what changed, e.g. "26SU185.DZZ0105 42->27".
+async function savePrices(prices: Record<string, number>): Promise<string[]> {
+  if (!Object.keys(prices).length) return [];
+  const { data: row, error } = await supabase.from("factory_codes").select("data")
+    .eq("list", "shop_costs").eq("category", "").maybeSingle();
+  if (error || !row?.data?.perMeter) return [];
+  const per = { ...(row.data.perMeter as Record<string, number>) };
+  const changes: string[] = [];
+  for (const [k, v] of Object.entries(prices)) {
+    if (Number(per[k]) !== v) {
+      changes.push(k + " " + (per[k] ?? "new") + "->" + v);
+      per[k] = v;
+    }
+  }
+  if (changes.length) {
+    const { error: upErr } = await supabase.from("factory_codes").update({ data: { ...row.data, perMeter: per } })
+      .eq("list", "shop_costs").eq("category", "");
+    if (upErr) return ["couldn't save prices: " + upErr.message];
+  }
+  return changes;
 }
 
 // The daily job's token: made inside the database by
@@ -663,7 +785,7 @@ async function cronAllowed(req: Request): Promise<boolean> {
 
 // Actions that only read from the factory (or build an order without
 // sending it), for the read-only lookup token.
-const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview", "factory_probe", "track"]);
+const LOOKUP_ACTIONS = new Set(["status", "size", "stock", "fabric", "archive", "factory_preview", "factory_probe", "track"]);
 
 // The lookup token: made inside the database by 21_factory_lookup.sql and
 // never shown to anyone.
@@ -745,6 +867,10 @@ Deno.serve(async (req) => {
         return json(await setWaybill(str(input.order_id), str(input.waybill)));
       case "status":
         return json(await kute("GET", "/order/status/" + encodeURIComponent(str(input.orderNo))));
+      case "size":
+        // The order's saved sizes (read-only). Note: a draft deleted from
+        // My Cart still answers here, like it does to "status".
+        return json(await kute("GET", "/order/ordenSize/" + encodeURIComponent(str(input.orderNo))));
       case "factory_preview": {
         const { body, warnings, blocking } = await factoryOrder(input);
         return json({ body, warnings, blocking });
@@ -753,6 +879,10 @@ Deno.serve(async (req) => {
         return json(await probeDraft(input));
       case "factory_draft":
         return json(await saveDraft(input));
+      case "factory_redraft":
+        // Admin sign-in only: never the read-only lookup or cron tokens.
+        if (byCron || byLookup) return json({ error: "not allowed" }, 403);
+        return json(await redraft(input));
       case "factory_submit":
         // Admin sign-in only: never the read-only lookup or cron tokens.
         if (byCron || byLookup) return json({ error: "not allowed" }, 403);
