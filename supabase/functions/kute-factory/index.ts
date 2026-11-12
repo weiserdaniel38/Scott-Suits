@@ -41,6 +41,15 @@
 //       public suit-images storage bucket, which the site reads to hide fabrics without enough cloth for a suit; run
 //       daily by pg_cron (supabase/sql/37_fabric_stock_daily.sql) with the
 //       same x-cron-token as factory_status_all (Daniel, 2026-11-01)
+//   { action: "track", carrier: "DHL", number: "4804475874" }
+//       where a parcel is now, from Shippo's tracking (no cost, nothing is
+//       bought or changed): status, latest event, place, ETA and history.
+//       For the admin's All Orders "Tracking" box: the factory's DHL
+//       shipment to the shop and the shop's label to the customer (Daniel,
+//       2026-11-12). Also allowed for the read-only lookup token.
+//   { action: "set_waybill", order_id, waybill }  the admin types the
+//       factory's DHL waybill on an order when the factory site has it but
+//       the factory API doesn't (admin sign-in only)
 //   { action: "sync" }   saves every code list (crafts for each garment
 //       category) into public.factory_codes and returns row counts. Can be
 //       run from the Supabase dashboard's function "Test" button (service
@@ -408,7 +417,8 @@ async function factoryStatus(id: string) {
   const update: Record<string, unknown> = {
     factory_status: d.statusName || String(d.status || ""),
     factory_delivery_date: d.deliveryDate || row.factory_delivery_date || null,
-    factory_waybill: d.waybillNo || null,
+    // Keep a waybill the admin typed in when the factory hasn't one yet.
+    factory_waybill: d.waybillNo || row.factory_waybill || null,
   };
   // Move the customer's shipping step forward (never back) to match.
   const stage = FACTORY_STAGE[String(d.status)];
@@ -476,6 +486,38 @@ export function trackStage(t: Record<string, any>): string {
   if (sub === "out_for_delivery" || /out for delivery/i.test(String(st.status_details || ""))) return "out_for_delivery";
   return "";
 }
+// One parcel's tracking for the admin (action "track").
+async function trackParcel(carrierName: string, number: string) {
+  const carrier = SHIPPO_CARRIER[carrierName.toLowerCase()];
+  const num = number.replace(/\s+/g, "");
+  if (!carrier) return { ok: false, error: "can't track " + (carrierName || "this carrier") + " here" };
+  if (!/^[A-Za-z0-9-]{6,40}$/.test(num)) return { ok: false, error: "that doesn't look like a tracking number" };
+  const key = env("SHIPPO_API_KEY");
+  if (!key) return { ok: false, error: "Shippo isn't set up" };
+  if (key.startsWith("shippo_test_")) return { ok: false, error: "Shippo test key: live tracking is off" };
+  const res = await fetch("https://api.goshippo.com/tracks/" + carrier + "/" + encodeURIComponent(num), {
+    headers: { authorization: "ShippoToken " + key },
+  });
+  const t = (await res.json().catch(() => ({}))) as Record<string, any>;
+  if (!res.ok) return { ok: false, error: "Shippo said " + res.status };
+  const place = (l: any) => (l ? [l.city, l.state, l.country].filter(Boolean).join(", ") : "");
+  const ev = (e: any) => ({ status: e?.status || "", details: e?.status_details || "", date: e?.status_date || null, place: place(e?.location) });
+  const st = t.tracking_status;
+  const history = ((t.tracking_history || []) as any[]).map(ev).reverse().slice(0, 12);
+  return { ok: true, carrier: carrierName, number: num, stage: trackStage(t), eta: t.eta || null, latest: st ? ev(st) : null, history };
+}
+
+async function setWaybill(orderId: string, waybill: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(orderId)) return { ok: false, error: "unknown order" };
+  const w = waybill.replace(/\s+/g, "");
+  if (w && !/^[A-Za-z0-9-]{6,40}$/.test(w)) return { ok: false, error: "that doesn't look like a waybill number" };
+  const { data, error } = await supabase.from("orders").update({ factory_waybill: w || null })
+    .eq("order_id", orderId).not("factory_order_no", "is", null).select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || !data.length) return { ok: false, error: "no suit on this order was sent to the factory" };
+  return { ok: true, waybill: w || null, suits: data.length };
+}
+
 async function carrierTrackingAll() {
   const key = env("SHIPPO_API_KEY");
   if (!key || key.startsWith("shippo_test_")) return { ok: true, skipped: "no live Shippo key" };
@@ -563,7 +605,7 @@ async function cronAllowed(req: Request): Promise<boolean> {
 
 // Actions that only read from the factory (or build an order without
 // sending it), for the read-only lookup token.
-const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview", "factory_probe"]);
+const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview", "factory_probe", "track"]);
 
 // The lookup token: made inside the database by 21_factory_lookup.sql and
 // never shown to anyone.
@@ -638,6 +680,11 @@ Deno.serve(async (req) => {
         return json(await kute("GET", "/order/stock/" + encodeURIComponent(str(input.code))));
       case "sync":
         return json(await syncCodes());
+      case "track":
+        return json(await trackParcel(str(input.carrier), str(input.number)));
+      case "set_waybill":
+        if (byCron || byLookup) return json({ error: "not allowed" }, 403);
+        return json(await setWaybill(str(input.order_id), str(input.waybill)));
       case "status":
         return json(await kute("GET", "/order/status/" + encodeURIComponent(str(input.orderNo))));
       case "factory_preview": {
