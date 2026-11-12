@@ -12766,19 +12766,25 @@ function startDesigning() {
 }
 window.startDesigning = startDesigning;
 
-// Tapping the logo goes back to the homepage (hero + "Start Designing"),
-// from any step. Non-destructive: nothing is cleared, so Start Designing
-// picks the suit type again and carries on with the same selections and
-// cart; the saved draft is left as it was.
+// Tapping the logo starts over (Daniel, 2026-11-12): back to the homepage
+// with the suit being designed cleared, no confirmation. Same clearing as
+// Start Over (the cart and sign-in stay); a drawing still running is
+// cancelled on the server so it stops costing.
 function goHome() {
-  if (orderMeasureTarget) {
-    orderMeasureTarget = null;
-    applyOrderMeasureMode();
-  }
   hideOrderDoneNotice();
+  if (designPreview && designPreview.status === "pending") cancelPreviewOnServer(designPreview.id);
+  designPreview = null;
+  clearDesignerAndForm();
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+  renderCartBar();
+  updateOrderSummaryUI();
+  if (cartItems.length) saveDraft(); else clearDraft();
   resetDesignStarted();
   ALL_STEPS.forEach((el) => el.classList.remove("active"));
   suitTypeSection.classList.add("active");
+  updateProcessBar();
+  updateDesignPreviewPanel();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 // Once an order is placed the suit is complete, so the designer closes out
