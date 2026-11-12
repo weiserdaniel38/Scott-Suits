@@ -433,8 +433,9 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
 
   const name = s(row.customer_name) || "Customer";
   const { first, last } = splitName(name);
-  const suitNo = Number(row.suit_number) || 1;
-  const ref = "SS-" + s(row.order_id).replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase() + "-" + suitNo;
+  // factory_ref: set only when the suit had to go back under a new
+  // reference after its draft was deleted on the factory site.
+  const ref = s(row.factory_ref) || defaultFactoryRef(row);
   const remark = ["Scott's Suits " + ref + ".", ...notes].join(" ");
 
   const body: Record<string, unknown> = {
@@ -485,3 +486,9 @@ export const SHIPPING_ORDER = [
   "", "sent_to_factory", "cutting", "sewing", "finishing", "factory_shipped",
   "final_check", "shipped", "out_for_delivery", "delivered",
 ];
+
+// The suit's usual factory reference (customerNo): SS-<order>-<suit no.>.
+export function defaultFactoryRef(row: Record<string, unknown>): string {
+  const id = String(row.order_id ?? "").replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toUpperCase();
+  return "SS-" + id + "-" + (Number(row.suit_number) || 1);
+}
