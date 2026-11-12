@@ -261,8 +261,11 @@ async function checkPromo(rawCode: unknown, userId: string | null, email: string
     if (!allowed.includes(userId)) return { error: "That promo code isn't valid for your account." };
   }
   // Paid orders that used it (one per order; an order has a row per suit).
+  // A paid-in-person (cash/Zelle) code takes nothing off, so any paid order
+  // with it counts as a use.
   const used = async (filter: (q: any) => any) => {
-    let q = supabase.from("orders").select("order_id").eq("promo_code", code).eq("payment_status", "paid").gt("promo_discount_usd", 0);
+    let q = supabase.from("orders").select("order_id").eq("promo_code", code).eq("payment_status", "paid");
+    q = p.paid_outside ? q.eq("paid_outside", true) : q.gt("promo_discount_usd", 0);
     q = filter(q);
     if (excludeOrder) q = q.neq("order_id", excludeOrder);
     const { data: rows, error: e } = await q.limit(5000);

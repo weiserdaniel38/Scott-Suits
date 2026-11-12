@@ -59,3 +59,7 @@ select 'CASHZELLE-89RP', true, false, 'Paid in person (cash or Zelle): order ski
  where not exists (select 1 from public.promo_codes where upper(code) = 'CASHZELLE-89RP');
 
 notify pgrst, 'reload schema';
+
+-- Daniel 2026-11-12: one use per account (by account, or by email for a
+-- guest checkout). stripe-checkout counts paid orders with paid_outside.
+update public.promo_codes set once_per_customer = true where upper(code) = 'CASHZELLE-89RP';

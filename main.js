@@ -2343,7 +2343,7 @@ function promoAdminResetForm() {
 function promoAdminRuleText(p) {
   // No money off = the paid-in-person code (supabase/sql/41): the order skips
   // card payment and counts as paid.
-  if (!Number(p.amount_off_usd) && !Number(p.percent_off)) return "Paid in person (cash or Zelle): customer's order skips card payment and counts as paid · any customer, any number of times";
+  if (!Number(p.amount_off_usd) && !Number(p.percent_off)) return "Paid in person (cash or Zelle): customer's order skips card payment and counts as paid · once per account";
   const bits = [promoOfferText(p)];
   const emails = p.allowed_emails || [];
   bits.push(emails.length ? "only for " + emails.join(", ") : "any customer");
