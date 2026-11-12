@@ -2040,7 +2040,7 @@ async function loadAdminOrders() {
   adminOrdersList.innerHTML = '<p class="account-section-note">Loading...</p>';
   try {
     const client = getSupabase();
-    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos, toMeasure, labels] = await Promise.all([
+    const [{ data, error }, live, pay, extras, protect, brands, fabrics, pictures, factory, promos, toMeasure, labels, outside] = await Promise.all([
       client.rpc("admin_list_orders"),
       client.rpc("admin_shipping_live"),
       client.rpc("admin_order_payments"),
@@ -2053,6 +2053,8 @@ async function loadAdminOrders() {
       client.rpc("admin_order_promos"),
       adminPendingMeasurements(),
       client.rpc("admin_order_labels"),
+      // Paid in person, cash or Zelle (supabase/sql/41).
+      client.rpc("admin_order_paid_outside"),
     ]);
     adminMeasurePending = toMeasure;
     if (shippingLiveToggle) shippingLiveToggle.checked = !live.error && live.data === true;
@@ -2071,6 +2073,7 @@ async function loadAdminOrders() {
     if (!protect.error && protect.data) protect.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!brands.error && brands.data) brands.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
     if (!promos.error && promos.data) promos.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], x)));
+    if (outside && !outside.error && outside.data) outside.data.forEach((x) => (payments[x.order_id] = Object.assign({}, payments[x.order_id], { paid_outside: true })));
     // Shipping labels bought from here (supabase/sql/40, shipping-label), oldest first.
     if (labels && !labels.error && labels.data) labels.data.slice().reverse().forEach((x) => {
       const p = (payments[x.order_id] = Object.assign({}, payments[x.order_id]));
@@ -2338,6 +2341,9 @@ function promoAdminResetForm() {
 }
 
 function promoAdminRuleText(p) {
+  // No money off = the paid-in-person code (supabase/sql/41): the order skips
+  // card payment and counts as paid.
+  if (!Number(p.amount_off_usd) && !Number(p.percent_off)) return "Paid in person (cash or Zelle): customer's order skips card payment and counts as paid · any customer, any number of times";
   const bits = [promoOfferText(p)];
   const emails = p.allowed_emails || [];
   bits.push(emails.length ? "only for " + emails.join(", ") : "any customer");
@@ -2510,6 +2516,7 @@ function adminPaymentLabel(o) {
   const brand = SITE_BRANDS[o.brand];
   if (brand && brand.payments === false) return brand.name + " request, no payment";
   const pickup = o.fulfillment === "pickup" ? "In-store pickup \u00b7 " : "";
+  if (o.payment_status === "paid" && o.paid_outside) return pickup + "Paid in person (cash or Zelle) $" + Number(o.amount_paid_usd || 0).toFixed(2);
   if (o.payment_status === "paid") {
     const extra = [];
     if (Number(o.shipping_usd)) extra.push("shipping $" + Number(o.shipping_usd).toFixed(2));
@@ -9800,7 +9807,9 @@ function updateOrderSummaryUI() {
   const protection = protectionTotalUsd();
   // Promo code: taken off the suits + protection, never shipping or tax.
   const discount = PROMO_ENABLED && !adminEditState ? promoDiscountUsd(suits + protection) : 0;
-  const total = suits + protection - discount + shipping;
+  // Paid in person (cash or Zelle code): no card, no shipping or tax here.
+  const paidOutside = PROMO_ENABLED && !adminEditState && !!(appliedPromo && appliedPromo.paid_outside);
+  const total = suits + protection - discount + (paidOutside ? 0 : shipping);
   refreshAlterationText();
   if (adminEditState) {
     submitBtn.textContent = "Save changes to order";
@@ -9820,6 +9829,16 @@ function updateOrderSummaryUI() {
     orderTotalNote.textContent = n + (n === 1 ? " suit" : " suits") + (protection ? " with Alteration Protection" : "") +
       ". No payment is needed: submit your order and we'll be in touch to confirm the details.";
     orderTotalNote.hidden = false;
+    return;
+  }
+  if (paidOutside) {
+    submitBtn.textContent = "Submit Order (paid in person)";
+    if (orderTotalNote) {
+      orderTotalNote.textContent = "Total: " + usd(total) + ", paid in person (cash or Zelle) with code " + appliedPromo.code + ". No card payment.";
+      orderTotalNote.hidden = false;
+    }
+    const persPriceEl = document.getElementById("persPrice");
+    if (persPriceEl) persPriceEl.textContent = usd(total);
     return;
   }
   submitBtn.textContent = PAYMENT_ENABLED ? "Pay " + usd(total) + (shipped ? (liveShippingRates() ? " + shipping + tax" : " + tax") : "") + " & Submit Order" : "Submit Order";
@@ -10636,7 +10655,7 @@ var appliedPromo = null;
 
 // Same sum as the function: percent first, then dollars, leaving $1 to pay.
 function promoDiscountUsd(goodsUsd) {
-  if (!appliedPromo || !(goodsUsd > 0)) return 0;
+  if (!appliedPromo || appliedPromo.paid_outside || !(goodsUsd > 0)) return 0;
   const goods = Math.round(goodsUsd * 100);
   const pct = Math.min(100, Math.max(0, Number(appliedPromo.percent_off) || 0));
   const off = Math.round((goods * pct) / 100) + Math.max(0, Math.round((Number(appliedPromo.amount_off_usd) || 0) * 100));
@@ -10645,6 +10664,7 @@ function promoDiscountUsd(goodsUsd) {
 
 // "$50 off", "10% off", "10% + $50 off".
 function promoOfferText(p) {
+  if (p.paid_outside) return "paid in person (cash or Zelle), no card payment";
   const pct = Number(p.percent_off) || 0;
   const amt = Number(p.amount_off_usd) || 0;
   if (pct && amt) return pct + "% + " + usd(amt) + " off";
@@ -10685,7 +10705,7 @@ function initPromoCode() {
       const res = await fetch(STRIPE_FN_URL, { method: "POST", headers, body: JSON.stringify({ action: "promo_check", code, email }) });
       const r = await res.json().catch(() => ({}));
       if (r && r.ok) {
-        appliedPromo = { code: r.code, amount_off_usd: r.amount_off_usd, percent_off: r.percent_off };
+        appliedPromo = { code: r.code, amount_off_usd: r.amount_off_usd, percent_off: r.percent_off, paid_outside: !!r.paid_outside };
         showApplied();
       } else {
         clear();
@@ -11851,7 +11871,19 @@ async function startStripeCheckout(orderId, pending) {
       // Without it the order is still saved and paid; only the email and
       // picture on return are skipped.
     }
-    const { url } = await callStripeFn({ action: "create", order_id: orderId });
+    const r = await callStripeFn({ action: "create", order_id: orderId });
+    // Paid in person (cash or Zelle code): already marked paid, no Stripe.
+    if (r.paid && r.paid_outside) {
+      try {
+        sessionStorage.removeItem(STRIPE_PENDING_KEY);
+      } catch (e) {
+        // ignore
+      }
+      await sendOrderEmail("[PAID IN PERSON] " + pending.subject, pending.customerEmail, "PAID IN PERSON (CASH OR ZELLE) $" + Number(r.amount || 0).toFixed(2) + ", CODE " + (pending.promoCode || "") + "\n\n" + pending.emailMessage);
+      finishOrder(pending.previewItems, true, 0);
+      return true;
+    }
+    const url = r.url;
     if (!url) throw new Error("no checkout page came back");
     window.location.href = url;
     return true;
