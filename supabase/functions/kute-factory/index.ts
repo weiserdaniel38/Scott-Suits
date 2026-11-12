@@ -14,6 +14,7 @@
 //   { action: "fabric", code: "DZZ0110" }   fabric photo, stock and price
 //   { action: "stock", code: "DZZ0110" }    fabric stock only
 //   { action: "status", orderNo: "..." }    production status + waybill
+//   { action: "size", orderNo: "..." }      the order's saved sizes
 //   { action: "factory_preview", id, height, heightUnit, weight, weightUnit }
 //       the factory order one suit (orders row id) would make, with
 //       warnings; nothing is sent
@@ -701,7 +702,7 @@ async function cronAllowed(req: Request): Promise<boolean> {
 
 // Actions that only read from the factory (or build an order without
 // sending it), for the read-only lookup token.
-const LOOKUP_ACTIONS = new Set(["status", "stock", "fabric", "archive", "factory_preview", "factory_probe", "track"]);
+const LOOKUP_ACTIONS = new Set(["status", "size", "stock", "fabric", "archive", "factory_preview", "factory_probe", "track"]);
 
 // The lookup token: made inside the database by 21_factory_lookup.sql and
 // never shown to anyone.
@@ -783,9 +784,17 @@ Deno.serve(async (req) => {
         return json(await setWaybill(str(input.order_id), str(input.waybill)));
       case "status":
         return json(await kute("GET", "/order/status/" + encodeURIComponent(str(input.orderNo))));
+      case "size":
+        // The order's saved sizes (read-only). Used to tell whether a draft
+        // still exists at the factory.
+        return json(await kute("GET", "/order/ordenSize/" + encodeURIComponent(str(input.orderNo))));
       case "factory_preview": {
-        const { body, warnings, blocking } = await factoryOrder(input);
-        return json({ body, warnings, blocking });
+        const { row, body, warnings, blocking } = await factoryOrder(input);
+        // The factory's saved sizes for the suit's draft, if it has one: shows
+        // whether that draft still exists at the factory (read-only).
+        const no = String(row.factory_order_no || "");
+        const factorySize = no ? await kute("GET", "/order/ordenSize/" + encodeURIComponent(no)) : null;
+        return json({ body, warnings, blocking, factorySize });
       }
       case "factory_probe":
         return json(await probeDraft(input));
