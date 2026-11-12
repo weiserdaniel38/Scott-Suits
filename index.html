@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261112herovid">
+<link rel="stylesheet" href="./style.css?v=20261112herovid2">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261112swcatchup"></script>
 <link rel="stylesheet" href="./brand.css?v=20261112measlimits">
@@ -245,7 +245,7 @@
        .hero-sketch-left CSS) -- a faint jacket illustration + tagline that
        fades into the page background, behind .hero-text (lower z-index),
        so it reads as texture rather than competing with the real content. -->
-  <!-- Video hero MOCKUP (2026-11-12): only switched on by ?herovideo=1, so the
+  <!-- Video hero MOCKUP (2026-11-12): only switched on by ?herovideo=1 (beige grade) or =2 (dark burgundy grade), so the
        live home page is unchanged until Daniel says go. Nothing downloads
        unless the flag is on (no src until the script below sets one). Phones
        get a tall 406x720 crop (~450 KB), wider screens the 1280x720 cut
@@ -256,17 +256,20 @@
   <script>
   (function(){
     try{
-      var on=/[?&]herovideo=1\b/.test(location.search);
-      if(!on) return;
-      document.documentElement.classList.add('hero-video-on');
+      var m=/[?&]herovideo=([12])\b/.exec(location.search);
+      if(!m) return;
+      // 1 = beige grade (site colors, dark text), 2 = dark burgundy grade (white text)
+      var tone=m[1]==='2'?'dark':'beige';
+      document.documentElement.classList.add('hero-video-on','hero-video-'+tone);
       var v=document.getElementById('heroVideo');
       var tall=window.matchMedia('(max-width:900px)').matches;
       var base='./assets/hero-video/';
-      v.poster=base+(tall?'poster-tall.jpg':'poster-wide.jpg')+'?v=20261112vid';
+      var cut=tall?'tall':'wide';
+      v.poster=base+'poster-'+tone+'-'+cut+'.jpg?v=20261112vid2';
       var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(navigator.connection&&navigator.connection.saveData);
       if(still) return;
       v.muted=true;v.defaultMuted=true;v.setAttribute('muted','');v.autoplay=true;
-      v.src=base+(tall?'hero-tall.mp4':'hero-wide.mp4')+'?v=20261112vid';
+      v.src=base+'hero-'+tone+'-'+cut+'.mp4?v=20261112vid2';
       var p=v.play();if(p&&p.catch)p.catch(function(){});
     }catch(e){}
   })();

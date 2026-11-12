@@ -3208,34 +3208,46 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 
 
 /* === VIDEO HERO MOCKUP (2026-11-12) ===
-   Only active with ?herovideo=1 (html.hero-video-on, set by the inline script
-   in the hero). Looping muted video fills the whole hero behind the text, a
-   dark wash keeps the words readable, the rest of the page stays beige. */
+   Only active with ?herovideo=1 or =2 (html.hero-video-on + hero-video-beige
+   or hero-video-dark, set by the inline script in the hero). The video is
+   colour-graded to the site palette in the file itself: beige = warm beige /
+   dusty-burgundy duotone with the site's normal dark text; dark = burgundy-
+   black duotone with white text. */
 .hero-video-wrap{display:none;}
-html.hero-video-on .hero{position:relative;overflow:hidden;background:#15110E;}
+html.hero-video-on .hero{position:relative;overflow:hidden;}
 html.hero-video-on .hero-photo,html.hero-video-on .hero-sketch-left{display:none !important;}
-html.hero-video-on .hero-video-wrap{display:block;position:absolute;inset:0;z-index:0;overflow:hidden;background:#15110E;}
+html.hero-video-on .hero-video-wrap{display:block;position:absolute;inset:0;z-index:0;overflow:hidden;}
 html.hero-video-on .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;}
-html.hero-video-on .hero-video-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg, rgba(18,14,11,0.72) 0%, rgba(18,14,11,0.5) 45%, rgba(18,14,11,0.12) 100%);}
+html.hero-video-on .hero-video-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;}
 html.hero-video-on .hero-grid::before{content:none;}
 html.hero-video-on .hero-grid{min-height:clamp(560px, 46vw, 760px);}
-html.hero-video-on .hero h1,html.hero-video-on .hero h1 em{color:#F7F2EC;}
-html.hero-video-on .hero-rule{background:#B88A93;}
-html.hero-video-on .hero-welcome{color:#D9B9BF;}
-html.hero-video-on .hero #welcomeIntro.welcome-intro{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.22);border-left:3px solid #B88A93;border-radius:12px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:none;}
-html.hero-video-on .welcome-intro-label{color:#D9B9BF;}
-html.hero-video-on .welcome-intro-title,html.hero-video-on .welcome-intro p{color:#F7F2EC;}
 html.hero-video-on .hero #heroStartDesigningBtn{background:var(--brass);color:#fff;border:1px solid var(--brass);}
 html.hero-video-on .hero #heroStartDesigningBtn span{color:#fff;}
-html.hero-video-on .hero #heroMeasureFirstBtn span{color:#F7F2EC;}
-html.hero-video-on .hero #heroMeasureFirstBtn{background:transparent;color:#F7F2EC;border:1px solid rgba(255,255,255,0.7);}
-@media(hover:hover){
-  html.hero-video-on .hero #heroStartDesigningBtn:hover{background:var(--brass-light);border-color:var(--brass-light);color:#fff;}
-  html.hero-video-on .hero #heroMeasureFirstBtn:hover{background:rgba(255,255,255,0.12);}
-}
+@media(hover:hover){html.hero-video-on .hero #heroStartDesigningBtn:hover{background:var(--brass-light);border-color:var(--brass-light);color:#fff;}}
+
+/* Beige: page-colour wash so the normal dark text reads. */
+html.hero-video-beige .hero,html.hero-video-beige .hero-video-wrap{background:var(--ink);}
+html.hero-video-beige .hero-video-wrap::after{background:linear-gradient(90deg, rgba(var(--ink-rgb),0.92) 0%, rgba(var(--ink-rgb),0.75) 42%, rgba(var(--ink-rgb),0.1) 75%, rgba(var(--ink-rgb),0) 100%);}
+html.hero-video-beige .hero #welcomeIntro.welcome-intro{background:rgba(255,255,255,0.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+html.hero-video-beige .hero #heroMeasureFirstBtn{background:rgba(255,255,255,0.55);}
+
+/* Dark burgundy: dark wash, white text. */
+html.hero-video-dark .hero,html.hero-video-dark .hero-video-wrap{background:#1A1214;}
+html.hero-video-dark .hero-video-wrap::after{background:linear-gradient(90deg, rgba(20,13,15,0.7) 0%, rgba(20,13,15,0.5) 45%, rgba(20,13,15,0.1) 100%);}
+html.hero-video-dark .hero h1,html.hero-video-dark .hero h1 em{color:#F7F2EC;}
+html.hero-video-dark .hero-rule{background:#C9A3AA;}
+html.hero-video-dark .hero-welcome{color:#D9B9BF;}
+html.hero-video-dark .hero #welcomeIntro.welcome-intro{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.22);border-left:3px solid #C9A3AA;border-radius:12px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:none;}
+html.hero-video-dark .welcome-intro-label{color:#D9B9BF;}
+html.hero-video-dark .welcome-intro-title,html.hero-video-dark .welcome-intro p{color:#F7F2EC;}
+html.hero-video-dark .hero #heroMeasureFirstBtn{background:transparent;color:#F7F2EC;border:1px solid rgba(255,255,255,0.7);}
+html.hero-video-dark .hero #heroMeasureFirstBtn span{color:#F7F2EC;}
+@media(hover:hover){html.hero-video-dark .hero #heroMeasureFirstBtn:hover{background:rgba(255,255,255,0.12);}}
+
 @media(max-width:900px){
   /* Phone: video behind the whole first screen, text centered on it. */
-  html.hero-video-on .hero-video-wrap::after{background:linear-gradient(180deg, rgba(18,14,11,0.35) 0%, rgba(18,14,11,0.5) 50%, rgba(18,14,11,0.7) 100%);}
   html.hero-video-on .hero-grid{position:relative;display:flex;align-items:center;min-height:calc(100svh - 80px);}
   html.hero-video-on .hero-text{padding:28px 24px 32px;}
+  html.hero-video-beige .hero-video-wrap::after{background:linear-gradient(180deg, rgba(var(--ink-rgb),0.45) 0%, rgba(var(--ink-rgb),0.62) 50%, rgba(var(--ink-rgb),0.8) 100%);}
+  html.hero-video-dark .hero-video-wrap::after{background:linear-gradient(180deg, rgba(20,13,15,0.35) 0%, rgba(20,13,15,0.5) 50%, rgba(20,13,15,0.7) 100%);}
 }
