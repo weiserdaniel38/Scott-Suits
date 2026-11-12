@@ -579,53 +579,57 @@ const PANTS_CATALOG_GROUPS = [
 // Height and weight ("body") come first and are asked on every order: the
 // factory needs both. Every other field is in cm; height is in inches and
 // weight in pounds (`unit`), and kute-factory sends them in those units.
-// min/max are the factory's own limits for each measurement (from its Open
-// API, public.factory_codes; calf and height/weight have none there, so
-// they get sensible ones); the site won't take a value outside them.
+// min/max are hard limits: the site won't save or go on with a value
+// outside them. They sit inside the factory's own limits (Open API,
+// public.factory_codes, much wider, e.g. stomach 60-221) and are set from
+// real people (Daniel, 2026-11-12, after a stomach typed as 65 cm instead of
+// ~130). typ is the usual range from real orders: a value outside it still
+// saves but shows "Looks unusual, double-check". Cross-field checks (knee
+// smaller than thigh, etc.) are MEASURE_CROSS_RULES in main.js.
 // factoryOptional: the factory doesn't require it (its "required" flag is 0
 // for that position), so the customer isn't asked for it. Bicep, Wrist, Knee
 // and Cuff aren't required either but are still asked: they keep the sleeves
 // and pant legs from coming out baggy. Kept here so older
 // orders and saved profiles that have the value still show and send it.
 const MEASUREMENTS = [
-  { id: "height", label: "Height", part: "body", unit: "in", step: "0.5", min: 48, max: 96 },
-  { id: "weight", label: "Weight", part: "body", unit: "lb", step: "1", min: 70, max: 500 },
-  { id: "shoulder", label: "Shoulder", part: "jacket", min: 31, max: 72 },
-  { id: "sleeve_length", label: "Sleeve Length", part: "jacket", hint: "Shoulder seam to sleeve end at the wrist. Not from the neck", min: 20, max: 85 },
-  { id: "wrist", label: "Wrist", part: "jacket", min: 20, max: 90 },
-  { id: "chest", label: "Chest", part: "jacket", min: 72, max: 211 },
-  { id: "stomach", label: "Stomach", part: "jacket", min: 60, max: 221 },
-  { id: "front_jacket", label: "Front Jacket", part: "jacket", min: 47, max: 108, factoryOptional: true },
-  { id: "back_jacket", label: "Back Jacket", part: "jacket", min: 47, max: 101 },
-  { id: "bicep", label: "Bicep", part: "jacket", min: 26, max: 86 },
-  { id: "hips", label: "Hips", part: "pants", min: 65, max: 243 },
-  { id: "waist", label: "Waist", part: "pants", min: 58, max: 221 },
-  { id: "leg_length", label: "Full Pants Length", part: "pants", hint: "Outseam: top of waistband, down the side, to the hem", min: 40, max: 135 },
-  { id: "crotch", label: "Full Crotch", part: "pants", hint: "Snug, not baggy: front waistband, between the legs, to back waistband", min: 50, max: 132 },
-  { id: "thigh", label: "Thigh", part: "pants", min: 46, max: 137 },
-  { id: "knee", label: "Knee", part: "pants", min: 30, max: 124 },
-  { id: "calf", label: "Calf", part: "pants", min: 25, max: 90, factoryOptional: true },
-  { id: "cuff", label: "Cuff", part: "pants", min: 26, max: 80 },
+  { id: "height", label: "Height", part: "body", unit: "in", step: "0.5", min: 54, max: 84, typ: [62, 78] },
+  { id: "weight", label: "Weight", part: "body", unit: "lb", step: "1", min: 90, max: 450, typ: [120, 300] },
+  { id: "shoulder", label: "Shoulder", part: "jacket", min: 36, max: 62, typ: [42, 53] },
+  { id: "sleeve_length", label: "Sleeve Length", part: "jacket", hint: "Shoulder seam to sleeve end at the wrist. Not from the neck", min: 50, max: 80, typ: [57, 70] },
+  { id: "wrist", label: "Wrist", part: "jacket", min: 20, max: 45, typ: [24, 32] },
+  { id: "chest", label: "Chest", part: "jacket", min: 80, max: 170, typ: [95, 135] },
+  { id: "stomach", label: "Stomach", part: "jacket", min: 70, max: 175, typ: [85, 135] },
+  { id: "front_jacket", label: "Front Jacket", part: "jacket", min: 55, max: 95, typ: [65, 85], factoryOptional: true },
+  { id: "back_jacket", label: "Back Jacket", part: "jacket", min: 60, max: 90, typ: [68, 80] },
+  { id: "bicep", label: "Bicep", part: "jacket", min: 28, max: 60, typ: [33, 46] },
+  { id: "hips", label: "Hips", part: "pants", min: 80, max: 170, typ: [95, 130] },
+  { id: "waist", label: "Waist", part: "pants", min: 64, max: 165, typ: [75, 122] },
+  { id: "leg_length", label: "Full Pants Length", part: "pants", hint: "Outseam: top of waistband, down the side, to the hem", min: 75, max: 125, typ: [88, 112] },
+  { id: "crotch", label: "Full Crotch", part: "pants", hint: "Snug, not baggy: front waistband, between the legs, to back waistband", min: 55, max: 100, typ: [60, 76] },
+  { id: "thigh", label: "Thigh", part: "pants", min: 44, max: 90, typ: [50, 70] },
+  { id: "knee", label: "Knee", part: "pants", min: 32, max: 70, typ: [36, 50] },
+  { id: "calf", label: "Calf", part: "pants", min: 28, max: 70, typ: [32, 50], factoryOptional: true },
+  { id: "cuff", label: "Cuff", part: "pants", min: 28, max: 60, typ: [29, 46] },
   // Body measurements (mode "body"): the customer measures themselves and
   // picks a fit; the factory adds its own allowances. Every entry above
   // without a `mode` is a finished-garment measurement. Each id is its
   // orders column; kute-factory maps them to the factory's body positions.
-  { id: "body_neck", label: "Neck", part: "jacket", mode: "body", hint: "Around the base of your neck", min: 30, max: 70 },
-  { id: "body_chest", label: "Chest", part: "jacket", mode: "body", hint: "Around the fullest part, under your arms", min: 66, max: 224 },
-  { id: "body_stomach", label: "Stomach", part: "jacket", mode: "body", hint: "Around your belly at the navel", min: 55, max: 219 },
-  { id: "body_seat", label: "Seat", part: "jacket", pantsToo: true, mode: "body", hint: "Around the fullest part of your seat", min: 68, max: 220 },
-  { id: "body_bicep", label: "Bicep", part: "jacket", mode: "body", hint: "Around the fullest part of your upper arm", min: 19, max: 74 },
-  { id: "body_shoulder", label: "Shoulder Width", part: "jacket", mode: "body", hint: "Across your back, shoulder point to shoulder point", min: 31, max: 72 },
-  { id: "body_sleeve", label: "Arm Length", part: "jacket", mode: "body", hint: "Shoulder point to wrist bone, arm relaxed. Not from the neck", min: 25, max: 90 },
-  { id: "body_nape_waist", label: "Nape to Waist", part: "jacket", mode: "body", hint: "Back of your neck down to your natural waist", min: 27, max: 63 },
-  { id: "body_back_length", label: "Jacket Length", part: "jacket", mode: "body", hint: "Back of your neck down to where the jacket should end", min: 47, max: 105 },
-  { id: "body_front_waist", label: "Front Waist Length", part: "jacket", mode: "body", hint: "Shoulder at the neck, down the front to your natural waist", min: 30, max: 75 },
-  { id: "body_waist", label: "Waist", part: "pants", mode: "body", hint: "Around where you wear your trousers", min: 58, max: 202 },
-  { id: "body_thigh", label: "Thigh", part: "pants", mode: "body", hint: "Around the fullest part of your upper thigh", min: 39, max: 113 },
-  { id: "body_u_rise", label: "U-Rise", part: "pants", mode: "body", hint: "Front waist, between your legs, to the back waist", min: 50, max: 120 },
-  { id: "body_front_waist_h", label: "Front Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the front", min: 1, max: 30 },
-  { id: "body_back_waist_h", label: "Back Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the back", min: 1, max: 21 },
-  { id: "body_outseam", label: "Outseam", part: "pants", mode: "body", hint: "Side of your waist down to where the trousers should end", min: 54, max: 148 },
+  { id: "body_neck", label: "Neck", part: "jacket", mode: "body", hint: "Around the base of your neck", min: 30, max: 55, typ: [36, 47] },
+  { id: "body_chest", label: "Chest", part: "jacket", mode: "body", hint: "Around the fullest part, under your arms", min: 76, max: 165, typ: [88, 130] },
+  { id: "body_stomach", label: "Stomach", part: "jacket", mode: "body", hint: "Around your belly at the navel", min: 60, max: 170, typ: [75, 130] },
+  { id: "body_seat", label: "Seat", part: "jacket", pantsToo: true, mode: "body", hint: "Around the fullest part of your seat", min: 76, max: 165, typ: [88, 125] },
+  { id: "body_bicep", label: "Bicep", part: "jacket", mode: "body", hint: "Around the fullest part of your upper arm", min: 22, max: 55, typ: [27, 42] },
+  { id: "body_shoulder", label: "Shoulder Width", part: "jacket", mode: "body", hint: "Across your back, shoulder point to shoulder point", min: 36, max: 60, typ: [41, 51] },
+  { id: "body_sleeve", label: "Arm Length", part: "jacket", mode: "body", hint: "Shoulder point to wrist bone, arm relaxed. Not from the neck", min: 48, max: 75, typ: [55, 68] },
+  { id: "body_nape_waist", label: "Nape to Waist", part: "jacket", mode: "body", hint: "Back of your neck down to your natural waist", min: 33, max: 55, typ: [40, 50] },
+  { id: "body_back_length", label: "Jacket Length", part: "jacket", mode: "body", hint: "Back of your neck down to where the jacket should end", min: 60, max: 90, typ: [68, 80] },
+  { id: "body_front_waist", label: "Front Waist Length", part: "jacket", mode: "body", hint: "Shoulder at the neck, down the front to your natural waist", min: 35, max: 62, typ: [40, 55] },
+  { id: "body_waist", label: "Waist", part: "pants", mode: "body", hint: "Around where you wear your trousers", min: 60, max: 160, typ: [70, 120] },
+  { id: "body_thigh", label: "Thigh", part: "pants", mode: "body", hint: "Around the fullest part of your upper thigh", min: 40, max: 85, typ: [48, 70] },
+  { id: "body_u_rise", label: "U-Rise", part: "pants", mode: "body", hint: "Front waist, between your legs, to the back waist", min: 55, max: 100, typ: [60, 80] },
+  { id: "body_front_waist_h", label: "Front Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the front", min: 1, max: 20, typ: [2, 10] },
+  { id: "body_back_waist_h", label: "Back Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the back", min: 1, max: 20, typ: [2, 10] },
+  { id: "body_outseam", label: "Outseam", part: "pants", mode: "body", hint: "Side of your waist down to where the trousers should end", min: 75, max: 125, typ: [88, 112] },
 ];
 // Fits offered with body measurements (the factory's fit names).
 const BODY_FITS = ["Slim", "Regular", "Loose"];
