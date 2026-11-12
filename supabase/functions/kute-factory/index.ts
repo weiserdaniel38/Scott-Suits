@@ -22,6 +22,9 @@
 //       on the factory site (submit is always false; the admin submits it
 //       there) and keeps the factory's order number on the row. Sending
 //       again updates the same draft.
+//   { action: "factory_redraft", id }  the admin deleted the suit's draft
+//       on the factory site: saves a NEW draft (old one must be a draft;
+//       the factory's duplicate check stops it if the old one is still there)
 //   { action: "factory_submit", id }  SUBMITS that suit's own saved draft
 //       for production (Daniel, 2026-11-03: submit from his phone). Only
 //       its own draft (same order number, still a draft at the factory) is
@@ -328,6 +331,52 @@ async function saveDraft(input: Record<string, unknown>) {
   }
   await supabase.from("orders").update(update).eq("id", row.id);
   return { ok, orderNo: d.orderNo || row.factory_order_no || null, deliveryDate: d.deliveryDate || null, error: err, warnings };
+}
+
+// "Deleted at factory? Save a new draft" (Daniel, 2026-11-12). A draft
+// deleted from My Cart on the factory site still answers "Stay Payments" to
+// the status and size APIs, and saving over its number updates the deleted
+// copy, so nothing new shows in the cart. Only the admin knows it was
+// deleted, so this asks the factory for a NEW draft without the old number.
+// It never makes a second suit: the old order must still be a draft (never
+// submitted), and the factory's own duplicate check on the suit's reference
+// stops it if the old draft is really still there (no new reference is ever
+// made up, Daniel's rule 2026-10-26).
+async function redraft(input: Record<string, unknown>) {
+  const { row, body, warnings, blocking } = await factoryOrder(input);
+  const oldNo = String(row.factory_order_no || "");
+  const unpaid = unpaidBlock(row);
+  if (unpaid) return { ok: false, error: unpaid, warnings };
+  if (blocking.length) return { ok: false, blocking, warnings };
+  if (!oldNo) return saveDraft(input);
+  const st = await kute("GET", "/order/status/" + encodeURIComponent(oldNo));
+  const sd = ((st.data || {}) as Record<string, any>).data || {};
+  if (st.httpStatus === 200 && sd.status && !DRAFT_STATUSES.includes(Number(sd.status))) {
+    return { ok: false, orderNo: oldNo, error: "Order " + oldNo + " is " + (sd.statusName || sd.status) + " at the factory, not a draft, so no new draft was made." };
+  }
+  body.orderNo = "";
+  body.submit = false; // never submit from here
+  const r = await kute("POST", "/order/saveOrder", {}, body);
+  const res = (r.data || {}) as Record<string, any>;
+  const d = res.data || {};
+  const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
+  const said = String(d.errorMessage || res.msg || res.message || "");
+  if (!ok && /duplicate customer/i.test(said)) {
+    return { ok: false, orderNo: oldNo, error: "The factory still has this suit (" + body.customerNo + "), so it wasn't sent again. Check My Cart on the factory site for draft " + oldNo + "." };
+  }
+  if (!ok) {
+    return { ok: false, orderNo: oldNo, error: said || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300), warnings };
+  }
+  if (String(d.orderNo) === oldNo) {
+    // The factory kept the old number: treat it as the same draft.
+    await supabase.from("orders").update({ factory_error: null, factory_sent_at: new Date().toISOString(), factory_status: "Draft" }).eq("id", row.id);
+    return { ok: true, orderNo: oldNo, sameNumber: true, deliveryDate: d.deliveryDate || null, warnings };
+  }
+  await supabase.from("orders").update({
+    factory_order_no: d.orderNo, factory_status: "Draft", factory_error: d.errorMessage || null,
+    factory_delivery_date: d.deliveryDate || null, factory_sent_at: new Date().toISOString(),
+  }).eq("id", row.id);
+  return { ok: true, orderNo: d.orderNo, oldOrderNo: oldNo, deliveryDate: d.deliveryDate || null, warnings };
 }
 
 // Submit the suit's own saved draft for production (the factory's "edit,
@@ -785,21 +834,21 @@ Deno.serve(async (req) => {
       case "status":
         return json(await kute("GET", "/order/status/" + encodeURIComponent(str(input.orderNo))));
       case "size":
-        // The order's saved sizes (read-only). Used to tell whether a draft
-        // still exists at the factory.
+        // The order's saved sizes (read-only). Note: a draft deleted from
+        // My Cart still answers here, like it does to "status".
         return json(await kute("GET", "/order/ordenSize/" + encodeURIComponent(str(input.orderNo))));
       case "factory_preview": {
-        const { row, body, warnings, blocking } = await factoryOrder(input);
-        // The factory's saved sizes for the suit's draft, if it has one: shows
-        // whether that draft still exists at the factory (read-only).
-        const no = String(row.factory_order_no || "");
-        const factorySize = no ? await kute("GET", "/order/ordenSize/" + encodeURIComponent(no)) : null;
-        return json({ body, warnings, blocking, factorySize });
+        const { body, warnings, blocking } = await factoryOrder(input);
+        return json({ body, warnings, blocking });
       }
       case "factory_probe":
         return json(await probeDraft(input));
       case "factory_draft":
         return json(await saveDraft(input));
+      case "factory_redraft":
+        // Admin sign-in only: never the read-only lookup or cron tokens.
+        if (byCron || byLookup) return json({ error: "not allowed" }, 403);
+        return json(await redraft(input));
       case "factory_submit":
         // Admin sign-in only: never the read-only lookup or cron tokens.
         if (byCron || byLookup) return json({ error: "not allowed" }, 403);
