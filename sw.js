@@ -4,7 +4,7 @@
 // Every other request (scripts, styles, photos, Supabase, Stripe) goes
 // straight to the network untouched, so ?v= cache tags and live data work
 // exactly as on the normal website. Bump VERSION if offline.html changes.
-var VERSION = "offline-v1";
+var VERSION = "offline-v2";
 var OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", function (event) {

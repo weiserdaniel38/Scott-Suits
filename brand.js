@@ -49,7 +49,7 @@ var SITE_BRANDS = {
     // 2026-10-25, gold monogram with an ivory name, made for midnight).
     logos: { midnight: "./assets/sw/logo-v3.png" },
     // The suit picture loading clip, recolored for midnight (no extension).
-    loadingVideo: "./assets/sw/suit-loading-thread",
+    loadingVideo: "./assets/sw/suit-loading-thread-v2",
     themes: ["midnight", "burgundy", "navy", "forest", "blush"],
     // Font pairings (brand.css), picked the same way with ?font=bodoni etc.
     // The first is shown: Art Deco, Poiret One + Josefin Sans (Daniel, 2026-10-25).
@@ -154,6 +154,23 @@ var SITE_BRAND_COPY = {
     "Custom-made,": "Handcrafted,",
     "without leaving home.": "tailored to you alone.",
     "Design it online. See a free preview. Send your measurements. We make it for you.": "A private atelier for suits and formalwear, cut to your measurements and finished by hand.",
+    // November 2026: wording added to the main site since.
+    "Same price at every level.": "The same craftsmanship at every level.",
+    "You only pay for your fabric and any add-ons you choose.": "Choose how much of your suit you wish to define.",
+    "Free: we draw your suit with the fabric, buttons, lining and thread you chose. It takes a few minutes.": "Complimentary: we render your suit in the cloth, buttons, lining and thread you have chosen. Please allow a few minutes.",
+    "Add your measurements later, before you pay.": "You may add your measurements later, before your order is submitted.",
+    "Add your measurements before you pay.": "Please add your measurements before your order is submitted.",
+    "Add them before you pay.": "Please add them before your order is submitted.",
+    "Let's get your measurements": "Let us take your measurements",
+    "Have a pro measure you, start from your usual size, or enter your own.": "Be measured by a tailor, begin from your usual size, or enter your own.",
+    "Have a pro measure you, or start from your usual size.": "Be measured by a tailor, or begin from your usual size.",
+    "Have a pro measure me": "Be measured by a tailor",
+    "Have a pro measure you": "Be measured by a tailor",
+    "Rather have a pro measure you?": "Prefer to be measured by a tailor?",
+    "Find a tailor near you. Bring our list.": "Find a partner tailor near you, and bring our measurement list.",
+    "Pick your usual store size. We fill in the rest for you to check.": "Select your usual size. We prepare the rest for you to review.",
+    "Match your jacket or pick a contrast fabric.": "Match your jacket or choose a considered contrast.",
+    "Pick up where you left off.": "Continue where you left off.",
     "See how it works": "Our Process",
     "How It Works": "Our Process",
     "Close how it works": "Close our process",

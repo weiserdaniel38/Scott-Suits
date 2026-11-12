@@ -19,5 +19,17 @@
   <p>Scott's Suits needs an internet connection. Check your signal or Wi-Fi and try again.</p>
   <button type="button" onclick="location.reload()">Try again</button>
 </main>
+<script>
+// S.W. Atelier visitors (brand.js remembers the brand) get its name and colors.
+try {
+  if (document.documentElement.getAttribute("data-brand") === "sw" || localStorage.getItem("siteBrand") === "sw") {
+    document.title = "S.W. Atelier: Offline";
+    document.querySelector("p").textContent = "S.W. Atelier needs an internet connection. Check your signal or Wi-Fi and try again.";
+    var st = document.createElement("style");
+    st.textContent = "html,body{background:#15171C;color:#EEE7DA}button{background:#D7B878;border-color:#D7B878;color:#15171C;border-radius:999px}";
+    document.head.appendChild(st);
+  }
+} catch (e) {}
+</script>
 </body>
 </html>
