@@ -114,7 +114,7 @@ html[data-brand="sw"][data-sw-font="vibes"]{
 html[data-sw-theme="midnight"] .opt-swatch,
 html[data-sw-theme="midnight"] .lightbox-frame,
 html[data-sw-theme="midnight"] .suit-type-icon,
-html[data-sw-theme="midnight"] .suit-preview-img{background:#fff !important;}
+html[data-sw-theme="midnight"] .suit-preview-img{background-color:#fff !important;}
 /* Option drawings (lapels, pockets, vents...) inverted to white lines on
    black (Daniel, 2026-10-25). Fabric, felt and button color photos are
    jacket- files too, so they are left out (2026-10-26). Photos (fabric, lining, buttons, thread) keep
@@ -223,3 +223,44 @@ html[data-prices="off"] .wiz-total,
 html[data-prices="off"] #cartBarTotal,
 html[data-prices="off"] .cart-item-price,
 html[data-prices="off"] #pastOrdersList .past-order-total{display:none !important;}
+
+/* ---- November 2026 catch-up: features added to the main site since the
+   S.W. Atelier look was set, restyled for Midnight & Champagne. ---- */
+/* Prices never show here: the fabrics page line about what sets the price. */
+html[data-brand="sw"] [data-scott-only]{display:none !important;}
+/* "Get measured first" sits beside Start Designing as its outlined twin. */
+html[data-brand="sw"] #heroMeasureFirstBtn{font-family:var(--sw-display) !important;font-weight:var(--sw-display-weight) !important;letter-spacing:var(--sw-display-track) !important;text-transform:var(--sw-display-case) !important;font-size:var(--sw-btn);padding:10px 40px 12px;background:transparent;color:var(--ivory);}
+html[data-brand="sw"] #heroMeasureFirstBtn *{font-family:inherit !important;}
+html[data-brand="sw"] #heroMeasureFirstBtn:hover{background:rgba(var(--brass-rgb),0.14);color:var(--ivory);}
+@media(max-width:600px){html[data-brand="sw"] #heroMeasureFirstBtn{font-size:var(--sw-btn-m);}}
+/* White lettering on a champagne fill is unreadable: use the midnight ink. */
+html[data-sw-theme="midnight"] .level-rec,
+html[data-sw-theme="midnight"] .level-card:hover .level-go,
+html[data-sw-theme="midnight"] .level-card.selected .level-go,
+html[data-sw-theme="midnight"] .designer-grid .opt-badge.opt-badge-rec,
+html[data-sw-theme="midnight"] .opt-badge.opt-badge-rec,
+html[data-sw-theme="midnight"] .designer-grid .back-to-families-btn:hover,
+html[data-sw-theme="midnight"] .designer-grid .back-to-families-btn:active,
+html[data-sw-theme="midnight"] #suitTypeSection .suit-type-card:hover .suit-type-go,
+html[data-sw-theme="midnight"] .body-scan-new,
+html[data-sw-theme="midnight"] .tailor-card.chosen .tailor-card-choose,
+html[data-sw-theme="midnight"] .tc-steps li::before,
+html[data-sw-theme="midnight"] .fabric-tap-hint-icon,
+html[data-sw-theme="midnight"] .preview-add-cart.is-added,
+html[data-sw-theme="midnight"] .bs-sheet.bs-full .btn-primary,
+html[data-sw-theme="midnight"] .bs-sheet.bs-full .ps-type button.selected{color:var(--ink) !important;}
+html[data-sw-theme="midnight"] .fabric-tap-hint-icon svg{stroke:var(--ink);}
+/* The "More options" nudge: champagne pill, dark lettering. */
+html[data-sw-theme="midnight"] .wiz-more{background:rgba(var(--brass-rgb),0.95);color:var(--ink);}
+/* Cream cards and dark lettering from the light theme, made dark here. */
+html[data-sw-theme="midnight"] .designer-grid .fabric-palette-grid .opt-card.same-as-card{background:var(--surface);color:var(--ivory);border:1px solid var(--line);}
+html[data-sw-theme="midnight"] .designer-grid .fabric-palette-grid .opt-card.same-as-card.selected{border-color:var(--brass);outline-color:var(--brass);}
+html[data-sw-theme="midnight"] .preview-add-cart,
+html[data-sw-theme="midnight"] .checkout-measure-btn,
+html[data-sw-theme="midnight"] .past-order-measure-btn{color:var(--ivory);}
+html[data-sw-theme="midnight"] .hiw-icon{background:var(--surface);color:var(--brass);}
+html[data-sw-theme="midnight"] .hiw-icon img{filter:invert(1) hue-rotate(180deg);mix-blend-mode:screen;}
+/* Swatches that show the chosen cloth or an upload prompt keep their own fill. */
+html[data-sw-theme="midnight"] .opt-swatch.upload-swatch:not(.has-photo){background-color:var(--surface) !important;color:var(--brass);}
+/* No payment here, so no promo codes. */
+html[data-brand="sw"] #promoBlock{display:none !important;}

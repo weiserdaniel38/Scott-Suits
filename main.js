@@ -11016,7 +11016,7 @@ function refreshAlterationText() {
         if (text) {
           const noun = protectionNoun();
           text.textContent = "Without Alteration Protection, any alterations are at your own cost, and " + (SITE_BRAND.id === "scott" ? "Scott Suits" : SITE_BRAND.name) + " takes no responsibility for a " +
-            noun + " that doesn't fit because of wrong or bad measurements. With it, you get three free alterations" +
+            noun + " that doesn't fit because of wrong or bad measurements. With it, you get three " + (PRICES_HIDDEN ? "complimentary" : "free") + " alterations" +
             (PRICES_HIDDEN ? "" : " for " + usd(protectionPriceUsd()) + ((cartItems.length || 1) > 1 ? " per " + noun : "")) + ".";
         }
         overlay.classList.add("open");
