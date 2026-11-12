@@ -268,3 +268,7 @@ html[data-brand="sw"] #promoBlock{display:none !important;}
 /* Measurement "looks unusual" warnings: lighter amber on the dark panels. */
 html[data-brand="sw"] #measWizard .measure-field-error.measure-field-warn,html[data-brand="sw"] #measWizard .tc-warn{color:#e0b660;}
 html[data-brand="sw"] #measWizard .tc-warn.tc-warn-hard{color:#e2826e;}
+/* Measurement check on dark themes */
+html[data-sw-theme="midnight"] .mcheck.is-pass .mcheck-head{color:#8fd19e;}
+html[data-sw-theme="midnight"] .mcheck.is-warn .mcheck-head{color:#e0b660;}
+html[data-sw-theme="midnight"] .mcheck.is-block .mcheck-head{color:#f08a7a;}

@@ -475,6 +475,136 @@ function measureHardOk(m, val, get) {
   const i = measureIssue(m, val, get);
   return !(i && i.hard);
 }
+// ---------------------------------------------------------------------------
+// Whole-suit measurement check (Daniel, 2026-11-12: "a checker to make sure
+// all measurements are correct before sending"). The per-field checks above
+// catch typos while typing; this looks at a suit's full set at once, the
+// way the Avi/David/Nathan reviews were done by hand: missing fields, out of
+// range, inches typed as cm, half-way-around numbers, proportions between
+// fields (and against height), and the same number in many fields.
+// Returns { status: "pass" | "warn" | "block", items: [{ level, labels, text }] }.
+// Admin uses it before Save draft / Submit to factory; customers see the
+// "warn" items once before paying.
+// ---------------------------------------------------------------------------
+// Proportions from real orders; only ever "double-check". v.h = height in
+// cm. Each test returns a message or a falsy value.
+const MEASURE_SET_RULES = [
+  { ids: ["knee", "thigh"], test: (v) => v.knee > v.thigh * 0.8 && "Knee is wide next to Thigh (" + v.knee + " vs " + v.thigh + "; knee is usually under 80% of thigh)" },
+  { ids: ["cuff", "knee"], test: (v) => v.cuff > v.knee * 0.95 && "Cuff is almost as wide as Knee (" + v.cuff + " vs " + v.knee + ")" },
+  { ids: ["thigh", "hips"], test: (v) => v.thigh > v.hips * 0.63 && "Thigh is large next to Hips (" + v.thigh + " vs " + v.hips + ")" },
+  { ids: ["stomach", "waist"], test: (v) => v.stomach >= v.waist * 0.93 && v.stomach - v.waist < 5 && "Jacket Stomach is only " + r1(v.stomach - v.waist) + " cm over Pants Waist (usually 6 to 14 cm over)" },
+  { ids: ["shoulder", "chest"], test: (v) => (v.shoulder < v.chest * 0.38 || v.shoulder > v.chest * 0.5) && "Shoulder doesn't match Chest (" + v.shoulder + " vs " + v.chest + ")" },
+  { ids: ["shoulder", "height"], test: (v) => (v.shoulder < v.h * 0.24 ? "Shoulder " + v.shoulder + " is narrow for " + heightText(v.height) + " (seam to seam, without the sleeve)" : v.shoulder > v.h * 0.31 && "Shoulder " + v.shoulder + " is wide for " + heightText(v.height)) },
+  { ids: ["sleeve_length", "height"], test: (v) => (v.sleeve_length < v.h * 0.335 ? "Sleeve Length " + v.sleeve_length + " is short for " + heightText(v.height) : v.sleeve_length > v.h * 0.4 && "Sleeve Length " + v.sleeve_length + " is long for " + heightText(v.height) + " (shoulder to wrist, not from the neck)") },
+  { ids: ["bicep", "chest"], test: (v) => v.bicep > v.chest * 0.4 && "Bicep is large next to Chest (" + v.bicep + " vs " + v.chest + ")" },
+  { ids: ["body_thigh", "body_seat"], test: (v) => v.body_thigh > v.body_seat * 0.66 && "Thigh is large next to Seat (" + v.body_thigh + " vs " + v.body_seat + ")" },
+  { ids: ["body_shoulder", "height"], test: (v) => (v.body_shoulder < v.h * 0.22 ? "Shoulder Width " + v.body_shoulder + " is narrow for " + heightText(v.height) : v.body_shoulder > v.h * 0.3 && "Shoulder Width " + v.body_shoulder + " is wide for " + heightText(v.height)) },
+  { ids: ["body_sleeve", "height"], test: (v) => (v.body_sleeve < v.h * 0.31 ? "Arm Length " + v.body_sleeve + " is short for " + heightText(v.height) : v.body_sleeve > v.h * 0.39 && "Arm Length " + v.body_sleeve + " is long for " + heightText(v.height) + " (shoulder to wrist, not from the neck)") },
+  { ids: ["body_stomach", "body_waist"], test: (v) => v.body_stomach < v.body_waist * 0.9 && "Stomach is smaller than Waist (" + v.body_stomach + " vs " + v.body_waist + ")" },
+];
+function r1(n) {
+  return Math.round(n * 10) / 10;
+}
+function heightText(inches) {
+  const i = Math.round(inches);
+  return Math.floor(i / 12) + "'" + (i % 12) + '"';
+}
+// Around-the-body fields, and the field a half-way-around number would sit
+// next to (Nathan's stomach 65 beside chest 128).
+const MEASURE_HALF_PAIRS = {
+  chest: "stomach", stomach: "chest", hips: "waist", waist: "hips",
+  body_chest: "body_stomach", body_stomach: "body_chest", body_seat: "body_waist", body_waist: "body_seat",
+};
+// values: { id: number } (an order row or a cart item's measurements use
+// the same names). suitType: "full" | "jacketOnly" | "pantsOnly" (or the
+// order row's "jacket_only" / "pants_only"). mode: "finished" | "body".
+function checkSuitMeasurements(values, suitType, mode) {
+  const type = suitType === "jacket_only" ? "jacketOnly" : suitType === "pants_only" ? "pantsOnly" : suitType || "full";
+  mode = mode === "body" ? "body" : "finished";
+  const get = measureValuesGetter(values);
+  const fields = MEASUREMENTS.filter(
+    (m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, type)
+  );
+  const items = [];
+  const add = (level, label, text) => {
+    const same = items.find((x) => x.level === level && x.text === text);
+    if (same) {
+      if (label && same.labels.indexOf(label) < 0) same.labels.push(label);
+      return;
+    }
+    items.push({ level, labels: label ? [label] : [], text });
+  };
+  const bad = {};
+  const warned = {};
+  const missing = [];
+  fields.forEach((m) => {
+    const val = get(m.id);
+    if (val === null) {
+      missing.push(m.label);
+      bad[m.id] = true;
+      return;
+    }
+    const issue = measureIssue(m, val, get);
+    if (!issue) return;
+    if (issue.hard) bad[m.id] = true;
+    else warned[m.id] = true;
+    let text = issue.text;
+    if (issue.hard && m.unit !== "in" && m.unit !== "lb" && m.min !== undefined && val < m.min) {
+      // Inches typed as cm, or half way around: whichever lands nearer the
+      // field it sits next to (stomach next to chest, and so on).
+      const other = MEASURE_HALF_PAIRS[m.id] ? get(MEASURE_HALF_PAIRS[m.id]) : null;
+      const inch = val * 2.54 >= m.min && val * 2.54 <= m.max ? val * 2.54 : null;
+      const half = other && Math.abs(val * 2 - other) <= other * 0.15 ? val * 2 : null;
+      if (half && (!inch || Math.abs(half - other) < Math.abs(inch - other))) text += " " + val + " looks like half way around (" + r1(half) + "?).";
+      else if (inch) text += " " + val + " looks like inches (" + r1(inch) + " cm).";
+    }
+    const ownField = /^Must be|^Looks unusual/.test(issue.text);
+    if (!ownField) {
+      // Cross-field: name both numbers.
+      const rule = MEASURE_CROSS_RULES.find((r) => issue.text.indexOf(r.text) === 0);
+      if (rule) text = text.replace(rule.text, rule.text + " (" + rule.ids.map((id) => {
+        const om = MEASUREMENTS.find((x) => x.id === id);
+        return (om ? om.label : id) + " " + (id === "height" ? heightText(get(id)) : get(id));
+      }).join(", ") + ")");
+    }
+    add(issue.hard ? "block" : "warn", ownField ? m.label + " " + (m.id === "height" ? heightText(val) : val) : "", text);
+  });
+  if (missing.length) items.unshift({ level: "block", labels: [], text: "Missing: " + missing.join(", ") + "." });
+  // Proportions, only between fields that are each fine on their own.
+  const height = get("height");
+  MEASURE_SET_RULES.forEach((r) => {
+    const v = { height, h: height ? height * 2.54 : null };
+    for (const id of r.ids) {
+      // A field already flagged on its own isn't listed twice.
+      if (!fields.some((m) => m.id === id) || bad[id] || (id !== "height" && warned[id])) return;
+      v[id] = get(id);
+      if (v[id] === null) return;
+    }
+    const msg = r.test(v);
+    if (msg) add("warn", "", msg + ". Please double-check.");
+  });
+  // The same number in three or more fields: usually a copy-paste slip.
+  const byVal = {};
+  fields.forEach((m) => {
+    if (m.part === "body" || bad[m.id]) return;
+    const val = get(m.id);
+    (byVal[val] = byVal[val] || []).push(m.label);
+  });
+  Object.keys(byVal).forEach((val) => {
+    if (byVal[val].length >= 3) add("warn", "", "Same number (" + val + ") in " + byVal[val].join(", ") + ". Please double-check.");
+  });
+  const status = items.some((x) => x.level === "block") ? "block" : items.length ? "warn" : "pass";
+  return { status, items };
+}
+function measureCheckItemText(x) {
+  return (x.labels.length ? x.labels.join(", ") + ": " : "") + x.text.replace(/ Please (double-)?check( both)?\.$/, "");
+}
+// Fingerprint of a suit's numbers, so "I confirmed these" stays ticked only
+// while the numbers are unchanged.
+function measureCheckSignature(values) {
+  return MEASUREMENTS.map((m) => (values && values[m.id] != null ? values[m.id] : "")).join("|");
+}
+
 function measureTypText(m) {
   if (m.id === "height") {
     const ftIn = (n) => Math.floor(n / 12) + "'" + (n % 12) + '"';
@@ -2871,7 +3001,7 @@ function adminSuitFactoryButton(o, s, suitBox, stateEl) {
       return;
     }
     panel.innerHTML = "";
-    panel.appendChild(adminFactorySuit(suit, 1, stateEl));
+    panel.appendChild(adminFactorySuit(suit, 1, stateEl, o.order_id));
   });
   return btn;
 }
@@ -3624,7 +3754,7 @@ function adminFactoryPanel(o) {
       return;
     }
     panel.innerHTML = "";
-    data.forEach((suit) => panel.appendChild(adminFactorySuit(suit, data.length)));
+    data.forEach((suit) => panel.appendChild(adminFactorySuit(suit, data.length, null, o.order_id)));
   })();
   return panel;
 }
@@ -3662,13 +3792,96 @@ function adminFactorySuitState(suit, noDue) {
   );
 }
 
+// The measurement check box on a suit's factory tools: loads the suit's
+// order row and lists what checkSuitMeasurements finds. "block" items must be
+// fixed (Edit suit); "warn" items need "I confirmed these" ticked, which is
+// remembered on this device until the numbers change. Returns { ok() }.
+function adminMeasureCheck(el, suit, orderId, onChange) {
+  let state = "loading";
+  let confirmed = false;
+  const key = "scott_mcheck_" + suit.id;
+  const submitted = () => !!suit.factory_order_no && FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
+  const render = (row) => {
+    if (!row) {
+      state = "error";
+      el.className = "mcheck is-block";
+      el.innerHTML = '<p class="mcheck-head">Couldn\u2019t load the measurements to check them.</p><button type="button" class="mcheck-again">Check again</button>';
+      el.querySelector(".mcheck-again").addEventListener("click", load);
+      onChange();
+      return;
+    }
+    if (row.measure_type === MEASUREMENTS_PENDING) {
+      state = "block";
+      el.className = "mcheck is-block";
+      el.innerHTML = '<p class="mcheck-head">Waiting on the customer\u2019s measurements.</p>';
+      onChange();
+      return;
+    }
+    const r = checkSuitMeasurements(row, row.suit_type, row.measure_type);
+    const sig = measureCheckSignature(row);
+    let saved = "";
+    try { saved = localStorage.getItem(key) || ""; } catch (e) { /* not kept */ }
+    confirmed = r.status === "warn" && saved === sig;
+    state = r.status;
+    const blocks = r.items.filter((x) => x.level === "block");
+    const warns = r.items.filter((x) => x.level === "warn");
+    const mode = row.measure_type === "body" ? "Body measurements" : "Finished sizes";
+    const list = (arr) => "<ul>" + arr.map((x) => "<li>" + escapeAttr(measureCheckItemText(x)) + "</li>").join("") + "</ul>";
+    el.className = "mcheck is-" + r.status;
+    el.innerHTML =
+      '<p class="mcheck-head"></p>' +
+      (blocks.length ? '<p class="mcheck-sub">Fix before sending (Edit suit):</p>' + list(blocks) : "") +
+      (warns.length ? '<p class="mcheck-sub">Double-check with the customer:</p>' + list(warns) : "") +
+      (r.status === "warn" ? '<label class="mcheck-ok"><input type="checkbox"> I confirmed these with the customer</label>' : "") +
+      '<button type="button" class="mcheck-again">Check again</button>';
+    el.querySelector(".mcheck-head").textContent =
+      (r.status === "pass" ? "\u2713 Measurements look right" : r.status === "warn" ? "\u26a0 " + warns.length + " to double-check" : "\u2715 " + blocks.length + " to fix" + (warns.length ? ", " + warns.length + " to double-check" : "")) +
+      " \u00b7 " + mode + (submitted() ? " \u00b7 already submitted" : "");
+    const box = el.querySelector(".mcheck-ok input");
+    if (box) {
+      box.checked = confirmed;
+      box.addEventListener("change", () => {
+        confirmed = box.checked;
+        try {
+          if (confirmed) localStorage.setItem(key, sig);
+          else localStorage.removeItem(key);
+        } catch (e) { /* only for this visit */ }
+        onChange();
+      });
+    }
+    el.querySelector(".mcheck-again").addEventListener("click", load);
+    onChange();
+  };
+  async function load() {
+    state = "loading";
+    el.className = "mcheck";
+    el.innerHTML = '<p class="mcheck-head">Checking measurements...</p>';
+    onChange();
+    let row = null;
+    try {
+      const { data, error } = await getSupabase().rpc("admin_order_rows", { p_order_id: orderId });
+      if (!error && data) row = data.find((x) => x.id === suit.id) || null;
+    } catch (e) {
+      console.error(e);
+    }
+    render(row);
+  }
+  if (!orderId) {
+    el.remove();
+    return null;
+  }
+  load();
+  return { ok: () => state === "pass" || (state === "warn" && confirmed) };
+}
+
 // stateEl: inside a suit card, the card's header shows the factory order
 // line, so this block leaves out its own header.
-function adminFactorySuit(suit, count, stateEl) {
+function adminFactorySuit(suit, count, stateEl, orderId) {
   const box = document.createElement("div");
   box.className = "admin-factory-suit";
   box.innerHTML =
     '<div class="admin-factory-head"><b></b><span class="admin-factory-state"></span></div>' +
+    '<div class="mcheck"><p class="mcheck-head">Checking measurements...</p></div>' +
     '<div class="admin-ship-actions">' +
     '<button type="button" class="admin-ship-factory fac-check">Check</button>' +
     '<button type="button" class="btn-primary fac-draft">Save draft at factory</button>' +
@@ -3697,8 +3910,21 @@ function adminFactorySuit(suit, count, stateEl) {
     // The factory's API can't tell that a draft was deleted from My Cart on
     // its site (it still says "Stay Payments"), so the admin says so here.
     redraftBtn.hidden = !suit.factory_order_no || FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
-
+    gate();
   };
+  // Measurement check: Save draft / Submit stay off until it passes, or
+  // its double-check items are ticked as confirmed (Daniel, 2026-11-12).
+  let mcheck = null;
+  const measureOk = () => !mcheck || mcheck.ok();
+  function gate() {
+    if (!mcheck) return;
+    const ok = mcheck.ok();
+    [draftBtn, submitBtn, redraftBtn].forEach((b) => {
+      b.disabled = !ok;
+      b.title = ok ? "" : "Check the measurements first";
+    });
+  }
+  mcheck = adminMeasureCheck(box.querySelector(".mcheck"), suit, orderId, () => gate());
   showState();
   // Height and weight always come from the order (kute-factory reads them).
   const params = () => ({ id: suit.id });
@@ -3713,6 +3939,7 @@ function adminFactorySuit(suit, count, stateEl) {
       out.textContent = "Couldn\u2019t reach the factory link: " + (err.message || err);
     } finally {
       buttons.forEach((b) => (b.disabled = false));
+      gate();
     }
   };
   const lines = (title, list) => (list && list.length ? title + "\n" + list.map((w) => "\u2022 " + w).join("\n") + "\n\n" : "");
@@ -3729,7 +3956,7 @@ function adminFactorySuit(suit, count, stateEl) {
     })
   );
   draftBtn.addEventListener("click", () =>
-    run("Saving the draft at the factory...", async () => {
+    measureOk() && run("Saving the draft at the factory...", async () => {
       const r = await callKuteFn(Object.assign({ action: "factory_draft" }, params()));
       if (r.blocking) return lines("Not sent. Fix first:", r.blocking) + lines("Also check:", r.warnings);
       suit.factory_error = r.error || null;
@@ -3747,6 +3974,7 @@ function adminFactorySuit(suit, count, stateEl) {
     })
   );
   redraftBtn.addEventListener("click", () => {
+    if (!measureOk()) return;
     if (!window.confirm(
       "Did you delete draft " + suit.factory_order_no + " from My Cart on the factory site?\n\n" +
       "This saves this suit as a NEW draft at the factory. If the old draft is still there, the factory refuses it and nothing changes."
@@ -3777,6 +4005,7 @@ function adminFactorySuit(suit, count, stateEl) {
     });
   });
   submitBtn.addEventListener("click", () => {
+    if (!measureOk()) return;
     if (!window.confirm(
       "Submit factory order " + suit.factory_order_no + " for production?\n\n" +
       "It is sent exactly as it was last saved here. Once submitted it can\u2019t be changed or cancelled from this page."
@@ -11166,6 +11395,34 @@ customerPhoneInput.addEventListener("input", () => {
 // Doesn't touch measurements -- those are validated per-suit and captured
 // into the cart already (see commitCurrentSuitToCart), not collected fresh
 // here. This only checks that there's actually at least one suit to submit.
+// Lists each suit's "double-check" measurement items in one confirm before
+// paying (Daniel, 2026-11-12). Shown once per set of numbers in a visit.
+function measureCheckBeforePay() {
+  const parts = [];
+  let sig = "";
+  cartItems.forEach((item, i) => {
+    const m = item.measurements;
+    if (!m || m.measure_type === MEASUREMENTS_PENDING) return;
+    const r = checkSuitMeasurements(m, item.type, m.measure_type);
+    sig += i + ":" + measureCheckSignature(m) + ";";
+    if (r.status === "pass") return;
+    const lines = r.items.map((x) => "\u2022 " + measureCheckItemText(x));
+    parts.push((cartItems.length > 1 ? "Suit " + (i + 1) + ":\n" : "") + lines.join("\n"));
+  });
+  if (!parts.length) return true;
+  try {
+    if (sessionStorage.getItem("scott_mcheck_pay") === sig) return true;
+  } catch (e) { /* ask again */ }
+  const ok = window.confirm(
+    "Please double-check these measurements before you " + (typeof PRICES_HIDDEN !== "undefined" && PRICES_HIDDEN ? "send your order" : "pay") + ":\n\n" + parts.join("\n\n") +
+    "\n\nTap OK if they\u2019re right, or Cancel to go back and fix them."
+  );
+  if (ok) {
+    try { sessionStorage.setItem("scott_mcheck_pay", sig); } catch (e) { /* ask again next time */ }
+  }
+  return ok;
+}
+
 function collectAndValidateOrderInput() {
   if (!cartItems.length) {
     alert("Your cart is empty -- please go back and finish designing at least one suit before submitting.");
@@ -11189,6 +11446,9 @@ function collectAndValidateOrderInput() {
     alert("Please add measurements for " + (cartItems.length === 1 ? "your suit" : pendingAt.map((i) => "Suit " + (i + 1)).join(" and ")) + " before you pay.");
     return null;
   }
+  // Whole-suit measurement check (soft for customers): anything that looks
+  // off is listed once before paying; OK goes on, Cancel stops to fix it.
+  if (!adminEditState && !measureCheckBeforePay()) return null;
 
   const customerName = customerNameInput.value.trim();
   const customerPhone = customerPhoneInput.value.trim();
