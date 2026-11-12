@@ -2993,6 +2993,162 @@ function adminFabricList(o) {
   return box;
 }
 
+// ---- Admin: shipment tracking (Daniel, 2026-11-12) ----
+// Each order in All Orders shows both legs of the trip: the factory's DHL
+// shipment to the shop (the waybill the factory gives, or one typed in) and
+// the shop's label to the customer. The live status comes from Shippo's
+// tracking through kute-factory "track" (free, nothing is bought).
+const adminTrackCache = new Map(); // "CARRIER number" -> { at, r }
+const ADMIN_TRACK_WORDS = {
+  PRE_TRANSIT: "Label made, not picked up yet",
+  TRANSIT: "In transit",
+  DELIVERED: "Delivered",
+  RETURNED: "Returned to sender",
+  FAILURE: "Delivery problem",
+  UNKNOWN: "No updates yet",
+};
+async function adminTrackParcel(carrier, number, fresh) {
+  const key = carrier + " " + number;
+  const hit = adminTrackCache.get(key);
+  if (hit && !fresh && Date.now() - hit.at < 10 * 60 * 1000) return hit.r;
+  const r = await callKuteFn({ action: "track", carrier, number });
+  adminTrackCache.set(key, { at: Date.now(), r });
+  return r;
+}
+function adminTrackWhen(d) {
+  if (!d) return "";
+  const t = new Date(d);
+  if (isNaN(t)) return "";
+  return t.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+function adminTrackDay(d) {
+  const t = d ? new Date(d) : null;
+  return t && !isNaN(t) ? t.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : "";
+}
+
+// One leg: label, carrier + number with a link to the carrier's page, then
+// the live status once loaded.
+function adminTrackLeg(title, carrier, number) {
+  const leg = document.createElement("div");
+  leg.className = "admin-track-leg";
+  leg.innerHTML =
+    '<div class="admin-track-top"><span class="admin-track-title"></span><a class="admin-track-num" target="_blank" rel="noopener"></a></div>' +
+    '<p class="admin-track-status">Checking...</p><p class="admin-track-detail" hidden></p>' +
+    '<details class="admin-track-history" hidden><summary>All updates</summary><ol></ol></details>';
+  leg.querySelector(".admin-track-title").textContent = title;
+  const a = leg.querySelector(".admin-track-num");
+  a.textContent = carrier + " " + number;
+  const url = trackingUrl(carrier, number);
+  if (url) a.href = url;
+  else a.removeAttribute("href");
+  leg.load = async (fresh) => {
+    const status = leg.querySelector(".admin-track-status");
+    const detail = leg.querySelector(".admin-track-detail");
+    const hist = leg.querySelector(".admin-track-history");
+    status.textContent = "Checking...";
+    status.className = "admin-track-status";
+    try {
+      const r = await adminTrackParcel(carrier, number, fresh);
+      if (!r.ok) throw new Error(r.error || "no tracking");
+      const st = r.latest || {};
+      const word = r.stage === "out_for_delivery" ? "Out for delivery" : ADMIN_TRACK_WORDS[st.status] || "No updates yet";
+      status.textContent = word + (st.date ? " · " + adminTrackWhen(st.date) : "");
+      status.classList.add("is-" + String(st.status || "unknown").toLowerCase());
+      const bits = [st.details, st.place].filter(Boolean);
+      if (r.eta && st.status !== "DELIVERED") bits.push("Expected " + adminTrackDay(r.eta));
+      detail.textContent = bits.join(" · ");
+      detail.hidden = !bits.length;
+      const ol = hist.querySelector("ol");
+      ol.innerHTML = "";
+      (r.history || []).forEach((e) => {
+        const li = document.createElement("li");
+        li.textContent = [adminTrackWhen(e.date), e.details || ADMIN_TRACK_WORDS[e.status] || e.status, e.place].filter(Boolean).join(" · ");
+        ol.appendChild(li);
+      });
+      hist.hidden = (r.history || []).length < 2;
+    } catch (err) {
+      status.textContent = "Live status not available (" + String(err.message || err) + "). Tap the number to track on the carrier’s site.";
+      status.classList.add("is-unknown");
+      detail.hidden = true;
+      hist.hidden = true;
+    }
+  };
+  return leg;
+}
+function adminTrackNote(title, text) {
+  const leg = document.createElement("div");
+  leg.className = "admin-track-leg";
+  leg.innerHTML = '<div class="admin-track-top"><span class="admin-track-title"></span></div><p class="admin-track-status is-none"></p>';
+  leg.querySelector(".admin-track-title").textContent = title;
+  leg.querySelector(".admin-track-status").textContent = text;
+  return leg;
+}
+
+function adminTrackingBox(o, row) {
+  const box = document.createElement("div");
+  box.className = "admin-track";
+  let loaded = false;
+  const render = (fresh) => {
+    box.innerHTML = '<div class="admin-track-head"><span class="admin-order-label">Tracking</span><button type="button" class="admin-track-refresh">Refresh</button></div>';
+    box.querySelector(".admin-track-refresh").addEventListener("click", () => render(true));
+    const legs = [];
+    // 1. Factory to me: the DHL waybill(s) of this order's suits.
+    const facts = (o.fabrics || []).map((s) => s.factory).filter((f) => f && f.factory_order_no);
+    const waybills = [...new Set(facts.map((f) => String(f.factory_waybill || "").trim()).filter(Boolean))];
+    if (waybills.length) waybills.forEach((w) => legs.push(adminTrackLeg("Factory to me", "DHL", w)));
+    else box.appendChild(adminTrackNote("Factory to me", facts.length ? (facts.some((f) => f.factory_status === "Stocked") ? "Finished at the factory. Not shipped yet: tap Arrange Shipment on the factory site." : "Not shipped from the factory yet" + (facts[0].factory_status ? " (" + facts[0].factory_status + ")" : "") + ".") : "Not sent to the factory yet."));
+    legs.forEach((l) => box.appendChild(l));
+    if (facts.length) {
+      const hand = document.createElement("details");
+      hand.className = "admin-track-hand";
+      hand.innerHTML = '<summary>' + (waybills.length ? "Change DHL waybill" : "Have the DHL waybill? Enter it") + '</summary>' +
+        '<div class="admin-track-hand-row"><input type="text" inputmode="numeric" placeholder="DHL waybill, e.g. 4804475874" aria-label="DHL waybill">' +
+        '<button type="button" class="admin-ship-factory">Save</button></div><p class="admin-track-hand-say" hidden></p>';
+      const input = hand.querySelector("input");
+      input.value = waybills[0] || "";
+      const say = hand.querySelector(".admin-track-hand-say");
+      hand.querySelector("button").addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        say.hidden = false;
+        say.textContent = "Saving...";
+        try {
+          const r = await callKuteFn({ action: "set_waybill", order_id: o.order_id, waybill: input.value.trim() });
+          if (!r.ok) throw new Error(r.error);
+          facts.forEach((f) => (f.factory_waybill = r.waybill));
+          render(true);
+        } catch (err) {
+          say.textContent = "Couldn’t save: " + String(err.message || err);
+          btn.disabled = false;
+        }
+      });
+      box.appendChild(hand);
+    }
+    // 2. Me to customer: the order's own tracking (label bought here or typed in).
+    let out = null;
+    if (o.tracking_number) {
+      out = adminTrackLeg("Me to customer", o.tracking_carrier && o.tracking_carrier !== "Other" ? o.tracking_carrier : "Other", String(o.tracking_number).trim());
+      box.appendChild(out);
+      legs.push(out);
+    } else box.appendChild(adminTrackNote("Me to customer", o.fulfillment === "pickup" ? "In-store pickup, nothing to ship." : "No label yet. Tap Shipping label below to buy one."));
+    legs.forEach((l) => l.load(fresh));
+  };
+  // Live status loads the first time the order is opened.
+  const open = () => {
+    if (loaded) return;
+    loaded = true;
+    render(false);
+  };
+  box.innerHTML = '<div class="admin-track-head"><span class="admin-order-label">Tracking</span></div>';
+  if (row.open) open();
+  else row.addEventListener("toggle", () => row.open && open());
+  row.addEventListener("admin-tracking-changed", () => {
+    loaded = true;
+    render(true);
+  });
+  return box;
+}
+
 // One order in All Orders: a summary line (customer, date, suits, shipping
 // step, total) that opens to the order's details, one card per suit and the
 // whole-order controls.
@@ -3030,7 +3186,9 @@ function adminOrderRow(o) {
     info.append(dt, dd);
   });
   const hasSuitCards = !!(o.fabrics && o.fabrics.length);
-  if (hasSuitCards) info.after(adminFabricList(o));
+  const trackBox = adminTrackingBox(o, row);
+  info.after(trackBox);
+  if (hasSuitCards) trackBox.after(adminFabricList(o));
   const result = row.querySelector(".admin-ship-result");
   const editBtn = row.querySelector(".admin-ship-edit");
   editBtn.addEventListener("click", () => startAdminOrderEdit(o, editBtn));
@@ -3267,6 +3425,11 @@ function adminLabelPanel(o, labelBtn) {
       const sent = b.test_mode ? "" : !n ? "" : n.email && n.email.ok ? (n.live ? " Customer emailed the tracking." : " Test mode: the email went to you, not the customer.") : " The email didn’t go out" + (n.error ? ": " + n.error : "") + ".";
       say("Label bought: " + b.carrier + " " + b.tracking_number + " (" + labelMoney(b.cost_usd) + ")." + (b.test_mode ? "" : " Order marked Shipped to you.") + sent + " Tap Print label.");
       if (!b.test_mode) {
+        o.tracking_carrier = b.carrier;
+        o.tracking_number = b.tracking_number;
+        o.shipping_status = "shipped";
+        const shipRow = panel.closest(".admin-ship-row");
+        if (shipRow) shipRow.dispatchEvent(new CustomEvent("admin-tracking-changed"));
         labelBtn.textContent = "Shipping label ✓";
         const badge = panel.closest(".admin-ship-row") && panel.closest(".admin-ship-row").querySelector(".admin-ship-badge");
         if (badge) badge.textContent = shippingLabel("shipped");
@@ -3313,6 +3476,7 @@ function adminLabelPanel(o, labelBtn) {
       const row = panel.closest(".admin-ship-row");
       const badge = row && row.querySelector(".admin-ship-badge");
       if (badge) badge.textContent = shippingLabel("shipped");
+      if (row) row.dispatchEvent(new CustomEvent("admin-tracking-changed"));
       handSay("Saved. " + (n.email && n.email.ok ? (n.live ? "Customer emailed the tracking link." : "Test mode: the email went to you, not the customer.") : "The email didn\u2019t go out" + (n.error ? ": " + n.error : n.email && n.email.detail ? ": " + n.email.detail : "") + "."));
     } catch (err) {
       handSay("Couldn\u2019t save: " + (err.message || err));
