@@ -29,8 +29,11 @@
 //       order's shipping step forward to match and, when it moves, emails
 //       (and texts) the customer through send-shipping-update
 //   { action: "factory_status_all" }  factory_status for every suit still
-//       at the factory, plus the carrier's tracking (Shippo) for orders
-//       shipped to the customer (out for delivery / delivered); run every hour by pg_cron (see
+//       at the factory, plus DHL tracking (Shippo) of the factory's box to
+//       the shop (picked up -> on its way from the factory, delivered ->
+//       final inspection with us), plus the carrier's tracking (Shippo) for
+//       orders shipped to the customer (shipped / out for delivery /
+//       delivered); run every hour by pg_cron (see
 //       supabase/sql/32_factory_status_hourly.sql), which signs in with the
 //       x-cron-token header and may run only this action
 //   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
@@ -468,8 +471,9 @@ async function factoryStatusAll() {
     if (out.ok) updated++;
     else failed++;
   }
+  const inbound = await inboundTrackingAll().catch((e) => ({ ok: false, error: String(e) }));
   const carriers = await carrierTrackingAll().catch((e) => ({ ok: false, error: String(e) }));
-  return { ok: true, checked: rows.length, updated, failed, carriers };
+  return { ok: true, checked: rows.length, updated, failed, inbound, carriers };
 }
 
 // Orders already shipped to the customer: asks Shippo where the parcel is
@@ -484,8 +488,62 @@ export function trackStage(t: Record<string, any>): string {
   if (st.status === "DELIVERED") return "delivered";
   const sub = String((st.substatus && st.substatus.code) || "").toLowerCase();
   if (sub === "out_for_delivery" || /out for delivery/i.test(String(st.status_details || ""))) return "out_for_delivery";
+  // Picked up by the carrier: an order still at "Final inspection with us"
+  // (tracking typed in before the parcel left) moves to "Shipped to you".
+  if (st.status === "TRANSIT") return "shipped";
   return "";
 }
+// The factory's DHL shipment to the shop (Daniel, 2026-11-12: "update the
+// status of suits based on its tracking info"). For every order whose suits
+// have a factory waybill and haven't reached the shop yet: DHL picked up ->
+// "On its way from the factory"; DHL delivered -> "Final inspection with us".
+// When an order's suits came on different waybills, the order moves only as
+// far as its slowest box. Forward only, and the customer gets the usual email
+// at each move. Runs inside the hourly job.
+async function inboundTrackingAll() {
+  const key = env("SHIPPO_API_KEY");
+  if (!key || key.startsWith("shippo_test_")) return { ok: true, skipped: "no live Shippo key" };
+  const before = ["", "received", "sent_to_factory", "cutting", "sewing", "finishing", "factory_shipped"];
+  const { data, error } = await supabase.from("orders").select("order_id, shipping_status, factory_waybill")
+    .not("factory_waybill", "is", null).limit(500);
+  if (error) throw new Error(error.message);
+  const byOrder = new Map<string, { status: string; waybills: Set<string> }>();
+  for (const r of data || []) {
+    const st = String(r.shipping_status || "");
+    const w = String(r.factory_waybill || "").replace(/\s+/g, "");
+    if (!w || !before.includes(st)) continue;
+    const o = byOrder.get(String(r.order_id)) || { status: st, waybills: new Set<string>() };
+    o.waybills.add(w);
+    byOrder.set(String(r.order_id), o);
+  }
+  const seen = new Map<string, string>(); // waybill -> stage it reached ("" = not picked up / unknown)
+  let moved = 0, failed = 0;
+  for (const [orderId, o] of byOrder) {
+    let stage = "final_check";
+    for (const w of o.waybills) {
+      if (!seen.has(w)) {
+        try {
+          const res = await fetch("https://api.goshippo.com/tracks/dhl_express/" + encodeURIComponent(w), { headers: { authorization: "ShippoToken " + key } });
+          if (!res.ok) throw new Error(String(res.status));
+          const t = await res.json();
+          const st = t?.tracking_status?.status;
+          seen.set(w, st === "DELIVERED" ? "final_check" : st === "TRANSIT" ? "factory_shipped" : "");
+        } catch {
+          failed++;
+          seen.set(w, "");
+        }
+      }
+      const s = seen.get(w) || "";
+      if (SHIPPING_ORDER.indexOf(s) < SHIPPING_ORDER.indexOf(stage)) stage = s;
+    }
+    if (!stage || SHIPPING_ORDER.indexOf(stage) <= SHIPPING_ORDER.indexOf(o.status)) continue;
+    await supabase.from("orders").update({ shipping_status: stage, shipping_updated_at: new Date().toISOString() }).eq("order_id", orderId);
+    await notifyCustomer(orderId);
+    moved++;
+  }
+  return { ok: true, orders: byOrder.size, waybills: seen.size, moved, failed };
+}
+
 // One parcel's tracking for the admin (action "track").
 async function trackParcel(carrierName: string, number: string) {
   const carrier = SHIPPO_CARRIER[carrierName.toLowerCase()];
@@ -522,7 +580,7 @@ async function carrierTrackingAll() {
   const key = env("SHIPPO_API_KEY");
   if (!key || key.startsWith("shippo_test_")) return { ok: true, skipped: "no live Shippo key" };
   const { data, error } = await supabase.from("orders").select("order_id, shipping_status, tracking_carrier, tracking_number")
-    .in("shipping_status", ["shipped", "out_for_delivery"]).not("tracking_number", "is", null).limit(500);
+    .in("shipping_status", ["final_check", "shipped", "out_for_delivery"]).not("tracking_number", "is", null).limit(500);
   if (error) throw new Error(error.message);
   const seen = new Map<string, Record<string, any>>();
   for (const r of data || []) if (!seen.has(String(r.order_id))) seen.set(String(r.order_id), r);
