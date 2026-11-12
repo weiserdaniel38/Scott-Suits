@@ -385,8 +385,8 @@ function measureInputHtml(prefix, m) {
     m.id + '" placeholder="' + (m.step === "1" ? "0" : "0.0") + '"><span class="unit">' + (m.unit || "cm") + "</span></div>"
   );
 }
-// Each measurement's allowed range (the factory's limits, see MEASUREMENTS
-// in catalog.js), as the customer reads it.
+// Each measurement's own hard limit (MEASUREMENTS in catalog.js, inside the
+// factory's much wider ones), as the customer reads it.
 function measureInRange(m, val) {
   return !(m.min !== undefined && val < m.min) && !(m.max !== undefined && val > m.max);
 }
@@ -400,27 +400,123 @@ function measureRangeText(m) {
   }
   return m.min + " to " + m.max + " " + (m.unit || "cm");
 }
-// Shows "Must be 72 to 211 cm." under a field once a value outside its range
-// is entered, and clears it as soon as the value is fixed.
+// Cross-field checks (Daniel, 2026-11-12: "don't allow bad measurements").
+// Each rule looks at two or more fields; "hard" means the pair can't both be
+// right on a real person (blocks saving and going on, like an out-of-range
+// number), "soft" only shows "double-check". Height is in inches, the rest cm.
+// Ratios come from real orders (stomach 8-14 cm over pants waist, outseam
+// 0.54-0.58 of height, jacket length 0.41-0.45 of height).
+const MEASURE_CROSS_RULES = [
+  { ids: ["knee", "thigh"], hard: (v) => v.knee >= v.thigh, text: "Knee should be smaller than Thigh" },
+  { ids: ["cuff", "knee"], hard: (v) => v.cuff > v.knee, text: "Cuff (leg opening) should be smaller than Knee" },
+  { ids: ["thigh", "hips"], hard: (v) => v.thigh >= v.hips * 0.8, text: "Thigh looks too big next to Hips" },
+  { ids: ["wrist", "bicep"], hard: (v) => v.wrist >= v.bicep, text: "Wrist should be smaller than Bicep" },
+  { ids: ["bicep", "chest"], hard: (v) => v.bicep * 2 >= v.chest, text: "Bicep looks too big next to Chest" },
+  { ids: ["stomach", "chest"], hard: (v) => v.stomach < v.chest * 0.7 || v.chest < v.stomach * 0.7, text: "Chest and Stomach are too far apart" },
+  { ids: ["stomach", "waist"], hard: (v) => v.stomach < v.waist * 0.7, soft: (v) => v.stomach < v.waist * 0.93, text: "Jacket Stomach is usually bigger than Pants Waist" },
+  { ids: ["waist", "hips"], hard: (v) => v.waist > v.hips * 1.35, soft: (v) => v.waist > v.hips * 1.1, text: "Waist is usually not bigger than Hips" },
+  { ids: ["leg_length", "height"], hard: (v) => v.leg_length < v.height * 2.54 * 0.42 || v.leg_length > v.height * 2.54 * 0.75, soft: (v) => v.leg_length < v.height * 2.54 * 0.5 || v.leg_length > v.height * 2.54 * 0.66, text: "Pants Length doesn't match your height" },
+  { ids: ["back_jacket", "height"], hard: (v) => v.back_jacket < v.height * 2.54 * 0.32 || v.back_jacket > v.height * 2.54 * 0.52, soft: (v) => v.back_jacket < v.height * 2.54 * 0.37 || v.back_jacket > v.height * 2.54 * 0.48, text: "Jacket Length doesn't match your height" },
+  { ids: ["sleeve_length", "height"], hard: (v) => v.sleeve_length < v.height * 2.54 * 0.28 || v.sleeve_length > v.height * 2.54 * 0.46, text: "Sleeve Length doesn't match your height" },
+  { ids: ["body_thigh", "body_seat"], hard: (v) => v.body_thigh >= v.body_seat * 0.8, text: "Thigh looks too big next to Seat" },
+  { ids: ["body_bicep", "body_chest"], hard: (v) => v.body_bicep * 2 >= v.body_chest, text: "Bicep looks too big next to Chest" },
+  { ids: ["body_stomach", "body_chest"], hard: (v) => v.body_stomach < v.body_chest * 0.7 || v.body_chest < v.body_stomach * 0.7, text: "Chest and Stomach are too far apart" },
+  { ids: ["body_outseam", "height"], hard: (v) => v.body_outseam < v.height * 2.54 * 0.42 || v.body_outseam > v.height * 2.54 * 0.75, soft: (v) => v.body_outseam < v.height * 2.54 * 0.5 || v.body_outseam > v.height * 2.54 * 0.66, text: "Outseam doesn't match your height" },
+  { ids: ["body_back_length", "height"], hard: (v) => v.body_back_length < v.height * 2.54 * 0.32 || v.body_back_length > v.height * 2.54 * 0.52, text: "Jacket Length doesn't match your height" },
+];
+// Reads a measurement field by prefix ("m_" flow, "pm_" My Account) as a
+// number, or null. Used as the "other fields" lookup for the checks below.
+function measureFieldGetter(prefix) {
+  return (id) => {
+    const el = document.getElementById(prefix + id);
+    const v = el ? parseFloat(el.value) : NaN;
+    return isNaN(v) || v <= 0 ? null : v;
+  };
+}
+function measureValuesGetter(values) {
+  return (id) => {
+    const v = values ? parseFloat(values[id]) : NaN;
+    return isNaN(v) || v <= 0 ? null : v;
+  };
+}
+// The one problem to show for this field, or null:
+// { hard: true, text } blocks; { hard: false, text } only warns.
+// get(id) returns another field's value (null if empty); without it only
+// this field's own limits are checked.
+function measureIssue(m, val, get) {
+  if (val === null || val === undefined || isNaN(val)) return null;
+  if (!measureInRange(m, val)) return { hard: true, text: "Must be " + measureRangeText(m) + "." };
+  let soft = null;
+  if (get) {
+    for (const r of MEASURE_CROSS_RULES) {
+      if (r.ids.indexOf(m.id) < 0) continue;
+      const v = {};
+      let ok = true;
+      r.ids.forEach((id) => {
+        v[id] = id === m.id ? val : get(id);
+        if (v[id] === null || v[id] === undefined) ok = false;
+        // The other number is already out of its own range: that field
+        // shows the problem, so don't blame this one too.
+        const om = id === m.id ? null : MEASUREMENTS.find((x) => x.id === id);
+        if (ok && om && !measureInRange(om, v[id])) ok = false;
+      });
+      if (!ok) continue;
+      if (r.hard && r.hard(v)) return { hard: true, text: r.text + ". Please check both." };
+      if (!soft && r.soft && r.soft(v)) soft = { hard: false, text: r.text + ". Please double-check." };
+    }
+  }
+  if (soft) return soft;
+  if (m.typ && (val < m.typ[0] || val > m.typ[1])) {
+    return { hard: false, text: "Looks unusual (most are " + measureTypText(m) + "). Please double-check." };
+  }
+  return null;
+}
+function measureHardOk(m, val, get) {
+  const i = measureIssue(m, val, get);
+  return !(i && i.hard);
+}
+function measureTypText(m) {
+  if (m.id === "height") {
+    const ftIn = (n) => Math.floor(n / 12) + "'" + (n % 12) + '"';
+    return ftIn(m.typ[0]) + " to " + ftIn(m.typ[1]);
+  }
+  return m.typ[0] + " to " + m.typ[1] + " " + (m.unit || "cm");
+}
+// Shows the field's problem under it: red "Must be 72 to 170 cm." or a
+// cross-field clash (blocks), amber "Looks unusual ... double-check"
+// (doesn't block). Rechecks every field in the same form on each change, so
+// fixing Thigh clears the Knee message too.
 function bindMeasureRange(field, prefix, m) {
   if (m.min === undefined && m.max === undefined) return;
   const el = field.querySelector("#" + prefix + m.id);
   const msg = document.createElement("p");
   msg.className = "measure-field-error";
   msg.hidden = true;
-  msg.textContent = "Must be " + measureRangeText(m) + ".";
   field.appendChild(msg);
   const check = (strict) => {
     const raw = el.value;
     const val = parseFloat(raw);
-    const bad = raw !== "" && !isNaN(val) && !measureInRange(m, val);
-    if (bad && !strict && msg.hidden) return; // only clear while typing
-    msg.hidden = !bad;
-    field.classList.toggle("measure-field-invalid", bad);
+    const issue = raw === "" || isNaN(val) ? null : measureIssue(m, val, measureFieldGetter(prefix));
+    // While typing, don't flash a message for a half-typed number; only
+    // clear one that's already showing (or update it).
+    if (issue && !strict && msg.hidden) return;
+    msg.hidden = !issue;
+    if (issue) msg.textContent = issue.text;
+    msg.classList.toggle("measure-field-warn", !!issue && !issue.hard);
+    field.classList.toggle("measure-field-invalid", !!issue && issue.hard);
+    field.classList.toggle("measure-field-unusual", !!issue && !issue.hard);
+  };
+  el.measureCheck = check;
+  const recheckOthers = () => {
+    MEASUREMENTS.forEach((o) => {
+      if (o.id === m.id) return;
+      const other = document.getElementById(prefix + o.id);
+      if (other && other.measureCheck && other.value !== "") other.measureCheck(true);
+    });
   };
   field.addEventListener("input", () => check(false));
-  field.addEventListener("change", () => check(true));
-  field.addEventListener("focusout", () => check(true));
+  field.addEventListener("change", () => { check(true); recheckOthers(); });
+  field.addEventListener("focusout", () => { check(true); recheckOthers(); });
 }
 // Set true only once an order has actually been saved -- used solely to mark
 // the "Order" step in the progress bar as done; see updateProcessBar().
@@ -1336,8 +1432,9 @@ function collectProfileMeasurements() {
 }
 // Saved measurements outside their allowed range, as "Chest (72 to 211 cm)".
 function profileMeasurementsOutOfRange(values) {
-  return MEASUREMENTS.filter((m) => values[m.id] !== undefined && !measureInRange(m, values[m.id]))
-    .map((m) => measurePartLabel(m) + " (" + measureRangeText(m) + ")");
+  const get = measureValuesGetter(values);
+  return MEASUREMENTS.filter((m) => values[m.id] !== undefined && !measureHardOk(m, values[m.id], get))
+    .map((m) => measurePartLabel(m) + " (" + measureIssue(m, values[m.id], get).text.replace(/\.$/, "") + ")");
 }
 
 // AUTOSAVE (Daniel, 2026-11-10: measurements typed into a customer's
@@ -1391,8 +1488,9 @@ async function autosaveProfileMeasurements() {
   if (!currentUser) return;
   const values = collectProfileMeasurements();
   const outOfRange = profileMeasurementsOutOfRange(values);
+  const getAll = measureValuesGetter(Object.assign({}, values));
   MEASUREMENTS.forEach((m) => {
-    if (values[m.id] !== undefined && !measureInRange(m, values[m.id])) delete values[m.id];
+    if (values[m.id] !== undefined && !measureHardOk(m, values[m.id], getAll)) delete values[m.id];
   });
   if (!MEASUREMENTS.some((m) => values[m.id] !== undefined)) return;
   const ok = await saveProfileMeasurements(values);
@@ -7994,7 +8092,7 @@ function refreshMeasHub() {}
   };
   const isDone = (m) => {
     const v = valueOf(m);
-    return v !== null && measureInRange(m, v);
+    return v !== null && measureHardOk(m, v, measureFieldGetter("m_"));
   };
   const shown = (m, v) => {
     if (m.id === "height") {
@@ -8341,9 +8439,26 @@ function refreshMeasHub() {}
     if (!m) return true;
     const v = valueOf(m);
     const err = borrowed && borrowed.field.querySelector(".measure-field-error");
-    if (v !== null && measureInRange(m, v)) return true;
+    const issue = v === null ? null : measureIssue(m, v, measureFieldGetter("m_"));
+    if (v !== null && (!issue || !issue.hard)) {
+      // An unusual (but possible) number: show the warning and make Next
+      // need a second tap, so it isn't skipped past unseen.
+      if (issue && borrowed && borrowed.field.dataset.warnAck !== String(v)) {
+        borrowed.field.dataset.warnAck = String(v);
+        if (err) {
+          err.textContent = issue.text + " Tap Next again if it's right.";
+          err.classList.add("measure-field-warn");
+          err.hidden = false;
+        }
+        borrowed.field.classList.add("measure-field-unusual");
+        return false;
+      }
+      return true;
+    }
     if (err) {
-      err.textContent = v === null ? "Please enter a number." : "Must be " + measureRangeText(m) + ".";
+      err.textContent = v === null ? "Please enter a number." : issue.text;
+      err.classList.remove("measure-field-warn");
+      borrowed.field.classList.remove("measure-field-unusual");
       err.hidden = false;
       borrowed.field.classList.add("measure-field-invalid");
     }
@@ -8923,9 +9038,9 @@ function collectMeasurements() {
     const val = parseFloat(raw);
     if (raw === "" || isNaN(val) || val <= 0) {
       missing.push(measurePartLabel(m));
-    } else if (!measureInRange(m, val)) {
+    } else if (!measureHardOk(m, val, measureFieldGetter("m_"))) {
       missing.push(measurePartLabel(m));
-      outOfRange.push(measurePartLabel(m) + ": " + measureRangeText(m));
+      outOfRange.push(measurePartLabel(m) + ": " + measureIssue(m, val, measureFieldGetter("m_")).text.replace(/^Must be/, "must be"));
     } else {
       values[m.id] = val;
     }
@@ -9346,7 +9461,28 @@ function renderTailorChecklist() {
       }
     });
     field.append(box2, document.createTextNode("cm"));
-    li.append(num, name, field);
+    // Same checks as the measuring pages: red for a number that can't be
+    // right (it won't be used), amber for an unusual one.
+    const warn = document.createElement("p");
+    warn.className = "tc-warn";
+    warn.hidden = true;
+    const checkBox = (strict) => {
+      const v = parseFloat(box2.value);
+      const issue = isNaN(v) ? null : measureIssue(m, v, measureFieldGetter("m_"));
+      if (issue && !strict && warn.hidden) return;
+      warn.hidden = !issue;
+      if (issue) warn.textContent = issue.text;
+      warn.classList.toggle("tc-warn-hard", !!issue && issue.hard);
+    };
+    box2.addEventListener("input", () => checkBox(false));
+    box2.addEventListener("change", () => checkBox(true));
+    box2.addEventListener("blur", () => {
+      checkBox(true);
+      list.querySelectorAll(".tc-input").forEach((o) => { if (o !== box2 && o.value && o.tcCheck) o.tcCheck(true); });
+    });
+    box2.tcCheck = checkBox;
+    if (box2.value) checkBox(true);
+    li.append(num, name, field, warn);
     list.appendChild(li);
     // Copied as "6. Jacket Length:" then "(instruction)" on the next line:
     // real bold when pasted into Notes/Mail, bold letters in a plain text.
@@ -10523,7 +10659,7 @@ async function saveOrderMeasurements() {
   if (!target) return;
   const { values, missing, outOfRange } = collectMeasurements();
   if (outOfRange.length) {
-    alert("These measurements are outside what can be made. Please check them. Allowed:\n\n" + outOfRange.join("\n"));
+    alert("Please fix these measurements first:\n\n" + outOfRange.join("\n"));
     return;
   }
   if (missing.length) {
@@ -10730,7 +10866,7 @@ function commitCurrentSuitToCart(opts) {
     outOfRange = [];
   }
   if (outOfRange.length) {
-    alert("These measurements are outside what can be made. Please check them. Allowed:\n\n" + outOfRange.join("\n"));
+    alert("Please fix these measurements first:\n\n" + outOfRange.join("\n"));
     return false;
   }
   if (missingMeasurements.length) {
@@ -12430,10 +12566,11 @@ async function flushMeasProfileSave() {
   const values = currentMeasValues();
   let any = false;
   const off = [];
+  const getAll = measureValuesGetter(Object.assign({}, values));
   MEASUREMENTS.forEach((m) => {
     if (values[m.id] === undefined) return;
     const val = parseFloat(values[m.id]);
-    if (isNaN(val) || val <= 0 || !measureInRange(m, val)) {
+    if (isNaN(val) || val <= 0 || !measureHardOk(m, val, getAll)) {
       if (!isNaN(val) && val > 0) off.push(m.id === "back_jacket" ? "Jacket Length" : m.label);
       delete values[m.id];
     } else {

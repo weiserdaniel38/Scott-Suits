@@ -264,3 +264,7 @@ html[data-sw-theme="midnight"] .hiw-icon img{filter:invert(1) hue-rotate(180deg)
 html[data-sw-theme="midnight"] .opt-swatch.upload-swatch:not(.has-photo){background-color:var(--surface) !important;color:var(--brass);}
 /* No payment here, so no promo codes. */
 html[data-brand="sw"] #promoBlock{display:none !important;}
+
+/* Measurement "looks unusual" warnings: lighter amber on the dark panels. */
+html[data-brand="sw"] #measWizard .measure-field-error.measure-field-warn,html[data-brand="sw"] #measWizard .tc-warn{color:#e0b660;}
+html[data-brand="sw"] #measWizard .tc-warn.tc-warn-hard{color:#e2826e;}
