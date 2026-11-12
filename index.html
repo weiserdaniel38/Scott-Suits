@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261112measlimits">
+<link rel="stylesheet" href="./style.css?v=20261112herovid">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261112swcatchup"></script>
 <link rel="stylesheet" href="./brand.css?v=20261112measlimits">
@@ -245,6 +245,32 @@
        .hero-sketch-left CSS) -- a faint jacket illustration + tagline that
        fades into the page background, behind .hero-text (lower z-index),
        so it reads as texture rather than competing with the real content. -->
+  <!-- Video hero MOCKUP (2026-11-12): only switched on by ?herovideo=1, so the
+       live home page is unchanged until Daniel says go. Nothing downloads
+       unless the flag is on (no src until the script below sets one). Phones
+       get a tall 406x720 crop (~450 KB), wider screens the 1280x720 cut
+       (~1.2 MB). Reduced-motion / data-saver visitors get the still poster. -->
+  <div class="hero-video-wrap" aria-hidden="true">
+    <video class="hero-video" id="heroVideo" muted loop playsinline preload="none"></video>
+  </div>
+  <script>
+  (function(){
+    try{
+      var on=/[?&]herovideo=1\b/.test(location.search);
+      if(!on) return;
+      document.documentElement.classList.add('hero-video-on');
+      var v=document.getElementById('heroVideo');
+      var tall=window.matchMedia('(max-width:900px)').matches;
+      var base='./assets/hero-video/';
+      v.poster=base+(tall?'poster-tall.jpg':'poster-wide.jpg')+'?v=20261112vid';
+      var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(navigator.connection&&navigator.connection.saveData);
+      if(still) return;
+      v.muted=true;v.defaultMuted=true;v.setAttribute('muted','');v.autoplay=true;
+      v.src=base+(tall?'hero-tall.mp4':'hero-wide.mp4')+'?v=20261112vid';
+      var p=v.play();if(p&&p.catch)p.catch(function(){});
+    }catch(e){}
+  })();
+  </script>
   <img class="hero-sketch-left" src="./assets/hero-sketch-left.png?v=20261101fast" loading="lazy" decoding="async" alt="Sketch of a suit jacket" aria-hidden="true">
   <div class="hero-grid">
     <div class="hero-text">
