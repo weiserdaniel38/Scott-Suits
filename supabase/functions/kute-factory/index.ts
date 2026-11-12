@@ -39,8 +39,10 @@
 //   { action: "factory_probe", id, set: { column: value }, swap?: { code: newCode }, orderNo? }
 //       saves a TEST draft of that suit with some choices changed, to see
 //       which combinations the factory refuses; the row is not changed
-//   { action: "fabric_stock_all" }  checks the factory's stock (metres) of
-//       every fabric on the site and saves it as fabric-stock.json in the
+//   { action: "fabric_stock_all" }  checks the factory's stock (metres) and
+//       price per metre of every fabric on the site; copies the live prices
+//       into the admin-only shop_costs row (so "My Cost" and order profit
+//       match what the factory charges) and saves stock as fabric-stock.json in the
 //       public suit-images storage bucket, which the site reads to hide fabrics without enough cloth for a suit; run
 //       daily by pg_cron (supabase/sql/37_fabric_stock_daily.sql) with the
 //       same x-cron-token as factory_status_all (Daniel, 2026-11-01)
@@ -620,6 +622,7 @@ async function fabricStockAll() {
   }
   const list = [...names];
   const rows: { code: string; metres: number | null; error: string | null; checked_at: string }[] = [];
+  const prices: Record<string, number> = {};
   let next = 0;
   const worker = async () => {
     while (next < list.length) {
@@ -633,6 +636,16 @@ async function fabricStockAll() {
         else error = String(r?.data?.message || "no stock figure").slice(0, 200);
       } catch (e) {
         error = String((e as Error).message || e).slice(0, 200);
+      }
+      // The factory's live price per metre (what it actually charges; the
+      // printed 26FW price lists are out of date for some fabrics).
+      try {
+        const f = (await kute("GET", "/fabric/fabric/queryFabric", { fabricCode: code })) as { data?: any };
+        const hit = ((f?.data?.data || []) as any[]).find((x) => String(x?.fabricCode || "").toUpperCase() === code.toUpperCase());
+        const pr = Number(hit?.price);
+        if (Number.isFinite(pr) && pr > 0) prices[name] = pr;
+      } catch {
+        // keep the saved price
       }
       rows.push({ code: name, metres, error, checked_at: new Date().toISOString() });
     }
@@ -649,7 +662,32 @@ async function fabricStockAll() {
     { upsert: true, contentType: "application/json", cacheControl: "300" });
   if (error) throw new Error("couldn't save fabric stock: " + error.message);
   const low = rows.filter((r) => r.metres !== null && r.metres < 4).map((r) => r.code + " " + r.metres + "m");
-  return { ok: true, checked: rows.length, failed: rows.filter((r) => r.metres === null).length, low };
+  const priceChanges = await savePrices(prices);
+  return { ok: true, checked: rows.length, failed: rows.filter((r) => r.metres === null).length, low, priceChanges };
+}
+
+// Copies the factory's live price per metre into the admin-only
+// factory_codes row list='shop_costs' (perMeter, keyed by the site's fabric
+// value) and returns what changed, e.g. "26SU185.DZZ0105 42->27".
+async function savePrices(prices: Record<string, number>): Promise<string[]> {
+  if (!Object.keys(prices).length) return [];
+  const { data: row, error } = await supabase.from("factory_codes").select("data")
+    .eq("list", "shop_costs").eq("category", "").maybeSingle();
+  if (error || !row?.data?.perMeter) return [];
+  const per = { ...(row.data.perMeter as Record<string, number>) };
+  const changes: string[] = [];
+  for (const [k, v] of Object.entries(prices)) {
+    if (Number(per[k]) !== v) {
+      changes.push(k + " " + (per[k] ?? "new") + "->" + v);
+      per[k] = v;
+    }
+  }
+  if (changes.length) {
+    const { error: upErr } = await supabase.from("factory_codes").update({ data: { ...row.data, perMeter: per } })
+      .eq("list", "shop_costs").eq("category", "");
+    if (upErr) return ["couldn't save prices: " + upErr.message];
+  }
+  return changes;
 }
 
 // The daily job's token: made inside the database by
