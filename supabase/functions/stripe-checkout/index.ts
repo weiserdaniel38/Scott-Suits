@@ -14,6 +14,7 @@
 //       discount before paying. Send the customer's Authorization: Bearer
 //       token when they're signed in (codes kept to certain accounts need it).
 //       The real discount is worked out again in "create" from the saved order.
+//       A paid-in-person code (cash or Zelle) also returns paid_outside: true.
 //   { action: "cancel", order_id }   -> { cancelled } or { paid }
 //       Called when the customer backs out of Stripe's page. Closes the
 //       Stripe session and removes the unpaid order, so trying again doesn't
@@ -38,6 +39,11 @@
 // "create" checks it again (account, uses, end date) and takes the discount
 // off the suits + Alteration Protection with a one-time Stripe coupon, never
 // off shipping or tax. At least $1 of the goods is always left to pay.
+//
+// Paid in person (supabase/sql/41_paid_outside_promo.sql): a code with
+// paid_outside = true (Daniel's cash/Zelle code) skips Stripe. "create"
+// marks the order paid at once (paid_outside = true, amount = suits +
+// protection, no shipping or tax) and returns { paid, paid_outside }.
 //
 // Admin orders (admin_no_payment) never come through here.
 //
@@ -215,6 +221,7 @@ type Promo = {
   once_per_customer: boolean;
   expires_on: string | null;
   active: boolean;
+  paid_outside?: boolean | null;
 };
 
 // Percent off first, then dollars off, leaving at least $1 to pay.
@@ -241,7 +248,7 @@ async function checkPromo(rawCode: unknown, userId: string | null, email: string
   if (!/^[A-Z0-9_-]{3,30}$/.test(code)) return { error: "That promo code isn't valid." };
   const { data, error } = await supabase
     .from("promo_codes")
-    .select("code, amount_off_usd, percent_off, allowed_user_ids, max_uses, once_per_customer, expires_on, active")
+    .select("code, amount_off_usd, percent_off, allowed_user_ids, max_uses, once_per_customer, expires_on, active, paid_outside")
     .eq("code", code)
     .limit(1);
   if (error) throw new Error(error.message);
@@ -288,7 +295,7 @@ async function promoCheck(body: Record<string, unknown>, authHeader: string | nu
   if (!userId) email = String(body.email || "").trim().toLowerCase();
   const { promo, error } = await checkPromo(body.code, userId, email);
   if (!promo) return json({ ok: false, error });
-  return json({ ok: true, code: promo.code, amount_off_usd: Number(promo.amount_off_usd) || 0, percent_off: Number(promo.percent_off) || 0 });
+  return json({ ok: true, code: promo.code, amount_off_usd: Number(promo.amount_off_usd) || 0, percent_off: Number(promo.percent_off) || 0, paid_outside: !!promo.paid_outside });
 }
 
 // The order form's free-text country as a 2-letter code Stripe understands,
@@ -428,6 +435,7 @@ async function createCheckout(orderId: string, origin: string | null) {
   if (promoCode) {
     const { promo, error } = await checkPromo(promoCode, rows[0].user_id, email.toLowerCase(), orderId);
     if (!promo) return json({ error: "Promo code " + promoCode + ": " + error }, 400);
+    if (promo.paid_outside) return await markPaidOutside(rows);
     discountCents = promoDiscountCents(goodsCents(rows), promo);
     if (discountCents > 0) {
       const coupon = await stripe("POST", "coupons", {
@@ -473,6 +481,19 @@ async function createCheckout(orderId: string, origin: string | null) {
     .eq("payment_status", "awaiting_payment");
   if (error) return json({ error: error.message }, 500);
   return json({ url: session.url });
+}
+
+// Paid in person (cash or Zelle): no Stripe, the order is paid now.
+async function markPaidOutside(rows: OrderRow[]) {
+  const orderId = rows[0].order_id;
+  const amount = goodsCents(rows) / 100;
+  const { error } = await supabase
+    .from("orders")
+    .update({ payment_status: "paid", paid_outside: true, amount_paid_usd: amount, shipping_usd: 0, tax_usd: 0, promo_discount_usd: null, paid_at: new Date().toISOString() })
+    .eq("order_id", orderId)
+    .eq("payment_status", "awaiting_payment");
+  if (error) return json({ error: error.message }, 500);
+  return json({ paid: true, paid_outside: true, order_id: orderId, amount, shipping: 0, tax: 0, discount: 0 });
 }
 
 // Marks the order paid if Stripe says this session was paid in full.

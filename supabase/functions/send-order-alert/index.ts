@@ -70,6 +70,7 @@ export type AlertRow = {
   shipping_zip: string | null;
   shipping_country: string | null;
   payment_status: string | null;
+  paid_outside?: boolean | null;
   admin_no_payment: boolean | null;
   amount_paid_usd: number | null;
   shipping_usd: number | null;
@@ -102,6 +103,8 @@ export function orderAlertEmail(rows: AlertRow[], siteUrl = SITE_URL) {
     ? "Admin order, placed without payment"
     : request
     ? brand!.name + " request, no payment"
+    : paid && rows.some((x) => x.paid_outside)
+    ? "Paid in person (cash or Zelle) " + money(r.amount_paid_usd)
     : paid
     ? "Paid " + money(r.amount_paid_usd) +
       (Number(r.shipping_usd) ? " (incl. shipping " + money(r.shipping_usd) + ")" : "") +
@@ -223,7 +226,7 @@ Deno.serve(async (req) => {
     .select(
       "order_id, suit_number, suit_type, fabric, item_price_usd, alteration_protection, alteration_protection_usd, customer_name, customer_email, customer_phone, fulfillment, " +
         "shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_zip, shipping_country, " +
-        "payment_status, admin_no_payment, amount_paid_usd, shipping_usd, tax_usd, client_form_text, created_at, brand",
+        "payment_status, paid_outside, admin_no_payment, amount_paid_usd, shipping_usd, tax_usd, client_form_text, created_at, brand",
     )
     .eq("order_id", orderId)
     .order("suit_number", { ascending: true });
