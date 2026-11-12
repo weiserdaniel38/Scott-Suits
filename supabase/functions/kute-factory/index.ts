@@ -24,7 +24,9 @@
 //       again updates the same draft.
 //   { action: "factory_redraft", id }  the admin deleted the suit's draft
 //       on the factory site: saves a NEW draft (old one must be a draft;
-//       the factory's duplicate check stops it if the old one is still there)
+//       the factory's duplicate check stops it if the old one is still there;
+//       with newRef: true, after the admin checked My Cart, it goes under
+//       the next reference SS-...-1B)
 //   { action: "factory_submit", id }  SUBMITS that suit's own saved draft
 //       for production (Daniel, 2026-11-03: submit from his phone). Only
 //       its own draft (same order number, still a draft at the factory) is
@@ -85,7 +87,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildFactoryOrder, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes, type SizeRanges } from "./order.ts";
+import { buildFactoryOrder, defaultFactoryRef, FACTORY_STAGE, SHIPPING_ORDER, type Catalog, type EmbCodes, type SizeRanges } from "./order.ts";
 
 const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
 const BASE = "https://platform.kutetailor.com/api";
@@ -342,6 +344,14 @@ async function saveDraft(input: Record<string, unknown>) {
 // submitted), and the factory's own duplicate check on the suit's reference
 // stops it if the old draft is really still there (no new reference is ever
 // made up, Daniel's rule 2026-10-26).
+// The suit's next factory reference after a deleted draft: SS-...-1 ->
+// SS-...-1B -> SS-...-1C.
+function nextRef(row: Record<string, unknown>): string {
+  const base = defaultFactoryRef(row);
+  const cur = String(row.factory_ref || "");
+  const m = cur.startsWith(base) ? /^([B-Y])$/.exec(cur.slice(base.length)) : null;
+  return base + (m ? String.fromCharCode(m[1].charCodeAt(0) + 1) : "B");
+}
 async function redraft(input: Record<string, unknown>) {
   const { row, body, warnings, blocking } = await factoryOrder(input);
   const oldNo = String(row.factory_order_no || "");
@@ -362,7 +372,31 @@ async function redraft(input: Record<string, unknown>) {
   const ok = r.httpStatus === 200 && String(res.code) === "0" && !!d.orderNo;
   const said = String(d.errorMessage || res.msg || res.message || "");
   if (!ok && /duplicate customer/i.test(said)) {
-    return { ok: false, orderNo: oldNo, error: "The factory still has this suit (" + body.customerNo + "), so it wasn't sent again. Check My Cart on the factory site for draft " + oldNo + "." };
+    // Tested 2026-11-12 (Nathan Friedman, DWNYP2611003): the factory's
+    // duplicate check still counts a draft deleted from My Cart. Only after
+    // the admin has looked at My Cart and confirmed the old draft is gone
+    // (newRef: true) is the suit saved under the next reference
+    // (SS-...-1B, -1C, ...), and that reference is kept for every later
+    // update and the submit.
+    if (!input.newRef) {
+      return { ok: false, orderNo: oldNo, needsNewRef: true, ref: body.customerNo, nextRef: nextRef(row),
+        error: "The factory still counts this suit (" + body.customerNo + ") under draft " + oldNo + "." };
+    }
+    body.customerNo = nextRef(row);
+    const cust = (body.customer || {}) as Record<string, unknown>;
+    cust.remark = String(cust.remark || "").replace(String(row.factory_ref || defaultFactoryRef(row)), String(body.customerNo));
+    const r2 = await kute("POST", "/order/saveOrder", {}, body);
+    const res2 = (r2.data || {}) as Record<string, any>;
+    const d2 = res2.data || {};
+    const ok2 = r2.httpStatus === 200 && String(res2.code) === "0" && !!d2.orderNo;
+    if (!ok2) {
+      return { ok: false, orderNo: oldNo, error: String(d2.errorMessage || res2.msg || res2.message || "factory said " + r2.httpStatus) + " (tried " + body.customerNo + ")" };
+    }
+    await supabase.from("orders").update({
+      factory_order_no: d2.orderNo, factory_ref: body.customerNo, factory_status: "Draft", factory_error: d2.errorMessage || null,
+      factory_delivery_date: d2.deliveryDate || null, factory_sent_at: new Date().toISOString(),
+    }).eq("id", row.id);
+    return { ok: true, orderNo: d2.orderNo, oldOrderNo: oldNo, ref: body.customerNo, deliveryDate: d2.deliveryDate || null, warnings };
   }
   if (!ok) {
     return { ok: false, orderNo: oldNo, error: said || "factory said " + r.httpStatus + " " + JSON.stringify(res).slice(0, 300), warnings };
