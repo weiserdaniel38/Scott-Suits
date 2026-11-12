@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261112herovid2">
+<link rel="stylesheet" href="./style.css?v=20261112herovid3">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261112swcatchup"></script>
 <link rel="stylesheet" href="./brand.css?v=20261112measlimits">
@@ -256,20 +256,22 @@
   <script>
   (function(){
     try{
-      var m=/[?&]herovideo=([12])\b/.exec(location.search);
+      var m=/[?&]herovideo=([123])\b/.exec(location.search);
       if(!m) return;
-      // 1 = beige grade (site colors, dark text), 2 = dark burgundy grade (white text)
-      var tone=m[1]==='2'?'dark':'beige';
-      document.documentElement.classList.add('hero-video-on','hero-video-'+tone);
+      // 1 = beige grade (dark text), 2 = dark burgundy grade (white text),
+      // 3 = natural colours, slightly warmer (white text, warm wash)
+      var tone=m[1]==='2'?'dark':(m[1]==='3'?'natural':'beige');
+      document.documentElement.classList.add('hero-video-on','hero-video-'+(tone==='beige'?'beige':'dark'));
+      if(tone==='natural') document.documentElement.classList.add('hero-video-natural');
       var v=document.getElementById('heroVideo');
       var tall=window.matchMedia('(max-width:900px)').matches;
       var base='./assets/hero-video/';
       var cut=tall?'tall':'wide';
-      v.poster=base+'poster-'+tone+'-'+cut+'.jpg?v=20261112vid2';
+      v.poster=base+'poster-'+tone+'-'+cut+'.jpg?v=20261112vid3';
       var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(navigator.connection&&navigator.connection.saveData);
       if(still) return;
       v.muted=true;v.defaultMuted=true;v.setAttribute('muted','');v.autoplay=true;
-      v.src=base+'hero-'+tone+'-'+cut+'.mp4?v=20261112vid2';
+      v.src=base+'hero-'+tone+'-'+cut+'.mp4?v=20261112vid3';
       var p=v.play();if(p&&p.catch)p.catch(function(){});
     }catch(e){}
   })();

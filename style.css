@@ -3244,10 +3244,15 @@ html.hero-video-dark .hero #heroMeasureFirstBtn{background:transparent;color:#F7
 html.hero-video-dark .hero #heroMeasureFirstBtn span{color:#F7F2EC;}
 @media(hover:hover){html.hero-video-dark .hero #heroMeasureFirstBtn:hover{background:rgba(255,255,255,0.12);}}
 
+/* Natural (=3): real colours warmed slightly; same white text as dark, warm brown wash. */
+html.hero-video-natural .hero,html.hero-video-natural .hero-video-wrap{background:#1C1612;}
+html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(90deg, rgba(28,21,16,0.72) 0%, rgba(28,21,16,0.5) 45%, rgba(28,21,16,0.1) 100%);}
+
 @media(max-width:900px){
   /* Phone: video behind the whole first screen, text centered on it. */
   html.hero-video-on .hero-grid{position:relative;display:flex;align-items:center;min-height:calc(100svh - 80px);}
   html.hero-video-on .hero-text{padding:28px 24px 32px;}
   html.hero-video-beige .hero-video-wrap::after{background:linear-gradient(180deg, rgba(var(--ink-rgb),0.45) 0%, rgba(var(--ink-rgb),0.62) 50%, rgba(var(--ink-rgb),0.8) 100%);}
   html.hero-video-dark .hero-video-wrap::after{background:linear-gradient(180deg, rgba(20,13,15,0.35) 0%, rgba(20,13,15,0.5) 50%, rgba(20,13,15,0.7) 100%);}
+  html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(180deg, rgba(28,21,16,0.35) 0%, rgba(28,21,16,0.5) 50%, rgba(28,21,16,0.72) 100%);}
 }
