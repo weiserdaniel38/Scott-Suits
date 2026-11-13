@@ -5765,45 +5765,58 @@ function ensureMonogramFonts() {
 }
 
 // Recolors a light blue thread picture (the handmade lapel buttonhole
-// photos) to another thread color in the browser: blue pixels take the new
-// color with their own shading; the white fabric stays as it is.
+// photos) in the browser: blue pixels take the thread color `hex` with
+// their own shading (or keep their blue when hex is null), and when `bgSrc`
+// is given the white cloth around the stitching becomes that fabric photo,
+// like the monogram colors shown on the customer's fabric.
 const THREAD_TINT_CACHE = {};
-function tintThreadImg(imgEl, src, hex) {
-  if (!imgEl || !src || !/^#[0-9a-f]{6}$/i.test(hex || "")) return;
-  const key = src + "|" + hex;
+function tintThreadImg(imgEl, src, hex, bgSrc) {
+  if (!imgEl || !src) return;
+  if (hex && !/^#[0-9a-f]{6}$/i.test(hex)) hex = null;
+  if (!hex && !bgSrc) return;
+  const key = src + "|" + (hex || "") + "|" + (bgSrc || "");
   imgEl.dataset.tint = key;
   if (THREAD_TINT_CACHE[key]) { imgEl.src = THREAD_TINT_CACHE[key]; return; }
-  const im = new Image();
-  im.onload = () => {
-    try {
-      const c = document.createElement("canvas");
-      c.width = im.naturalWidth; c.height = im.naturalHeight;
-      const ctx = c.getContext("2d");
-      ctx.drawImage(im, 0, 0);
-      const data = ctx.getImageData(0, 0, c.width, c.height);
-      const px = data.data;
-      const tr = parseInt(hex.slice(1, 3), 16), tg = parseInt(hex.slice(3, 5), 16), tb = parseInt(hex.slice(5, 7), 16);
-      // The thread in the photos is about #6fa8dc (brightness 220).
-      for (let i = 0; i < px.length; i += 4) {
-        const r = px[i], g = px[i + 1], b = px[i + 2];
-        const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-        if (!mx || b < r || b < g) continue;
-        const sat = (mx - mn) / mx;
-        const m = Math.max(0, Math.min(1, (sat - 0.07) / 0.25));
-        if (!m) continue;
+  const load = (u) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = u; });
+  Promise.all([load(src), bgSrc ? load(bgSrc) : null]).then(([im, bg]) => {
+    const c = document.createElement("canvas");
+    const w = (c.width = im.naturalWidth), h = (c.height = im.naturalHeight);
+    const ctx = c.getContext("2d");
+    let bgPx = null;
+    if (bg) {
+      // Middle of the fabric photo (past its pinked edge) filling the square.
+      const sc = 1.7 * Math.max(w / bg.naturalWidth, h / bg.naturalHeight);
+      const bw = bg.naturalWidth * sc, bh = bg.naturalHeight * sc;
+      ctx.drawImage(bg, (w - bw) / 2, (h - bh) / 2, bw, bh);
+      bgPx = ctx.getImageData(0, 0, w, h).data;
+    }
+    ctx.drawImage(im, 0, 0);
+    const data = ctx.getImageData(0, 0, w, h);
+    const px = data.data;
+    const tr = hex ? parseInt(hex.slice(1, 3), 16) : 0, tg = hex ? parseInt(hex.slice(3, 5), 16) : 0, tb = hex ? parseInt(hex.slice(5, 7), 16) : 0;
+    // The thread in the photos is about #6fa8dc (brightness 220).
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      const blue = mx && b >= r && b >= g;
+      const m = blue ? Math.max(0, Math.min(1, ((mx - mn) / mx - 0.07) / 0.25)) : 0;
+      let nr = r, ng = g, nb = b;
+      if (m && hex) {
         const shade = Math.min(1.15, mx / 220);
-        const gray = (r + g + b) / 3;
-        px[i] = Math.round(gray * (1 - m) + Math.min(255, tr * shade) * m);
-        px[i + 1] = Math.round(gray * (1 - m) + Math.min(255, tg * shade) * m);
-        px[i + 2] = Math.round(gray * (1 - m) + Math.min(255, tb * shade) * m);
+        nr = Math.min(255, tr * shade); ng = Math.min(255, tg * shade); nb = Math.min(255, tb * shade);
       }
-      ctx.putImageData(data, 0, 0);
-      const url = c.toDataURL("image/jpeg", 0.9);
-      THREAD_TINT_CACHE[key] = url;
-      if (imgEl.dataset.tint === key) imgEl.src = url;
-    } catch (e) { /* keep the light blue picture */ }
-  };
-  im.src = src;
+      let br, bgc, bb;
+      if (bgPx) { br = bgPx[i]; bgc = bgPx[i + 1]; bb = bgPx[i + 2]; }
+      else { const gray = (r + g + b) / 3; br = bgc = bb = m ? gray : r; if (!m) { bgc = g; bb = b; } }
+      px[i] = Math.round(br * (1 - m) + nr * m);
+      px[i + 1] = Math.round(bgc * (1 - m) + ng * m);
+      px[i + 2] = Math.round(bb * (1 - m) + nb * m);
+    }
+    ctx.putImageData(data, 0, 0);
+    const url = c.toDataURL("image/jpeg", 0.9);
+    THREAD_TINT_CACHE[key] = url;
+    if (imgEl.dataset.tint === key) imgEl.src = url;
+  }).catch(() => { /* keep the plain picture */ });
 }
 
 function createDesigner(catalog, ids, sameAsResolvers, groups) {
@@ -7678,9 +7691,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         card.innerHTML = '<img class="opt-swatch" src="' + opt.img + '" alt="' + wizEsc(shown) + '" loading="lazy" decoding="async"><div class="opt-name">' + wizEsc(shown) + "</div>";
         // Handmade buttonhole pictures switch to the customer's Lapel
         // Buttonhole Color once one is picked (Daniel, 2026-11-13).
+        // They also sit on the customer's fabric (like the monogram colors).
         if (icat.tintWithColorOf) {
-          const hex = threadHexFor(icat.tintWithColorOf);
-          if (hex) tintThreadImg(card.querySelector("img"), opt.img, hex);
+          const fabVal = resolvedValue("fabric");
+          const fab = fabVal && catalog.fabric && catalog.fabric.options.find((x) => x.name === fabVal);
+          const bgSrc = fab && fab.img && !fab.matchesFabric && !fab.uploadPhoto ? fab.img : null;
+          tintThreadImg(card.querySelector("img"), opt.img, threadHexFor(icat.tintWithColorOf), bgSrc);
         }
         card.onclick = () => {
           cancelAutoAdvance();
