@@ -1860,7 +1860,8 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type");
+    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type, fulfillment");
+    if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type"));
     if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd"));
     if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status"));
     if (error) ({ data, error } = await runQuery("order_id, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number"));
@@ -1874,7 +1875,7 @@ async function loadOrderHistory() {
     // An order still waiting on Stripe isn't placed yet.
     if (data) data = data.filter((row) => row.payment_status !== "awaiting_payment");
     if (!data || !data.length) {
-      pastOrdersList.innerHTML = '<p class="account-section-note">No past orders yet.</p>';
+      pastOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
       return;
     }
     const byOrder = {};
@@ -1899,8 +1900,7 @@ async function loadOrderHistory() {
     // "Add measurements" button is the first thing seen.
     const pastOrdersSection = document.getElementById("pastOrdersSection");
     if (pastOrdersSection && order.some((key) => byOrder[key].toMeasure.length)) pastOrdersSection.open = true;
-    pastOrdersList.innerHTML = order
-      .map((key) => {
+    const rowHtml = (key) => {
         const o = byOrder[key];
         const date = o.created_at ? new Date(o.created_at).toLocaleDateString() : "";
         // Finished-suit pictures (generated once the shop marks the order
@@ -1928,8 +1928,14 @@ async function loadOrderHistory() {
           reorderButtonsHtml(o) +
           "</div>"
         );
-      })
-      .join("");
+      };
+    // Orders still being made or on their way first; delivered (or, for
+    // pickup, arrived at the shop) under Past orders, same as the admin list.
+    const current = order.filter((key) => !orderIsFinished(byOrder[key].ship));
+    const past = order.filter((key) => orderIsFinished(byOrder[key].ship));
+    pastOrdersList.innerHTML =
+      (current.length ? current.map(rowHtml).join("") : past.length ? '<p class="account-section-note">Nothing in progress.</p>' : "") +
+      (past.length ? '<h4 class="past-orders-sub">Past orders</h4>' + past.map(rowHtml).join("") : "");
   } catch (err) {
     console.error(err);
     pastOrdersList.innerHTML = '<p class="account-section-note">Couldn’t load past orders right now.</p>';
@@ -2212,6 +2218,16 @@ function trackingUrl(carrier, number) {
   return "";
 }
 
+// Finished = delivered to the customer, or for pickup from the shop, once
+// the suit has reached us (Daniel, 2026-11-13). Finished orders move to
+// Past orders, for the admin and the customer alike.
+const PICKUP_FINISHED_STATUSES = ["final_check", "shipped", "out_for_delivery", "delivered"];
+function orderIsFinished(o) {
+  const s = (o && o.shipping_status) || "";
+  if (s === "delivered") return true;
+  return !!o && o.fulfillment === "pickup" && PICKUP_FINISHED_STATUSES.indexOf(s) !== -1;
+}
+
 function shippingLabel(status) {
   const hit = SHIPPING_STATUSES.find((s) => s[0] === (status || ""));
   return hit ? hit[1] : "";
@@ -2222,6 +2238,10 @@ function shippingLabel(status) {
 // shipping columns haven't been added yet (older database).
 function shippingLineHtml(row) {
   if (!row || !("shipping_status" in row)) return "";
+  if (row.fulfillment === "pickup" && orderIsFinished(row)) {
+    return '<div class="past-order-ship"><span class="past-order-step"><b>' + (row.shipping_status === "final_check" ? "Ready for pickup" : "Picked up") + '</b></span>' +
+      '<span class="past-order-progress" role="progressbar" aria-valuemin="1" aria-valuemax="1" aria-valuenow="1"><span style="width:100%"></span></span></div>';
+  }
   const i = Math.max(0, SHIPPING_STATUSES.findIndex((s) => s[0] === (row.shipping_status || "")));
   const pct = Math.round(((i + 1) / SHIPPING_STATUSES.length) * 100);
   let html =
@@ -2329,7 +2349,20 @@ async function loadAdminOrders() {
       adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
       return;
     }
-    rowsShown.forEach((o) => adminOrdersList.appendChild(adminOrderRow(o)));
+    // Finished orders (delivered, or a pickup order that has reached the
+    // shop) leave the list and sit under Past orders (Daniel, 2026-11-13).
+    const current = rowsShown.filter((o) => !orderIsFinished(o));
+    const past = rowsShown.filter((o) => orderIsFinished(o));
+    if (!current.length) adminOrdersList.innerHTML = '<p class="account-section-note">No current orders.</p>';
+    current.forEach((o) => adminOrdersList.appendChild(adminOrderRow(o)));
+    if (past.length) {
+      const box = document.createElement("details");
+      box.className = "admin-past-orders";
+      box.innerHTML = '<summary><span class="admin-past-title">Past orders</span><span class="admin-past-count"></span><span class="account-collapse-chevron" aria-hidden="true"></span></summary><p class="account-section-note">Delivered, or arrived at the shop for pickup.</p>';
+      box.querySelector(".admin-past-count").textContent = String(past.length);
+      past.forEach((o) => box.appendChild(adminOrderRow(o)));
+      adminOrdersList.appendChild(box);
+    }
   } catch (err) {
     console.error(err);
     adminOrdersList.innerHTML = '<p class="account-section-note">Couldn\u2019t load orders right now.</p>';
@@ -3401,7 +3434,7 @@ function adminOrderRow(o) {
   if (o.brand && o.brand !== "scott" && SITE_BRANDS[o.brand]) name.textContent += " \u00b7 " + SITE_BRANDS[o.brand].name;
   row.querySelector(".admin-order-sub").textContent = [date, suits].filter(Boolean).join(" \u00b7 ");
   const shipBadge = row.querySelector(".admin-ship-badge");
-  shipBadge.textContent = adminOrderAwaitingMeasurements(o.order_id) ? "Waiting for measurements" : shippingLabel(o.shipping_status) || "Order received";
+  shipBadge.textContent = adminOrderAwaitingMeasurements(o.order_id) ? "Waiting for measurements" : o.fulfillment === "pickup" && o.shipping_status === "final_check" ? "At the shop for pickup" : shippingLabel(o.shipping_status) || "Order received";
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   const info = row.querySelector(".admin-order-info");
   const protection = adminProtectionLabel(o).replace(/^Alteration Protection: /, "");
@@ -4280,6 +4313,7 @@ function refreshAccountData() {
   try { cloudCartOnAuth(); } catch (e) { /* before the cloud cart code has loaded */ }
   loadProfile();
   loadOrderHistory();
+  try { loadWishlist(); } catch (e) { /* before the wishlist code has loaded */ }
   refreshAdminStatus();
   prefillContactDetails();
   if (window.recheckPromoCode) window.recheckPromoCode();
@@ -9198,6 +9232,7 @@ function syncPreviewCartButton(justAdded) {
   const measLine = document.getElementById("previewCartMeasLine");
   const item = pendingCommitIndex !== null ? cartItems[pendingCommitIndex] : null;
   if (measLine) measLine.hidden = !!(item && !itemNeedsMeasurements(item));
+  try { syncWishlistButton(); } catch (e) { /* before the wishlist code has loaded */ }
 }
 const addToCartFromPreviewBtn = document.getElementById("addToCartFromPreviewBtn");
 if (addToCartFromPreviewBtn) addToCartFromPreviewBtn.addEventListener("click", addToCartMeasureLater);
@@ -10982,7 +11017,7 @@ async function saveOrderMeasurements() {
   suitTypeSection.classList.add("active");
   const oldPicture = document.getElementById("suitPreview");
   if (oldPicture) oldPicture.hidden = true;
-  showOrderDonePage("Measurements saved", "Thank you!", "We have your measurements and will start making your " + (target.rowType === "jacket_only" ? "jacket" : target.rowType === "pants_only" ? "pants" : "suit") + " now. You can follow it under Past Orders in My Account.");
+  showOrderDonePage("Measurements saved", "Thank you!", "We have your measurements and will start making your " + (target.rowType === "jacket_only" ? "jacket" : target.rowType === "pants_only" ? "pants" : "suit") + " now. You can follow it under My Orders in My Account.");
 }
 
 // Shows one step from whatever page is showing (same "scroll up before
@@ -12429,8 +12464,8 @@ function finishOrder(previewItems, paid, discountUsd) {
     (paid
       ? "We've received your payment and recorded your suit selections" + (measureLater ? "" : ", measurements,") + " and shipping details. We'll be in touch to confirm the final details before production begins."
       : "We've recorded your suit selections" + (measureLater ? "" : ", measurements,") + " and shipping details. We'll be in touch to confirm the final details before production begins.") +
-    (measureLater ? " Next, add your measurements under Past Orders in My Account. We start making your suit once we have them." : "") +
-      (currentUser && !measureLater ? " You can see this order any time under Past Orders in My Account." : "")
+    (measureLater ? " Next, add your measurements under My Orders in My Account. We start making your suit once we have them." : "") +
+      (currentUser && !measureLater ? " You can see this order any time under My Orders in My Account." : "")
   );
 }
 
@@ -13292,7 +13327,8 @@ async function syncCloudCart() {
       const { error: upErr } = await client.from("profiles").upsert({
         id: user.id,
         email: user.email,
-        cart: { items: merged.map(cloudCartItem), savedAt: new Date().toISOString() },
+        // Other keys on the same jsonb (the wishlist) are kept as they are.
+        cart: Object.assign({}, data && data.cart, { items: merged.map(cloudCartItem), savedAt: new Date().toISOString() }),
       });
       if (upErr) {
         if (upErr.code === "42703" || upErr.code === "PGRST204") cloudCartOff = true;
@@ -13368,6 +13404,299 @@ window.addEventListener("pageshow", (e) => { if (e.persisted) cloudCartOnReturn(
 readCloudCartSync();
 cloudCartPageReady = true;
 if (currentUser) scheduleCloudCartSync(0);
+
+// ============================================================
+// Wishlist (Daniel, 2026-11-13). "Save to wishlist" on the Preview page
+// keeps a designed suit on the signed-in customer's account to order
+// later; My Account > Wishlist lists them with Add to cart and Remove.
+// Stored in profiles.cart.wishlist (the same jsonb as the cloud cart, so
+// no new column): each entry is the suit's choices like a cart item, plus
+// wishId, savedAt, spec (to tell the same design) and imageUrl (its drawn
+// picture, if there was one). No measurements: those are added in the cart.
+// ============================================================
+var wishlistItems = null; // null until loaded for the signed-in account
+var wishlistQueue = Promise.resolve();
+
+// One account write at a time, and never while the cart sync is between
+// reading and writing the same jsonb.
+function wishlistRun(task) {
+  const run = wishlistQueue.then(async () => {
+    while (cloudCartBusy) await new Promise((r) => setTimeout(r, 150));
+    cloudCartBusy = true;
+    try {
+      return await task();
+    } finally {
+      cloudCartBusy = false;
+      if (cloudCartAgain) {
+        cloudCartAgain = false;
+        scheduleCloudCartSync(0);
+      }
+    }
+  });
+  wishlistQueue = run.catch(() => {});
+  return run;
+}
+async function wishlistRead(client, userId) {
+  const { data, error } = await client.from("profiles").select("cart").eq("id", userId).maybeSingle();
+  if (error) throw error;
+  const cart = (data && data.cart) || {};
+  return { cart, list: Array.isArray(cart.wishlist) ? cart.wishlist : [] };
+}
+async function wishlistUpdate(mutate) {
+  return wishlistRun(async () => {
+    const user = currentUser;
+    if (!user) throw new Error("Not signed in");
+    const client = getSupabase();
+    const { cart, list } = await wishlistRead(client, user.id);
+    const next = mutate(list.slice());
+    const { error } = await client.from("profiles").upsert({ id: user.id, email: user.email, cart: Object.assign({}, cart, { wishlist: next }) });
+    if (error) throw error;
+    if (currentUser && currentUser.id === user.id) wishlistItems = next;
+    return next;
+  });
+}
+async function loadWishlist() {
+  const section = document.getElementById("wishlistSection");
+  const box = document.getElementById("wishlistList");
+  if (!currentUser || !isSupabaseConfigured()) {
+    wishlistItems = null;
+    if (section) section.hidden = true;
+    syncWishlistButton();
+    return;
+  }
+  const user = currentUser;
+  try {
+    const { list } = await wishlistRead(getSupabase(), user.id);
+    if (!currentUser || currentUser.id !== user.id) return;
+    wishlistItems = list;
+  } catch (err) {
+    console.error("Couldn't load the wishlist:", err);
+    if (box) box.innerHTML = '<p class="account-section-note">Couldn’t load your wishlist right now.</p>';
+    if (section) section.hidden = false;
+    return;
+  }
+  renderWishlist();
+  syncWishlistButton();
+}
+
+// The suit on the Preview page, as a wishlist entry.
+function currentWishlistItem() {
+  const type = currentSuitType;
+  const photo = hasJacketStep() ? jacketDesigner.getLiningPhoto() : null;
+  const previewId = currentDesignPreviewId();
+  return {
+    wishId: "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    savedAt: Date.now(),
+    spec: currentDesignSpec(),
+    type,
+    level: currentLevel,
+    jacket: hasJacketStep() ? jacketDesigner.getSelections() : {},
+    pants: isJacketOnlyType(type) ? null : pantsDesigner.getSelections(),
+    texts: { jacket: hasJacketStep() ? jacketDesigner.getTexts() : {}, pants: isJacketOnlyType(type) ? {} : pantsDesigner.getTexts() },
+    liningPhoto: photo && String(photo).length <= CLOUD_CART_PHOTO_MAX ? photo : null,
+    previewId: previewId || editedSuitPreviewId(),
+    imageUrl: previewId && designPreview ? designPreview.url || null : null,
+  };
+}
+function wishlistHasCurrent() {
+  if (!wishlistItems || !wishlistItems.length) return false;
+  const spec = currentDesignSpec();
+  return wishlistItems.some((w) => w.spec === spec);
+}
+function syncWishlistButton() {
+  const btn = document.getElementById("saveToWishlistBtn");
+  if (!btn || btn.disabled) return;
+  const saved = !!currentUser && wishlistHasCurrent();
+  btn.classList.toggle("is-saved", saved);
+  btn.innerHTML = saved ? '<span aria-hidden="true">♥</span> Saved to wishlist' : '<span aria-hidden="true">♡</span> Save to wishlist';
+}
+function saveToWishlist(btn) {
+  requireSignIn(btn, "Sign in or create an account to save suits to your wishlist.", async () => {
+    if (wishlistItems === null) await loadWishlist();
+    if (wishlistHasCurrent()) {
+      // Already saved: show it in My Account.
+      if (openAccountOverlay) openAccountOverlay(btn);
+      const section = document.getElementById("wishlistSection");
+      if (section) {
+        section.open = true;
+        setTimeout(() => section.scrollIntoView({ block: "start", behavior: "smooth" }), 250);
+      }
+      return;
+    }
+    const item = currentWishlistItem();
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+    try {
+      await wishlistUpdate((list) => list.filter((w) => w.spec !== item.spec).concat([item]));
+      renderWishlist();
+    } catch (err) {
+      console.error("Couldn't save to the wishlist:", err);
+      alert("Sorry, that didn’t save. Please try again.");
+    } finally {
+      btn.disabled = false;
+      syncWishlistButton();
+    }
+  });
+}
+const saveToWishlistBtn = document.getElementById("saveToWishlistBtn");
+if (saveToWishlistBtn) saveToWishlistBtn.addEventListener("click", () => saveToWishlist(saveToWishlistBtn));
+
+function wishlistTypeTag(type) {
+  return isJacketOnlyType(type) ? "Jacket" : isPantsOnlyType(type) ? "Pants" : "Suit";
+}
+function renderWishlist() {
+  const section = document.getElementById("wishlistSection");
+  const box = document.getElementById("wishlistList");
+  if (!section || !box) return;
+  section.hidden = !currentUser;
+  const list = (wishlistItems || []).slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+  const summaryTitle = section.querySelector("summary h3");
+  if (summaryTitle) summaryTitle.textContent = list.length ? "Wishlist (" + list.length + ")" : "Wishlist";
+  box.innerHTML = "";
+  if (!list.length) {
+    box.innerHTML = '<p class="account-section-note">Nothing saved yet. Tap Save to wishlist on the Preview page to keep a suit for later.</p>';
+    return;
+  }
+  list.forEach((w) => {
+    const card = document.createElement("div");
+    card.className = "wishlist-card";
+    if (w.imageUrl) {
+      const img = document.createElement("img");
+      img.className = "wishlist-img";
+      img.loading = "lazy";
+      img.alt = "Saved suit";
+      img.src = w.imageUrl;
+      card.appendChild(img);
+    } else {
+      const sw = document.createElement("div");
+      sw.className = "wishlist-img wishlist-swatch";
+      const fabric = (w.jacket && w.jacket.fabric) || (w.pants && w.pants.fabric);
+      const opt = fabric ? JACKET_CATALOG.fabric.options.find((o) => o.name === fabric) : null;
+      if (opt && opt.img) sw.style.backgroundImage = "url('" + opt.img + "')";
+      card.appendChild(sw);
+    }
+    const info = document.createElement("div");
+    info.className = "wishlist-info";
+    const title = document.createElement("b");
+    title.textContent = cartItemTitle(w);
+    const sub = document.createElement("span");
+    sub.className = "wishlist-sub";
+    const fabric = (w.jacket && w.jacket.fabric) || (w.pants && w.pants.fabric);
+    const fabOpt = fabric ? JACKET_CATALOG.fabric.options.find((o) => o.name === fabric) : null;
+    let price = "";
+    try { price = PRICES_HIDDEN ? "" : "$" + itemPriceUsd(w); } catch (e) { price = ""; }
+    sub.textContent = [fabOpt ? fabOpt.displayName || "" : "", price, w.savedAt ? "Saved " + new Date(w.savedAt).toLocaleDateString() : ""].filter(Boolean).join(" · ");
+    const actions = document.createElement("div");
+    actions.className = "wishlist-actions";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "past-order-reorder-btn";
+    add.textContent = "Add to cart";
+    add.addEventListener("click", () => {
+      const go = () => wishlistToCart(w.wishId, add);
+      // A design that is itself saved on the wishlist isn't lost.
+      if (!designerHasUnsavedWork() || wishlistHasCurrent()) return go();
+      openEditSuitConfirm(null, {
+        title: "Add this suit to your cart?",
+        text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+        confirm: "Yes, add it",
+        onConfirm: go,
+      });
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "wishlist-remove";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", async () => {
+      remove.disabled = true;
+      try {
+        await wishlistUpdate((l) => l.filter((x) => x.wishId !== w.wishId));
+      } catch (err) {
+        console.error(err);
+        alert("Sorry, that didn’t work. Please try again.");
+      }
+      renderWishlist();
+      syncWishlistButton();
+    });
+    actions.append(add, remove);
+    info.append(title, sub, actions);
+    card.appendChild(info);
+    box.appendChild(card);
+  });
+}
+
+// A wishlist entry -> a cart item, through the designers (same as Reorder)
+// so anything no longer offered is left to choose again. Measurements come
+// from the account's saved ones, or are added in the cart.
+function cartItemFromWish(w) {
+  const type = w.type || "full";
+  const jacketOnly = isJacketOnlyType(type);
+  const pantsOnly = isPantsOnlyType(type);
+  const keep = (catalog, sel) => {
+    const out = {};
+    Object.keys(sel || {}).forEach((k) => {
+      if (catalog[k] && catalogStillOffers(catalog[k], sel[k])) out[k] = sel[k];
+    });
+    return out;
+  };
+  const texts = w.texts || {};
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  applySuitType(type);
+  if (w.liningPhoto) jacketDesigner.setLiningPhoto(w.liningPhoto);
+  jacketDesigner.setTexts(texts.jacket || {});
+  pantsDesigner.setTexts(texts.pants || {});
+  if (!pantsOnly) jacketDesigner.setSelections(keep(JACKET_CATALOG, w.jacket));
+  if (!jacketOnly) pantsDesigner.setSelections(keep(PANTS_CATALOG, w.pants));
+  const missing = [].concat(pantsOnly ? [] : jacketDesigner.missingLabels()).concat(jacketOnly ? [] : pantsDesigner.missingLabels());
+  const item = {
+    type,
+    level: w.level,
+    jacket: pantsOnly ? {} : jacketDesigner.getSelections(),
+    pants: jacketOnly ? null : pantsDesigner.getSelections(),
+    measurements: { measure_type: MEASUREMENTS_PENDING },
+    liningPhoto: pantsOnly ? null : jacketDesigner.getLiningPhoto(),
+    texts: { jacket: pantsOnly ? {} : jacketDesigner.getTexts(), pants: jacketOnly ? {} : pantsDesigner.getTexts() },
+    previewId: w.previewId || null,
+    cartId: newCartId(),
+    savedAt: Date.now(),
+  };
+  if (missing.length) item.needsReview = missing;
+  return item;
+}
+async function wishlistToCart(wishId, btn) {
+  const w = (wishlistItems || []).find((x) => x.wishId === wishId);
+  if (!w || !currentUser) return;
+  if (btn) { btn.disabled = true; btn.textContent = "Adding..."; }
+  try {
+    const item = cartItemFromWish(w);
+    resetDesignerForNewSuit();
+    // Off the wishlist first, so a failed save doesn't leave it in both.
+    await wishlistUpdate((l) => l.filter((x) => x.wishId !== wishId));
+    cartItems.push(item);
+    const n = cartItems.length - 1;
+    if (closeAccountOverlay) closeAccountOverlay();
+    markDesignStarted();
+    renderCartBar();
+    updateOrderSummaryUI();
+    updateProcessBar();
+    saveDraft();
+    renderWishlist();
+    if (item.needsReview) {
+      loadCartItemIntoDesigner(n);
+      alert("Suit " + (n + 1) + " is in your cart. Please pick a new " + item.needsReview.join(", ") + " (what you chose isn’t offered anymore).");
+    } else {
+      const dropdown = document.getElementById("cartDropdown");
+      const iconBtn = document.getElementById("cartIconBtn");
+      if (dropdown && dropdown.hidden && iconBtn) setTimeout(() => iconBtn.click(), 50);
+    }
+  } catch (err) {
+    console.error("Couldn't move the suit to the cart:", err);
+    alert("Sorry, something went wrong. Please try again.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Add to cart"; }
+  }
+}
 
 // The hero "Start Designing" button always means "take me to the suit-type
 // choice", even if a saved draft currently has a later step showing

@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261112mcheck">
+<link rel="stylesheet" href="./style.css?v=20261113wish">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261112swcatchup"></script>
 <link rel="stylesheet" href="./brand.css?v=20261112mcheck">
@@ -538,6 +538,7 @@
     <button type="button" class="preview-add-cart" id="addToCartFromPreviewBtn">Add to cart</button>
     <p class="preview-cart-note" id="previewCartNote">Add your measurements later, before you pay.</p>
     <p class="preview-cart-note preview-cart-done" id="previewCartDone" role="status" hidden>In your cart. <button type="button" class="preview-view-cart" id="previewViewCartBtn">View cart</button><span id="previewCartMeasLine"><br>Add your measurements before you pay.</span></p>
+    <button type="button" class="preview-wishlist" id="saveToWishlistBtn">Save to wishlist</button>
   </div>
   <div class="measure-actions wiz-bar meas-bar">
     <button type="button" class="wiz-back" id="backFromPreviewBtn">&larr; Back</button>
@@ -1079,8 +1080,14 @@
       </details>
 
       <!-- Collapsed by default, like the sections above. -->
+      <!-- Wishlist (2026-11-13): suits saved from the Preview page to order later. -->
+      <details class="account-collapse" id="wishlistSection" hidden>
+        <summary><h3>Wishlist</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <div id="wishlistList" class="wishlist-list"></div>
+      </details>
+
       <details class="account-collapse" id="pastOrdersSection">
-        <summary><h3>Past Orders</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <summary><h3>My Orders</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
         <div id="pastOrdersList"></div>
       </details>
 
@@ -1198,7 +1205,7 @@
 <script src="./catalog.js?v=20261112measlimits"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261112mcheck"></script>
+<script src="./main.js?v=20261113wish"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>
