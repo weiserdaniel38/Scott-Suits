@@ -3296,3 +3296,10 @@ html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(90deg
 .admin-past-count{font-size:12px;font-weight:600;min-width:22px;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--ivory-dim);text-align:center;}
 .admin-past-orders>summary .account-collapse-chevron{margin:0 6px 4px auto;}
 .admin-past-orders[open]>summary .account-collapse-chevron{transform:rotate(-135deg);margin:6px 6px 0 auto;}
+/* Wishlist edit bar: one slim line (Daniel, 2026-11-13: smaller, discreet). */
+.wishlist-edit-bar{display:flex;align-items:center;justify-content:center;gap:4px 12px;flex-wrap:wrap;margin:6px auto 0;padding:3px 12px;width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;border-radius:999px;background:rgba(var(--brass-rgb),0.08);font-family:'Inter',sans-serif;font-size:12px;line-height:1.3;color:var(--ivory-dim);}
+.wishlist-edit-bar[hidden]{display:none;}
+.wishlist-edit-save,.wishlist-edit-cancel{background:none;border:0;padding:4px 2px;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.wishlist-edit-save{font-weight:700;color:var(--brass);}
+.wishlist-edit-cancel{color:var(--ivory-dim);text-decoration:underline;text-underline-offset:2px;}
+.wishlist-edit-save:disabled{opacity:.6;}
