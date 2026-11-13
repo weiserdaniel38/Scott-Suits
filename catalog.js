@@ -2808,7 +2808,10 @@ JACKET_CATALOG.lapelButtonholeStyle = {
   defaultOption: "Machine Sewn",
   parentDefault: "Standard",
   inlineToggleLabel: "Handmade buttonhole styles",
-  description: "Hand stitched in your Lapel Buttonhole Color (shown in light blue). Tap again to remove.",
+  description: "Hand stitched in your Lapel Buttonhole Color. Tap again to remove.",
+  // Pictures show the picked Lapel Buttonhole Color (light blue until one
+  // is picked); see tintThreadImg in main.js.
+  tintWithColorOf: "buttonholeThreadColor",
   requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
   options: [
     { name: "Machine Sewn", displayName: "Machine Sewn", specName: "Machine Sewn", img: "./assets/jacket-lapelbuttonhole-left.jpg", badge: "Standard" },
@@ -2817,8 +2820,13 @@ JACKET_CATALOG.lapelButtonholeStyle = {
     // double left buttonhole (test drafts, 2026-11-09).
     { name: "Handmade Knotted End", displayName: "Handmade, Knotted End (+$40)", specName: "Handmade Knotted End", surchargeUsd: 40, factoryCode: "035C", img: "./assets/jacket-handmadehole-knotted.jpg?v=lightblue", hiddenWhen: { lapelbuttonhole: ["Left Two"] } },
     { name: "Handmade Small Round End", displayName: "Handmade, Small Round End (+$35)", specName: "Handmade Small Round End", surchargeUsd: 35, factoryCode: "00EC", img: "./assets/jacket-handmadehole-small-round.jpg?v=lightblue" },
-    { name: "Handmade Downward Arc", displayName: "Handmade, Slight Downward Arc (+$35)", specName: "Handmade Downward Arc", surchargeUsd: 35, factoryCode: "06EG", img: "./assets/jacket-handmadehole-arc-down.jpg?v=lightblue" },
-    { name: "Handmade Upward Arc", displayName: "Handmade, Upward Arc (+$35)", specName: "Handmade Upward Arc", surchargeUsd: 35, factoryCode: "055F", img: "./assets/jacket-handmadehole-arc-up.jpg?v=lightblue" },
+    // The two arcs keep the factory's names inside (06EG is the factory's
+    // "slight downwards" arc, 055F its "upwards" arc), but the factory's
+    // photos show 06EG curving like a smile and 055F like an arch, so the
+    // customer-facing names are swapped to match the pictures (Daniel,
+    // 2026-11-13: "upward arc and downward arc is backwards").
+    { name: "Handmade Downward Arc", displayName: "Handmade, Upward Arc (+$35)", specName: "Handmade Downward Arc", surchargeUsd: 35, factoryCode: "06EG", img: "./assets/jacket-handmadehole-arc-down.jpg?v=lightblue" },
+    { name: "Handmade Upward Arc", displayName: "Handmade, Downward Arc (+$35)", specName: "Handmade Upward Arc", surchargeUsd: 35, factoryCode: "055F", img: "./assets/jacket-handmadehole-arc-up.jpg?v=lightblue" },
     { name: "Journey of Life", displayName: "Journey of Life (+$60)", specName: "Journey of Life Handmade", surchargeUsd: 60, factoryCode: "0352", img: "./assets/jacket-handmadehole-journey.jpg?v=lightblue", hiddenWhen: { lapelbuttonhole: ["Left Two"] } },
     { name: "Light of Victory", displayName: "Light of Victory (+$40)", specName: "Light of Victory Handmade", surchargeUsd: 40, factoryCode: "0357", img: "./assets/jacket-handmadehole-victory.jpg?v=lightblue" },
     { name: "Rose End", displayName: "Rose End (+$45)", specName: "Rose End Handmade", surchargeUsd: 45, factoryCode: "0359", img: "./assets/jacket-handmadehole-rose.jpg?v=lightblue" },

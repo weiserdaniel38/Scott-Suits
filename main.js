@@ -5764,6 +5764,48 @@ function ensureMonogramFonts() {
   document.head.appendChild(link);
 }
 
+// Recolors a light blue thread picture (the handmade lapel buttonhole
+// photos) to another thread color in the browser: blue pixels take the new
+// color with their own shading; the white fabric stays as it is.
+const THREAD_TINT_CACHE = {};
+function tintThreadImg(imgEl, src, hex) {
+  if (!imgEl || !src || !/^#[0-9a-f]{6}$/i.test(hex || "")) return;
+  const key = src + "|" + hex;
+  imgEl.dataset.tint = key;
+  if (THREAD_TINT_CACHE[key]) { imgEl.src = THREAD_TINT_CACHE[key]; return; }
+  const im = new Image();
+  im.onload = () => {
+    try {
+      const c = document.createElement("canvas");
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(im, 0, 0);
+      const data = ctx.getImageData(0, 0, c.width, c.height);
+      const px = data.data;
+      const tr = parseInt(hex.slice(1, 3), 16), tg = parseInt(hex.slice(3, 5), 16), tb = parseInt(hex.slice(5, 7), 16);
+      // The thread in the photos is about #6fa8dc (brightness 220).
+      for (let i = 0; i < px.length; i += 4) {
+        const r = px[i], g = px[i + 1], b = px[i + 2];
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+        if (!mx || b < r || b < g) continue;
+        const sat = (mx - mn) / mx;
+        const m = Math.max(0, Math.min(1, (sat - 0.07) / 0.25));
+        if (!m) continue;
+        const shade = Math.min(1.15, mx / 220);
+        const gray = (r + g + b) / 3;
+        px[i] = Math.round(gray * (1 - m) + Math.min(255, tr * shade) * m);
+        px[i + 1] = Math.round(gray * (1 - m) + Math.min(255, tg * shade) * m);
+        px[i + 2] = Math.round(gray * (1 - m) + Math.min(255, tb * shade) * m);
+      }
+      ctx.putImageData(data, 0, 0);
+      const url = c.toDataURL("image/jpeg", 0.9);
+      THREAD_TINT_CACHE[key] = url;
+      if (imgEl.dataset.tint === key) imgEl.src = url;
+    } catch (e) { /* keep the light blue picture */ }
+  };
+  im.src = src;
+}
+
 function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // sameAsResolvers (optional): { categoryKey: () => "currently selected value elsewhere" }.
   // For any category listed here, an extra "Same as ___" card is added so the
@@ -7626,6 +7668,12 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         const shown = opt.displayName || opt.name;
         card.className = "opt-card" + (current === opt.name ? " selected" : "");
         card.innerHTML = '<img class="opt-swatch" src="' + opt.img + '" alt="' + wizEsc(shown) + '" loading="lazy" decoding="async"><div class="opt-name">' + wizEsc(shown) + "</div>";
+        // Handmade buttonhole pictures switch to the customer's Lapel
+        // Buttonhole Color once one is picked (Daniel, 2026-11-13).
+        if (icat.tintWithColorOf) {
+          const hex = threadHexFor(icat.tintWithColorOf);
+          if (hex) tintThreadImg(card.querySelector("img"), opt.img, hex);
+        }
         card.onclick = () => {
           cancelAutoAdvance();
           const off = order[k] === opt.name;
@@ -7650,6 +7698,22 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       else optionsEl.appendChild(box);
     });
   }
+  // The real thread color for a color step: the picked color's hex, or for
+  // "Match Fabric Color" the thread closest to the fabric. Null until the
+  // customer has picked a color (the pictures then stay light blue).
+  function threadHexFor(colorKey) {
+    const ccat = catalog[colorKey];
+    const v = order[colorKey];
+    if (!ccat || !v) return null;
+    const o = ccat.options.find((x) => x.name === v);
+    if (!o) return null;
+    if (o.matchesFabric) {
+      const best = resolveBestMatchOption(ccat);
+      return best ? best.hex : null;
+    }
+    return o.hex || null;
+  }
+
   // Inline choices with a default (Machine Sewn) count as answered.
   function fillInlineDefaults() {
     keys.forEach((k) => {
