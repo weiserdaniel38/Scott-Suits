@@ -3270,3 +3270,29 @@ html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(90deg
   html.hero-video-dark .hero-video-wrap::after{background:linear-gradient(180deg, rgba(20,13,15,0.35) 0%, rgba(20,13,15,0.5) 50%, rgba(20,13,15,0.7) 100%);}
   html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(180deg, rgba(28,21,16,0.35) 0%, rgba(28,21,16,0.5) 50%, rgba(28,21,16,0.72) 100%);}
 }
+
+/* Wishlist (2026-11-13): Save to wishlist on the Preview page and
+   My Account > Wishlist. */
+.preview-wishlist{margin-top:4px;padding:6px 10px;background:none;border:0;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;color:var(--brass);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.preview-wishlist span{margin-right:5px;}
+.preview-wishlist:disabled{opacity:.6;cursor:default;}
+@media(hover:hover){.preview-wishlist:hover{text-decoration:underline;text-underline-offset:3px;}}
+.wishlist-list{display:flex;flex-direction:column;}
+.wishlist-card{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ivory);}
+.wishlist-card:last-child{border-bottom:none;}
+.wishlist-img{flex:none;width:84px;height:112px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--card-tint) center/cover no-repeat;}
+.wishlist-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;}
+.wishlist-info b{font-weight:600;}
+.wishlist-sub{font-size:12.5px;color:var(--ivory-dim);}
+.wishlist-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:6px;}
+.wishlist-remove{background:none;border:0;padding:4px 0;font-family:'Inter',sans-serif;font-size:13px;color:var(--ivory-dim);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.wishlist-remove:disabled{opacity:.6;}
+/* Finished orders under My Orders and the admin's Past orders. */
+.past-orders-sub{margin:22px 0 2px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ivory-dim);}
+.admin-past-orders{margin:18px 0 0;border-top:1px solid var(--line);padding-top:4px;}
+.admin-past-orders>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 0;-webkit-tap-highlight-color:transparent;}
+.admin-past-orders>summary::-webkit-details-marker{display:none;}
+.admin-past-title{font-size:16px;font-weight:600;color:var(--ivory);}
+.admin-past-count{font-size:12px;font-weight:600;min-width:22px;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--ivory-dim);text-align:center;}
+.admin-past-orders>summary .account-collapse-chevron{margin:0 6px 4px auto;}
+.admin-past-orders[open]>summary .account-collapse-chevron{transform:rotate(-135deg);margin:6px 6px 0 auto;}
