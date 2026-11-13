@@ -9452,6 +9452,9 @@ if (addAnotherSuitBtn) {
     if (!commitCurrentSuitToCart()) return;
     jacketDesigner.resetSelections();
     pantsDesigner.resetSelections();
+    // The next suit is a new one, not the wishlist suit being edited.
+    wishlistEditingId = null;
+    wishlistEditingPreview = null;
     // Measurements are cleared, not carried over -- suits added to the same
     // order are just as often for someone else (a gift, a groomsman) as for
     // the same person, so blank fields are the safer default. Anyone who IS
@@ -11288,6 +11291,8 @@ function commitCurrentSuitToCart(opts) {
     cartId: newCartId(),
     savedAt: Date.now(),
   };
+  // A wishlist suit opened with Edit: ordering it takes it off the wishlist.
+  if (typeof wishlistEditingId !== "undefined" && wishlistEditingId) item.fromWishId = wishlistEditingId;
   // Took the account's saved measurements (shown on the cart row).
   if (savedForLater || designerShowsSavedMeasurements()) item.savedMeasurements = true;
   if (pendingCommitIndex !== null && pendingCommitIndex < cartItems.length) {
@@ -11298,6 +11303,7 @@ function commitCurrentSuitToCart(opts) {
       item.adminSuitNumber = prev.adminSuitNumber;
     }
     if (prev && prev.cartId) item.cartId = prev.cartId;
+    if (prev && prev.fromWishId) item.fromWishId = prev.fromWishId;
     cartItems[pendingCommitIndex] = item;
   } else {
     cartItems.push(item);
@@ -12548,6 +12554,9 @@ async function sendOrderEmail(subject, customerEmail, message) {
 // Supabase (client_form_text) and in the notification email.
 function finishOrder(previewItems, paid, discountUsd) {
   if (currentUser) loadOrderHistory();
+  // Ordered suits leave the wishlist (Daniel, 2026-11-13). Read before
+  // returnHomeAfterOrder() clears the cart.
+  try { removeOrderedFromWishlist(cartItems); } catch (e) { console.warn(e); }
   // Read before returnHomeAfterOrder() clears the cart.
   const measureLater = pendingMeasureIndexes().length > 0;
   // Built from the cart before returnHomeAfterOrder() clears it.
@@ -13788,12 +13797,25 @@ function cartItemFromWish(w) {
     liningPhoto: pantsOnly ? null : jacketDesigner.getLiningPhoto(),
     texts: { jacket: pantsOnly ? {} : jacketDesigner.getTexts(), pants: jacketOnly ? {} : pantsDesigner.getTexts() },
     previewId: w.previewId || null,
+    // Taken off the wishlist once this suit is ordered (finishOrder).
+    fromWishId: w.wishId,
     cartId: newCartId(),
     savedAt: Date.now(),
   };
   if (missing.length) item.needsReview = missing;
   return item;
 }
+// Once an order is placed, the wishlist suits in it come off the wishlist:
+// those added from it (fromWishId) and any with exactly the same design.
+function removeOrderedFromWishlist(items) {
+  if (!currentUser || adminEditState || !items || !items.length) return;
+  const ids = items.map((it) => it && it.fromWishId).filter(Boolean);
+  const specs = items.map((it) => { try { return buildVisualSpecText(it); } catch (e) { return null; } }).filter(Boolean);
+  wishlistUpdate((l) => l.filter((w) => ids.indexOf(w.wishId) === -1 && specs.indexOf(w.spec) === -1))
+    .then(() => { renderWishlist(); syncWishlistButton(); })
+    .catch((err) => console.warn("Couldn't update the wishlist after the order:", err));
+}
+
 // Edit (My Account > Wishlist): opens the saved suit in the designer.
 // Saving from the Preview page then updates that same wishlist entry.
 function editWishlistItem(wishId) {
@@ -13999,6 +14021,8 @@ function startOver() {
 // Over and returnHomeAfterOrder(); the cart and saved draft are left to the
 // caller.
 function clearDesignerAndForm() {
+  wishlistEditingId = null;
+  wishlistEditingPreview = null;
   if (orderMeasureTarget) {
     orderMeasureTarget = null;
     applyOrderMeasureMode();
