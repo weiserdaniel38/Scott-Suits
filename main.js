@@ -2079,6 +2079,8 @@ function resetDesignerForNewSuit() {
   pendingCommitIndex = null;
   editingCartIndex = null;
   savedFillDeclined = false;
+  wishlistEditingId = null;
+  wishlistEditingPreview = null;
 }
 
 async function reorderPastOrder(orderId, suitNumber, btn) {
@@ -2984,6 +2986,8 @@ function adminRedrawOverlay(suitBox, had) {
 // requests are exempt.
 function adminAwaitingPayment(o) {
   if (o.admin_no_payment) return false;
+  // Already delivered (e.g. an order re-added by hand): not a checkout left unpaid.
+  if (orderIsFinished(o)) return false;
   if ((o.brand || "scott") === "sw") return false;
   return o.payment_status !== "paid";
 }
@@ -10863,6 +10867,8 @@ function loadCartItemIntoDesigner(index, toMeasurements) {
   designPreview = null;
   pendingCommitIndex = index;
   editingCartIndex = index;
+  wishlistEditingId = null;
+  wishlistEditingPreview = null;
   editingCartPreview = item.previewId ? { spec: currentDesignSpec(), previewId: item.previewId } : null;
   // Every page of this suit is already filled in, so the progress bar can
   // jump straight to any of them, Measurements included.
@@ -13415,6 +13421,11 @@ if (currentUser) scheduleCloudCartSync(0);
 // picture, if there was one). No measurements: those are added in the cart.
 // ============================================================
 var wishlistItems = null; // null until loaded for the signed-in account
+// A wishlist suit opened with Edit: saving updates that entry instead of
+// adding a new one. { spec, previewId, imageUrl } keeps its picture while
+// the design is unchanged.
+var wishlistEditingId = null;
+var wishlistEditingPreview = null;
 var wishlistQueue = Promise.resolve();
 
 // One account write at a time, and never while the cart sync is between
@@ -13483,7 +13494,12 @@ async function loadWishlist() {
 function currentWishlistItem() {
   const type = currentSuitType;
   const photo = hasJacketStep() ? jacketDesigner.getLiningPhoto() : null;
-  const previewId = currentDesignPreviewId();
+  let previewId = currentDesignPreviewId();
+  let imageUrl = previewId && designPreview ? designPreview.url || null : null;
+  if (!previewId && wishlistEditingPreview && wishlistEditingPreview.spec === currentDesignSpec()) {
+    previewId = wishlistEditingPreview.previewId;
+    imageUrl = wishlistEditingPreview.imageUrl;
+  }
   return {
     wishId: "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
     savedAt: Date.now(),
@@ -13495,7 +13511,7 @@ function currentWishlistItem() {
     texts: { jacket: hasJacketStep() ? jacketDesigner.getTexts() : {}, pants: isJacketOnlyType(type) ? {} : pantsDesigner.getTexts() },
     liningPhoto: photo && String(photo).length <= CLOUD_CART_PHOTO_MAX ? photo : null,
     previewId: previewId || editedSuitPreviewId(),
-    imageUrl: previewId && designPreview ? designPreview.url || null : null,
+    imageUrl,
   };
 }
 function wishlistHasCurrent() {
@@ -13507,8 +13523,12 @@ function syncWishlistButton() {
   const btn = document.getElementById("saveToWishlistBtn");
   if (!btn || btn.disabled) return;
   const saved = !!currentUser && wishlistHasCurrent();
+  const editing = !saved && !!currentUser && wishlistEditingEntry();
   btn.classList.toggle("is-saved", saved);
-  btn.innerHTML = saved ? '<span aria-hidden="true">♥</span> Saved to wishlist' : '<span aria-hidden="true">♡</span> Save to wishlist';
+  btn.innerHTML = saved ? '<span aria-hidden="true">♥</span> Saved to wishlist' : '<span aria-hidden="true">♡</span> ' + (editing ? "Save changes to wishlist" : "Save to wishlist");
+}
+function wishlistEditingEntry() {
+  return wishlistEditingId && wishlistItems ? wishlistItems.find((w) => w.wishId === wishlistEditingId) || null : null;
 }
 function saveToWishlist(btn) {
   requireSignIn(btn, "Sign in or create an account to save suits to your wishlist.", async () => {
@@ -13524,10 +13544,18 @@ function saveToWishlist(btn) {
       return;
     }
     const item = currentWishlistItem();
+    const editId = wishlistEditingEntry() ? wishlistEditingId : null;
+    if (editId) item.wishId = editId;
     btn.disabled = true;
     btn.textContent = "Saving...";
     try {
-      await wishlistUpdate((list) => list.filter((w) => w.spec !== item.spec).concat([item]));
+      await wishlistUpdate((list) => {
+        // Editing a saved suit: it keeps its place in the list.
+        const at = editId ? list.findIndex((w) => w.wishId === editId) : -1;
+        const rest = list.filter((w) => w.spec !== item.spec || w.wishId === editId);
+        if (at === -1) return rest.filter((w) => w.wishId !== item.wishId).concat([item]);
+        return rest.map((w) => (w.wishId === editId ? item : w));
+      });
       renderWishlist();
     } catch (err) {
       console.error("Couldn't save to the wishlist:", err);
@@ -13603,6 +13631,20 @@ function renderWishlist() {
         onConfirm: go,
       });
     });
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "wishlist-remove wishlist-edit";
+    edit.textContent = "Edit";
+    edit.addEventListener("click", () => {
+      const go = () => editWishlistItem(w.wishId);
+      if (!designerHasUnsavedWork() || wishlistHasCurrent()) return go();
+      openEditSuitConfirm(null, {
+        title: "Edit this suit?",
+        text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+        confirm: "Yes, edit it",
+        onConfirm: go,
+      });
+    });
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "wishlist-remove";
@@ -13618,7 +13660,7 @@ function renderWishlist() {
       renderWishlist();
       syncWishlistButton();
     });
-    actions.append(add, remove);
+    actions.append(add, edit, remove);
     info.append(title, sub, actions);
     card.appendChild(info);
     box.appendChild(card);
@@ -13664,6 +13706,41 @@ function cartItemFromWish(w) {
   if (missing.length) item.needsReview = missing;
   return item;
 }
+// Edit (My Account > Wishlist): opens the saved suit in the designer.
+// Saving from the Preview page then updates that same wishlist entry.
+function editWishlistItem(wishId) {
+  const w = (wishlistItems || []).find((x) => x.wishId === wishId);
+  if (!w) return;
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
+  // Through the designers so anything no longer offered is left to choose.
+  const item = cartItemFromWish(w);
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  applySuitType(item.type, item.level);
+  if (item.liningPhoto) jacketDesigner.setLiningPhoto(item.liningPhoto);
+  jacketDesigner.setTexts((item.texts && item.texts.jacket) || {});
+  pantsDesigner.setTexts((item.texts && item.texts.pants) || {});
+  jacketDesigner.setSelections(item.jacket || {});
+  if (!isJacketOnlyType(item.type) && item.pants) pantsDesigner.setSelections(item.pants);
+  designPreview = null;
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+  editingCartPreview = null;
+  wishlistEditingId = w.wishId;
+  wishlistEditingPreview = w.previewId ? { spec: currentDesignSpec(), previewId: w.previewId, imageUrl: w.imageUrl || null } : null;
+  furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(previewSection));
+  if (closeAccountOverlay) closeAccountOverlay();
+  markDesignStarted();
+  renderCartBar();
+  updateOrderSummaryUI();
+  updateProcessBar();
+  saveDraft();
+  showDesignerForEditing();
+}
+
 async function wishlistToCart(wishId, btn) {
   const w = (wishlistItems || []).find((x) => x.wishId === wishId);
   if (!w || !currentUser) return;
@@ -13734,6 +13811,8 @@ function goHome() {
   clearDesignerAndForm();
   pendingCommitIndex = null;
   editingCartIndex = null;
+  wishlistEditingId = null;
+  wishlistEditingPreview = null;
   renderCartBar();
   updateOrderSummaryUI();
   if (cartItems.length) saveDraft(); else clearDraft();
