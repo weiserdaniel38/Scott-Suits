@@ -3303,3 +3303,5 @@ html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(90deg
 .wishlist-edit-save{font-weight:700;color:var(--brass);}
 .wishlist-edit-cancel{color:var(--ivory-dim);text-decoration:underline;text-underline-offset:2px;}
 .wishlist-edit-save:disabled{opacity:.6;}
+.wishlist-confirm span{font-size:13px;color:var(--ivory);}
+.wishlist-remove-yes{color:var(--brass);font-weight:600;}

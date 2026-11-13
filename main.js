@@ -13550,14 +13550,26 @@ async function wishlistRead(client, userId) {
   const cart = (data && data.cart) || {};
   return { cart, list: Array.isArray(cart.wishlist) ? cart.wishlist : [] };
 }
-async function wishlistUpdate(mutate) {
+// removed: a suit the customer removed on purpose, kept (last 10) under
+// cart.wishlistRemoved so the shop can bring it back if asked.
+async function wishlistUpdate(mutate, removed, opts) {
   return wishlistRun(async () => {
     const user = currentUser;
     if (!user) throw new Error("Not signed in");
     const client = getSupabase();
     const { cart, list } = await wishlistRead(client, user.id);
-    const next = mutate(list.slice());
-    const { error } = await client.from("profiles").upsert({ id: user.id, email: user.email, cart: Object.assign({}, cart, { wishlist: next }) });
+    let next = mutate(list.slice());
+    // Never drop a suit by accident: only Remove (removed) and an order
+    // (opts.ordered) may take one off; anything else missing is kept.
+    if (!(opts && opts.ordered)) {
+      const keepIds = new Set(next.map((w) => w.wishId));
+      list.forEach((w) => {
+        if (!keepIds.has(w.wishId) && !(removed && removed.wishId === w.wishId)) next.push(w);
+      });
+    }
+    const patch = { wishlist: next };
+    if (removed) patch.wishlistRemoved = [Object.assign({}, removed, { removedAt: Date.now() })].concat(Array.isArray(cart.wishlistRemoved) ? cart.wishlistRemoved : []).slice(0, 10);
+    const { error } = await client.from("profiles").upsert({ id: user.id, email: user.email, cart: Object.assign({}, cart, patch) });
     if (error) throw error;
     if (currentUser && currentUser.id === user.id) wishlistItems = next;
     return next;
@@ -13791,16 +13803,35 @@ function renderWishlist() {
     remove.type = "button";
     remove.className = "wishlist-remove";
     remove.textContent = "Remove";
-    remove.addEventListener("click", async () => {
-      remove.disabled = true;
-      try {
-        await wishlistUpdate((l) => l.filter((x) => x.wishId !== w.wishId));
-      } catch (err) {
-        console.error(err);
-        alert("Sorry, that didn’t work. Please try again.");
-      }
-      renderWishlist();
-      syncWishlistButton();
+    // Remove asks first (it sits next to Edit, easy to tap by mistake), and
+    // the removed suit is kept in cart.wishlistRemoved so it can be restored.
+    remove.addEventListener("click", () => {
+      actions.style.display = "none";
+      const ask = document.createElement("div");
+      ask.className = "wishlist-actions wishlist-confirm";
+      ask.innerHTML = '<span>Remove this suit?</span>';
+      const yes = document.createElement("button");
+      yes.type = "button";
+      yes.className = "wishlist-remove wishlist-remove-yes";
+      yes.textContent = "Remove";
+      const no = document.createElement("button");
+      no.type = "button";
+      no.className = "past-order-reorder-btn";
+      no.textContent = "Keep";
+      no.addEventListener("click", () => { ask.remove(); actions.style.display = ""; });
+      yes.addEventListener("click", async () => {
+        yes.disabled = no.disabled = true;
+        try {
+          await wishlistUpdate((l) => l.filter((x) => x.wishId !== w.wishId), w);
+        } catch (err) {
+          console.error(err);
+          alert("Sorry, that didn\u2019t work. Please try again.");
+        }
+        renderWishlist();
+        syncWishlistButton();
+      });
+      ask.append(no, yes);
+      info.appendChild(ask);
     });
     actions.append(add, edit, remove);
     info.append(title, sub, actions);
@@ -13856,7 +13887,7 @@ function removeOrderedFromWishlist(items) {
   if (!currentUser || adminEditState || !items || !items.length) return;
   const ids = items.map((it) => it && it.fromWishId).filter(Boolean);
   const specs = items.map((it) => { try { return buildVisualSpecText(it); } catch (e) { return null; } }).filter(Boolean);
-  wishlistUpdate((l) => l.filter((w) => ids.indexOf(w.wishId) === -1 && specs.indexOf(w.spec) === -1))
+  wishlistUpdate((l) => l.filter((w) => ids.indexOf(w.wishId) === -1 && specs.indexOf(w.spec) === -1), null, { ordered: true })
     .then(() => { renderWishlist(); syncWishlistButton(); })
     .catch((err) => console.warn("Couldn't update the wishlist after the order:", err));
 }
