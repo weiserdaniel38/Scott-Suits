@@ -6165,6 +6165,14 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // set to that value (e.g. no Lining step on an unlined jacket).
     const hidEq = cat.hiddenWhenEquals;
     if (hidEq && order[hidEq.key] === hidEq.value) return false;
+    // `hiddenWhenOnlyOption: { key, value }`: dropped while the other
+    // category's only allowed choice is that value (e.g. no Lapel Buttonhole
+    // Color on a Shawl, where the only lapel buttonhole is "No").
+    const onlyOpt = cat.hiddenWhenOnlyOption;
+    if (onlyOpt && catalog[onlyOpt.key]) {
+      const allowed = allowedOptions(onlyOpt.key);
+      if (allowed.length && allowed.every((o) => o.name === onlyOpt.value)) return false;
+    }
     return true;
   }
 

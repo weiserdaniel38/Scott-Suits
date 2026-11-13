@@ -359,7 +359,7 @@ const JACKET_CATALOG_GROUPS = [
   { label: "Sleeves", keys: ["sleevecuffstyle", "cuffbuttons"] },
   // Lining Style comes right before Lining Fabric: Unlined skips the
   // fabric (Daniel, 2026-11-09).
-  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "facing", "lining", "lapelbuttonhole", "lapelButtonholeStyle", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
+  { label: "Buttons, Lining & Details", keys: ["buttoncolor", "facing", "lining", "buttonholeThreadColor", "lapelbuttonhole", "lapelButtonholeStyle", "frontButtonholeThreadColor", "buttonholeColorPlacement", "feltundercollar", "feltColor", "threadColor", "pickStitch", "buttonNail", "insidepocket"] },
   { label: "Personalization", keys: ["monogram"] },
   // Technical tailoring questions go last so they don't slow down the
   // visible style choices above.
@@ -2750,10 +2750,12 @@ JACKET_CATALOG.buttonholeThreadColor = {
   label: "Lapel Buttonhole Color",
   flatColorTiles: true, // one flat palette of color tiles, dark to light (see renderFlatColorTiles in main.js)
   chooseOtherColor: true,
-  // Only offered once a real lapel buttonhole is picked: with "No Lapel
-  // Buttonhole" there's no buttonhole to color, so the step is hidden and
-  // any color picked earlier is cleared (see isApplicable in main.js).
-  requiresOtherThan: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
+  // Asked BEFORE the Lapel Buttonhole step (Daniel, 2026-11-13) so the
+  // handmade buttonhole pictures there show this color. Hidden when the
+  // lapel can't have a buttonhole (Shawl, Diamond, Arc), and cleared if the
+  // customer then picks "No Lapel Buttonhole" (see isApplicable in main.js).
+  hiddenWhenEquals: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
+  hiddenWhenOnlyOption: { key: "lapelbuttonhole", value: "No Lapel Buttonhole" },
   column: "jacket_buttonhole_thread_color",
   colorFamilies: BUTTONHOLE_THREAD_COLOR_FAMILIES,
   specialOptions: [MATCH_FABRIC_COLOR_OPTION],
