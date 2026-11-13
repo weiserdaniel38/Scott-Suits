@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261113wishkeep">
+<link rel="stylesheet" href="./style.css?v=20261113wishbar">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261112swcatchup"></script>
 <link rel="stylesheet" href="./brand.css?v=20261112mcheck">
@@ -373,6 +373,14 @@
   <div class="editing-cart-notice" id="editingCartNotice" hidden>
     <span class="editing-cart-tag" id="editingCartTag">Editing Suit 1</span>
     <span class="editing-cart-text">Changes save to your cart when you finish Measurements.</span>
+  </div>
+  <!-- While a wishlist suit is open with Edit (My Account > Wishlist), same
+       idea as the admin's order edit bar below. See editWishlistItem(). -->
+  <div class="admin-edit-bar wishlist-edit-bar" id="wishlistEditBar" hidden>
+    <span class="admin-edit-who"><strong>Wishlist</strong> <span>Editing a saved suit</span></span>
+    <span class="admin-edit-help">Make your change on any step, then press Save changes.</span>
+    <button type="button" class="admin-order-btn" id="wishlistEditSaveBtn">Save changes</button>
+    <button type="button" class="admin-edit-cancel" id="wishlistEditCancelBtn">Cancel</button>
   </div>
   <!-- Admin only, while editing an order already placed ("Edit order" under
        All Orders in My Account). See startAdminOrderEdit() in main.js. -->
@@ -1205,7 +1213,7 @@
 <script src="./catalog.js?v=20261113bhfirst"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261113wishorder"></script>
+<script src="./main.js?v=20261113wishbar"></script>
 <script src="./photo-suit.js?v=20261104pants"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>

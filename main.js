@@ -13617,6 +13617,7 @@ function wishlistHasCurrent() {
   return wishlistItems.some((w) => w.spec === spec);
 }
 function syncWishlistButton() {
+  try { updateWishlistEditUI(); } catch (e) { /* before the bar exists */ }
   const btn = document.getElementById("saveToWishlistBtn");
   if (!btn || btn.disabled) return;
   const saved = !!currentUser && wishlistHasCurrent();
@@ -13624,6 +13625,50 @@ function syncWishlistButton() {
   btn.classList.toggle("is-saved", saved);
   btn.innerHTML = saved ? '<span aria-hidden="true">♥</span> Saved to wishlist' : '<span aria-hidden="true">♡</span> ' + (editing ? "Save changes to wishlist" : "Save to wishlist");
 }
+// The "Editing a saved suit" bar with Save changes / Cancel.
+function updateWishlistEditUI() {
+  const bar = document.getElementById("wishlistEditBar");
+  if (bar) bar.hidden = !(currentUser && !adminEditState && wishlistEditingEntry());
+}
+// Save changes on the bar: writes the design back to the same wishlist
+// suit, then back to My Account > Wishlist with a fresh designer.
+async function saveWishlistEdit(btn) {
+  const editId = wishlistEditingEntry() ? wishlistEditingId : null;
+  if (!editId || !currentUser) return;
+  const item = currentWishlistItem();
+  item.wishId = editId;
+  const label = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Saving..."; }
+  try {
+    await wishlistUpdate((list) => list.filter((w) => w.wishId === editId || w.spec !== item.spec).map((w) => (w.wishId === editId ? item : w)));
+  } catch (err) {
+    console.error("Couldn't save the wishlist suit:", err);
+    alert("Sorry, that didn\u2019t save. Please try again.");
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+    return;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label; }
+  endWishlistEdit(true);
+}
+// Leaves the wishlist suit (Cancel drops unsaved changes) and opens the wishlist.
+function endWishlistEdit(saved) {
+  wishlistEditingId = null;
+  wishlistEditingPreview = null;
+  goHome();
+  renderWishlist();
+  if (openAccountOverlay) openAccountOverlay();
+  const section = document.getElementById("wishlistSection");
+  if (section) {
+    section.open = true;
+    setTimeout(() => section.scrollIntoView({ block: "start", behavior: "smooth" }), 250);
+  }
+}
+(function initWishlistEditBar() {
+  const save = document.getElementById("wishlistEditSaveBtn");
+  const cancel = document.getElementById("wishlistEditCancelBtn");
+  if (save) save.addEventListener("click", () => saveWishlistEdit(save));
+  if (cancel) cancel.addEventListener("click", () => endWishlistEdit(false));
+})();
 function wishlistEditingEntry() {
   return wishlistEditingId && wishlistItems ? wishlistItems.find((w) => w.wishId === wishlistEditingId) || null : null;
 }
