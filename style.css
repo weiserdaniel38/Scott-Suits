@@ -3305,3 +3305,17 @@ html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(90deg
 .wishlist-edit-save:disabled{opacity:.6;}
 .wishlist-confirm span{font-size:13px;color:var(--ivory);}
 .wishlist-remove-yes{color:var(--brass);font-weight:600;}
+
+/* BODY OR FITTED? (mix-up prompt, 2026-11-13) */
+.meas-type-ask{position:fixed;inset:0;z-index:2600;background:rgba(0,0,0,0.45);display:flex;align-items:flex-end;justify-content:center;padding:16px;}
+.meas-type-card{width:100%;max-width:440px;background:var(--surface);color:var(--ivory);border-radius:20px;padding:20px 18px 18px;box-shadow:0 12px 40px rgba(0,0,0,0.25);display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 32px);overflow:auto;}
+.meas-type-card h3{margin:0;font-size:19px;font-weight:600;}
+.meas-type-lead{margin:0;font-size:15px;line-height:1.45;}
+.meas-type-why{margin:0 0 4px;padding-left:18px;font-size:13px;line-height:1.4;color:var(--ivory-dim);}
+.meas-type-why li{margin:2px 0;}
+.meas-type-opt{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line);border-radius:14px;background:transparent;padding:13px 15px;font:inherit;color:var(--ivory);cursor:pointer;}
+.meas-type-opt b{font-size:16px;font-weight:600;}
+.meas-type-opt span{font-size:13px;color:var(--ivory-dim);line-height:1.4;}
+.meas-type-opt.likely{border:1.5px solid var(--brass);background:rgba(var(--brass-rgb),0.08);padding:12.5px 14.5px;}
+@media (min-width:700px){.meas-type-ask{align-items:center;}}
+.meas-wiz-kind{margin:6px 0 0;font-size:13px;color:var(--ivory-dim);}

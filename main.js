@@ -570,6 +570,17 @@ function checkSuitMeasurements(values, suitType, mode) {
     add(issue.hard ? "block" : "warn", ownField ? m.label + " " + (m.id === "height" ? heightText(val) : val) : "", text);
   });
   if (missing.length) items.unshift({ level: "block", labels: [], text: "Missing: " + missing.join(", ") + "." });
+  // Body measurements entered as fitted suit sizes, or the other way round
+  // (Blake's suits, 2026-11). Amber: must be confirmed before the factory.
+  const mix = measureTypeMixup(get, mode);
+  if (mix.suspect) {
+    items.unshift({
+      level: "warn",
+      labels: [],
+      text: (mix.suspect === "body" ? "Look like BODY measurements, but entered as fitted suit sizes" : "Look like FITTED suit sizes, but entered as body measurements") +
+        (mix.reasons.length ? ": " + mix.reasons.join("; ") : "") + ". Confirm which they are.",
+    });
+  }
   // Proportions, only between fields that are each fine on their own.
   const height = get("height");
   MEASURE_SET_RULES.forEach((r) => {
@@ -603,6 +614,169 @@ function measureCheckItemText(x) {
 // while the numbers are unchanged.
 function measureCheckSignature(values) {
   return MEASUREMENTS.map((m) => (values && values[m.id] != null ? values[m.id] : "")).join("|");
+}
+
+// ---------------------------------------------------------------------------
+// BODY vs FITTED MIX-UP (Daniel, 2026-11-13, after Blake's suits came out
+// not fitting: body measurements were typed in as fitted suit sizes). Looks
+// at the numbers typed so far and says whether they look like the OTHER
+// kind. Each tell adds points; 2 or more = probable mix-up.
+// Grounded in the factory's size chart (a fitted jacket's Stomach is about
+// 10 cm over the pants Waist; wrist/cuff openings 25-33 cm) and real orders
+// (Stomach 8-14 over Waist, Shoulder 45-49, Knee 37.5-55). Body chest is
+// estimated from height and weight (adult male averages: about 103 cm at
+// BMI 27.7, 1.7 cm per BMI point); a fitted Chest sits 7-15 cm above it.
+// Returns { suspect: "body" | "finished" | null, score, reasons: [] }.
+// ---------------------------------------------------------------------------
+function measureBodyChestGuess(get) {
+  const h = get("height");
+  const w = get("weight");
+  if (!h || !w) return null;
+  const bmi = (703 * w) / (h * h);
+  return 103 + 1.7 * (bmi - 27.7);
+}
+function measureTypeMixup(get, mode) {
+  mode = mode === "body" ? "body" : "finished";
+  const reasons = [];
+  let score = 0;
+  const tell = (pts, why) => {
+    score += pts;
+    if (pts > 0 && why) reasons.push(why);
+  };
+  const guess = measureBodyChestGuess(get);
+  if (mode === "finished") {
+    const st = get("stomach"), wa = get("waist"), ch = get("chest");
+    if (st && wa) {
+      const d = st - wa;
+      // Stomach under Waist by more than 3 is a typo, not a mix-up (the
+      // range checks flag it). The size estimate can land close too, so
+      // this alone never flags.
+      if (d >= -3 && d < 7) tell(1, "Jacket Stomach is only " + r1(Math.max(d, 0)) + " cm over Pants Waist (fitted is usually 8 to 14 over)");
+      else if (d >= 9) tell(-1);
+    }
+    if (ch && guess) {
+      const d = ch - guess;
+      if (d < 3) tell(2, "Chest " + ch + " is about body size for your height and weight");
+      else if (d < 5) tell(1, "Chest " + ch + " is close to body size for your height and weight");
+      else if (d > 10) tell(-1);
+    }
+    const wr = get("wrist");
+    if (wr && wr < 22) tell(3, "Wrist " + wr + " is a body wrist (a sleeve opening is 25 to 32)");
+    const cu = get("cuff");
+    if (cu && cu < 28) tell(3, "Cuff " + cu + " is an ankle size (a leg opening is 30 to 46)");
+    const sh = get("shoulder");
+    if (sh && sh < 43 && ch && ch >= 100) tell(1, "Shoulder " + sh + " is narrow for a jacket (usually 45 to 49)");
+    const kn = get("knee"), hp = get("hips");
+    if (kn && kn < 37 && hp && hp >= 100) tell(1, "Knee " + kn + " is closer to a body size (pants knee is usually 38 or more)");
+    const bi = get("bicep");
+    if (bi && bi < 33 && ch && ch >= 95) tell(1, "Bicep " + bi + " is closer to a body size (a sleeve is usually 35 or more)");
+  } else {
+    const st = get("body_stomach"), wa = get("body_waist"), ch = get("body_chest");
+    if (st && wa) {
+      const d = st - wa;
+      if (d >= 8) tell(2, "Stomach is " + r1(d) + " cm over Waist, like a fitted jacket over pants (on the body they're close)");
+      else if (d >= 6) tell(1, "Stomach is " + r1(d) + " cm over Waist (on the body they're usually close)");
+      else if (d <= 3) tell(-1);
+    }
+    if (ch && guess) {
+      const d = ch - guess;
+      if (d > 11) tell(2, "Chest " + ch + " is roomy for your height and weight, like a fitted jacket");
+      else if (d > 8) tell(1, "Chest " + ch + " is large for your height and weight");
+      else if (d < 4) tell(-1);
+    }
+    const bi = get("body_bicep");
+    if (bi && ch && bi > ch * 0.36) tell(1, "Bicep " + bi + " is roomy next to Chest, like a sleeve");
+    const sh = get("body_shoulder");
+    if (sh && sh > 50) tell(1, "Shoulder " + sh + " is wide for body width");
+  }
+  const suspect = score >= 2 ? (mode === "finished" ? "body" : "finished") : null;
+  return { suspect, score, reasons: reasons.slice(0, 2) };
+}
+// Same numbers moved to the other kind's fields when the customer says
+// "these are actually body (or fitted) measurements".
+const MEASURE_TYPE_MAP = {
+  shoulder: "body_shoulder", sleeve_length: "body_sleeve", chest: "body_chest", stomach: "body_stomach",
+  back_jacket: "body_back_length", bicep: "body_bicep", hips: "body_seat", waist: "body_waist",
+  leg_length: "body_outseam", crotch: "body_u_rise", thigh: "body_thigh",
+};
+function measureTypeConvert(values, toMode) {
+  const out = {};
+  Object.keys(MEASURE_TYPE_MAP).forEach((fin) => {
+    const body = MEASURE_TYPE_MAP[fin];
+    const from = toMode === "body" ? fin : body;
+    const to = toMode === "body" ? body : fin;
+    if (values[from] != null && values[from] !== "") out[to] = values[from];
+  });
+  return out;
+}
+
+// The type the customer confirmed for the numbers typed so far: { mode,
+// score }. Asked again only if the numbers then look even more like the
+// other kind. Reset with the form.
+let measureTypeOk = null;
+let profileMeasureTypeOk = null;
+function measureTypeAskNeeded(get, mode, ok) {
+  const r = measureTypeMixup(get, mode);
+  if (!r.suspect) return null;
+  if (ok && ok.mode === mode && r.score <= ok.score) return null;
+  return r;
+}
+// "Body or fitted?" two-choice sheet. No way to skip it: the customer has
+// to say which the numbers are. onPick("body" | "finished").
+function askMeasureType(r, mode, onPick) {
+  const old = document.getElementById("measTypeAsk");
+  if (old) old.remove();
+  const looks = r.suspect === "body" ? "body measurements" : "fitted suit sizes";
+  const typed = mode === "body" ? "body measurements" : "fitted suit sizes";
+  const box = document.createElement("div");
+  box.id = "measTypeAsk";
+  box.className = "meas-type-ask";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  box.setAttribute("aria-labelledby", "measTypeAskQ");
+  const card = document.createElement("div");
+  card.className = "meas-type-card";
+  const q = document.createElement("h3");
+  q.id = "measTypeAskQ";
+  q.textContent = "Body or fitted measurements?";
+  const p = document.createElement("p");
+  p.className = "meas-type-lead";
+  p.textContent = "These look like " + looks + ", but they were entered as " + typed + ". Which are they?";
+  card.append(q, p);
+  if (r.reasons.length) {
+    const ul = document.createElement("ul");
+    ul.className = "meas-type-why";
+    r.reasons.forEach((t) => {
+      const li = document.createElement("li");
+      li.textContent = t + ".";
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+  }
+  const opts = [
+    ["body", "Body measurements", "Taken around my body. Our tailors add the room."],
+    ["finished", "Fitted suit sizes", "How the suit should fit, measured on a suit."],
+  ];
+  if (r.suspect === "finished") opts.reverse();
+  opts.forEach(([key, title, sub]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "meas-type-opt" + (key === r.suspect ? " likely" : "");
+    const bt = document.createElement("b");
+    bt.textContent = title;
+    const sp = document.createElement("span");
+    sp.textContent = sub;
+    b.append(bt, sp);
+    b.addEventListener("click", () => {
+      box.remove();
+      onPick(key);
+    });
+    card.appendChild(b);
+  });
+  box.appendChild(card);
+  document.body.appendChild(box);
+  const first = card.querySelector("button");
+  if (first) setTimeout(() => { try { first.focus({ preventScroll: true }); } catch (e) {} }, 50);
 }
 
 function measureTypText(m) {
@@ -1643,6 +1817,29 @@ if (profileMeasureGrid) {
   };
   profileMeasureGrid.addEventListener("input", onProfileMeasTyped);
   profileMeasureGrid.addEventListener("change", onProfileMeasTyped);
+  // Body vs fitted mix-up, checked when a box is left (not mid-number).
+  let profileMixTimer = null;
+  profileMeasureGrid.addEventListener("focusout", () => {
+    clearTimeout(profileMixTimer);
+    profileMixTimer = setTimeout(() => {
+      if (document.getElementById("measTypeAsk")) return;
+      const mode = profileMeasureMode || "finished";
+      const r = measureTypeAskNeeded(measureFieldGetter("pm_"), mode, profileMeasureTypeOk);
+      if (!r) return;
+      askMeasureType(r, mode, (pick) => {
+        if (pick === mode) {
+          profileMeasureTypeOk = { mode, score: r.score };
+          return;
+        }
+        const typed = collectProfileMeasurements();
+        renderProfileMeasureGrid(Object.assign({}, (currentProfile && currentProfile.measurements) || {}, typed, measureTypeConvert(typed, pick)), pick);
+        profileMeasureTypeOk = { mode: pick, score: 99 };
+        keepProfileMeasDraft();
+        clearTimeout(profileMeasSaveTimer);
+        profileMeasSaveTimer = setTimeout(autosaveProfileMeasurements, 600);
+      });
+    }, 350);
+  });
 }
 
 // Prefers the name collected at signup (available immediately off the
@@ -2069,6 +2266,7 @@ function resetDesignerForNewSuit() {
   jacketDesigner.resetSelections();
   pantsDesigner.resetSelections();
   measureStash = {};
+  measureTypeOk = null;
   clearBodyScan();
   applySuitType("full");
   setMeasureMode("finished");
@@ -8761,6 +8959,9 @@ function refreshMeasHub() {}
         el("p", "meas-wiz-eyebrow", missing.length ? "Almost there" : "All set"),
         el("h2", "meas-wiz-q", missing.length ? missing.length + " still to fill in" : "Your measurements")
       );
+      page.appendChild(el("p", "meas-wiz-kind", measureMode === "body"
+        ? "Entered as body measurements. Our tailors add the room."
+        : "Entered as fitted suit sizes: how the suit should fit."));
       page.appendChild(summaryList(true));
       setNext(missing.length ? "Fill in the rest &rarr;" : "Done &check;", !missing.length);
       return;
@@ -8855,6 +9056,44 @@ function refreshMeasHub() {}
     return false;
   }
 
+  // Body vs fitted mix-up (Daniel, 2026-11-13): when the numbers so far
+  // look like the other kind, the customer must say which they are before
+  // going on. Picking the other kind moves the numbers to its fields and
+  // asks for the ones it still needs. Returns true when it stopped to ask.
+  function mixupGate(cont) {
+    if (wiz.dataset.route === "estimate") return false;
+    const r = measureTypeAskNeeded(measureFieldGetter("m_"), measureMode, measureTypeOk);
+    if (!r) return false;
+    askMeasureType(r, measureMode, (pick) => {
+      if (pick === measureMode) {
+        measureTypeOk = { mode: measureMode, score: r.score };
+        cont();
+        return;
+      }
+      returnBorrowed();
+      const typed = {};
+      MEASUREMENTS.forEach((m) => {
+        const input = document.getElementById("m_" + m.id);
+        if (input && input.value !== "") typed[m.id] = input.value;
+      });
+      const moved = measureTypeConvert(typed, pick);
+      setMeasureMode(pick);
+      Object.keys(moved).forEach((id) => {
+        const input = document.getElementById("m_" + id);
+        if (input) input.value = moved[id];
+      });
+      measureTypeOk = { mode: pick, score: 99 };
+      if (wiz.dataset.route !== "pro") wiz.dataset.route = pick;
+      wiz.dataset.branch = wiz.dataset.route === "pro" ? "dontknow" : "know";
+      buildPages();
+      wiz.dataset.fillMissing = "1";
+      idx = nextMissing(null);
+      saveDraft();
+      render();
+    });
+    return true;
+  }
+
   function go(step, force) {
     const key = pages[idx];
     if (step > 0 && key === "saved") {
@@ -8873,6 +9112,7 @@ function refreshMeasHub() {}
       if (estPanel) estPanel.hidden = false;
     }
     if (step > 0 && key === "pro-bring" && tailorTyped()) {
+      if (mixupGate(() => go(step, force))) return;
       wiz.dataset.fillMissing = "1";
       idx = nextMissing(null);
       saveDraft();
@@ -8880,6 +9120,7 @@ function refreshMeasHub() {}
       return;
     }
     if (step > 0 && !currentFieldOk()) return;
+    if (step > 0 && (key === "review" || list().some((m) => m.id === key)) && mixupGate(() => go(step, force))) return;
     if (step > 0 && wiz.dataset.fillMissing === "1" && list().some((m) => m.id === key)) {
       idx = nextMissing(key);
       saveDraft();
@@ -9011,6 +9252,7 @@ function refreshMeasHub() {}
   againBtn.addEventListener("click", () => {
     savedFillDeclined = true;
     measureStash = {};
+    measureTypeOk = null;
     activeMeasurements().forEach((m) => {
       const f = document.getElementById("m_" + m.id);
       if (f) f.value = "";
@@ -9463,6 +9705,7 @@ if (addAnotherSuitBtn) {
     // (see samePreviousMeasurementsBanner / updateSamePreviousMeasurementsBanner)
     // instead of retyping everything.
     measureStash = {};
+    measureTypeOk = null;
     savedFillDeclined = false;
     clearBodyScan();
     MEASUREMENTS.forEach((m) => {
@@ -10763,6 +11006,7 @@ const resetMeasurementsBtn = document.getElementById("resetMeasurementsBtn");
 if (resetMeasurementsBtn) {
   resetMeasurementsBtn.addEventListener("click", () => {
     measureStash = {};
+    measureTypeOk = null;
     savedFillDeclined = true;
     clearBodyScan();
     activeMeasurements().forEach((m) => {
@@ -14109,6 +14353,7 @@ function clearDesignerAndForm() {
   // its full (jacket + pants) field set before the clearing loop below, and
   // resets the progress bar / prices / button wording along with it.
   measureStash = {};
+  measureTypeOk = null;
   clearBodyScan();
   applySuitType("full");
   setMeasureMode("finished");
