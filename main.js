@@ -13755,7 +13755,7 @@ function renderWishlist() {
   });
 }
 
-// A wishlist entry -> a cart item, through the designers (same as Reorder)
+// A wishlist entry -> a cart item (the entry stays saved), through the designers (same as Reorder)
 // so anything no longer offered is left to choose again. Measurements come
 // from the account's saved ones, or are added in the cart.
 function cartItemFromWish(w) {
@@ -13836,8 +13836,7 @@ async function wishlistToCart(wishId, btn) {
   try {
     const item = cartItemFromWish(w);
     resetDesignerForNewSuit();
-    // Off the wishlist first, so a failed save doesn't leave it in both.
-    await wishlistUpdate((l) => l.filter((x) => x.wishId !== wishId));
+    // Stays on the wishlist too (Daniel, 2026-11-13); Remove takes it off.
     cartItems.push(item);
     const n = cartItems.length - 1;
     if (closeAccountOverlay) closeAccountOverlay();
