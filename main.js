@@ -5120,6 +5120,10 @@ function savedMeasurementsFor(type) {
   if (!needed.length || needed.some((m) => !(saved[m.id] > 0) || !measureInRange(m, saved[m.id]))) return null;
   const out = { measure_type: mode };
   needed.forEach((m) => (out[m.id] = saved[m.id]));
+  // Optional fields (Calf, Front Jacket) come along when saved and in range.
+  MEASUREMENTS.forEach((m) => {
+    if (m.factoryOptional && (m.mode || "finished") === mode && measurementForType(m, type) && saved[m.id] > 0 && measureInRange(m, saved[m.id])) out[m.id] = saved[m.id];
+  });
   if (mode === "body") {
     if (!isPantsOnlyType(type)) out.jacket_fit = saved.jacket_fit || "Regular";
     if (!isJacketOnlyType(type)) out.pants_fit = saved.pants_fit || "Regular";
