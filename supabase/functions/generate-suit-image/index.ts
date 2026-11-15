@@ -343,15 +343,15 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     Tall: "taller waistband, about 5 cm",
   },
   "Waistband Extension Style": {
-    "Round Shape": "a short tab (about 5 cm) overlapping just past the top of the fly, with a ROUNDED end and one button",
-    "Round Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly, with a ROUNDED end and no visible button",
-    "Long Round Shape": "a LONG extension: the waistband runs across the front past the front belt loop and ends near the hip in a ROUNDED tip with one button",
-    "Arrow Shape": "a short tab overlapping just past the top of the fly that tapers to a POINT like an arrowhead, with one button",
-    "Arrow Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly that tapers to a POINT like an arrowhead, no visible button",
-    "Square Shape": "a short tab overlapping just past the top of the fly with a SQUARE end and one button",
-    "Square Shape (No Button/Hole)": "a short tab overlapping just past the top of the fly with a SQUARE end, no visible button",
+    "Round Shape": "a short tab (about 5 cm) from the waistband on the viewer's right, lying over the centre front and pointing to the viewer's left, with a ROUNDED end and one button",
+    "Round Shape (No Button/Hole)": "a short tab from the waistband on the viewer's right, lying over the centre front and pointing to the viewer's left, with a ROUNDED end and no visible button",
+    "Long Round Shape": "a LONG extension: the waistband on the viewer's right runs across the whole front, past the belt loop on the viewer's left, and ends near the viewer's left hip in a ROUNDED tip with one button",
+    "Arrow Shape": "a short tab (about 5 cm) from the waistband on the viewer's right, lying over the centre front and tapering to a POINT on the viewer's left like an arrowhead, with one button",
+    "Arrow Shape (No Button/Hole)": "a short tab (about 5 cm) from the waistband on the viewer's right, lying over the centre front and tapering to a POINT on the viewer's left like an arrowhead, no visible button",
+    "Square Shape": "a short tab (about 5 cm) from the waistband on the viewer's right, lying over the centre front and pointing to the viewer's left, with a SQUARE end and one button",
+    "Square Shape (No Button/Hole)": "a short tab from the waistband on the viewer's right, lying over the centre front and pointing to the viewer's left, with a SQUARE end, no visible button",
     "Square Waistband Centered": "no tab: the two waistband ends meet edge to edge exactly at the centre front above the fly, no visible button",
-    "Square Shape W/ Long Extension": "a LONG extension: the waistband runs across the front past the front belt loop and ends near the hip in a SQUARE end with one button",
+    "Square Shape W/ Long Extension": "a LONG extension: the waistband on the viewer's right runs across the whole front, past the belt loop on the viewer's left, and ends near the viewer's left hip in a SQUARE end with one button",
   },
   "Waistband Style": {
     "Normal Waistband": "a plain, straight waistband with no side adjusters",
@@ -570,6 +570,47 @@ const JACKET_LENGTH =
 // than the jacket itself, collar to hem.
 const TROUSER_LENGTH =
   "a normal, real-life suit-trouser length: the legs below the jacket hem are slightly SHORTER than the jacket itself measured from collar to hem (about 4/5 of it), and the hems end at the ankle where the top of a shoe would be, with at most a slight break. Never stretch the legs to fill a tall panel: keep the whole suit at real human proportions and leave white space above and below it instead";
+
+// 2026-11-15: an Arrow (No Button/Hole) tab drew short, stopping before the
+// fly edge, and the fly stitching read like a pocket opening. Real men's
+// trousers close left over right: the wearer's left (viewer's RIGHT in a
+// front view) is the top layer, so its waistband carries the tab across to
+// the viewer's left and the fly's J-stitching sits on the viewer's right of
+// the fly edge (matches the catalog drawings pants-wext-new-*.jpg).
+const TROUSER_FLY =
+  "The fly: its folded front edge is ONE straight vertical line at the exact centre front, running down from the bottom of the waistband to just above the crotch. The fly's topstitching is a single thin line of stitching about 3.5 cm to the VIEWER'S RIGHT of that edge (the wearer's left), running straight down and curving in at the bottom to meet the edge in a J shape about 18 cm below the waistband. It is only stitching on flat, closed fabric: never an opening, slit, welt or pocket, and there is no fly stitching on the viewer's left of the edge";
+
+function trouserClosureText(ext: string): string {
+  const noButton = /no button/i.test(ext);
+  const overlap = "The waistband closes left over right like real men's trousers: the half of the waistband on the VIEWER'S RIGHT (the wearer's left) is the top layer and ";
+  const tabBody = " The tab is part of the waistband itself: exactly the same height, its top and bottom edges running on in one line with the waistband's, lying flat on top of the waistband half on the viewer's left (which runs on underneath it).";
+  const button = noButton
+    ? " NO button and NO buttonhole anywhere on the tab or the waistband front (it fastens with a hidden hook inside)."
+    : " One button sits on the tab about 2 cm in from its tip, fastening it.";
+  const shortTab = (shape: string) =>
+    overlap + "continues past the centre front as a short tab (about 5 cm) pointing to the VIEWER'S LEFT, ending in " + shape +
+      ". The tip ends about 2.5 cm to the viewer's left of the fly edge, so the fly edge starts directly UNDER the tab, never beside or past its tip." + tabBody + button;
+  const longTab = (shape: string) =>
+    overlap + "continues right across the front, past the centre front and past the front belt loop on the VIEWER'S LEFT, ending near the viewer's left hip (the wearer's right) in " + shape +
+      ", fastened by one button there. Nothing fastens at the centre front; the fly edge starts directly under this long band." + tabBody;
+  let closure = "";
+  if (/no waistband|string/i.test(ext)) {
+    closure = "There is NO separate waistband band and NO extension tab: the top edge of the trousers is a soft gathered drawstring waist, with a fabric drawstring tied in a small bow at the centre front above the fly. No button at the waist.";
+  } else if (/centered|square waistband/i.test(ext)) {
+    closure = "There is NO extension tab: the two halves of the waistband meet edge to edge in a straight vertical seam exactly at the centre front, directly above the fly edge. No button or buttonhole is visible on the waistband.";
+  } else if (/long round/i.test(ext)) {
+    closure = longTab("a ROUNDED tip");
+  } else if (/square.*long/i.test(ext)) {
+    closure = longTab("a straight, SQUARE-cornered end");
+  } else if (/arrow/i.test(ext)) {
+    closure = shortTab("a POINT like an arrowhead (two straight edges meeting at a point, not square, not rounded)");
+  } else if (/square/i.test(ext)) {
+    closure = shortTab("a straight, SQUARE-cornered end (not pointed, not rounded)");
+  } else if (/round/i.test(ext)) {
+    closure = shortTab("a ROUNDED end (not pointed, not square)");
+  }
+  return (closure ? closure + " " : "") + TROUSER_FLY;
+}
 
 // The image model drew a besom chest pocket as a stack of piped lines above a
 // second, separate welt slit. There is only ever one chest pocket.
@@ -915,6 +956,8 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
   }
   if (!/^Suit type: Jacket only/m.test(spec)) {
     out.push("- TROUSER LENGTH: " + TROUSER_LENGTH + ".");
+    const ext = (spec.match(/^Waistband Extension Style: (.+)$/m) || [])[1] || "";
+    out.push("- TROUSER FRONT CLOSURE (front view and waistband close-up): " + trouserClosureText(ext) + ".");
   }
   if (/^Front Button: Double Breasted/im.test(spec)) {
     out.push("- JACKET LENGTH: the double-breasted jacket is " + JACKET_LENGTH + ".");
@@ -1017,33 +1060,11 @@ function fixedRules(spec: string, buttonPhoto = false): string {
       "- No exposed metal on the trouser front: no visible clasps, hooks, bars or zipper teeth. Any hook-and-eye is hidden inside the waistband." +
         (buckle ? " The only visible metal is the small side-adjuster buckles described below." : ""),
     );
-    // One entry per Waistband Extension Style option (catalog.js), matched on
-    // the customer-facing name; most specific first.
-    const extRules: [RegExp, string][] = [
-      [/no waistband|string/i,
-        "There is NO separate waistband band and NO extension tab: the top edge of the trousers is a soft gathered drawstring waist, with a fabric drawstring tied in a small bow at the centre front above the fly. No button at the waist."],
-      [/centered|square waistband/i,
-        "There is NO extension tab: the two halves of the waistband meet edge to edge in a straight vertical seam exactly at the centre front, directly above the fly. No button or buttonhole is visible on the waistband."],
-      [/long round/i,
-        "The waistband has a LONG extension with a ROUNDED end: one side of the waistband continues right across the front, past the front belt loop, and ends near the side of the hip in a rounded tip fastened by one button there. Nothing fastens at the centre front."],
-      [/square.*long/i,
-        "The waistband has a LONG extension with a SQUARE end: one side of the waistband continues right across the front, past the front belt loop, and ends near the side of the hip in a straight, square-cornered end fastened by one button there. Nothing fastens at the centre front."],
-      [/arrow/i,
-        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly and tapers to a POINT like an arrowhead (not square, not rounded)."],
-      [/square/i,
-        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly, with a straight, square-cornered end (not pointed, not rounded)."],
-      [/round/i,
-        "The waistband extension is a short tab (about 5 cm) that overlaps just past the top of the fly, with a ROUNDED end (not pointed, not square)."],
-    ];
-    const extRule = (extRules.find(([re]) => re.test(ext)) || [])[1];
-    if (extRule) {
-      const short = !/no waistband|string|centered|square waistband|long/i.test(ext);
-      rules.push(
-        "- Waistband front: " + extRule +
-          (short ? (/no button/i.test(ext) ? " The tab has NO visible button or buttonhole (it fastens hidden underneath)." : " The tab is fastened with one button.") : "") +
-          " Show this clearly in the full-suit front and the waistband close-up.",
-      );
-    }
+    // Spelled out once in keyDetails at the top of the prompt (tab
+    // direction, fly side, button); repeated here as a short reminder.
+    rules.push("- Waistband front and fly, in the full-suit front and the waistband close-up: exactly as in TROUSER FRONT CLOSURE at the top" +
+      (/no waistband|string|centered|square waistband/i.test(ext) ? "" : " (the tab or extension comes from the viewer's right and points to the viewer's left, over the fly edge)") +
+      "; the fly's J-shaped stitching is on the viewer's right of the fly edge and is never drawn as an opening or pocket.");
     const styleRules: [RegExp, string][] = [
       [/arrow shape belt/i, "a pointed, arrow-shaped fabric strap on each side of the waistband, threaded through a small metal adjuster buckle"],
       [/side w\/ buckle|adjustable waistband on side/i, "a short fabric side-adjuster tab on each side of the waistband, closing through a small metal buckle"],
