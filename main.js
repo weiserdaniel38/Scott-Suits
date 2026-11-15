@@ -12521,6 +12521,7 @@ async function updateDesignPreviewPanel() {
       if (cancelBtn) { cancelBtn.remove(); cancelBtn = null; }
       preview.status = r.status === "done" ? "done" : "failed";
       if (r.status === "done") preview.url = r.url;
+      if (r.status === "done") { try { wishlistAttachPicture(preview); } catch (e) { console.warn(e); } }
       saveDraft();
       if (box.contains(ui.card)) {
         if (r.status === "done") showImage(r.url);
@@ -14134,6 +14135,18 @@ function removeOrderedFromWishlist(items) {
   wishlistUpdate((l) => l.filter((w) => ids.indexOf(w.wishId) === -1 && specs.indexOf(w.spec) === -1), null, { ordered: true })
     .then(() => { renderWishlist(); syncWishlistButton(); })
     .catch((err) => console.warn("Couldn't update the wishlist after the order:", err));
+}
+
+// A picture just drawn for a design that is on the wishlist (Edit, or
+// saved before the picture was ready) becomes that wishlist suit's photo.
+function wishlistAttachPicture(preview) {
+  if (!currentUser || !preview || !preview.id || !preview.url || !wishlistItems) return;
+  const hit = (w) => w.spec === preview.spec || (wishlistEditingId && w.wishId === wishlistEditingId && preview.spec === currentDesignSpec());
+  if (wishlistEditingId) wishlistEditingPreview = { spec: preview.spec, previewId: preview.id, imageUrl: preview.url };
+  if (!wishlistItems.some((w) => hit(w) && w.previewId !== preview.id)) return;
+  wishlistUpdate((l) => l.map((w) => (hit(w) ? Object.assign({}, w, { previewId: preview.id, imageUrl: preview.url, spec: preview.spec }) : w)))
+    .then(() => renderWishlist())
+    .catch((err) => console.warn("Couldn't put the new picture on the wishlist:", err));
 }
 
 // Edit (My Account > Wishlist): opens the saved suit in the designer.
