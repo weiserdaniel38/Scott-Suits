@@ -414,7 +414,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       ...(bodyMode ? { versionStyle: fit(row.pants_fit) } : {}),
     });
     const calf = Number(row.calf);
-    if (!bodyMode && isFinite(calf) && calf > 0) notes.push("Calf (finished): " + calf + " cm.");
+    if (!bodyMode && isFinite(calf) && calf > 0) notes.push("Trousers calf (finished): " + calf + " cm. Please keep the leg at least this wide at the calf; taper knee to hem evenly, not narrower at the calf.");
   }
 
   // Fabric: the site stores "26SU218.DBV3529"; the factory's number is the part after the dot.
