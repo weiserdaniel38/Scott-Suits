@@ -12153,7 +12153,14 @@ async function pollSuitImage(checkPayload, isStillWanted) {
   // Up to two drawing rounds of about two minutes each (generate-suit-image).
   const deadline = Date.now() + 6 * 60 * 1000;
   while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 3000));
+    // Every 3 s, or right away when the phone comes back to this page (timers
+    // are paused while it's in the background).
+    await new Promise((r) => {
+      const t = setTimeout(done, 3000);
+      function done() { clearTimeout(t); document.removeEventListener("visibilitychange", onShow); r(); }
+      function onShow() { if (document.visibilityState === "visible") done(); }
+      document.addEventListener("visibilitychange", onShow);
+    });
     if (isStillWanted && !isStillWanted()) return { status: "abandoned" };
     const check = await callSuitImageFn(checkPayload);
     const st = check.data && check.data.status;
@@ -12164,8 +12171,8 @@ async function pollSuitImage(checkPayload, isStillWanted) {
 }
 
 const SUIT_IMAGE_MESSAGES = {
-  failed: "Sorry, something went wrong drawing your suit.",
-  timeout: "This is taking longer than usual.",
+  failed: "Sorry, the drawing didn't finish. Please tap Try Again.",
+  timeout: "The drawing took too long. Please tap Try Again.",
   limit: "You've drawn 3 suits today, the daily limit. Please try again tomorrow. You can still keep going and place your order.",
   start: "Sorry, we couldn't start the picture right now.",
   network: "Sorry, we couldn't reach the picture service.",
@@ -12439,6 +12446,9 @@ function buildSelectionsReview(card) {
   return wrap;
 }
 
+// One-time line shown under the picture (e.g. a redraw that didn't finish).
+var suitPreviewNotice = "";
+
 // Top of the Measurements step: "See your suit before you order".
 async function updateDesignPreviewPanel() {
   if (typeof syncPreviewCartButton === "function") syncPreviewCartButton();
@@ -12480,6 +12490,13 @@ async function updateDesignPreviewPanel() {
   const showImage = (url) => {
     ui.showImage(url);
     const media = ui.card.querySelector(".suit-preview-media");
+    if (suitPreviewNotice) {
+      const n = document.createElement("p");
+      n.className = "suit-preview-redraw-note";
+      n.textContent = suitPreviewNotice;
+      suitPreviewNotice = "";
+      media.appendChild(n);
+    }
     const note = document.createElement("p");
     note.className = "suit-preview-disclaimer";
     note.textContent = "This picture is AI-generated and drawn as accurately as possible. Small details may differ, but your suit is made exactly to the selections you chose.";
@@ -12519,6 +12536,14 @@ async function updateDesignPreviewPanel() {
     pollSuitImage({ preview_check: preview.id }, () => designPreview === preview).then((r) => {
       if (designPreview !== preview) return;
       if (cancelBtn) { cancelBtn.remove(); cancelBtn = null; }
+      // A redraw that failed or got stuck puts the previous picture back.
+      if (r.status !== "done" && preview.prev && preview.prev.url) {
+        designPreview = { spec: preview.spec, photo: preview.photo, id: preview.prev.id, status: "done", url: preview.prev.url };
+        suitPreviewNotice = "The new drawing didn't finish. Your earlier picture is kept.";
+        saveDraft();
+        updateDesignPreviewPanel();
+        return;
+      }
       preview.status = r.status === "done" ? "done" : "failed";
       if (r.status === "done") preview.url = r.url;
       if (r.status === "done") { try { wishlistAttachPicture(preview); } catch (e) { console.warn(e); } }

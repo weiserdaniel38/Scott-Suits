@@ -66,6 +66,9 @@ import Anthropic from "npm:@anthropic-ai/sdk";
 const BUCKET = "suit-images";
 const LAYOUT_REFERENCE = "./assets/suit-layout-outline.jpg";
 const STALE_PENDING_MS = 5 * 60 * 1000;
+// Previews are checked every 3 s by a waiting customer: one round can't run
+// past ~150 s, so 3 minutes without an update means it was cut off.
+const PREVIEW_STALE_MS = 3 * 60 * 1000;
 
 const env = (k: string, d = "") => (Deno.env.get(k) || d).trim();
 const SUPABASE_URL = env("SUPABASE_URL");
@@ -1618,10 +1621,12 @@ async function claim(id: string, force: boolean) {
   return data && data.length ? data[0] : null;
 }
 
-// Draws one sheet and stores it; returns its public URL and the prompt used,
-// or null when no right sheet came out and another round should be tried
-// (lastRound false).
-async function drawSheet(raw: string, folder: string, name: string, lastRound = true, cancelled: () => Promise<boolean> = async () => false): Promise<{ url: string; prompt: string } | null> {
+// Draws one sheet and stores it; returns its public URL, the prompt used and
+// whether it passed the check (good=false: a wrong sheet, kept as the fallback
+// while one more round is tried). null only when cancelled. A round after the
+// first passes the first round's prompt (promptOverride) so it doesn't spend
+// time and money writing it again.
+async function drawSheet(raw: string, folder: string, name: string, lastRound = true, cancelled: () => Promise<boolean> = async () => false, promptOverride = ""): Promise<{ url: string; prompt: string; good: boolean } | null> {
   const { text: spec, swatches: allSwatches } = parseSpec(raw);
   // An unlined jacket shows no lining, so don't show the model a lining swatch.
   const unlined = /^Facing Style: No Lining/m.test(spec);
@@ -1714,35 +1719,63 @@ async function drawSheet(raw: string, folder: string, name: string, lastRound = 
   const notes = refsNote(loaded, !!layoutImg, spec);
   const buttonPhoto = loaded.some((r) => r.label === "button");
   const key = keyDetails(spec, loaded.some((r) => r.label.startsWith("lining (customer")), buttonPhoto);
-  const prompt = (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec, buttonPhoto);
+  const prompt = promptOverride || (key ? key + "\n\n" : "") + (await writePrompt(layout, notes, describeSpec(spec))) + "\n\n" + fixedRules(spec, buttonPhoto);
   if (await cancelled()) return null;
   const { jpeg, good } = await drawChecked(prompt, images, spec, cancelled, lastRound);
   if (await cancelled()) return null;
-  if (!good && !lastRound) return null;
   if (!jpeg) throw new Error("No picture was drawn in time");
 
   const path = folder + "/" + name + "-" + Date.now() + ".jpg";
   const up = await supabase.storage.from(BUCKET).upload(path, jpeg, { contentType: "image/jpeg", upsert: true });
   if (up.error) throw new Error("Storage upload failed: " + up.error.message);
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return { url: data.publicUrl, prompt };
+  return { url: data.publicUrl, prompt, good: good || lastRound };
+}
+
+// The function is stopped about 150 s after it starts (free plan), with no
+// chance to save anything: on 2026-11-15 a second-round picture was cut off
+// that way and the preview stayed "drawing" forever. So a round gives up a
+// little before that and falls back to the first round's picture (or fails
+// with a message). The drawing already sent to OpenAI is still billed.
+const ROUND_DEADLINE_MS = () => Math.max(60000, Number(env("ROUND_DEADLINE_MS", "138000")) || 138000);
+class RoundTimeout extends Error {}
+function withDeadline<T>(work: Promise<T>, startedAt: number): Promise<T> {
+  const left = ROUND_DEADLINE_MS() - (Date.now() - startedAt);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new RoundTimeout("The drawing took too long")), Math.max(1000, left));
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
 }
 
 async function generate(row: { id: string; order_id: string | null; suit_type: string | null; visual_spec: string | null }, round = 1) {
+  const startedAt = Date.now();
+  // Round 2+: the first round's (wrong) picture and prompt, saved on the row.
+  let fallback: { image_url: string | null; image_prompt: string | null } | null = null;
   try {
     const raw = (row.visual_spec || "").trim();
     if (!raw) throw new Error("This order has no visual_spec (placed before the image feature was set up)");
-    const r = await drawSheet(raw, row.order_id || row.id, row.id, round >= ROUNDS());
-    if (!r) {
-      await setRow(row.id, { image_status: "pending" });
+    if (round > 1) {
+      const { data } = await supabase.from("orders").select("image_url, image_prompt").eq("id", row.id).maybeSingle();
+      fallback = data || null;
+    }
+    const r = await withDeadline(drawSheet(raw, row.order_id || row.id, row.id, round >= ROUNDS(), async () => false, fallback?.image_prompt || ""), startedAt);
+    if (!r) return;
+    const { url, prompt, good } = r;
+    if (!good) {
+      // Keep the wrong picture as the fallback, then draw ONE more.
+      await setRow(row.id, { image_status: "pending", image_url: url, image_prompt: prompt });
       await chainRound({ retry: "order", id: row.id, round: round + 1 });
       return;
     }
-    const { url, prompt } = r;
     await setRow(row.id, { image_status: "done", image_url: url, image_prompt: prompt, image_error: null });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("Suit image failed for", row.id, msg);
+    console.error("Suit image failed for", row.id, "round", round, msg);
+    if (fallback?.image_url) {
+      await setRow(row.id, { image_status: "done", image_error: ("Round " + round + ": " + msg).slice(0, 1000) });
+      return;
+    }
     await setRow(row.id, { image_status: "failed", image_error: msg.slice(0, 1000) });
   }
 }
@@ -1759,24 +1792,37 @@ async function generatePreview(id: string, raw: string, round = 1) {
     const { data } = await supabase.from("suit_previews").select("status").eq("id", id).maybeSingle();
     return data?.status === "cancelled";
   };
+  const startedAt = Date.now();
+  // Round 2+: the first round's (wrong) picture and prompt, saved on the row.
+  let fallback: { image_url: string | null; image_prompt: string | null } | null = null;
   try {
     if (await cancelled()) return;
-    const r = await drawSheet(raw, "previews", id, round >= ROUNDS(), cancelled);
+    if (round > 1) {
+      const { data } = await supabase.from("suit_previews").select("image_url, image_prompt").eq("id", id).maybeSingle();
+      fallback = data || null;
+    }
+    const r = await withDeadline(drawSheet(raw, "previews", id, round >= ROUNDS(), cancelled, fallback?.image_prompt || ""), startedAt);
     if (await cancelled()) {
       console.log("Preview cancelled", id);
       return;
     }
-    if (!r) {
-      await set({ status: "pending" });
+    if (!r) return;
+    const { url, prompt, good } = r;
+    if (!good) {
+      // Keep the wrong picture as the fallback, then draw ONE more.
+      await set({ status: "pending", image_url: url, image_prompt: prompt });
       await chainRound({ retry: "preview", id, round: round + 1 });
       return;
     }
-    const { url, prompt } = r;
     await set({ status: "done", image_url: url, image_prompt: prompt, image_error: null });
   } catch (err) {
     if (await cancelled()) return;
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("Suit preview failed for", id, msg);
+    console.error("Suit preview failed for", id, "round", round, msg);
+    if (fallback?.image_url) {
+      await set({ status: "done", image_error: ("Round " + round + ": " + msg).slice(0, 1000) });
+      return;
+    }
     await set({ status: "failed", image_error: msg.slice(0, 1000) });
   }
 }
@@ -1879,7 +1925,15 @@ async function checkPreview(id: string): Promise<Response> {
   if (error) return json({ error: "Lookup failed" }, 500);
   if (!data) return json({ error: "Not found" }, 404);
   let status = data.status;
-  if (status === "pending" && Date.now() - Date.parse(data.updated_at) > STALE_PENDING_MS) status = "failed";
+  // A round is stopped after about 150 s, so a preview still "pending" 3
+  // minutes after its last update was cut off: show the first round's picture
+  // if there is one, else say it failed (and record that on the row).
+  if (status === "pending" && Date.now() - Date.parse(data.updated_at) > PREVIEW_STALE_MS) {
+    status = data.image_url ? "done" : "failed";
+    await supabase.from("suit_previews")
+      .update({ status, image_error: "Drawing was cut off", updated_at: new Date().toISOString() })
+      .eq("id", id).eq("status", "pending");
+  }
   if (status === "cancelled") status = "failed";
   return json({ status, image_url: status === "done" ? data.image_url : null });
 }
@@ -2015,7 +2069,8 @@ Deno.serve(async (req) => {
   if (body?.check || found.image_status === "done") {
     let status = found.image_status || "none";
     if (status === "pending" && found.image_updated_at && Date.now() - Date.parse(found.image_updated_at) > STALE_PENDING_MS) {
-      status = "failed";
+      // Cut off: the first round's picture if there is one.
+      status = found.image_url ? "done" : "failed";
     }
     return json({ status, image_url: status === "done" ? found.image_url : null });
   }
