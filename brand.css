@@ -16,7 +16,11 @@
 @font-face{font-family:'Cinzel';font-style:normal;font-weight:400 700;font-display:swap;src:url(./assets/sw/fonts/cinzel-500.woff) format('woff');}
 @font-face{font-family:'SW Montserrat';font-style:normal;font-weight:400 500;font-display:swap;src:url(./assets/sw/fonts/montserrat-400.woff) format('woff');}
 @font-face{font-family:'SW Montserrat';font-style:normal;font-weight:600 700;font-display:swap;src:url(./assets/sw/fonts/montserrat-600.woff) format('woff');}
-@font-face{font-family:'Poiret One';font-style:normal;font-weight:400 700;font-display:swap;src:url(./assets/sw/fonts/poiret-one.woff) format('woff');}
+@font-face{font-family:'Poiret One';font-style:normal;font-weight:100 900;font-display:swap;src:url(./assets/sw/fonts/poiret-one.woff) format('woff');}
+/* Arrows, ticks, hearts and the warning sign are not in Poiret One, so they
+   used to drop to whatever font the phone had. These are drawn in the same
+   thin line (Daniel, 2026-11-16: every single letter in one font). */
+@font-face{font-family:'SW Symbols';font-style:normal;font-weight:100 900;font-display:swap;src:url(./assets/sw/fonts/sw-symbols.woff?v=1) format('woff');unicode-range:U+2190-2193,U+2713,U+2715,U+2726,U+2661,U+2665,U+26A0;}
 @font-face{font-family:'Josefin Sans';font-style:normal;font-weight:400 500;font-display:swap;src:url(./assets/sw/fonts/josefin-sans-400.woff) format('woff');}
 @font-face{font-family:'Josefin Sans';font-style:normal;font-weight:600 700;font-display:swap;src:url(./assets/sw/fonts/josefin-sans-600.woff) format('woff');}
 @font-face{font-family:'Great Vibes';font-style:normal;font-weight:400 700;font-display:swap;src:url(./assets/sw/fonts/great-vibes.woff) format('woff');}
@@ -100,8 +104,11 @@ html[data-brand="sw"][data-sw-font="cinzel"]{
   --sw-h1:54px;--sw-h1-m:36px;--sw-h2:1em;--sw-nav:14px;--sw-nav-m:12px;--sw-btn:16px;--sw-btn-m:14px;
 }
 html[data-brand="sw"][data-sw-font="deco"]{
-  --sw-display:'Poiret One',sans-serif;--sw-display-weight:400;--sw-display-track:0.06em;--sw-display-case:uppercase;
-  --sw-body:'Josefin Sans',Helvetica,sans-serif;--sw-body-size:1.02em;--sw-body-weight:400;
+  /* One typeface for every letter on the site (Daniel, 2026-11-16): reading
+     text used to be Josefin Sans, now it is Poiret One like the titles. */
+  --sw-display:'Poiret One','SW Symbols',sans-serif;--sw-display-weight:400;--sw-display-track:0.06em;--sw-display-case:uppercase;
+  --sw-body:'Poiret One','SW Symbols',sans-serif;--sw-body-size:1.02em;--sw-body-weight:400;
+  font-synthesis:none;
   --sw-h1:56px;--sw-h1-m:36px;--sw-h2:1em;--sw-nav:16px;--sw-nav-m:13px;--sw-btn:18px;--sw-btn-m:16px;
 }
 html[data-brand="sw"][data-sw-font="vibes"]{
