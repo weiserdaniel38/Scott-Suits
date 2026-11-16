@@ -139,7 +139,7 @@ var SITE_BRAND_TEXT = {
     ".how-it-works-list .hiw-step:nth-child(3) h3": "See your suit before it is made",
     ".how-it-works-list .hiw-step:nth-child(5) h3": "Place your order",
     ".how-it-works-list .hiw-step:nth-child(5) p": "Choose delivery to your door or collection in store, and add Alteration Protection for three complimentary alterations. No payment is needed: send your order and you'll receive a confirmation right away.",
-    "footer": "S.W. Atelier: Custom Suits &amp; Formalwear. Handcrafted suits and jackets, tailored to your exact measurements. <a href=\"./contact.html\" style=\"color:inherit;\">Contact</a> · <a href=\"./privacy.html\" style=\"color:inherit;\">Privacy Policy</a>",
+    "footer": "<span class=\"footer-tagline\">S.W. Atelier: Custom Suits &amp; Formalwear. Handcrafted suits and jackets, tailored to your exact measurements. </span><a href=\"./contact.html\" style=\"color:inherit;\">Contact</a> · <a href=\"./privacy.html\" style=\"color:inherit;\">Privacy Policy</a>",
     "body > .wrap > footer": "<a href=\"./\">Back to S.W. Atelier</a> · <a href=\"./contact.html\">Contact us</a>",
   },
 };
