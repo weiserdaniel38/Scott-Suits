@@ -259,7 +259,8 @@
       var m=/[?&]herovideo=([123])\b/.exec(location.search);
       // S.W. Atelier always gets the natural video (Daniel, 2026-11-16);
       // Scott's Suits keeps its photo hero unless a ?herovideo= flag is used.
-      if(!m && document.documentElement.getAttribute('data-brand')==='sw') m=[0,'3'];
+      var sw=document.documentElement.getAttribute('data-brand')==='sw';
+      if(!m && sw) m=[0,'3'];
       if(!m) return;
       // 1 = beige grade (dark text), 2 = dark burgundy grade (white text),
       // 3 = natural colours, slightly warmer (white text, warm wash)
@@ -270,11 +271,14 @@
       var tall=window.matchMedia('(max-width:900px)').matches;
       var base='./assets/hero-video/';
       var cut=tall?'tall':'wide';
-      v.poster=base+'poster-'+tone+'-'+cut+'.jpg?v=20261112vid3';
+      // S.W. uses its own cut of the natural video: crossfades between the
+      // shots instead of hard cuts, and a seamless loop (Daniel, 2026-11-16).
+      var file=(sw&&tone==='natural')?'sw':tone;
+      v.poster=base+'poster-'+file+'-'+cut+'.jpg?v=20261116fade';
       var still=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(navigator.connection&&navigator.connection.saveData);
       if(still) return;
       v.muted=true;v.defaultMuted=true;v.setAttribute('muted','');v.autoplay=true;
-      v.src=base+'hero-'+tone+'-'+cut+'.mp4?v=20261112vid3';
+      v.src=base+'hero-'+file+'-'+cut+'.mp4?v=20261116fade';
       var p=v.play();if(p&&p.catch)p.catch(function(){});
     }catch(e){}
   })();
