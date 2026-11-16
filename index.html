@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261115savedcalf">
+<link rel="stylesheet" href="./style.css?v=20261116swvideo">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261112swcatchup"></script>
 <link rel="stylesheet" href="./brand.css?v=20261112mcheck">
@@ -245,7 +245,7 @@
        .hero-sketch-left CSS) -- a faint jacket illustration + tagline that
        fades into the page background, behind .hero-text (lower z-index),
        so it reads as texture rather than competing with the real content. -->
-  <!-- Video hero MOCKUP (2026-11-12): only switched on by ?herovideo=1 (beige grade) or =2 (dark burgundy grade), so the
+  <!-- Video hero MOCKUP (2026-11-12): ON for S.W. Atelier (data-brand=sw, natural grade); for Scott's Suits only with ?herovideo=1/2/3 (beige / dark burgundy / natural), so the
        live home page is unchanged until Daniel says go. Nothing downloads
        unless the flag is on (no src until the script below sets one). Phones
        get a tall 406x720 crop (~450 KB), wider screens the 1280x720 cut
@@ -257,6 +257,9 @@
   (function(){
     try{
       var m=/[?&]herovideo=([123])\b/.exec(location.search);
+      // S.W. Atelier always gets the natural video (Daniel, 2026-11-16);
+      // Scott's Suits keeps its photo hero unless a ?herovideo= flag is used.
+      if(!m && document.documentElement.getAttribute('data-brand')==='sw') m=[0,'3'];
       if(!m) return;
       // 1 = beige grade (dark text), 2 = dark burgundy grade (white text),
       // 3 = natural colours, slightly warmer (white text, warm wash)
