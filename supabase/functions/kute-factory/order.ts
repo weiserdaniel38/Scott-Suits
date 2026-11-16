@@ -55,6 +55,15 @@ const PANTS_FIXED = ["3500", "3514", "3400", "3420", "3430"];
 const BUCKLE_CODES = new Set(["3352", "33TG"]);
 const BUCKLE = "QZMAB01-2";
 
+// Fabrics the factory calls thick: regular belt loops (3330) are refused
+// ("belt loops width under 2.0CM not allowed"), so they go as 2.0 cm loops
+// (3332), which keeps the customer's belt loops. Avi's Navy Flannel shawl
+// DWNYP2611004 was refused, 2026-11-16. Add a fabric here when Place Order
+// says the same about it.
+export const THICK_FABRICS = new Set(["DBV5314", "DBV5315", "DBV5316", "DBV5319"]);
+const BELT_LOOPS = "3330";
+const BELT_LOOPS_2CM = "3332";
+
 // Steps handled by hand below rather than by the catalog's own codes.
 const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "lapelButtonholeStyle", "monogramThreadColor", "fabric"]);
 const PANTS_BY_HAND = new Set(["monogram", "monogramFont", "monogramThreadColor", "threadColor", "fabric"]);
@@ -236,6 +245,14 @@ function splitName(full: string) {
   return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
 }
 
+// The factory's fabric number: the site stores "26SU218.DBV3529", the
+// factory's number is the part after the dot. Pants on their own use the
+// pants fabric.
+function factoryFabric(row: Row, hasJacket: boolean): string {
+  const v = hasJacket ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
+  return v.includes(".") ? v.split(".").pop() || "" : v;
+}
+
 export function buildFactoryOrder(input: BuildInput): BuildResult {
   const { row, jacket, pants, emb } = input;
   const warnings: string[] = [];
@@ -383,6 +400,11 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     // by craft<3352>").
     const buckle = pc.findIndex((c) => BUCKLE_CODES.has(c));
     if (buckle !== -1) pc[buckle] += ":" + BUCKLE;
+    const loops = pc.indexOf(BELT_LOOPS);
+    if (loops !== -1 && THICK_FABRICS.has(factoryFabric(row, hasJacket))) {
+      pc[loops] = BELT_LOOPS_2CM;
+      notes.push("Belt loops 2.0 cm (thick fabric).");
+    }
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
     // Pleat depth, and the factory's seat/thigh allowance for it: finished
     // measurements are for flat-front trousers, so a pleated pair needs the
@@ -420,7 +442,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   // Fabric: the site stores "26SU218.DBV3529"; the factory's number is the part after the dot.
   // Pants on their own use the pants fabric.
   const fabricValue = hasJacket ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
-  const fabric = fabricValue.includes(".") ? fabricValue.split(".").pop() || "" : fabricValue;
+  const fabric = factoryFabric(row, hasJacket);
   if (!fabric) blocking.push("No fabric on this suit.");
   const pantsFabric = s(row.pants_fabric);
   if (isSuit && pantsFabric && pantsFabric !== fabricValue) {
