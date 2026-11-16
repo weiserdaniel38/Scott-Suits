@@ -377,7 +377,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
 
     // Buttons.
     if (button && !matched(jacket.buttoncolor, button)) jc.push("0638:" + button);
-    else notes.push("Buttons: best match to the fabric.");
+    // No button named = the factory's own "Match fabric" button choice (it
+    // has no code of its own), so no note (Daniel 2026-11-16: no notes).
 
     const jacketEmbs = monogram(row, "Jacket", "jacket_monogram_placement", "jacket_monogram_text", "jacket_monogram_font",
       "jacket_monogram_thread_color", JACKET_EMB_POSITIONS, emb.MXF, jacket.monogramFont, warnings, notes);
@@ -434,8 +435,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       orderEmbs: pantsEmbs,
       ...(bodyMode ? { versionStyle: fit(row.pants_fit) } : {}),
     });
-    const calf = Number(row.calf);
-    if (!bodyMode && isFinite(calf) && calf > 0) notes.push("Trousers calf (finished): " + calf + " cm. Please keep the leg at least this wide at the calf; taper knee to hem evenly, not narrower at the calf.");
+    // Finished calf has no factory position and the factory ignores notes
+    // (Daniel 2026-11-16), so knee + cuff do the work; nothing is sent.
   }
 
   // Fabric: the site stores "26SU218.DBV3529"; the factory's number is the part after the dot.
