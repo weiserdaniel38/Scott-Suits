@@ -63,6 +63,7 @@ const BUCKLE = "QZMAB01-2";
 export const THICK_FABRICS = new Set(["DBV5314", "DBV5315", "DBV5316", "DBV5319"]);
 const BELT_LOOPS = "3330";
 const BELT_LOOPS_2CM = "3332";
+const HAND_FELLED_WAISTBAND = "345M";
 
 // Steps handled by hand below rather than by the catalog's own codes.
 const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "lapelButtonholeStyle", "monogramThreadColor", "fabric"]);
@@ -404,6 +405,10 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     const loops = pc.indexOf(BELT_LOOPS);
     if (loops !== -1 && THICK_FABRICS.has(factoryFabric(row, hasJacket))) {
       pc[loops] = BELT_LOOPS_2CM; // the code does it; no note (Daniel: no notes)
+      // With 2.0 cm loops it still refused "the selected belt-loop process"
+      // on thick fabric until hand-felled waistband lining 345M is added
+      // (its recommended fix, DWNYP2611004 second try, 2026-11-16).
+      pc.push(HAND_FELLED_WAISTBAND);
     }
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
     // Pleat depth, and the factory's seat/thigh allowance for it: finished
