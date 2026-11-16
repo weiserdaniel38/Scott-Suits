@@ -3320,3 +3320,7 @@ html.hero-video-natural .hero-video-wrap::after{background:linear-gradient(90deg
 .meas-type-opt.likely{border:1.5px solid var(--brass);background:rgba(var(--brass-rgb),0.08);padding:12.5px 14.5px;}
 @media (min-width:700px){.meas-type-ask{align-items:center;}}
 .meas-wiz-kind{margin:6px 0 0;font-size:13px;color:var(--ivory-dim);}
+/* S.W. Atelier gets the video by default; its gold Start Designing button
+   needs dark text on the gold fill to stay readable. */
+html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn,
+html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn span{color:#1A1416;}
