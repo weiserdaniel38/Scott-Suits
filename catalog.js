@@ -66,25 +66,33 @@ const JACKET_CATALOG = {
     // Semi-Notch has no Extra Wide (10 cm is its widest). Its Standard was
     // missing until 2026-11-01 (a client saw only Thin and Wide), so it is
     // now Thin 7.4 / Standard 8.3 / Wide 10.
+    // Shawl: Place Order refused 9 cm (00N5) on Avi's Navy Flannel shawl
+    // (DWNYP2611004, 2026-11-16) and listed 4.2, 5.0, 5.7, 6.5, 7.6, 8.3,
+    // 8.9 and 11.4 cm. So Shawl is Thin 7.6 / Standard 8.9 / Wide 11.4.
     options: [
       { name: "9 cm", displayName: "Standard", factoryCode: "00N5", img: "./assets/jacket-lapelwidth-new-9.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: ["8.9 cm", "8.3 cm"] },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel", "Shawl"] }, replaceWith: ["8.9 cm", "8.3 cm"] },
       { name: "8.9 cm", displayName: "Standard", factoryCode: "00N4", img: "./assets/jacket-lapelwidth-new-9.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["9 cm", "8.3 cm"] },
+        onlyWhen: { collar: ["Peak Lapel", "Shawl"] }, replaceWith: ["9 cm", "8.3 cm"] },
       { name: "8.3 cm", displayName: "Standard", factoryCode: "00N2", img: "./assets/jacket-lapelwidth-new-9.jpg",
         onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["9 cm", "8.9 cm"] },
       { name: "8 cm", displayName: "Thin", factoryCode: "00X6", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        hiddenWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["7.4 cm"] },
+        hiddenWhen: { collar: ["Semi-Notch Lapel", "Shawl"] }, replaceWith: ["7.4 cm", "7.6 cm"] },
       { name: "7.4 cm", displayName: "Thin", factoryCode: "00X3", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["8 cm"] },
+        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["8 cm", "7.6 cm"] },
+      { name: "7.6 cm", displayName: "Thin", factoryCode: "00W9", img: "./assets/jacket-lapelwidth-new-8.jpg",
+        onlyWhen: { collar: ["Shawl"] }, replaceWith: ["8 cm", "7.4 cm"] },
       { name: "10 cm", displayName: "Wide", factoryCode: "00N0", img: "./assets/jacket-lapelwidth-new-10.jpg",
-        hiddenWhen: { collar: ["Peak Lapel"] }, replaceWith: ["9.7 cm"] },
+        hiddenWhen: { collar: ["Peak Lapel", "Shawl"] }, replaceWith: ["9.7 cm", "11.4 cm"] },
       { name: "9.7 cm", displayName: "Wide", factoryCode: "00Y3", img: "./assets/jacket-lapelwidth-new-10.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["10 cm"] },
+        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["10 cm", "11.4 cm"] },
       { name: "11 cm", displayName: "Extra Wide", factoryCode: "00S2", img: "./assets/jacket-lapelwidth-new-11.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel"] }, replaceWith: ["10.8 cm", "10 cm"] },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel", "Shawl"] }, replaceWith: ["10.8 cm", "10 cm", "11.4 cm"] },
       { name: "10.8 cm", displayName: "Extra Wide", factoryCode: "00S1", img: "./assets/jacket-lapelwidth-new-11.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["11 cm", "10 cm"] },
+        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["11 cm", "10 cm", "11.4 cm"] },
+      // Shawl has no 9.7-11 cm at the factory: its Wide is 11.4 cm.
+      { name: "11.4 cm", displayName: "Wide", factoryCode: "00S3", img: "./assets/jacket-lapelwidth-new-11.jpg",
+        onlyWhen: { collar: ["Shawl"] }, replaceWith: ["10 cm", "11 cm", "9.7 cm"] },
     ],
   },
   lapelbuttonhole: {
@@ -3370,7 +3378,7 @@ const CLASSIC_SUIT_PRESET = {
     },
     fixedBySelection: {
       collar: {
-        "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
+        "Shawl": { lapelbuttonhole: "No Lapel Buttonhole", lapelwidth: "8.9 cm" },
         "Arc Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
         "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole", lapelwidth: "8 cm" },
         // The factory's nearest sizes to standard 9 cm for these lapels.
@@ -3440,7 +3448,7 @@ const CUSTOMIZATION_LEVELS = (function () {
       // the lapel here.
       fixedBySelection: {
         collar: {
-          "Shawl": { lapelbuttonhole: "No Lapel Buttonhole" },
+          "Shawl": { lapelbuttonhole: "No Lapel Buttonhole", lapelwidth: "8.9 cm" },
           "Arc Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
           "Diamond Lapel": { lapelbuttonhole: "No Lapel Buttonhole" },
         },
