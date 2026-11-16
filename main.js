@@ -8112,7 +8112,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     },
     // Whether the customer has answered any question they were actually
     // asked (a preset's own filled-in answers don't count).
-    hasUserChoices: () => keys.filter(isShown).some((k) => order[k]),
+    // A catalog `preselect` (Working Buttonholes, filled in on every new
+    // suit) isn't the customer's own work either.
+    hasUserChoices: () => keys.filter(isShown).some((k) => order[k] && order[k] !== catalog[k].preselect),
     // Same move as tapping a progress segment (scrolls up, then swaps).
     showTab: (k) => { if (keys.indexOf(k) !== -1 && k !== activeTab) switchTab(k); },
     // Redraws the step progress bar (e.g. after admin status changes).
@@ -11153,7 +11155,15 @@ function designerHasUnsavedWork() {
   if (pendingCommitIndex !== null && cartItems[pendingCommitIndex]) {
     return buildVisualSpecText(cartItems[pendingCommitIndex]) !== currentDesignSpec();
   }
-  return (hasJacketStep() && jacketDesigner.hasUserChoices()) || (hasPantsStep() && pantsDesigner.hasUserChoices());
+  if (!((hasJacketStep() && jacketDesigner.hasUserChoices()) || (hasPantsStep() && pantsDesigner.hasUserChoices()))) return false;
+  // The same design already sits in the cart or on the wishlist (a suit
+  // opened with Edit and not changed): nothing would be lost.
+  const spec = currentDesignSpec();
+  if (!spec) return true;
+  const same = (it) => { try { return !!it && buildVisualSpecText(it) === spec; } catch (e) { return false; } };
+  if (cartItems.some(same)) return false;
+  if (typeof wishlistItems !== "undefined" && wishlistItems && wishlistItems.some((w) => w.spec === spec || same(w))) return false;
+  return true;
 }
 
 function editCartItem(index) {
