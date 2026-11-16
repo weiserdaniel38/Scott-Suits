@@ -4300,8 +4300,9 @@ async function startAdminOrderEdit(o, btn, suitNumber) {
     alert("You're already editing " + (adminEditState.name || "an order") + "'s order. Save or cancel that first (the bar at the top of the designer).");
     return;
   }
-  if ((cartItems.length || designerHasUnsavedWork()) &&
-      !window.confirm("Edit " + (o.customer_name || "this") + "'s order?\n\nYour own cart and design are put aside while you edit and come back when you save or cancel.")) return;
+  // No question first: the admin's own cart and design are put aside while
+  // editing and come back on save or cancel, so nothing is lost (Daniel,
+  // 2026-11-16: "it always thinks I'm in the middle of a suit").
   const label = btn.textContent;
   btn.disabled = true;
   btn.textContent = "Loading...";
