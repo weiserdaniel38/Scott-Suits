@@ -402,8 +402,7 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     if (buckle !== -1) pc[buckle] += ":" + BUCKLE;
     const loops = pc.indexOf(BELT_LOOPS);
     if (loops !== -1 && THICK_FABRICS.has(factoryFabric(row, hasJacket))) {
-      pc[loops] = BELT_LOOPS_2CM;
-      notes.push("Belt loops 2.0 cm (thick fabric).");
+      pc[loops] = BELT_LOOPS_2CM; // the code does it; no note (Daniel: no notes)
     }
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
     // Pleat depth, and the factory's seat/thigh allowance for it: finished
