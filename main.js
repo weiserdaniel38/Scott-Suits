@@ -6319,9 +6319,11 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // shawl/diamond lapel buttonhole is hidden under Notch or Peak).
     // `hiddenWhen` is the reverse: hidden while otherKey is set to one of
     // those values (e.g. Notch lapel on a double breasted front).
+    // resolvedValue: pants fabric "same as jacket" counts as the jacket's
+    // fabric (belt loops hidden on thick flannel, 2026-11-16).
     const shownNow = (o) =>
-      (!o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(order[dep]) !== -1)) &&
-      (!o.hiddenWhen || Object.keys(o.hiddenWhen).every((dep) => o.hiddenWhen[dep].indexOf(order[dep]) === -1));
+      (!o.onlyWhen || Object.keys(o.onlyWhen).every((dep) => o.onlyWhen[dep].indexOf(resolvedValue(dep)) !== -1)) &&
+      (!o.hiddenWhen || Object.keys(o.hiddenWhen).every((dep) => o.hiddenWhen[dep].indexOf(resolvedValue(dep)) === -1));
     if (!rules) return cat.options.filter(shownNow).filter((o) => presetAllows(key, o)).map(withImg);
     const lists = Object.keys(rules).map((dep) => rules[dep][order[dep]]).filter(Boolean);
     const allowed = cat.options

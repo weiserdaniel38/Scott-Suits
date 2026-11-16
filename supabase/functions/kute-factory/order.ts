@@ -55,15 +55,14 @@ const PANTS_FIXED = ["3500", "3514", "3400", "3420", "3430"];
 const BUCKLE_CODES = new Set(["3352", "33TG"]);
 const BUCKLE = "QZMAB01-2";
 
-// Fabrics the factory calls thick: regular belt loops (3330) are refused
-// ("belt loops width under 2.0CM not allowed"), so they go as 2.0 cm loops
-// (3332), which keeps the customer's belt loops. Avi's Navy Flannel shawl
-// DWNYP2611004 was refused, 2026-11-16. Add a fabric here when Place Order
-// says the same about it.
+// Fabrics the factory calls thick: belt loops are refused there without
+// hand-felled waistband 345M, so these get No Belt Loops (Daniel, Avi's
+// Navy Flannel DWNYP2611004, 2026-11-16; the designer hides loops on them
+// too). Add a fabric here and in catalog.js beltLoops when Place Order
+// says it is thick.
 export const THICK_FABRICS = new Set(["DBV5314", "DBV5315", "DBV5316", "DBV5319"]);
-const BELT_LOOPS = "3330";
-const BELT_LOOPS_2CM = "3332";
-const HAND_FELLED_WAISTBAND = "345M";
+const BELT_LOOP_CODES = new Set(["3330", "3332", "333E", "3331"]);
+const NO_BELT_LOOPS = "3329";
 
 // Steps handled by hand below rather than by the catalog's own codes.
 const JACKET_BY_HAND = new Set(["facing", "monogram", "monogramFont", "sleevecuffstyle", "cuffbuttons", "lining", "feltundercollar", "feltColor", "buttoncolor", "threadColor", "buttonholeThreadColor", "frontButtonholeThreadColor", "buttonholeColorPlacement", "lapelButtonholeStyle", "monogramThreadColor", "fabric"]);
@@ -402,13 +401,13 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     // by craft<3352>").
     const buckle = pc.findIndex((c) => BUCKLE_CODES.has(c));
     if (buckle !== -1) pc[buckle] += ":" + BUCKLE;
-    const loops = pc.indexOf(BELT_LOOPS);
-    if (loops !== -1 && THICK_FABRICS.has(factoryFabric(row, hasJacket))) {
-      pc[loops] = BELT_LOOPS_2CM; // the code does it; no note (Daniel: no notes)
-      // With 2.0 cm loops it still refused "the selected belt-loop process"
-      // on thick fabric until hand-felled waistband lining 345M is added
-      // (its recommended fix, DWNYP2611004 second try, 2026-11-16).
-      pc.push(HAND_FELLED_WAISTBAND);
+    // Thick fabric: the factory refuses regular and 2.0 cm belt loops
+    // unless hand-felled waistband 345M is added; Daniel chose no belt
+    // loops instead (DWNYP2611004, 2026-11-16). Older designs that still
+    // have loops on a thick fabric go as No Belt Loops.
+    if (THICK_FABRICS.has(factoryFabric(row, hasJacket))) {
+      const loops = pc.findIndex((c) => BELT_LOOP_CODES.has(c));
+      if (loops !== -1) pc[loops] = NO_BELT_LOOPS;
     }
     if (!s(row.pants_pick_stitch)) pc.push("31A6");
     // Pleat depth, and the factory's seat/thigh allowance for it: finished

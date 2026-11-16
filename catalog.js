@@ -1,3 +1,9 @@
+// Fabrics the factory calls thick: it refuses belt loops on them unless a
+// hand-felled waistband (345M) is added, so they get No Belt Loops (Daniel,
+// 2026-11-16, Avi's Navy Flannel). Keep in step with THICK_FABRICS in
+// supabase/functions/kute-factory/order.ts.
+const THICK_FABRIC_NAMES = ["26SU125.DBV5319", "26SU126.DBV5316", "26SU127.DBV5315", "26SU128.DBV5314"];
+
 const JACKET_CATALOG = {
   // Fabric (patternTypes-based, see FABRIC_PATTERN_TYPES) is wired in via
   // JACKET_CATALOG.fabric = {...} further down, once FABRIC_PATTERN_TYPES
@@ -463,8 +469,10 @@ const PANTS_CATALOG = {
     label: "Belt Loops",
     column: "belt_loops",
     options: [
-      { name: "Belt Loops", displayName: "Standard Belt Loops", specName: "Belt Loops", factoryCode: "3330", img: "./assets/pants-beltloop-new-yes.jpg" },
-      { name: "X Loops", displayName: "Crossed (X) Belt Loops", specName: "X Loops", factoryCode: "333E", img: "./assets/pants-beltloop-new-x.jpg" },
+      { name: "Belt Loops", displayName: "Standard Belt Loops", specName: "Belt Loops", factoryCode: "3330", img: "./assets/pants-beltloop-new-yes.jpg",
+        hiddenWhen: { fabric: THICK_FABRIC_NAMES }, replaceWith: ["No Belt Loop"] },
+      { name: "X Loops", displayName: "Crossed (X) Belt Loops", specName: "X Loops", factoryCode: "333E", img: "./assets/pants-beltloop-new-x.jpg",
+        hiddenWhen: { fabric: THICK_FABRIC_NAMES }, replaceWith: ["No Belt Loop"] },
       { name: "No Belt Loop", displayName: "No Belt Loops", specName: "No Belt Loop", factoryCode: "3329", img: "./assets/pants-beltloop-new-no.jpg" },
     ],
   },
