@@ -31,6 +31,19 @@
   .contact-list a:hover,.contact-list a:focus-visible{color:var(--brass);}
   .contact-page .back{display:inline-block;margin-top:40px;font-size:13px;color:var(--ivory-dim);text-decoration:none;}
   .contact-page .back:hover{color:var(--brass);}
+  .contact-form{margin-top:32px;display:flex;flex-direction:column;gap:16px;}
+  .contact-form label{display:flex;flex-direction:column;gap:6px;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:500;color:var(--ivory-dim);}
+  .contact-form input,.contact-form textarea{font:inherit;font-size:16px;letter-spacing:0;text-transform:none;color:var(--ivory);background:var(--surface,#fff);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;box-sizing:border-box;}
+  .contact-form textarea{min-height:140px;resize:vertical;line-height:1.5;}
+  .contact-form input:focus,.contact-form textarea:focus{outline:none;border-color:var(--brass);}
+  .contact-form .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;}
+  .contact-form button{align-self:flex-start;background:var(--sw-burgundy,#74444D);color:var(--sw-gold,#fff);border:none;border-radius:999px;padding:14px 32px;font:inherit;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:500;cursor:pointer;}
+  .contact-form button:disabled{opacity:.6;cursor:default;}
+  .contact-status{font-size:14px;line-height:1.6;color:var(--ivory-dim);margin:0;}
+  .contact-status.ok{color:var(--ivory);}
+  .contact-or{margin:36px 0 0;font-size:13px;color:var(--ivory-dim);}
+  .contact-or + .contact-list{margin-top:12px;}
+  @media(max-width:600px){.contact-form button{align-self:stretch;}}
   @media(max-width:600px){
     .contact-page{padding:40px 16px 64px;}
     .contact-page h1{font-size:30px;}
@@ -54,6 +67,18 @@
   <h1>Contact</h1>
   <div class="hero-rule"></div>
 
+  <p class="lead">Send us a message and we'll get back to you within one business day.</p>
+
+  <form class="contact-form" id="contactForm" novalidate>
+    <label>Name<input type="text" name="name" autocomplete="name" maxlength="80"></label>
+    <label>Email<input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+    <label>Message<textarea name="message" required maxlength="4000"></textarea></label>
+    <div class="hp" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+    <button type="submit" id="contactSend">Send message</button>
+    <p class="contact-status" id="contactStatus" role="status" aria-live="polite"></p>
+  </form>
+
+  <p class="contact-or">Or email us directly:</p>
   <ul class="contact-list">
     <li><a href="mailto:hello@scottssuits.com">Email</a></li>
   </ul>
@@ -62,6 +87,49 @@
 </main>
 
 <footer><a href="./faq.html" style="color:inherit;">FAQ</a> · <a href="./contact.html" style="color:inherit;">Contact</a> · <a href="https://www.instagram.com/scott_suits/" target="_blank" rel="noopener" style="color:inherit;white-space:nowrap;"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.6" fill="currentColor" stroke="none"/></svg>Follow us on Instagram</a> · <a href="./privacy.html" style="color:inherit;">Privacy Policy</a></footer>
+<script src="./config.js?v=20261117contact"></script>
+<script>
+// Contact form (2026-11-17): the contact-message edge function emails the
+// shop and sends the customer an automatic "we received your message" reply.
+(function () {
+  var form = document.getElementById("contactForm");
+  var btn = document.getElementById("contactSend");
+  var status = document.getElementById("contactStatus");
+  if (!form) return;
+  function say(msg, ok) { status.textContent = msg; status.className = "contact-status" + (ok ? " ok" : ""); }
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = form.elements;
+    var email = f.email.value.trim();
+    var message = f.message.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say("Please enter a valid email address."); f.email.focus(); return; }
+    if (message.length < 2) { say("Please write your message."); f.message.focus(); return; }
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    say("");
+    fetch(SUPABASE_URL + "/functions/v1/contact-message", {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: SUPABASE_ANON_KEY, authorization: "Bearer " + SUPABASE_ANON_KEY },
+      body: JSON.stringify({
+        name: f.name.value.trim(),
+        email: email,
+        message: message,
+        website: f.website.value,
+        brand: (typeof SITE_BRAND !== "undefined" && SITE_BRAND.id) || "scott",
+      }),
+    }).then(function (res) {
+      if (!res.ok) throw new Error("send failed");
+      form.reset();
+      say("Thank you. Your message was sent, and a confirmation is on its way to " + email + ".", true);
+    }).catch(function () {
+      say("We couldn't send your message just now. Please try again, or email us directly below.");
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = "Send message";
+    });
+  });
+})();
+</script>
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
