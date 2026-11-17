@@ -3608,7 +3608,7 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
    the "stay on this page" note and Cancel. Phones keep their own layout. === */
 @media(min-width:901px){
   #designPreview.is-drawing .suit-preview-media{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;}
-  #designPreview.is-drawing .suit-preview-loading{width:260px;height:260px;margin:4px auto 16px;border-radius:10px;grid-row:auto;object-fit:cover;}
+  #designPreview.is-drawing .suit-preview-loading{width:260px;height:260px;margin:4px auto 16px;border-radius:0;grid-row:auto;object-fit:cover;background:transparent;box-shadow:none;-webkit-mask-image:radial-gradient(closest-side,#000 90%,transparent 100%);mask-image:radial-gradient(closest-side,#000 90%,transparent 100%);}
   #designPreview.is-drawing .suit-preview-loading-text{width:100%;text-align:center;margin:0;}
   #designPreview.is-drawing .suit-preview-loading-text strong{font-size:19px;}
   #designPreview.is-drawing .suit-preview-wait-notice{display:inline-block;max-width:none;margin:10px auto 0;padding:8px 18px;border-radius:999px;text-align:center;}
