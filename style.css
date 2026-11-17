@@ -3486,3 +3486,26 @@ html[data-brand="scott"] .account-tabs button{letter-spacing:0.06em;font-size:12
 html[data-brand="scott"] .opt-name{text-transform:uppercase;letter-spacing:0.12em;line-height:1.35;}
 html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile) .opt-name{font-size:11px;}
 html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
+/* Phone landing header: keep the cart icon fully on screen (it touched or
+   passed the right edge at 360 to 393 wide once the links became capitals). */
+@media(max-width:600px){
+  html[data-brand="scott"] body.home-page:not(.designing) .nav-inner{padding-left:12px;padding-right:12px;gap:4px;}
+  html[data-brand="scott"] body.home-page:not(.designing) .logo-block::after{margin-left:8px;height:52px;}
+  html[data-brand="scott"] body.home-page:not(.designing) .logo-mark{height:58px;}
+  html[data-brand="scott"] body.home-page:not(.designing) .nav-right{gap:2px;min-width:0;}
+  html[data-brand="scott"] body.home-page:not(.designing) .navlinks .navlink-btn{letter-spacing:0.03em;font-size:10px;padding-left:4px;padding-right:4px;}
+}
+/* Phone browser = home-screen app (Daniel, 2026-11-17, two screenshots:
+   "center the lettering and background like this"). In Safari the page
+   stopped where the address bar starts, so the photo was cropped tighter,
+   the headline sat higher and a plain strip showed behind the bar. The
+   landing page now lays out on the FULL screen height (lvh), so the photo
+   and headline land where they do in the app. Only the footer links are
+   lifted to stay above the browser bar; in the app lvh = svh, no change. */
+@supports (height:100lvh){
+  @media(max-width:900px){
+    html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view){min-height:100lvh;}
+    html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{padding-top:clamp(18px,9lvh,110px);padding-bottom:clamp(12px,calc(7lvh - (100lvh - 100svh) * 0.8),72px);}
+    html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{margin-bottom:calc(100lvh - 100svh);}
+  }
+}
