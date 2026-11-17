@@ -3468,3 +3468,19 @@ html[data-brand="scott"] :is(.suit-type-eyebrow,.hero-eyebrow,.wiz-step,.wiz-gro
 html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta,.nav-cart-checkout-btn,.order-done-home,.nav-startover-btn){font-weight:400 !important;text-transform:uppercase;letter-spacing:0.16em;}
 html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta) *{font-weight:inherit !important;}
 html[data-brand="scott"] :is(input,select,textarea){font-weight:400;}
+/* Short text too (Daniel, 2026-11-17: "change all the lower case letters
+   too"): menu links, footer links, field labels, tabs, prices and every
+   button are spaced capitals like the landing page. Sentences people read
+   (paragraphs, FAQ answers, descriptions, what they type) stay in normal
+   letters, slightly opened up, so they remain easy to read. */
+html[data-brand="scott"] :is(button,.navlink-btn,footer,label,legend,th,summary,.suit-type-price,.suit-type-preset-link,.wiz-cheer,.wiz-price,a.btn-primary,a.btn-ghost){text-transform:uppercase;letter-spacing:0.12em;}
+html[data-brand="scott"] :is(summary,label,.suit-type-price){font-size:0.92em;}
+html[data-brand="scott"] :is(p,li,dd,td,.level-desc,.suit-type-sub){letter-spacing:0.02em;}
+html[data-brand="scott"] :is(input,textarea,select){text-transform:none;letter-spacing:0.01em;}
+html[data-brand="scott"] button :is(.level-desc,.suit-type-sub,p){text-transform:none;letter-spacing:0.02em;}
+html[data-brand="scott"] .account-tabs button{letter-spacing:0.06em;font-size:12px;white-space:nowrap;}
+@media(max-width:600px){
+  html[data-brand="scott"] .navlinks .navlink-btn{letter-spacing:0.05em;font-size:10px;padding-left:5px;padding-right:5px;}
+  html[data-brand="scott"] body > footer{font-size:clamp(7.5px,2.2vw,9.5px) !important;letter-spacing:0.08em;white-space:nowrap;padding-left:8px;padding-right:8px;}
+  html[data-brand="scott"] body > footer svg{width:12px;height:12px;margin-right:3px !important;}
+}
