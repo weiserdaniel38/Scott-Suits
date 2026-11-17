@@ -3495,3 +3495,17 @@ html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
   html[data-brand="scott"] body.home-page:not(.designing) .nav-right{gap:2px;min-width:0;}
   html[data-brand="scott"] body.home-page:not(.designing) .navlinks .navlink-btn{letter-spacing:0.03em;font-size:10px;padding-left:4px;padding-right:4px;}
 }
+/* Phone browser = home-screen app (Daniel, 2026-11-17, two screenshots:
+   "center the lettering and background like this"). In Safari the page
+   stopped where the address bar starts, so the photo was cropped tighter,
+   the headline sat higher and a plain strip showed behind the bar. The
+   landing page now lays out on the FULL screen height (lvh), so the photo
+   and headline land where they do in the app. Only the footer links are
+   lifted to stay above the browser bar; in the app lvh = svh, no change. */
+@supports (height:100lvh){
+  @media(max-width:900px){
+    html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view){min-height:100lvh;}
+    html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{padding-top:clamp(18px,9lvh,110px);padding-bottom:clamp(12px,calc(7lvh - (100lvh - 100svh) * 0.8),72px);}
+    html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{margin-bottom:calc(100lvh - 100svh);}
+  }
+}
