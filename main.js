@@ -607,6 +607,101 @@ function checkSuitMeasurements(values, suitType, mode) {
   const status = items.some((x) => x.level === "block") ? "block" : items.length ? "warn" : "pass";
   return { status, items };
 }
+// ---------------------------------------------------------------------------
+// HALF-WAY-AROUND NUMBERS (Daniel, 2026-11-17: "for measurements that should
+// be doubled, if it's not doubled, automatically double it"). Someone who
+// measures a garment laid flat types the side-to-side width, half the real
+// number (cuff 17 instead of 34). For around-the-body fields only, a number
+// BELOW the field's hard minimum whose double fits is doubled for them, with
+// a note and Undo. Lengths (sleeve, outseam, jacket length, shoulder,
+// crotch...) are never doubled. Every real customer number is inside the
+// hard limits, so a slim customer's real thigh or cuff is never touched.
+// ---------------------------------------------------------------------------
+const MEASURE_AROUND_IDS = [
+  "chest", "stomach", "hips", "waist", "thigh", "knee", "calf", "cuff", "wrist", "bicep",
+  "body_neck", "body_chest", "body_stomach", "body_seat", "body_bicep", "body_waist", "body_thigh",
+];
+// How many of the other numbers are clearly in cm, and how many look like
+// inches (a length that only fits times 2.54).
+function measureUnitEvidence(skipId, get) {
+  let cm = 0;
+  let inch = 0;
+  MEASUREMENTS.forEach((o) => {
+    if (o.id === skipId || o.part === "body" || o.unit || o.min === undefined) return;
+    const v = get(o.id);
+    if (v === null || v === undefined) return;
+    if (measureInRange(o, v)) cm++;
+    else if (v < o.min && measureInRange(o, v * 2.54) && !(MEASURE_AROUND_IDS.indexOf(o.id) >= 0 && measureInRange(o, v * 2))) inch++;
+  });
+  return { cm, inch };
+}
+// The doubled number to use instead of val, or null to leave it alone.
+function measureHalfGuess(m, val, get) {
+  if (!m || MEASURE_AROUND_IDS.indexOf(m.id) < 0 || m.min === undefined) return null;
+  if (!(val > 0) || val >= m.min) return null;
+  const d = r1(val * 2);
+  if (!measureInRange(m, d)) return null;
+  if (m.typ && (d < m.typ[0] * 0.9 || d > m.typ[1] * 1.1)) return null;
+  const dIssue = get ? measureIssue(m, d, get) : null;
+  if (dIssue && dIssue.hard) return null;
+  // Inches typed as cm can land in range too (cuff 17 = 43 cm). Then only
+  // double when at least two other numbers are clearly in cm and none look
+  // like inches.
+  const inch = val * 2.54;
+  const inchIssue = measureInRange(m, inch) ? (get ? measureIssue(m, inch, get) : null) : { hard: true };
+  if (!inchIssue || !inchIssue.hard) {
+    if (!get) return null;
+    const ev = measureUnitEvidence(m.id, get);
+    if (ev.inch > 0 || ev.cm < 2) return null;
+  }
+  return d;
+}
+// Doubles the box's number when it's clearly half way around, and shows
+// "Looks like a flat measurement..." with Undo under it (in host).
+// recheck() reruns the field's own red/amber check. Returns true if doubled.
+function measureAutoDouble(input, m, get, host, recheck) {
+  if (!input || !host) return false;
+  const raw = String(input.value || "").trim();
+  const val = parseFloat(raw);
+  if (raw === "" || isNaN(val) || input.dataset.halfKeep === raw) return false;
+  const d = measureHalfGuess(m, val, get);
+  if (d === null) return false;
+  const set = (v) => {
+    input.value = v;
+    if (input.hasAttribute("value")) input.setAttribute("value", v);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  set(String(d));
+  input.dataset.halfDoubled = String(d);
+  let note = host.querySelector(".measure-half-note");
+  if (!note) {
+    note = document.createElement("p");
+    note.className = "measure-half-note";
+    note.setAttribute("role", "status");
+    host.appendChild(note);
+    input.addEventListener("input", (e) => {
+      if (e.isTrusted) note.hidden = true;
+    });
+  }
+  note.textContent = "Looks like a flat measurement (half way around), so we doubled " + raw + " to " + d + " " + (m.unit || "cm") + ". ";
+  const undo = document.createElement("button");
+  undo.type = "button";
+  undo.className = "measure-half-undo";
+  undo.textContent = "Undo";
+  undo.addEventListener("mousedown", (e) => e.preventDefault());
+  undo.addEventListener("click", () => {
+    input.dataset.halfKeep = raw;
+    delete input.dataset.halfDoubled;
+    note.hidden = true;
+    set(raw);
+    if (recheck) recheck();
+  });
+  note.appendChild(undo);
+  note.hidden = false;
+  if (recheck) recheck();
+  return true;
+}
 function measureCheckItemText(x) {
   return (x.labels.length ? x.labels.join(", ") + ": " : "") + x.text.replace(/ Please (double-)?check( both)?\.$/, "");
 }
@@ -818,9 +913,12 @@ function bindMeasureRange(field, prefix, m) {
       if (other && other.measureCheck && other.value !== "") other.measureCheck(true);
     });
   };
+  // A half-way-around number is doubled when the customer leaves the box
+  // (never while typing, and not for the copies At the tailor sends in).
+  const autoDouble = () => measureAutoDouble(el, m, measureFieldGetter(prefix), field, () => { check(true); recheckOthers(); });
   field.addEventListener("input", () => check(false));
-  field.addEventListener("change", () => { check(true); recheckOthers(); });
-  field.addEventListener("focusout", () => { check(true); recheckOthers(); });
+  field.addEventListener("change", (e) => { if (e.isTrusted && e.target === el) autoDouble(); check(true); recheckOthers(); });
+  field.addEventListener("focusout", (e) => { if (e.target === el) autoDouble(); check(true); recheckOthers(); });
 }
 // Set true only once an order has actually been saved -- used solely to mark
 // the "Order" step in the progress bar as done; see updateProcessBar().
@@ -2946,10 +3044,15 @@ function mcRenderGrid(values, mode) {
       if (v !== box.value) box.value = v;
       check(false);
     });
-    box.addEventListener("change", () => check(true));
-    box.addEventListener("blur", () => {
+    const recheckAll = () => {
       check(true);
       list.querySelectorAll(".tc-input").forEach((o) => { if (o !== box && o.value && o.measureCheck) o.measureCheck(true); });
+    };
+    const autoDouble = () => measureAutoDouble(box, m, measureFieldGetter("cm_"), li, recheckAll);
+    box.addEventListener("change", (e) => { if (e.isTrusted) autoDouble(); check(true); });
+    box.addEventListener("blur", () => {
+      autoDouble();
+      recheckAll();
     });
     li.append(num, name, field, warn);
     list.appendChild(li);
@@ -9494,6 +9597,19 @@ function refreshMeasHub() {}
     const key = pages[idx];
     const m = list().find((x) => x.id === key);
     if (!m) return true;
+    // Half way around (typed then Enter, without leaving the box): double
+    // it and stay on the page once so the note is seen.
+    const inp = document.getElementById("m_" + m.id);
+    if (borrowed && inp) {
+      if (measureAutoDouble(inp, m, measureFieldGetter("m_"), borrowed.field, () => inp.measureCheck && inp.measureCheck(true))) {
+        inp.dataset.halfAck = inp.value;
+        return false;
+      }
+      if (inp.dataset.halfDoubled && inp.dataset.halfDoubled === inp.value && inp.dataset.halfAck !== inp.value) {
+        inp.dataset.halfAck = inp.value;
+        return false;
+      }
+    }
     const v = valueOf(m);
     const err = borrowed && borrowed.field.querySelector(".measure-field-error");
     const issue = v === null ? null : measureIssue(m, v, measureFieldGetter("m_"));
@@ -10577,11 +10693,16 @@ function renderTailorChecklist() {
       if (issue) warn.textContent = issue.text;
       warn.classList.toggle("tc-warn-hard", !!issue && issue.hard);
     };
-    box2.addEventListener("input", () => checkBox(false));
-    box2.addEventListener("change", () => checkBox(true));
-    box2.addEventListener("blur", () => {
+    const recheckAll = () => {
       checkBox(true);
       list.querySelectorAll(".tc-input").forEach((o) => { if (o !== box2 && o.value && o.tcCheck) o.tcCheck(true); });
+    };
+    const autoDouble = () => measureAutoDouble(box2, m, measureFieldGetter("m_"), li, recheckAll);
+    box2.addEventListener("input", () => checkBox(false));
+    box2.addEventListener("change", (e) => { if (e.isTrusted) autoDouble(); checkBox(true); });
+    box2.addEventListener("blur", () => {
+      autoDouble();
+      recheckAll();
     });
     box2.tcCheck = checkBox;
     if (box2.value) checkBox(true);

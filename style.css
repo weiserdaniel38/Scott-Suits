@@ -836,6 +836,11 @@ a.admin-track-num[href]{text-decoration:underline;}
 .measure-field-unusual .measure-input-wrap{border-color:#d1a035;}
 .tc-warn{flex-basis:100%;margin:2px 0 0;font-size:12.5px;line-height:1.35;color:#8a5a00;}
 .tc-warn.tc-warn-hard{color:#a8402f;}
+.measure-half-note{flex-basis:100%;margin:2px 0 0;font-size:12.5px;line-height:1.4;color:#3f6b4a;}
+.tc-list .measure-half-note{grid-column:2 / -1;}
+.meas-wiz-field .measure-half-note{font-size:14px;margin:4px 0 0;}
+.measure-half-undo{background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;}
+@media print{.measure-half-note{display:none !important;}}
 .tc-list .tc-warn{grid-column:2 / -1;}
 @media print{.tc-warn{display:none !important;}}
 .measure-field-hint{font-size:11px;color:var(--ivory-dim);opacity:0.8;margin-top:-6px;line-height:1.4;}
