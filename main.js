@@ -5010,6 +5010,7 @@ function refreshAccountData() {
   loadProfile();
   loadOrderHistory();
   try { loadWishlist(); } catch (e) { /* before the wishlist code has loaded */ }
+  try { myDesigns = null; loadMyDesignsSection(); } catch (e) { /* before the My Designs code has loaded */ }
   refreshAdminStatus();
   prefillContactDetails();
   if (window.recheckPromoCode) window.recheckPromoCode();
@@ -14893,6 +14894,353 @@ async function wishlistToCart(wishId, btn) {
     if (btn) { btn.disabled = false; btn.textContent = "Add to cart"; }
   }
 }
+
+// ============================================================
+// My Designs (Daniel, 2026-11-17). My Account lists every suit this account
+// has had drawn (suit_previews, read through generate-suit-image's
+// my_previews, one per design, newest first) with Add to cart, Edit and
+// Save to wishlist. Read only: opening it never starts a drawing. The
+// choices are read back from the picture's saved description (visual_spec);
+// anything no longer offered is left to choose again, as with Reorder.
+// Designs the customer removes are hidden by id in profiles.cart.designsHidden.
+// ============================================================
+var myDesigns = null; // [{ id, created_at, image_url, visual_spec, w }]
+var myDesignsHidden = [];
+var myDesignsLoading = null;
+
+// visual_spec -> the suit's choices, shaped like a wishlist entry.
+let designSpecLookup = null;
+function designSpecTables() {
+  if (designSpecLookup) return designSpecLookup;
+  const table = (catalog) => {
+    const byLabel = {};
+    Object.keys(catalog).forEach((key) => {
+      const cat = catalog[key];
+      const label = cat.specLabel || cat.label;
+      if (!label || byLabel[label]) return;
+      const values = {};
+      let matches = null;
+      (cat.options || []).forEach((o) => {
+        if (o.matchesFabric) { if (!matches) matches = o.name; return; }
+        const d = visualSpecOptionDetail(cat, o.name);
+        if (d && !(d.text in values)) values[d.text] = o.name;
+      });
+      byLabel[label] = { key, values, matches };
+    });
+    return byLabel;
+  };
+  designSpecLookup = { JACKET: table(JACKET_CATALOG), PANTS: table(PANTS_CATALOG) };
+  return designSpecLookup;
+}
+function designFromSpec(spec) {
+  const lines = String(spec || "").split("\n");
+  const first = lines[0] || "";
+  const type = /Jacket only/i.test(first) ? "jacketOnly" : /Pants only/i.test(first) ? "pantsOnly" : "full";
+  const tables = designSpecTables();
+  const out = { jacket: {}, pants: {} };
+  const texts = { jacket: {}, pants: {} };
+  let section = null;
+  lines.forEach((line) => {
+    const t = line.trim();
+    if (t === "JACKET" || t === "PANTS") { section = t; return; }
+    if (t === "REFERENCE SWATCHES") { section = null; return; }
+    if (!section) return;
+    const i = t.indexOf(": ");
+    if (i < 1) return;
+    const label = t.slice(0, i);
+    const value = t.slice(i + 2);
+    const part = section === "JACKET" ? "jacket" : "pants";
+    if (label === "Monogram Text") { texts[part].monogram = value; return; }
+    const row = tables[section][label];
+    if (!row) return;
+    const name = /^matched to the fabric color/.test(value) ? row.matches : row.values[value];
+    if (name) out[part][row.key] = name;
+  });
+  return {
+    type,
+    level: "advanced",
+    jacket: type === "pantsOnly" ? {} : out.jacket,
+    pants: type === "jacketOnly" ? null : out.pants,
+    texts,
+  };
+}
+
+async function myDesignsWrite(mutate) {
+  return wishlistRun(async () => {
+    const user = currentUser;
+    if (!user) throw new Error("Not signed in");
+    const client = getSupabase();
+    const { cart } = await wishlistRead(client, user.id);
+    const hidden = mutate(Array.isArray(cart.designsHidden) ? cart.designsHidden.slice() : []).slice(0, 300);
+    const { error } = await client.from("profiles").upsert({ id: user.id, email: user.email, cart: Object.assign({}, cart, { designsHidden: hidden }) });
+    if (error) throw error;
+    myDesignsHidden = hidden;
+  });
+}
+
+async function loadMyDesigns(force) {
+  const section = document.getElementById("myDesignsSection");
+  const box = document.getElementById("myDesignsList");
+  if (!section || !box) return;
+  section.hidden = !currentUser || !isSupabaseConfigured() || !SUIT_IMAGE_FN_URL;
+  if (section.hidden) { myDesigns = null; return; }
+  if (myDesigns && !force) return renderMyDesigns();
+  if (myDesignsLoading) return myDesignsLoading;
+  const user = currentUser;
+  box.innerHTML = '<p class="account-section-note">Loading your designs...</p>';
+  myDesignsLoading = (async () => {
+    try {
+      const [r, saved] = await Promise.all([
+        callSuitImageFn({ my_previews: true }),
+        wishlistRead(getSupabase(), user.id).catch(() => ({ cart: {} })),
+      ]);
+      if (!currentUser || currentUser.id !== user.id) return;
+      if (!r.ok) throw new Error("my_previews " + r.status);
+      myDesignsHidden = Array.isArray(saved.cart && saved.cart.designsHidden) ? saved.cart.designsHidden : [];
+      myDesigns = ((r.data && r.data.designs) || []).map((d) => {
+        const w = designFromSpec(d.visual_spec);
+        w.spec = d.visual_spec;
+        w.previewId = d.id;
+        w.imageUrl = d.image_url;
+        w.savedAt = Date.parse(d.created_at) || 0;
+        return Object.assign({}, d, { w });
+      });
+      renderMyDesigns();
+    } catch (err) {
+      console.error("Couldn't load My Designs:", err);
+      box.innerHTML = '<p class="account-section-note">Couldn’t load your designs right now.</p>';
+    } finally {
+      myDesignsLoading = null;
+    }
+  })();
+  return myDesignsLoading;
+}
+
+// The same design already in the cart (e.g. added from the Preview page).
+function designInCart(d) {
+  return cartItems.some((it) => {
+    if (it.previewId && it.previewId === d.id) return true;
+    try { return buildVisualSpecText(it) === d.visual_spec; } catch (e) { return false; }
+  });
+}
+
+function renderMyDesigns() {
+  const section = document.getElementById("myDesignsSection");
+  const box = document.getElementById("myDesignsList");
+  if (!section || !box || !myDesigns) return;
+  const list = myDesigns.filter((d) => myDesignsHidden.indexOf(d.id) === -1);
+  const summaryTitle = section.querySelector("summary h3");
+  if (summaryTitle) summaryTitle.textContent = list.length ? "My Designs (" + list.length + ")" : "My Designs";
+  box.innerHTML = "";
+  if (!list.length) {
+    box.innerHTML = '<p class="account-section-note">No designs yet. Every suit you have drawn on the Preview page will appear here.</p>';
+    return;
+  }
+  list.forEach((d) => {
+    const w = d.w;
+    const card = document.createElement("div");
+    card.className = "wishlist-card";
+    const img = document.createElement("img");
+    img.className = "wishlist-img";
+    img.loading = "lazy";
+    img.alt = "Your suit design";
+    img.src = d.image_url;
+    img.addEventListener("click", () => window.open(d.image_url, "_blank", "noopener"));
+    img.style.cursor = "zoom-in";
+    card.appendChild(img);
+    const info = document.createElement("div");
+    info.className = "wishlist-info";
+    const title = document.createElement("b");
+    title.textContent = cartItemTitle(w);
+    const sub = document.createElement("span");
+    sub.className = "wishlist-sub";
+    const fabric = (w.jacket && w.jacket.fabric) || (w.pants && w.pants.fabric);
+    const fabOpt = fabric ? JACKET_CATALOG.fabric.options.find((o) => o.name === fabric) : null;
+    let price = "";
+    try { price = PRICES_HIDDEN || !fabric ? "" : "$" + itemPriceUsd(w); } catch (e) { price = ""; }
+    sub.textContent = [fabOpt ? fabOpt.displayName || "" : "", price, w.savedAt ? "Drawn " + new Date(w.savedAt).toLocaleDateString() : ""].filter(Boolean).join(" · ");
+    const actions = document.createElement("div");
+    actions.className = "wishlist-actions";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "past-order-reorder-btn";
+    const inCart = designInCart(d);
+    add.textContent = inCart ? "✓ In your cart" : "Add to cart";
+    add.disabled = inCart;
+    add.addEventListener("click", () => {
+      const go = () => myDesignToCart(d, add);
+      if (!designerHasUnsavedWork()) return go();
+      openEditSuitConfirm(null, {
+        title: "Add this suit to your cart?",
+        text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
+        confirm: "Yes, add it",
+        onConfirm: go,
+      });
+    });
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "wishlist-remove wishlist-edit";
+    edit.textContent = "Edit";
+    edit.addEventListener("click", () => {
+      const go = () => editMyDesign(d);
+      if (!designerHasUnsavedWork()) return go();
+      openEditSuitConfirm(null, {
+        title: "Edit this suit?",
+        text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
+        confirm: "Yes, edit it",
+        onConfirm: go,
+      });
+    });
+    const onWish = !!(wishlistItems && wishlistItems.some((x) => x.previewId === d.id || x.spec === d.visual_spec));
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "wishlist-remove";
+    save.textContent = onWish ? "♥ On wishlist" : "Save to wishlist";
+    save.disabled = onWish;
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try {
+        const entry = cartItemFromWish(w);
+        resetDesignerForNewSuit();
+        const wish = {
+          wishId: "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+          savedAt: Date.now(),
+          spec: d.visual_spec,
+          type: entry.type,
+          level: entry.level,
+          jacket: entry.jacket,
+          pants: entry.pants,
+          texts: entry.texts,
+          liningPhoto: null,
+          previewId: d.id,
+          imageUrl: d.image_url,
+        };
+        await wishlistUpdate((l) => (l.some((x) => x.previewId === d.id || x.spec === d.visual_spec) ? l : l.concat([wish])));
+        renderWishlist();
+        syncWishlistButton();
+        save.textContent = "♥ On wishlist";
+      } catch (err) {
+        console.error(err);
+        save.disabled = false;
+        alert("Sorry, that didn’t work. Please try again.");
+      }
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "wishlist-remove";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      actions.style.display = "none";
+      const ask = document.createElement("div");
+      ask.className = "wishlist-actions wishlist-confirm";
+      ask.innerHTML = "<span>Remove this design?</span>";
+      const yes = document.createElement("button");
+      yes.type = "button";
+      yes.className = "wishlist-remove wishlist-remove-yes";
+      yes.textContent = "Remove";
+      const no = document.createElement("button");
+      no.type = "button";
+      no.className = "past-order-reorder-btn";
+      no.textContent = "Keep";
+      no.addEventListener("click", () => { ask.remove(); actions.style.display = ""; });
+      yes.addEventListener("click", async () => {
+        yes.disabled = no.disabled = true;
+        try {
+          await myDesignsWrite((h) => (h.indexOf(d.id) === -1 ? [d.id].concat(h) : h));
+        } catch (err) {
+          console.error(err);
+          alert("Sorry, that didn’t work. Please try again.");
+        }
+        renderMyDesigns();
+      });
+      ask.append(no, yes);
+      info.appendChild(ask);
+    });
+    actions.append(add, edit, save, remove);
+    info.append(title, sub, actions);
+    card.appendChild(info);
+    box.appendChild(card);
+  });
+}
+
+// Add to cart: a COPY of the design goes in the cart (it stays here), with
+// its picture. Saved measurements fill in as with any new cart suit.
+async function myDesignToCart(d, btn) {
+  if (!currentUser) return;
+  if (designInCart(d)) { renderMyDesigns(); return; }
+  if (btn) { btn.disabled = true; btn.textContent = "Adding..."; }
+  try {
+    const item = cartItemFromWish(d.w);
+    delete item.fromWishId;
+    resetDesignerForNewSuit();
+    cartItems.push(item);
+    const n = cartItems.length - 1;
+    if (closeAccountOverlay) closeAccountOverlay();
+    markDesignStarted();
+    renderCartBar();
+    updateOrderSummaryUI();
+    updateProcessBar();
+    saveDraft();
+    if (item.needsReview) {
+      loadCartItemIntoDesigner(n);
+      alert("Suit " + (n + 1) + " is in your cart. Please pick a new " + item.needsReview.join(", ") + " (what you chose isn’t offered anymore).");
+    } else {
+      const dropdown = document.getElementById("cartDropdown");
+      const iconBtn = document.getElementById("cartIconBtn");
+      if (dropdown && dropdown.hidden && iconBtn) setTimeout(() => iconBtn.click(), 50);
+    }
+  } catch (err) {
+    console.error("Couldn't add the design to the cart:", err);
+    alert("Sorry, something went wrong. Please try again.");
+  } finally {
+    renderMyDesigns();
+  }
+}
+
+// Edit: opens the design in the designer as a new suit. While it is
+// unchanged its picture is kept on the Preview page (no new drawing).
+function editMyDesign(d) {
+  if (orderMeasureTarget) {
+    orderMeasureTarget = null;
+    applyOrderMeasureMode();
+  }
+  const item = cartItemFromWish(d.w);
+  jacketDesigner.resetSelections();
+  pantsDesigner.resetSelections();
+  applySuitType(item.type, item.level);
+  jacketDesigner.setTexts((item.texts && item.texts.jacket) || {});
+  pantsDesigner.setTexts((item.texts && item.texts.pants) || {});
+  jacketDesigner.setSelections(item.jacket || {});
+  if (!isJacketOnlyType(item.type) && item.pants) pantsDesigner.setSelections(item.pants);
+  pendingCommitIndex = null;
+  editingCartIndex = null;
+  editingCartPreview = null;
+  wishlistEditingId = null;
+  wishlistEditingPreview = null;
+  const spec = currentDesignSpec();
+  designPreview = spec === d.visual_spec ? { spec, photo: jacketDesigner.getLiningPhoto(), id: d.id, status: "done", url: d.image_url } : null;
+  furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(previewSection));
+  if (closeAccountOverlay) closeAccountOverlay();
+  markDesignStarted();
+  renderCartBar();
+  updateOrderSummaryUI();
+  updateProcessBar();
+  saveDraft();
+  showDesignerForEditing();
+}
+
+// Sign-in / sign-out: show the section for the account; load once opened.
+function loadMyDesignsSection() {
+  const section = document.getElementById("myDesignsSection");
+  if (!section) return;
+  section.hidden = !currentUser || !isSupabaseConfigured() || !SUIT_IMAGE_FN_URL;
+  if (section.hidden) { myDesigns = null; return; }
+  if (section.open) loadMyDesigns(true);
+}
+(function () {
+  const section = document.getElementById("myDesignsSection");
+  if (section) section.addEventListener("toggle", () => { if (section.open) loadMyDesigns(); });
+})();
 
 // The hero "Start Designing" button always means "take me to the suit-type
 // choice", even if a saved draft currently has a later step showing
