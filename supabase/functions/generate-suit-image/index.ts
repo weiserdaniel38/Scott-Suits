@@ -1801,7 +1801,24 @@ async function generate(row: { id: string; order_id: string | null; suit_type: s
   }
 }
 
-async function generatePreview(id: string, raw: string, round = 1) {
+// A finished "Generate My Suit" picture is emailed to the customer who drew
+// it (send-suit-preview: one email per design, none for redraws or admins).
+// It never draws anything, so it adds no picture cost.
+async function emailPreview(id: string, brand: string) {
+  try {
+    const res = await fetch(SUPABASE_URL + "/functions/v1/send-suit-preview", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-webhook-secret": env("WEBHOOK_SECRET") },
+      body: JSON.stringify({ preview_id: id, brand }),
+    });
+    console.log("Preview email", id, res.status, (await res.text()).slice(0, 200));
+  } catch (e) {
+    console.warn("Preview email failed", id, e);
+  }
+}
+const brandId = (b: unknown) => (b === "sw" ? "sw" : "scott");
+
+async function generatePreview(id: string, raw: string, round = 1, brand = "scott") {
   const set = async (fields: Record<string, unknown>) => {
     const { error } = await supabase
       .from("suit_previews")
@@ -1832,16 +1849,18 @@ async function generatePreview(id: string, raw: string, round = 1) {
     if (!good) {
       // Keep the wrong picture as the fallback, then draw ONE more.
       await set({ status: "pending", image_url: url, image_prompt: prompt });
-      await chainRound({ retry: "preview", id, round: round + 1 });
+      await chainRound({ retry: "preview", id, round: round + 1, brand });
       return;
     }
     await set({ status: "done", image_url: url, image_prompt: prompt, image_error: null });
+    await emailPreview(id, brand);
   } catch (err) {
     if (await cancelled()) return;
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Suit preview failed for", id, "round", round, msg);
     if (fallback?.image_url) {
       await set({ status: "done", image_error: ("Round " + round + ": " + msg).slice(0, 1000) });
+      await emailPreview(id, brand);
       return;
     }
     await set({ status: "failed", image_error: msg.slice(0, 1000) });
@@ -1908,7 +1927,7 @@ async function extraPictures(userId: string): Promise<number> {
 
 const SIGN_IN_NEEDED = () => json({ status: "signin", error: "Sign in to have your suit drawn" }, 401);
 
-async function startPreview(req: Request, raw: string): Promise<Response> {
+async function startPreview(req: Request, raw: string, brand = "scott"): Promise<Response> {
   if (!looksLikeSuitSpec(raw)) return json({ error: "Not a suit description" }, 400);
   const userId = await requestUserId(req);
   if (!userId) return SIGN_IN_NEEDED();
@@ -1931,7 +1950,7 @@ async function startPreview(req: Request, raw: string): Promise<Response> {
     .select("id")
     .single();
   if (error || !data) return json({ error: "Could not start" }, 500);
-  const p = runInBackground(generatePreview(data.id, raw));
+  const p = runInBackground(generatePreview(data.id, raw, 1, brand));
   // @ts-ignore see runInBackground
   if (typeof EdgeRuntime === "undefined") await p;
   return json({ status: "pending", preview_id: data.id }, 202);
@@ -2005,7 +2024,7 @@ Deno.serve(async (req) => {
   // Before the order: previews of the suit being designed.
   if (body?.preview) {
     if (!env("OPENAI_API_KEY")) return json({ status: "unavailable" }, 503);
-    return startPreview(req, String(body?.visual_spec || "").trim());
+    return startPreview(req, String(body?.visual_spec || "").trim(), brandId(body?.brand));
   }
   // Admin "Cancel" on the preview page: no further drawing rounds for this
   // preview. Pictures already being drawn are still billed by OpenAI.
@@ -2047,7 +2066,7 @@ Deno.serve(async (req) => {
       if (row) work = generate(row, round);
     } else if (body?.retry === "preview") {
       const { data: prev } = await supabase.from("suit_previews").select("visual_spec").eq("id", id).maybeSingle();
-      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round);
+      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round, brandId(body?.brand));
     }
     if (!work) return json({ error: "Not found" }, 404);
     const p = runInBackground(work);

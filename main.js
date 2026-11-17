@@ -1322,6 +1322,19 @@ let currentIsAdmin = false;
 // form first if they aren't).
 let openAdminOrdersPending = new URLSearchParams(window.location.search).get("admin") === "orders";
 if (openAdminOrdersPending) window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+// The suit-picture emails link to /?open=cart ("View my cart") and
+// /?open=orders ("View my order"): open the cart, or My Account at Past
+// Orders, once the customer is signed in (the sign-in form first if not).
+let openFromEmailPending = (function () {
+  const params = new URLSearchParams(window.location.search);
+  const v = params.get("open");
+  if (v !== "cart" && v !== "orders") return null;
+  params.delete("open");
+  const q = params.toString();
+  window.history.replaceState(null, "", window.location.pathname + (q ? "?" + q : "") + window.location.hash);
+  return v;
+})();
+let openFromEmailAskedSignIn = false;
 // Set by the QA nav bar code near the end of this file.
 let setQaNavAllowed = null;
 let setQaMyCostAllowed = null;
@@ -1457,6 +1470,29 @@ function applyAdminStatus(user, admin) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
     else setAdminUnread(0);
+  }
+  if (openFromEmailPending && openAccountOverlay) {
+    const what = openFromEmailPending;
+    if (!user) {
+      if (!openFromEmailAskedSignIn) openAccountOverlay();
+      openFromEmailAskedSignIn = true;
+    } else if (what === "orders") {
+      openFromEmailPending = null;
+      openAccountOverlay();
+      const section = document.getElementById("pastOrdersSection");
+      if (section) {
+        section.open = true;
+        setTimeout(() => section.scrollIntoView({ block: "start", behavior: "smooth" }), 300);
+      }
+    } else {
+      openFromEmailPending = null;
+      // The account's cart arrives a moment after sign-in.
+      setTimeout(() => {
+        const dropdown = document.getElementById("cartDropdown");
+        const iconBtn = document.getElementById("cartIconBtn");
+        if (dropdown && dropdown.hidden && iconBtn) iconBtn.click();
+      }, 1500);
+    }
   }
   if (openAdminOrdersPending && openAccountOverlay) {
     if (admin) {
@@ -13146,6 +13182,7 @@ async function updateDesignPreviewPanel() {
       preview.status = r.status === "done" ? "done" : "failed";
       if (r.status === "done") preview.url = r.url;
       if (r.status === "done") { try { wishlistAttachPicture(preview); } catch (e) { console.warn(e); } }
+      if (r.status === "done") autoAddPreviewToCart(preview);
       saveDraft();
       if (box.contains(ui.card)) {
         if (r.status === "done") showImage(r.url);
@@ -13176,7 +13213,8 @@ async function updateDesignPreviewPanel() {
       const sent = photoUrl
         ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(), texts: currentDesignTexts() }, { liningPhotoUrl: photoUrl })
         : spec;
-      const start = await callSuitImageFn({ preview: true, visual_spec: sent });
+      // brand: the "your suit design" email comes from the same storefront.
+      const start = await callSuitImageFn({ preview: true, visual_spec: sent, brand: typeof SITE_BRAND !== "undefined" && SITE_BRAND ? SITE_BRAND.id : "scott" });
       if (start.status === 401) return signInAgain();
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
@@ -13194,6 +13232,21 @@ async function updateDesignPreviewPanel() {
     ui.fail("", true);
     ui.btn.textContent = "Generate My Suit";
     requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
+  }
+}
+
+// A finished picture puts the suit in the cart by itself (Daniel,
+// 2026-11-17: "After generated automatically add to cart"), the same as
+// tapping "Add to cart": measurements come later, and a suit already in the
+// cart is updated in place, never copied. Only while the design on screen is
+// still the one drawn, and never while the admin edits a customer's order.
+function autoAddPreviewToCart(preview) {
+  try {
+    if (!currentUser || adminEditState) return;
+    if (!preview || preview.spec !== currentDesignSpec() || preview.photo !== jacketDesigner.getLiningPhoto()) return;
+    addToCartMeasureLater();
+  } catch (e) {
+    console.warn("Couldn't add the drawn suit to the cart", e);
   }
 }
 
