@@ -1135,6 +1135,12 @@
         <div id="wishlistList" class="wishlist-list"></div>
       </details>
 
+      <!-- My Designs (2026-11-17): every suit this account has had drawn. -->
+      <details class="account-collapse" id="myDesignsSection" hidden>
+        <summary><h3>My Designs</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <div id="myDesignsList" class="wishlist-list"></div>
+      </details>
+
       <details class="account-collapse" id="pastOrdersSection">
         <summary><h3>My Orders</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
         <div id="pastOrdersList"></div>
@@ -1254,7 +1260,7 @@
 <script src="./catalog.js?v=20261117trim"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261117halfdouble"></script>
+<script src="./main.js?v=20261117mydesigns"></script>
 <script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>

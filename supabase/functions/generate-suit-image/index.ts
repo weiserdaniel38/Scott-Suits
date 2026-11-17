@@ -2022,6 +2022,33 @@ Deno.serve(async (req) => {
     }
     return json({ status: "cancelled" });
   }
+  // My Account > My Designs (Daniel, 2026-11-17): the signed-in customer's
+  // own finished pictures, newest first, one per design (redraws of the same
+  // suit collapse to the newest). Read only: never starts a drawing.
+  if (body?.my_previews) {
+    const userId = await requestUserId(req);
+    if (!userId) return SIGN_IN_NEEDED();
+    const { data, error } = await supabase
+      .from("suit_previews")
+      .select("id, created_at, image_url, visual_spec")
+      .eq("user_id", userId)
+      .eq("status", "done")
+      .not("image_url", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) return json({ error: "Lookup failed" }, 500);
+    const seen = new Set<string>();
+    const designs = [];
+    for (const r of data || []) {
+      if (!r.image_url || !r.visual_spec) continue;
+      const core = specCore(String(r.visual_spec));
+      if (seen.has(core)) continue;
+      seen.add(core);
+      designs.push(r);
+      if (designs.length >= 60) break;
+    }
+    return json({ designs });
+  }
   if (body?.preview_check) {
     const id = String(body.preview_check);
     return UUID.test(id) ? checkPreview(id) : json({ error: "Bad id" }, 400);
