@@ -9213,6 +9213,21 @@ var MEAS_WIZ_HINTS = {
   cuff: "Around the leg opening at the hem.",
 };
 var measWizOpen = false;
+// Scott's Suits WhatsApp Business number (Daniel's screenshot, 2026-11-17).
+const HOME_VISIT_WHATSAPP = "17472219834";
+
+// wa.me link with a pre-filled home-visit request. Name and email come from
+// the signed-in account; the rest the customer fills in before sending.
+function homeVisitWhatsAppLink() {
+  const name = typeof customerDisplayName === "function" ? customerDisplayName() : "";
+  const email = currentUser && currentUser.email ? currentUser.email : "";
+  const lines = ["Hi, I'd like to be measured at home for my Scott's Suits order."];
+  lines.push("Name: " + (name && name !== email ? name : ""));
+  if (email) lines.push("Email: " + email);
+  lines.push("Address: ", "Best days and times: ", "Please call or message me to set it up.");
+  return "https://wa.me/" + HOME_VISIT_WHATSAPP + "?text=" + encodeURIComponent(lines.join("\n"));
+}
+
 // Tailors picked on the "Have a pro measure me" page (buildTailorCard).
 var chosenTailors = [];
 // Who measured the customer, saved with the suit and written into the
@@ -9452,13 +9467,31 @@ function refreshMeasHub() {}
     if (key === "dontknow") {
       const r = wiz.dataset.route || "";
       optionPage("I don't know my measurements", "How should we get them?", [
-        [r === "pro", "Have a pro measure me", "Find a tailor near you. Bring our list.", pickRoute("pro")],
+        [r === "pro", "Have a pro measure me", SITE_BRAND.id === "scott" ? "We come to your home, or find a tailor near you." : "Find a tailor near you. Bring our list.", pickRoute("pro")],
         [r === "estimate", "Fill in from standard sizing", "Pick your usual store size. We fill in the rest for you to check.", pickRoute("estimate")],
       ]);
       return;
     }
     if (key === "pro") {
-      page.append(el("p", "meas-wiz-eyebrow", "Have a pro measure you"), el("h2", "meas-wiz-q", "Choose a tailor near you"));
+      page.append(el("p", "meas-wiz-eyebrow", "Have a pro measure you"), el("h2", "meas-wiz-q", SITE_BRAND.id === "scott" ? "Who should measure you?" : "Choose a tailor near you"));
+      // Home visit (Daniel, 2026-11-17): opens WhatsApp to the Scott's
+      // Suits business number with a ready-made message. Scott's Suits only.
+      if (SITE_BRAND.id === "scott") {
+        const home = el("a", "meas-wiz-option meas-wiz-home");
+        home.href = homeVisitWhatsAppLink();
+        home.target = "_blank";
+        home.rel = "noopener";
+        home.append(el("b", "", "We come to you"), el("span", "", "We measure you at home. Tap to message us on WhatsApp and pick a time."));
+        const sent = el("p", "meas-wiz-home-sent", "Message ready in WhatsApp. Send it and we'll reply to set a time. Your design is saved.");
+        sent.hidden = true;
+        home.addEventListener("click", () => {
+          home.href = homeVisitWhatsAppLink();
+          measuredBy = "Home visit by Scott's Suits";
+          saveDraft();
+          sent.hidden = false;
+        });
+        page.append(home, sent, el("p", "meas-wiz-or", "Or go to a tailor near you"));
+      }
       page.appendChild(el("p", "meas-wiz-hint", "Search your address or ZIP, then tap Choose on a tailor."));
       if (tailorPanel) {
         tailorPanel.hidden = false;
@@ -9896,6 +9929,8 @@ function refreshMeasHub() {}
       statusEl.innerHTML = "";
       if (fromSaved) {
         statusEl.append(el("b", "", "Using your saved measurements"), el("span", "", "From your account. Tap any one to change it, or measure again."));
+      } else if (!done && measuredBy && /^Home visit/.test(measuredBy)) {
+        statusEl.append(el("b", "", "Home visit requested"), el("span", "", "We'll message you on WhatsApp to set a time and add your measurements for you. You can add the suit to your cart now."));
       } else if (!done && measuredBy) {
         statusEl.append(el("b", "", "Got your tailor's numbers?"), el("span", "", "Measured by " + measuredBy + ". Tap below and type in each number they wrote, one at a time."));
       } else if (!done) {
