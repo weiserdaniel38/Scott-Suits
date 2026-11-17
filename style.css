@@ -3509,3 +3509,15 @@ html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
     html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{margin-bottom:calc(100lvh - 100svh);}
   }
 }
+/* "What are we building?" and the customization level page on phones
+   (Daniel, 2026-11-17: "move down more and center slightly"): the content
+   used to hug the header with the footer floating mid-screen. The page is
+   now one screen tall, the content sits in the middle (a touch above
+   centre) and the footer links rest at the bottom. */
+@media(max-width:600px){
+  html[data-brand="scott"] body.designing:has(> #suitTypeSection.active){display:flex;flex-direction:column;min-height:100svh;}
+  html[data-brand="scott"] body.designing:has(> #suitTypeSection.active) > nav{flex:none;}
+  html[data-brand="scott"] body.designing > #suitTypeSection.active{flex:1 0 auto;min-height:0;justify-content:center;padding-top:12px;padding-bottom:calc(12px + 4svh);}
+  html[data-brand="scott"] body.designing:has(> #suitTypeSection.active) > footer{flex:none;padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
+  html[data-brand="scott"] body.designing:has(> #suitTypeSection.active) > #scrollSlack{display:none;}
+}
