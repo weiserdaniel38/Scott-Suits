@@ -3600,3 +3600,20 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
   body.designing .step .ps-photo{max-height:calc(38vh / var(--wz));}
   body.designing .step .ps-photos .ps-photo{max-height:calc(34vh / var(--wz));}
 }
+
+/* === DESKTOP: drawing button big, square and centred (Daniel, 2026-11-17:
+   "On desktop, I need the button to be big square and center the way it
+   used to be"). While the suit draws, the button-stitching clip shows as
+   its full square frame (no round crop), large, centred above the caption,
+   the "stay on this page" note and Cancel. Phones keep their own layout. === */
+@media(min-width:901px){
+  #designPreview.is-drawing .suit-preview-media{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;}
+  #designPreview.is-drawing .suit-preview-loading{width:260px;height:260px;margin:4px auto 16px;border-radius:10px;grid-row:auto;object-fit:cover;}
+  #designPreview.is-drawing .suit-preview-loading-text{width:100%;text-align:center;margin:0;}
+  #designPreview.is-drawing .suit-preview-loading-text strong{font-size:19px;}
+  #designPreview.is-drawing .suit-preview-wait-notice{display:inline-block;max-width:none;margin:10px auto 0;padding:8px 18px;border-radius:999px;text-align:center;}
+  #designPreview.is-drawing .suit-preview-wait-notice strong{display:inline;}
+}
+@media(min-width:901px) and (max-height:760px){
+  #designPreview.is-drawing .suit-preview-loading{width:170px;height:170px;margin-bottom:10px;}
+}
