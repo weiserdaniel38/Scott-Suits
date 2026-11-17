@@ -12773,7 +12773,11 @@ function buildSuitImageCard(labelText) {
       const video = document.createElement("video");
       video.className = "suit-preview-loading";
       // A brand can have its own recolored copy (brand.js loadingVideo).
-      const clip = SITE_BRAND.loadingVideo || "./assets/suit-loading-thread";
+      // Desktop (Scott's Suits): a copy on the card's own cream, so the square
+      // clip blends into the white card (Daniel, 2026-11-17: "I don't like that
+      // brown on white box, make uniform"). Phones keep the beige-circle clip.
+      const creamClip = !SITE_BRAND.loadingVideo && window.matchMedia && window.matchMedia("(min-width:901px)").matches;
+      const clip = SITE_BRAND.loadingVideo || (creamClip ? "./assets/suit-loading-thread-cream" : "./assets/suit-loading-thread");
       [[clip + ".mp4?v=20261111square2", "video/mp4"], [clip + ".webm?v=20261111square2", "video/webm"]].forEach(([src, type]) => {
         const source = document.createElement("source");
         source.src = src;
