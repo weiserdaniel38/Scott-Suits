@@ -3082,6 +3082,10 @@ html.meas-wiz-lock #accountOverlay{z-index:2100;}
 #newPasswordDone .btn-primary{width:100%;justify-content:center;}
 #accountOverlay .account-tabs[hidden]{display:none;}
 #accountRecoveryView .reset-pw-title{margin:10px 0 20px;}
+/* Confirm your email after Create Account (2026-11-17) */
+.confirm-email-pane .reset-pw-note b{color:var(--ivory);word-break:break-all;}
+.confirm-email-pane .confirm-email-tip{font-size:13px;margin-top:-8px;}
+.account-status-msg .meas-reset-link{font-size:13px;margin-left:4px;}
 /* Show/hide password eye (2026-11-10) */
 .pw-eye{flex:none;background:none;border:none;padding:6px;margin-right:-6px;color:var(--ivory-dim);cursor:pointer;display:flex;align-items:center;}
 .pw-eye:hover,.pw-eye[aria-pressed="true"]{color:var(--brass);}

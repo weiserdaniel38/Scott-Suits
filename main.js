@@ -4960,6 +4960,12 @@ async function prefillContactDetails() {
     if (signupForm) signupForm.reset();
     if (loginForm) loginForm.reset();
     if (typeof hideResetRequest === "function") hideResetRequest();
+    // "Check your email" pane open: reopening shows Log In (their account
+    // exists now, it just waits for the link).
+    if (typeof confirmEmailPane !== "undefined" && confirmEmailPane && !confirmEmailPane.hidden) {
+      hideConfirmEmail();
+      if (showLoginTabBtn) showLoginTabBtn.click();
+    }
     if (passwordRecoveryMode) {
       passwordRecoveryMode = false;
       updateAccountUI();
@@ -5013,7 +5019,7 @@ function friendlyAuthError(error) {
     return "We couldn't send the confirmation email right now -- too many sign-ups at once. Please try again in a little while, or use Continue with Google.";
   }
   if (code === "email_not_confirmed" || msg.includes("email not confirmed")) {
-    return "Please confirm your email first -- click the link we emailed you, then log in.";
+    return "Please confirm your email first. Tap the link we emailed you.";
   }
   if (code === "user_already_exists" || msg.includes("already registered")) {
     return "An account with this email already exists. Log in instead, or use Continue with Google.";
@@ -5040,6 +5046,7 @@ if (showSignupTabBtn && showLoginTabBtn && signupForm && loginForm) {
     signupForm.hidden = false;
     loginForm.hidden = true;
     hideResetRequest();
+    hideConfirmEmail();
     showSignupTabBtn.classList.add("active");
     showLoginTabBtn.classList.remove("active");
     showSignupTabBtn.setAttribute("aria-selected", "true");
@@ -5050,6 +5057,7 @@ if (showSignupTabBtn && showLoginTabBtn && signupForm && loginForm) {
     signupForm.hidden = true;
     loginForm.hidden = false;
     hideResetRequest();
+    hideConfirmEmail();
     showSignupTabBtn.classList.remove("active");
     showLoginTabBtn.classList.add("active");
     showSignupTabBtn.setAttribute("aria-selected", "false");
@@ -5118,35 +5126,20 @@ if (signupForm) {
     signupSubmitBtn.disabled = true;
     signupSubmitBtn.textContent = "Creating Account...";
     try {
-      const client = getSupabase();
-      const baseUrl = window.location.href.split("?")[0].split("#")[0];
-      // full_name goes into the auth user's own metadata immediately (so it's
-      // available for display the instant a session exists, with no extra
-      // fetch -- see customerDisplayName() above) -- a database trigger (see
-      // add_customer_profiles_migration.sql) copies it into the profiles
-      // table row it creates for every new signup, confirmed or not.
-      const { data, error } = await client.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: name }, emailRedirectTo: baseUrl },
-      });
-      if (error) {
-        showAccountStatus(accountStatusMsg, friendlyAuthError(error));
-      } else if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-        // Supabase's answer when the email already has an account (from an
-        // earlier sign-up or Continue with Google): it looks like a success
-        // but sends no email, so saying "check your email" would leave the
-        // customer waiting for a message that never comes.
-        showAccountStatus(accountStatusMsg, "An account with this email already exists. Log in instead, or use Continue with Google.");
-      } else if (data && data.session) {
-        // Email confirmation is off for this project -- signed in right
-        // away. onAuthStateChange fires on its own and swaps the overlay to
-        // the logged-in view; nothing else to do here.
-        signupForm.reset();
+      // Email + password accounts confirm their email first (Daniel,
+      // 2026-11-17; Continue with Google is exempt). The account is made by
+      // the send-signup-confirmation edge function, which emails the
+      // "Confirm your email" link through Resend -- Supabase's own mailer
+      // only sends a few emails an hour. The link signs them in on the site.
+      // full_name goes into the auth user's metadata; a database trigger
+      // (add_customer_profiles_migration.sql) copies it into profiles.
+      const result = await callSignupConfirmation({ action: "signup", email, password, full_name: name });
+      if (!result.ok) {
+        showAccountStatus(accountStatusMsg, result.error || "Something went wrong. Please try again.");
       } else {
         if (measureFirstSignInWanted()) measureFirstAwaitEmail = true;
-        showAccountStatus(accountStatusMsg, "Account created -- check your email to confirm it, then log in.");
         signupForm.reset();
+        showConfirmEmail(email);
       }
     } catch (err) {
       showAccountStatus(accountStatusMsg, err.message);
@@ -5176,7 +5169,12 @@ if (loginForm) {
       const client = getSupabase();
       const { error } = await client.auth.signInWithPassword({ email, password });
       if (error) {
-        showAccountStatus(accountStatusMsg, friendlyAuthError(error));
+        const code = error.code || error.error_code || "";
+        if (code === "email_not_confirmed" || /email not confirmed/i.test(error.message || "")) {
+          showConfirmEmail(email, "Please confirm your email first.");
+        } else {
+          showAccountStatus(accountStatusMsg, friendlyAuthError(error));
+        }
       } else {
         loginForm.reset();
       }
@@ -5220,6 +5218,83 @@ if (loginForm) {
     input.parentNode.appendChild(btn);
   });
 })();
+
+// ---- Confirm your email (Daniel, 2026-11-17) ----
+// After Create Account (or a Log In with an email that isn't confirmed yet)
+// the popup shows "Check your email" with a Resend button.
+const confirmEmailPane = document.getElementById("confirmEmailPane");
+const confirmEmailAddr = document.getElementById("confirmEmailAddr");
+const confirmResendBtn = document.getElementById("confirmResendBtn");
+const confirmBackBtn = document.getElementById("confirmBackBtn");
+let confirmEmailFor = "";
+
+async function callSignupConfirmation(payload) {
+  try {
+    const res = await fetch(SUPABASE_URL + "/functions/v1/send-signup-confirmation", {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: SUPABASE_ANON_KEY, authorization: "Bearer " + SUPABASE_ANON_KEY },
+      body: JSON.stringify(
+        Object.assign(
+          {
+            redirectTo: window.location.origin + window.location.pathname,
+            brand: typeof SITE_BRAND !== "undefined" && SITE_BRAND ? SITE_BRAND.id : "scott",
+          },
+          payload
+        )
+      ),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) return { ok: true };
+    return { ok: false, error: data.error || "We couldn't create the account right now. Please try again in a few minutes." };
+  } catch (err) {
+    return { ok: false, error: "We couldn't reach the server. Check your connection and try again." };
+  }
+}
+
+function showConfirmEmail(email, lead) {
+  if (!confirmEmailPane) {
+    showAccountStatus(accountStatusMsg, "Check your email to confirm your account.");
+    return;
+  }
+  confirmEmailFor = email;
+  if (loginForm) loginForm.hidden = true;
+  if (signupForm) signupForm.hidden = true;
+  if (resetRequestForm) resetRequestForm.hidden = true;
+  if (accountTabsRow) accountTabsRow.hidden = true;
+  if (confirmEmailAddr) confirmEmailAddr.textContent = email;
+  confirmEmailPane.hidden = false;
+  if (lead) showAccountStatus(accountStatusMsg, lead);
+  else hideAccountStatus(accountStatusMsg);
+}
+function hideConfirmEmail() {
+  if (!confirmEmailPane || confirmEmailPane.hidden) return;
+  confirmEmailPane.hidden = true;
+  if (accountTabsRow) accountTabsRow.hidden = false;
+}
+if (confirmBackBtn) {
+  confirmBackBtn.addEventListener("click", () => {
+    hideConfirmEmail();
+    if (showLoginTabBtn) showLoginTabBtn.click();
+    if (loginEmailInput && confirmEmailFor) loginEmailInput.value = confirmEmailFor;
+  });
+}
+if (confirmResendBtn) {
+  confirmResendBtn.addEventListener("click", async () => {
+    if (!confirmEmailFor) return;
+    confirmResendBtn.disabled = true;
+    confirmResendBtn.textContent = "Sending...";
+    const result = await callSignupConfirmation({ action: "resend", email: confirmEmailFor });
+    showAccountStatus(
+      accountStatusMsg,
+      result.ok ? "Sent. Check your inbox for a new link." : "We couldn't send the email right now. Please try again in a minute."
+    );
+    // A short pause before another resend (the server allows one a minute).
+    confirmResendBtn.textContent = "Resend email";
+    setTimeout(() => {
+      confirmResendBtn.disabled = false;
+    }, 30000);
+  });
+}
 
 // ---- Forgot password (Daniel, 2026-11-10) ----
 // "Forgot password?" under Log In swaps the tabs for a one-field form that
