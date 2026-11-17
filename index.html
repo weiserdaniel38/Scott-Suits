@@ -136,9 +136,9 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261117contactback">
+<link rel="stylesheet" href="./style.css?v=20261117trim">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
-<script src="./brand.js?v=20261116homefit"></script>
+<script src="./brand.js?v=20261117trim"></script>
 <link rel="stylesheet" href="./brand.css?v=20261116onefont">
 <link rel="stylesheet" href="./glass.css?v=20261117landingstyle">
 </head>
@@ -391,7 +391,7 @@
        All Orders in My Account). See startAdminOrderEdit() in main.js. -->
   <div class="admin-edit-bar" id="adminEditBar" hidden>
     <span class="admin-edit-who"><strong>Admin</strong> <span id="adminEditWho">Editing an order</span></span>
-    <span class="admin-edit-help">Make your change on any step, then press Save changes to order. Contact details are on the Order page.</span>
+    <span class="admin-edit-help">Change any step, then press Save changes to order. Contact details are on the Order page.</span>
     <button type="button" class="admin-order-btn" id="adminEditSaveBtn">Save changes to order</button>
     <button type="button" class="admin-edit-cancel" id="adminEditCancelBtn">Cancel</button>
   </div>
@@ -452,7 +452,7 @@
     <span class="suit-type-photo-text"><b>Have a photo or link of a suit you love?</b></span>
     <span class="suit-type-photo-go" aria-hidden="true">&rarr;</span>
   </button>
-  <p class="suit-type-note">Price depends on the fabric. All style options included, except full canvas (+$200).</p>
+  <p class="suit-type-note">Fabric sets the price. All options included except full canvas (+$200).</p>
   <!-- Preset Suit / Preset Jacket, kept low-key on purpose (Daniel,
        2026-10-11): small text links, not extra cards. Only fabric (4 dark
        solids), single/double breasted and lapel style are asked (plus hem or
@@ -464,7 +464,7 @@
   <div class="level-picker" id="levelPicker" hidden>
     <span class="suit-type-eyebrow">Your <span id="levelPickerWhat">suit</span></span>
     <h2>How much would you like to customize?</h2>
-    <p class="level-price-note"><b>Same price at every level.</b> You only pay for your fabric and any add-ons you choose.</p>
+    <p class="level-price-note"><b>Same price at every level.</b> You pay only for fabric and add-ons.</p>
     <div class="level-grid">
       <button type="button" class="level-card" data-level="minimal">
         <img class="level-img" src="./assets/level-minimal.jpg?v=4" alt="" width="83" height="95"><span class="level-divider" aria-hidden="true"></span>
@@ -495,12 +495,12 @@
   <div class="studio-designer-host" id="studioDesignerHost"></div>
   <div class="designer-head">
     <h2>Design your jacket</h2>
-    <p>From <span id="jacketPriceText">$350</span>, set by the fabric. All style options included except full canvas (+$200).</p>
+    <p>From <span id="jacketPriceText">$350</span>, set by the fabric. All options included except full canvas (+$200).</p>
   </div>
 
   <div class="designer-grid" id="designerGrid">
     <div class="tabs" id="tabs"></div>
-    <p class="tabs-hint">Swipe left or right to see all the categories →</p>
+    <p class="tabs-hint">Swipe for more categories →</p>
     <div class="options" id="options"></div>
     <div class="summary">
       <h3>Your Suit</h3>
@@ -520,7 +520,7 @@
 
   <div class="designer-grid" id="pantsGrid">
     <div class="tabs" id="pantsTabs"></div>
-    <p class="tabs-hint">Swipe left or right to see all the categories →</p>
+    <p class="tabs-hint">Swipe for more categories →</p>
     <div class="options" id="pantsOptions"></div>
     <div class="summary">
       <h3>Your Pants</h3>
@@ -789,7 +789,7 @@
       <label for="customerEmail">Email</label>
       <div class="measure-input-wrap"><input type="email" id="customerEmail" placeholder="Email address" autocomplete="email"></div>
     </div>
-    <p class="email-promise pers-email-promise">We respect your privacy. Your email is used only to send updates on your order, never for marketing or promotions.</p>
+    <p class="email-promise pers-email-promise">Your email is used only for order updates, never marketing.</p>
     <div class="pers-ship-fields" id="shipAddressFields">
     <div class="measure-field pers-full address-field-with-suggestions">
       <label for="shippingAddress1">Street address</label>
@@ -915,11 +915,11 @@
     </div>
     <ol class="how-it-works-list">
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-jacket.png?v=20261006h" alt="Jacket"></span><div class="hiw-step-body"><span class="hiw-num">Step 1</span><h3>Choose what you're building</h3><p>A full suit from $350, a jacket from $275, or pants from $150.</p></div></li>
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-pants.png?v=20261006h" alt="Pants"></span><div class="hiw-step-body"><span class="hiw-num">Step 2</span><h3>Design every detail</h3><p>Pick your fabric (it sets the price), then the lapel, pockets, buttons, lining and more. All style options included except full canvas (+$200).</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><img src="./assets/hiw-icon-pants.png?v=20261006h" alt="Pants"></span><div class="hiw-step-body"><span class="hiw-num">Step 2</span><h3>Design every detail</h3><p>Pick your fabric (it sets the price), then lapel, pockets, buttons and lining. All options included except full canvas (+$200).</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 3</span><h3>See your suit before you buy</h3><p>Sign in for a free picture of your finished suit.</p></div></li>
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 4</span><h3>Add your measurements</h3><p>Measure a suit that fits you, measure your body, or estimate from your usual size.</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 4</span><h3>Add your measurements</h3><p>Measure a suit that fits, measure your body, or start from your usual size.</p></div></li>
       <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6.5 14.5h4"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 5</span><h3>Choose delivery and pay</h3><p>Ship to your door or pick up free in store. Pay by card, Apple Pay, Google Pay or Klarna.</p></div></li>
-      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2z"/><path d="M14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 6</span><h3>Follow your suit and reorder anytime</h3><p>Track your suit in My Account. Reorder any time in one tap.</p></div></li>
+      <li class="hiw-step"><span class="hiw-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2z"/><path d="M14 9h4l3 3.5V16h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg></span><div class="hiw-step-body"><span class="hiw-num">Step 6</span><h3>Follow your suit and reorder anytime</h3><p>Track it in My Account. Reorder in one tap.</p></div></li>
     </ol>
     <div class="hiw-foot">
       <button class="btn-primary how-it-works-cta" id="howItWorksStartBtn">Start Designing <span aria-hidden="true">&rarr;</span></button>
@@ -944,7 +944,7 @@
 
     <div id="accountLoggedOutView">
       <p class="account-intro" id="accountIntro"></p>
-      <p class="email-promise">We respect your privacy. Your email is used only to send updates on your order, never for marketing or promotions.</p>
+      <p class="email-promise">Your email is used only for order updates, never marketing.</p>
 
       <!-- Google sign-in works the same whether this is someone's first visit
            or their tenth -- Supabase creates the account automatically the
@@ -999,7 +999,7 @@
            that brings the customer back to set a new password. -->
       <form class="account-form" id="resetRequestForm" hidden>
         <h3 class="reset-pw-title">Reset your password</h3>
-        <p class="reset-pw-note">Enter the email you signed up with and we'll send you a link to set a new password.</p>
+        <p class="reset-pw-note">Enter your email and we'll send a link to set a new password.</p>
         <div class="measure-field">
           <label for="resetEmailInput">Email address</label>
           <div class="measure-input-wrap"><input type="email" id="resetEmailInput" placeholder="you@example.com" autocomplete="email"></div>
@@ -1013,7 +1013,7 @@
       <div class="account-form confirm-email-pane" id="confirmEmailPane" hidden>
         <h3 class="reset-pw-title">Check your email</h3>
         <p class="reset-pw-note">We sent a link to <b id="confirmEmailAddr"></b>. Tap it to confirm your email and finish creating your account.</p>
-        <p class="reset-pw-note confirm-email-tip">It can take a minute to arrive. Check your spam folder too.</p>
+        <p class="reset-pw-note confirm-email-tip">It can take a minute. Check spam too.</p>
         <button type="button" class="btn-primary" id="confirmResendBtn">Resend email</button>
         <p class="forgot-pw-row"><button type="button" class="meas-reset-link" id="confirmBackBtn">Back to log in</button></p>
       </div>
@@ -1189,7 +1189,7 @@
   <div class="confirm-panel">
     <span class="confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
     <h3 id="editSuitConfirmTitle">Edit Suit 1?</h3>
-    <p id="editSuitConfirmText">The suit you're designing now isn't in your cart yet, so its choices will be cleared.</p>
+    <p id="editSuitConfirmText">The suit you're designing isn't in your cart yet, so it will be cleared.</p>
     <div class="confirm-actions">
       <button type="button" class="btn-ghost" id="editSuitCancelBtn">Keep designing</button>
       <button type="button" class="btn-primary" id="editSuitConfirmBtn">Yes, edit it</button>
@@ -1251,11 +1251,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261022protect"></script>
-<script src="./catalog.js?v=20261117keep350"></script>
+<script src="./catalog.js?v=20261117trim"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261117confirm"></script>
-<script src="./photo-suit.js?v=20261104pants"></script>
+<script src="./main.js?v=20261117trim"></script>
+<script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>
 <!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:

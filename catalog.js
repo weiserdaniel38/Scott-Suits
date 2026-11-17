@@ -232,7 +232,7 @@ const JACKET_CATALOG = {
     // Shown on the options page as a brief explainer -- most customers
     // won't know this tailoring term on sight the way they might "collar"
     // or "pocket".
-    description: "How much of the inside of your jacket is lined. Unlined is the lightest and coolest.",
+    description: "How much of the inside is lined. Unlined is lightest and coolest.",
     // Options taken off the designer. A draft saved while one of these was
     // picked has it cleared on reload (see reconcileSelections in main.js)
     // so the customer is asked again instead of ordering a retired style.
@@ -573,7 +573,7 @@ const PANTS_CATALOG = {
 PANTS_CATALOG.pickStitch = {
   label: "Pick Stitching",
   column: "pants_pick_stitch",
-  description: "A row of small stitches along the front pocket openings, to match a pick stitched jacket.",
+  description: "Small stitches along the front pockets, to match a pick stitched jacket.",
   options: [
     { name: "No Pick Stitching", displayName: "None", factoryCode: "31A6", img: "./assets/pants-pickstitch-none.jpg?v=2", badge: "Standard" },
     // The factory refuses it with slit front pockets (test drafts, 2026-10-25).
@@ -2867,7 +2867,7 @@ JACKET_CATALOG.feltundercollar = {
   // The suit picture generator still knows this step by its old name.
   specLabel: "Felt Under Collar",
   column: "felt_under_collar",
-  description: "A hidden layer under the collar. Never seen when worn, but it shapes the collar.",
+  description: "A hidden layer that shapes the collar.",
   options: [
     { name: "Match Felt Undercollar", displayName: "Matching Felt", specName: "Match Felt Undercollar", img: "./assets/jacket-felt-new-match.jpg", badge: "Standard" },
     { name: "Customer-Appointed Felt", displayName: "Choose a Felt Color", specName: "Choose Your Felt", img: "./assets/jacket-felt-new-customer.jpg" },
@@ -3030,8 +3030,8 @@ PANTS_CATALOG_GROUPS.find((g) => g.label === "Personalization").keys.push("monog
 JACKET_CATALOG.threadColor.label = "Button Thread Color";
 JACKET_CATALOG.threadColor.description = "The thread your jacket's buttons are sewn on with.";
 JACKET_CATALOG.buttonholeThreadColor.description = "The thread stitched around the buttonhole on your lapel.";
-JACKET_CATALOG.frontButtonholeThreadColor.description = "The thread stitched around the buttonholes on your jacket front and sleeves.";
-JACKET_CATALOG.buttonholeColorPlacement.description = "Pick where your buttonhole color shows. The other buttonholes match the fabric.";
+JACKET_CATALOG.frontButtonholeThreadColor.description = "The thread around your front and sleeve buttonholes.";
+JACKET_CATALOG.buttonholeColorPlacement.description = "Where your buttonhole color shows. The rest match the fabric.";
 JACKET_CATALOG.monogramThreadColor.description = "The thread your jacket monogram is embroidered in.";
 PANTS_CATALOG.threadColor.label = "Button Thread Color";
 PANTS_CATALOG.threadColor.description = "The thread your pants buttons are sewn on with.";

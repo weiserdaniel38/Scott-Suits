@@ -2362,7 +2362,7 @@ if (pastOrdersList) {
       if (!designerHasUnsavedWork()) return go();
       openEditSuitConfirm(null, {
         title: "Add your measurements?",
-        text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+        text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
         confirm: "Yes, continue",
         onConfirm: go,
       });
@@ -2376,7 +2376,7 @@ if (pastOrdersList) {
     if (!designerHasUnsavedWork()) return go();
     openEditSuitConfirm(null, {
       title: "Reorder this?",
-      text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+      text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
       confirm: "Yes, reorder",
       onConfirm: go,
     });
@@ -5016,7 +5016,7 @@ function friendlyAuthError(error) {
   const code = (error && (error.code || error.error_code)) || "";
   const msg = ((error && error.message) || "").toLowerCase();
   if (code === "over_email_send_rate_limit" || msg.includes("rate limit")) {
-    return "We couldn't send the confirmation email right now -- too many sign-ups at once. Please try again in a little while, or use Continue with Google.";
+    return "We couldn't send the confirmation email right now. Try again in a little while, or use Continue with Google.";
   }
   if (code === "email_not_confirmed" || msg.includes("email not confirmed")) {
     return "Please confirm your email first. Tap the link we emailed you.";
@@ -5358,7 +5358,7 @@ if (resetRequestForm) {
         body: JSON.stringify({ email, redirectTo: window.location.origin + window.location.pathname }),
       });
       if (!res.ok) throw new Error("send failed");
-      showAccountStatus(accountStatusMsg, "If an account exists for " + email + ", we've sent a link to set a new password. It can take a minute to arrive, so check your spam folder too.");
+      showAccountStatus(accountStatusMsg, "If an account exists for " + email + ", we've sent a link to set a new password. It can take a minute. Check spam too.");
     } catch (err) {
       showAccountStatus(accountStatusMsg, "We couldn't send the email right now. Please try again in a few minutes.");
     } finally {
@@ -9347,7 +9347,7 @@ function refreshMeasHub() {}
     }
     if (key === "pro-ready") {
       page.append(el("p", "meas-wiz-eyebrow", "Step 2 of 2"), el("h2", "meas-wiz-q", "Got your numbers?"));
-      page.appendChild(el("p", "meas-wiz-hint", "Type in what the tailor wrote, one at a time. Not yet? Close this. When you have them, come back on this phone and tap \u201cEnter my measurements\u201d. Your design is saved for 60 days."));
+      page.appendChild(el("p", "meas-wiz-hint", "Type in what the tailor wrote, one at a time. Not yet? Close this and come back on this phone later. Your design is saved for 60 days."));
       setNext("Enter them &rarr;");
       return;
     }
@@ -9367,7 +9367,7 @@ function refreshMeasHub() {}
       page.append(
         el("p", "meas-wiz-eyebrow", "Save your measurements"),
         el("h2", "meas-wiz-q", "Save them to your account"),
-        el("p", "meas-wiz-hint", "Sign in or create an account so your measurements are kept safely in your profile, ready for this suit and the next.")
+        el("p", "meas-wiz-hint", "Sign in or create an account to save your measurements to your profile.")
       );
       const keep = el("button", "meas-wiz-own", "Keep on this phone only");
       keep.type = "button";
@@ -10854,7 +10854,7 @@ function initTailorFinder() {
           .filter((x) => x.miles <= TAILOR_MAX_MILES)
           .sort((a, b) => a.miles - b.miles);
       } else if (!zip) {
-        say("We couldn’t find that address. Please pick one from the list as you type, or try just your ZIP code.");
+        say("We couldn’t find that address. Pick one from the list, or try your ZIP code.");
         return;
       } else {
         // Map lookup unavailable: fall back to tailors in the same ZIP area.
@@ -10930,7 +10930,7 @@ function initTailorFinder() {
         (err) => {
           locateBtn.disabled = false;
           say(err && err.code === 1
-            ? "Location is turned off for this site. Please allow it in your settings, or type your address or ZIP code."
+            ? "Location is off for this site. Allow it in settings, or type your address or ZIP code."
             : "We couldn’t find your location. Please type your address or ZIP code.");
         },
         { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
@@ -11675,7 +11675,7 @@ function measureCartItem(index) {
   if (designerHasUnsavedWork()) {
     openEditSuitConfirm(index, {
       title: "Add measurements for Suit " + (index + 1) + "?",
-      text: "The suit you're designing now isn't in your cart yet, so its choices will be cleared.",
+      text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
       confirm: "Yes, continue",
       onConfirm: () => loadCartItemIntoDesigner(index, true),
     });
@@ -11923,7 +11923,7 @@ const openEditSuitConfirm = (function () {
     if (text) {
       text.textContent = pendingCommitIndex !== null && cartItems[pendingCommitIndex]
         ? "Your latest changes to Suit " + (pendingCommitIndex + 1) + " aren't saved to your cart yet, so they'll be lost."
-        : "The suit you're designing now isn't in your cart yet, so its choices will be cleared.";
+        : "The suit you're designing isn't in your cart yet, so it will be cleared.";
     }
     overlay.classList.add("open");
     cancelBtn.focus();
@@ -12619,7 +12619,7 @@ async function pollSuitImage(checkPayload, isStillWanted) {
 const SUIT_IMAGE_MESSAGES = {
   failed: "Sorry, the drawing didn't finish. Please tap Try Again.",
   timeout: "The drawing took too long. Please tap Try Again.",
-  limit: "You've drawn 3 suits today, the daily limit. Please try again tomorrow. You can still keep going and place your order.",
+  limit: "You've drawn 3 suits today, the daily limit. Try again tomorrow. You can still place your order.",
   start: "Sorry, we couldn't start the picture right now.",
   network: "Sorry, we couldn't reach the picture service.",
 };
@@ -12945,7 +12945,7 @@ async function updateDesignPreviewPanel() {
     }
     const note = document.createElement("p");
     note.className = "suit-preview-disclaimer";
-    note.textContent = "This picture is AI-generated and drawn as accurately as possible. Small details may differ, but your suit is made exactly to the selections you chose.";
+    note.textContent = "This picture is AI-generated. Small details may differ, but your suit is made exactly as you chose.";
     media.append(note, buildSelectionsReview(ui.card));
     // Admin only: draw the same design again (to test the picture generator).
     // The server gives admins unlimited pictures; customers never see this.
@@ -13378,7 +13378,7 @@ async function handleStripeReturn() {
     } catch (e) {
       console.error(e);
     }
-    alert("Payment was cancelled, so your order wasn't placed and you weren't charged. Everything you entered is still here, so you can try again whenever you're ready.");
+    alert("Payment was cancelled, so your order wasn't placed and you weren't charged. Everything you entered is still here.");
     return;
   }
 
@@ -13420,7 +13420,7 @@ function handlePayPalReturn() {
   window.history.replaceState(null, "", window.location.pathname + window.location.hash);
 
   if (cancelled) {
-    alert("Payment was cancelled -- your order wasn't submitted. Everything you entered is still here, so you can try again whenever you're ready.");
+    alert("Payment was cancelled -- your order wasn't submitted. Everything you entered is still here.");
     return;
   }
 
@@ -13581,7 +13581,7 @@ function getMeasuredFirst() {
   }
   requireSignIn(
     document.getElementById("heroMeasureFirstBtn"),
-    "Create an account to get measured. Your measurements are saved to your profile, ready for every suit you design.",
+    "Create an account to get measured. Your measurements are saved for every suit.",
     () => {
       clearMeasureFirstSignIn();
       openMeasureFirst();
@@ -14496,7 +14496,7 @@ function renderWishlist() {
       if (!designerHasUnsavedWork() || wishlistHasCurrent()) return go();
       openEditSuitConfirm(null, {
         title: "Add this suit to your cart?",
-        text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+        text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
         confirm: "Yes, add it",
         onConfirm: go,
       });
@@ -14510,7 +14510,7 @@ function renderWishlist() {
       if (!designerHasUnsavedWork() || wishlistHasCurrent()) return go();
       openEditSuitConfirm(null, {
         title: "Edit this suit?",
-        text: "The suit you're designing now isn't saved to your cart yet, so its choices will be cleared.",
+        text: "The suit you're designing isn't in your cart yet, so it will be cleared.",
         confirm: "Yes, edit it",
         onConfirm: go,
       });

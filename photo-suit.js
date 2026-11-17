@@ -501,7 +501,7 @@
     if (data && data.page && typeof data.page === "object") state.page = { site: String(data.page.site || ""), title: String(data.page.title || ""), url: String(data.page.url || "") };
     if (data && Array.isArray(data.photos)) state.photos.push(...data.photos.filter((p) => typeof p === "string" && p.startsWith("data:image/")));
     if (data && data.error === "link") { showError(data.message || "We couldn't open that link. You can save the photo and upload it instead."); return; }
-    if (status === 429) { showError("You've uploaded a lot of photos in a short time. Please try again in a little while."); return; }
+    if (status === 429) { showError("Too many photos at once. Please try again in a little while."); return; }
     const result = data && data.result;
     const notSuit = link ? "We couldn't find a suit at that link. Please try another link." : "We couldn't find a suit in that photo. Please try another picture of a suit.";
     if (data && data.isSuit === false) { showError(link ? notSuit : (data.message || notSuit)); return; }
@@ -591,7 +591,7 @@
     if (designerHasUnsavedWork()) {
       openEditSuitConfirm(null, {
         title: "Start from a photo?",
-        text: "This replaces the suit you're designing now with one built from your photo. Suits already in your cart stay as they are.",
+        text: "This replaces the suit you're designing with one built from your photo. Suits in your cart stay.",
         confirm: "Continue",
         cancel: "Keep My Design",
         onConfirm: showStart,
