@@ -7950,14 +7950,42 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // Lining keeps the pattern-first picker above; only Fabric opts in.
   const colorFirstBrowse = {};
   const typeBrowse = {};
+  let fabricTypeFilter = null; // Fabric step "Show" filter (null = all types)
   function renderColorFirstOptions(cat, gridId, descriptionHtml) {
     // Every fabric laid out as its own flat color tile, like a paint palette:
     // the tile is the palette color the fabric is filed under (an
     // approximation -- the real photo shows in the zoom), the fabric's name
     // sits on it in spaced capitals. Whole grid ordered darkest to lightest. Tapping a tile opens the zoom with Confirm.
+    // Quiet "Show: All · Solid · Pinstripe ..." line above the grid (Daniel,
+    // 2026-11-17: sort fabrics by type, "make it a subtle option"). The pick
+    // is kept while the customer moves between steps. Types come from each fabric's own
+    // pattern (catalog.js), in FABRIC_TYPE_ORDER, counting only fabrics in
+    // stock.
+    const typeCounts = {};
+    cat.colorFirst.forEach((g) => g.patterns.forEach((b) => b.options.forEach((o) => {
+      if (o.outOfStock && order[activeTab] !== o.name) return;
+      typeCounts[b.name] = (typeCounts[b.name] || 0) + 1;
+    })));
+    const typeNames = Object.keys(typeCounts).sort((a, b) => {
+      const ia = FABRIC_TYPE_ORDER.indexOf(a), ib = FABRIC_TYPE_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+    });
+    if (fabricTypeFilter && !typeCounts[fabricTypeFilter]) fabricTypeFilter = null;
+    const filterHtml = typeNames.length > 1
+      ? '<div class="fabric-type-filter" role="group" aria-label="Show fabric type"><span class="ftf-label">Show</span>' +
+        [null].concat(typeNames).map((t) =>
+          '<button type="button" class="ftf-btn' + (t === fabricTypeFilter ? " active" : "") + '" data-type="' + (t || "") + '" aria-pressed="' + (t === fabricTypeFilter) + '">' + (t || "All") + "</button>"
+        ).join('<span class="ftf-sep" aria-hidden="true">\u00b7</span>') + "</div>"
+      : "";
     optionsEl.innerHTML =
-      "<h3>" + cat.label + "</h3>" + descriptionHtml +
+      "<h3>" + cat.label + "</h3>" + descriptionHtml + filterHtml +
       '<div class="opt-grid fabric-palette-grid" id="' + gridId + '"></div>';
+    optionsEl.querySelectorAll(".ftf-btn").forEach((btn) => {
+      btn.onclick = () => {
+        fabricTypeFilter = btn.dataset.type || null;
+        renderOptions();
+      };
+    });
     const grid = document.getElementById(gridId);
     renderSameAsCard(cat, grid);
     (cat.specialOptions || []).forEach((opt) => renderSwatchCard(cat, opt, grid));
@@ -7981,7 +8009,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     };
     const tiles = [];
     cat.colorFirst.forEach((g) => {
-      g.patterns.reduce((all, b) => all.concat(b.options), []).forEach((opt) => {
+      g.patterns.filter((b) => !fabricTypeFilter || b.name === fabricTypeFilter).reduce((all, b) => all.concat(b.options), []).forEach((opt) => {
         // Not enough cloth at the factory (see loadFabricStock), unless it's
         // already this customer's pick.
         if (opt.outOfStock && order[activeTab] !== opt.name) return;
