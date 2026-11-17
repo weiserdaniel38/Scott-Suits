@@ -3142,8 +3142,19 @@ function mcOpen(c) {
   document.getElementById("mcFind").hidden = true;
   document.getElementById("mcPanel").hidden = false;
   mcSay("mcFindMsg", "");
-  const has = c.measurements && MEASUREMENTS.some((m) => c.measurements[m.id] != null);
-  mcSay("mcMsg", draft ? "Unsaved numbers from this phone are filled in. They save when you type or tap Save." : has ? "Their saved measurements are filled in. Change any number and it saves." : "No measurements saved yet.");
+  const status = mcMeasureStatus(c.measurements);
+  mcSay("mcMsg", draft ? "Unsaved numbers from this phone are filled in. They save when you type or tap Save." : status === "full" ? "Their saved measurements are filled in. Change any number and it saves." : status === "partial" ? "Some measurements are saved. Fill in the missing ones and they save as you type." : "No measurements saved yet.");
+}
+// "full" when every measurement the factory needs for the client's saved
+// mode (finished or body, plus height and weight) is filled, "partial"
+// when only some are, "none" when nothing is saved (Daniel, 2026-11-17).
+function mcMeasureStatus(meas) {
+  if (!meas) return "none";
+  const mode = meas.measure_type === "body" ? "body" : "finished";
+  const filled = (m) => meas[m.id] != null && meas[m.id] !== "";
+  if (!MEASUREMENTS.some(filled)) return "none";
+  const needed = MEASUREMENTS.filter((m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === mode));
+  return needed.every(filled) ? "full" : "partial";
 }
 let mcSearchTimer = null;
 let mcSearchSeq = 0;
@@ -3166,7 +3177,8 @@ async function mcSearch() {
     list.forEach((c) => {
       const b = document.createElement("button");
       b.type = "button";
-      const has = c.measurements && MEASUREMENTS.some((m) => c.measurements[m.id] != null);
+      const status = mcMeasureStatus(c.measurements);
+      const has = status !== "none";
       // Daniel (2026-11-17): clients who already have measurements in bold.
       b.className = "mc-client" + (has ? " mc-has" : "");
       const name = document.createElement("b");
@@ -3174,7 +3186,7 @@ async function mcSearch() {
       const sub = document.createElement("span");
       if (c.name) sub.append(c.email + " · ");
       const tag = document.createElement(has ? "strong" : "span");
-      tag.textContent = has ? "Has measurements" : "No measurements yet";
+      tag.textContent = status === "full" ? "Full measurements" : status === "partial" ? "Partial measurements" : "No measurements yet";
       sub.appendChild(tag);
       b.append(name, sub);
       b.addEventListener("click", () => mcOpen(c));
