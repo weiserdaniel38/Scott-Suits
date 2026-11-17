@@ -1353,6 +1353,8 @@ function applyAdminStatus(user, admin) {
   }
   const fabricSearchSection = document.getElementById("adminFabricSearchSection");
   if (fabricSearchSection) fabricSearchSection.hidden = !admin;
+  const measureClientSection = document.getElementById("adminMeasureClientSection");
+  if (measureClientSection) measureClientSection.hidden = !admin;
   if (adminNotificationsSection) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
@@ -2774,6 +2776,276 @@ async function searchFabricByPhoto(file) {
     renderFabricSearch();
     fabricSearchLoadStock().then(renderFabricSearch);
     if (window.matchMedia && window.matchMedia("(pointer:fine)").matches) input.focus();
+  });
+})();
+
+// ---- Admin: Measure a Client (Daniel, 2026-11-17) ----
+// Daniel measures a client in person and types the numbers here. They go
+// straight into that client's saved measurements (order-measurements
+// function, admin only), so the client's cart and next suits use them.
+// Same fields, limits and "body or fitted?" check as My Account. Typing is
+// kept on this phone per client until it's saved, and saves itself a moment
+// after typing stops. The admin's own profile is never touched.
+const MC_DRAFT_KEY = "scottSuitsClientMeasDraft";
+let mcClient = null; // { id, email, name, measurements }
+let mcMode = "finished";
+let mcSaveTimer = null;
+let mcTypeOk = null;
+async function mcCall(payload) {
+  const headers = Object.assign({ "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY }, await suitImageAuthHeaders());
+  const res = await fetch(SUPABASE_URL + "/functions/v1/order-measurements", { method: "POST", headers, body: JSON.stringify(payload) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) throw new Error(data.error || "Couldn't reach the server (" + res.status + ")");
+  return data;
+}
+function mcSay(id, text) {
+  const el = document.getElementById(id);
+  if (el) (text ? showAccountStatus(el, text) : hideAccountStatus(el));
+}
+function mcReadDraft(clientId) {
+  try {
+    const d = JSON.parse(localStorage.getItem(MC_DRAFT_KEY) || "null");
+    if (!d || d.clientId !== clientId || !d.values) return null;
+    if (Date.now() - (d.savedAt || 0) > 60 * 24 * 3600 * 1000) return null;
+    return d;
+  } catch (e) {
+    return null;
+  }
+}
+function mcClearDraft() {
+  try {
+    localStorage.removeItem(MC_DRAFT_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+function mcKeepDraft() {
+  if (!mcClient) return;
+  const values = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("cm_" + m.id);
+    if (el && el.value !== "") values[m.id] = el.value;
+  });
+  try {
+    localStorage.setItem(MC_DRAFT_KEY, JSON.stringify({ clientId: mcClient.id, savedAt: Date.now(), mode: mcMode, values }));
+  } catch (e) {
+    // storage unavailable: the account save still runs
+  }
+}
+function mcCollect() {
+  const values = {};
+  MEASUREMENTS.forEach((m) => {
+    const el = document.getElementById("cm_" + m.id);
+    const val = el ? parseFloat(el.value) : NaN;
+    if (!isNaN(val) && val > 0) values[m.id] = val;
+  });
+  if (Object.keys(values).length) values.measure_type = mcMode;
+  return values;
+}
+function mcRenderGrid(values, mode) {
+  const grid = document.getElementById("mcGrid");
+  if (!grid) return;
+  mcMode = mode || (values && values.measure_type === "body" ? "body" : "finished");
+  grid.innerHTML = "";
+  const pick = document.createElement("div");
+  pick.className = "measure-mode-pick profile-measure-mode";
+  [["finished", "Finished suit sizes"], ["body", "Body measurements"]].forEach(([key, label]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "measure-mode-btn profile-mode-btn" + (key === mcMode ? " active" : "");
+    b.setAttribute("aria-pressed", key === mcMode ? "true" : "false");
+    b.innerHTML = "<b>" + label + "</b>";
+    b.addEventListener("click", () => {
+      if (key === mcMode) return;
+      mcRenderGrid(Object.assign({}, (mcClient && mcClient.measurements) || {}, mcCollect()), key);
+      mcKeepDraft();
+    });
+    pick.appendChild(b);
+  });
+  grid.appendChild(pick);
+  let lastPart = null;
+  MEASUREMENTS.forEach((m) => {
+    if (m.factoryOptional) return;
+    if (m.part !== "body" && (m.mode || "finished") !== mcMode) return;
+    if (m.part !== lastPart) {
+      const h = document.createElement("h4");
+      h.className = "measure-part-heading";
+      h.textContent = measurePartHeading(m.part);
+      grid.appendChild(h);
+    }
+    lastPart = m.part;
+    const field = document.createElement("div");
+    field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
+    field.innerHTML = '<label for="cm_' + m.id + '">' + m.label + "</label>" + measureInputHtml("cm_", m);
+    bindBodyMeasure(field, "cm_", m);
+    bindMeasureRange(field, "cm_", m);
+    grid.appendChild(field);
+  });
+  if (values) {
+    MEASUREMENTS.forEach((m) => {
+      const el = document.getElementById("cm_" + m.id);
+      if (el && values[m.id] !== undefined && values[m.id] !== null) el.value = values[m.id];
+    });
+  }
+}
+async function mcSave(manual) {
+  clearTimeout(mcSaveTimer);
+  mcSaveTimer = null;
+  if (!mcClient) return;
+  const client = mcClient;
+  const values = mcCollect();
+  const get = measureValuesGetter(Object.assign({}, values));
+  const bad = MEASUREMENTS.filter((m) => values[m.id] !== undefined && !measureHardOk(m, values[m.id], get));
+  bad.forEach((m) => delete values[m.id]);
+  if (!MEASUREMENTS.some((m) => values[m.id] !== undefined)) {
+    if (manual) mcSay("mcMsg", bad.length ? "Fix the numbers marked in red first." : "Type at least one measurement first.");
+    return;
+  }
+  mcSay("mcMsg", "Saving...");
+  try {
+    const data = await mcCall({ action: "save_client", user_id: client.id, measurements: values });
+    if (mcClient !== client) return;
+    client.measurements = data.measurements || client.measurements;
+    if (!bad.length) mcClearDraft();
+    const who = client.name || client.email;
+    mcSay("mcMsg", bad.length
+      ? "Saved to " + who + "'s account, except: " + bad.map(measurePartLabel).join(", ") + " (looks off, kept on this phone)."
+      : "Saved to " + who + "'s account.");
+  } catch (e) {
+    mcSay("mcMsg", "Not saved yet (kept on this phone): " + e.message);
+  }
+}
+function mcOpen(c) {
+  mcClient = c;
+  mcTypeOk = null;
+  const draft = mcReadDraft(c.id);
+  mcRenderGrid(Object.assign({}, c.measurements || {}, draft ? draft.values : {}), draft && draft.mode);
+  document.getElementById("mcWhoName").textContent = c.name || "No name";
+  document.getElementById("mcWhoEmail").textContent = c.email;
+  document.getElementById("mcFind").hidden = true;
+  document.getElementById("mcPanel").hidden = false;
+  mcSay("mcFindMsg", "");
+  const has = c.measurements && MEASUREMENTS.some((m) => c.measurements[m.id] != null);
+  mcSay("mcMsg", draft ? "Unsaved numbers from this phone are filled in. They save when you type or tap Save." : has ? "Their saved measurements are filled in. Change any number and it saves." : "No measurements saved yet.");
+}
+let mcSearchTimer = null;
+let mcSearchSeq = 0;
+async function mcSearch() {
+  const input = document.getElementById("mcSearch");
+  const box = document.getElementById("mcResults");
+  if (!input || !box) return;
+  const seq = ++mcSearchSeq;
+  box.innerHTML = '<p class="account-section-note">Searching...</p>';
+  try {
+    const data = await mcCall({ action: "find_clients", q: input.value.trim() });
+    if (seq !== mcSearchSeq) return;
+    box.innerHTML = "";
+    const list = data.clients || [];
+    if (!list.length) {
+      box.innerHTML = '<p class="account-section-note">No account found. Make one below.</p>';
+      return;
+    }
+    if (!input.value.trim()) box.appendChild(Object.assign(document.createElement("p"), { className: "account-section-note", textContent: "Newest accounts:" }));
+    list.forEach((c) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mc-client";
+      const has = c.measurements && MEASUREMENTS.some((m) => c.measurements[m.id] != null);
+      const name = document.createElement("b");
+      name.textContent = c.name || c.email;
+      const sub = document.createElement("span");
+      sub.textContent = (c.name ? c.email + " · " : "") + (has ? "Has measurements" : "No measurements yet");
+      b.append(name, sub);
+      b.addEventListener("click", () => mcOpen(c));
+      box.appendChild(b);
+    });
+  } catch (e) {
+    if (seq === mcSearchSeq) box.innerHTML = "";
+    mcSay("mcFindMsg", "Couldn't search: " + e.message);
+  }
+}
+(function initMeasureClient() {
+  const section = document.getElementById("adminMeasureClientSection");
+  if (!section) return;
+  const input = document.getElementById("mcSearch");
+  const grid = document.getElementById("mcGrid");
+  input.addEventListener("input", () => {
+    clearTimeout(mcSearchTimer);
+    mcSearchTimer = setTimeout(mcSearch, 300);
+  });
+  section.addEventListener("toggle", () => {
+    if (section.open && !mcClient) mcSearch();
+  });
+  document.getElementById("mcChangeBtn").addEventListener("click", () => {
+    if (mcSaveTimer) mcSave(false);
+    mcClient = null;
+    document.getElementById("mcPanel").hidden = true;
+    document.getElementById("mcFind").hidden = false;
+    mcSay("mcMsg", "");
+    mcSearch();
+  });
+  document.getElementById("mcSaveBtn").addEventListener("click", () => mcSave(true));
+  const newForm = document.getElementById("mcNewForm");
+  document.getElementById("mcNewLink").addEventListener("click", () => {
+    newForm.hidden = !newForm.hidden;
+    if (!newForm.hidden) {
+      const q = input.value.trim();
+      if (q.indexOf("@") > 0) document.getElementById("mcNewEmail").value = q;
+      else if (q) document.getElementById("mcNewName").value = q;
+    }
+  });
+  newForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("mcNewBtn");
+    btn.disabled = true;
+    mcSay("mcFindMsg", "");
+    try {
+      const data = await mcCall({
+        action: "create_client",
+        email: document.getElementById("mcNewEmail").value.trim(),
+        full_name: document.getElementById("mcNewName").value.trim(),
+      });
+      newForm.hidden = true;
+      newForm.reset();
+      mcOpen(data.client);
+    } catch (err) {
+      mcSay("mcFindMsg", err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  const typed = (e) => {
+    if (!e.target || !e.target.closest("input, select")) return;
+    mcKeepDraft();
+    clearTimeout(mcSaveTimer);
+    mcSaveTimer = setTimeout(() => mcSave(false), 1500);
+  };
+  grid.addEventListener("input", typed);
+  grid.addEventListener("change", typed);
+  // Body vs fitted mix-up, checked when a box is left.
+  let mixTimer = null;
+  grid.addEventListener("focusout", () => {
+    clearTimeout(mixTimer);
+    mixTimer = setTimeout(() => {
+      if (!mcClient || document.getElementById("measTypeAsk")) return;
+      const r = measureTypeAskNeeded(measureFieldGetter("cm_"), mcMode, mcTypeOk);
+      if (!r) return;
+      askMeasureType(r, mcMode, (pick) => {
+        if (pick === mcMode) {
+          mcTypeOk = { mode: pick, score: r.score };
+          return;
+        }
+        const now = mcCollect();
+        mcRenderGrid(Object.assign({}, (mcClient && mcClient.measurements) || {}, now, measureTypeConvert(now, pick)), pick);
+        mcTypeOk = { mode: pick, score: 99 };
+        mcKeepDraft();
+        clearTimeout(mcSaveTimer);
+        mcSaveTimer = setTimeout(() => mcSave(false), 600);
+      });
+    }, 350);
+  });
+  window.addEventListener("pagehide", () => {
+    if (mcSaveTimer) mcSave(false);
   });
 })();
 
