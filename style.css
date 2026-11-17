@@ -3576,3 +3576,27 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
 .fabric-type-filter .ftf-btn:hover{color:var(--ivory);}
 .fabric-type-filter .ftf-btn.active{color:var(--brass);border-bottom-color:var(--brass);}
 .fabric-type-filter .ftf-sep{color:var(--ivory-dim);opacity:.5;margin:0 4px;}
+
+/* === DESIGNER STEPS BIGGER ON WIDE SCREENS (Daniel, 2026-11-17) ===
+   "On desktop make much bigger and centered": on wide monitors the step pages
+   (suit type, level, jacket, pants, preview, measurements, order, complete)
+   and the step tabs were a narrow column in a sea of empty space. From 1600px
+   up they are zoomed as a whole (--wz), still centred. The header, footer and
+   landing page keep their normal size; laptops, tablets and phones are
+   unchanged. Both brands.
+   Zoom also multiplies vh heights and sticky offsets inside the steps, so those
+   are divided by --wz below to stay the same size on screen. */
+@media(min-width:1600px){ body.designing{--wz:1.25;} }
+@media(min-width:1900px){ body.designing{--wz:1.4;} }
+@media(min-width:2200px){ body.designing{--wz:1.55;} }
+@media(min-width:2500px){ body.designing{--wz:1.7;} }
+@media(min-width:1600px){
+  body.designing > .step, body.designing > .process > .process-inner{zoom:var(--wz);}
+  body.designing #suitTypeSection.active{min-height:calc((100vh - 220px) / var(--wz));min-height:calc((100svh - 220px) / var(--wz));}
+  body.designing #suitTypeSection .suit-type-card{min-height:min(calc(39vh / var(--wz)),430px);}
+  body.designing .step .studio-canvas{height:min(880px,calc((100svh - var(--nav-height,90px) - 64px) / var(--wz)));}
+  body.designing .step .studio-sheet{top:calc((var(--nav-height,90px) + 12px) / var(--wz));max-height:calc((100svh - var(--nav-height,90px) - 32px) / var(--wz));}
+  body.designing .step .summary{top:calc(115px / var(--wz));}
+  body.designing .step .ps-photo{max-height:calc(38vh / var(--wz));}
+  body.designing .step .ps-photos .ps-photo{max-height:calc(34vh / var(--wz));}
+}
