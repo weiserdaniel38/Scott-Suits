@@ -1187,7 +1187,8 @@ nav{position:sticky;top:0;z-index:70;}
 }
 
 /* Site-wide typeface: Montserrat. Light for body text; anything that was bold before (headings, labels, prices, buttons) keeps its original weight. */
-*,*::before,*::after{font-family:'Montserrat',sans-serif !important;}
+@font-face{font-family:'Scott Symbols';font-style:normal;font-weight:100 900;font-display:swap;src:url(./assets/fonts/scott-symbols.woff?v=1) format('woff');unicode-range:U+2713,U+2715,U+2726,U+2661,U+2665,U+26A0;}
+*,*::before,*::after{font-family:'Montserrat','Scott Symbols',sans-serif !important;}
 body{font-weight:300;}
 
 /* Montserrat embedded from the supplied font files (Latin subset) */
@@ -3390,9 +3391,9 @@ html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn span{color:#1A1
    outlined pill buttons near the bottom and small caps footer links.
    Phones and tablets: the tall photo fills the screen, nothing scrolls.
    Desktop: cream wall on the left with the text, photo on the right. */
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view){display:flex;flex-direction:column;min-height:100vh;min-height:100svh;background:#F7ECE3;}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view)::before{inset:0;opacity:1;background:#F7ECE3 url("./assets/home/home-bg-tall.jpg?v=20261117landing") 58% 50%/cover no-repeat;}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > nav{flex:none;position:relative;background:transparent;border-bottom:none;box-shadow:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view){position:relative;display:flex;flex-direction:column;min-height:100vh;min-height:100svh;background:#F7ECE3;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view)::before{position:absolute;inset:0;opacity:1;background:#F7ECE3 url("./assets/home/home-bg-tall.jpg?v=20261117landing") 58% 50%/cover no-repeat;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > nav{flex:none;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .logo-block::after{content:"";align-self:center;width:1px;height:62px;margin-left:clamp(14px,4vw,34px);background:linear-gradient(180deg,rgba(168,122,69,0),#A87A45 18%,#A87A45 82%,rgba(168,122,69,0));}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .nav-inner{justify-content:flex-start;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .nav-right{margin-left:auto;}
@@ -3446,3 +3447,24 @@ html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(
   html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{padding-top:10px;padding-bottom:14px;}
   html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta{gap:9px;}
 }
+
+/* === ONE TYPE STYLE ACROSS THE SITE (Daniel, 2026-11-17) ===
+   Everything matches the landing page: Montserrat, light weight. Titles in
+   light spaced capitals, buttons in spaced capitals, reading text and form
+   fields in normal Montserrat. Ticks, crosses, hearts and the warning sign
+   are not in Montserrat, so a tiny matching symbol font (Scott Symbols,
+   top of the Montserrat block) draws them. !important because many older
+   rules set heavier weights with IDs. */
+html[data-brand="scott"] :is(h1,h2,h3,.suit-type-name,.level-name){font-weight:300 !important;text-transform:uppercase !important;letter-spacing:0.14em !important;line-height:1.25;text-wrap:balance;}
+html[data-brand="scott"] :is(h1,h2,h3) em{font-weight:400 !important;font-style:italic;}
+html[data-brand="scott"] body:not(.home-page) .hero h1,html[data-brand="scott"] h1:not(.hero h1){font-size:clamp(22px,5.6vw,36px) !important;}
+html[data-brand="scott"] h2{font-size:clamp(19px,4.8vw,26px) !important;}
+html[data-brand="scott"] h3{font-size:clamp(16px,4vw,21px) !important;}
+html[data-brand="scott"] .suit-type-name{font-size:16px !important;letter-spacing:0.12em !important;}
+html[data-brand="scott"] .level-name{font-size:16px !important;}
+html[data-brand="scott"] :is(.suit-type-price,.wiz-price,.suit-type-preset-link,.suit-type-preset-link button,.wiz-cheer,.wiz-pct,.suit-type-photo-text b){font-weight:400 !important;}
+html[data-brand="scott"] :is(b,strong){font-weight:500;}
+html[data-brand="scott"] :is(.suit-type-eyebrow,.hero-eyebrow,.wiz-step,.wiz-group,.wiz-review-link,.level-rec,.step-label,.opt-section-divider){font-weight:500 !important;letter-spacing:0.16em;}
+html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta,.nav-cart-checkout-btn,.order-done-home,.nav-startover-btn){font-weight:400 !important;text-transform:uppercase;letter-spacing:0.16em;}
+html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta) *{font-weight:inherit !important;}
+html[data-brand="scott"] :is(input,select,textarea){font-weight:400;}
