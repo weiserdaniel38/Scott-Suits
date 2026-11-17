@@ -3362,6 +3362,11 @@ html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn span{color:#1A1
 .mc-client{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(var(--surface-rgb),0.6);color:var(--ivory);font:inherit;cursor:pointer;}
 .mc-client:hover,.mc-client:focus-visible{border-color:var(--brass);}
 .mc-client b{font-size:15px;overflow-wrap:anywhere;}
+.mc-client:not(.mc-has) b{font-weight:400;}
+.mc-client.mc-has b{font-weight:800;}
+.mc-client strong{font-weight:700;color:var(--brass);}
+.mc-sheet{grid-column:1 / -1;margin:6px 0 14px;}
+#mcGrid .measure-field-body{margin-bottom:10px;}
 .mc-client span{font-size:13px;color:var(--ivory-dim);overflow-wrap:anywhere;}
 .mc-new-link{display:block;margin:4px 0 10px;}
 .mc-new{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
