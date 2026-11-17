@@ -3551,3 +3551,8 @@ html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar .wiz-back{white-space:nowrap;letter-spacing:0.08em;padding-left:14px;padding-right:14px;flex:none;}
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar #submitOrderBtn{flex:1 1 auto;font-size:12px;letter-spacing:0.06em;line-height:1.35;padding:10px 16px;}
 }
+
+/* How It Works sheet: its Start Designing button is a solid burgundy main
+   button (the landing page rules had left its light lettering on a clear
+   background, so it could not be read). */
+html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !important;color:#FFF8F2 !important;border-color:transparent !important;}
