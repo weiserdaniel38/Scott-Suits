@@ -3550,7 +3550,4 @@ html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar #persPrice{display:none;}
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar .wiz-back{white-space:nowrap;letter-spacing:0.08em;padding-left:14px;padding-right:14px;flex:none;}
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar #submitOrderBtn{flex:1 1 auto;font-size:12px;letter-spacing:0.06em;line-height:1.35;padding:10px 16px;}
-  html[data-brand="scott"] body:has(> main.contact-page){display:flex;flex-direction:column;min-height:100svh;}
-  html[data-brand="scott"] body > main.contact-page{flex:1 0 auto;width:100%;display:flex;flex-direction:column;justify-content:center;padding-bottom:10svh;}
-  html[data-brand="scott"] body:has(> main.contact-page) > footer{padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
 }
