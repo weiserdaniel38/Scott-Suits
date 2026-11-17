@@ -3356,3 +3356,20 @@ html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn span{color:#1A1
   body:not(.designing) .welcome-intro-title{margin-bottom:0;}
   body:not(.designing) .welcome-intro{padding:8px 12px;}
 }
+
+/* ---- Admin: Measure a Client (2026-11-17) ---- */
+.mc-results{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.mc-client{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(var(--surface-rgb),0.6);color:var(--ivory);font:inherit;cursor:pointer;}
+.mc-client:hover,.mc-client:focus-visible{border-color:var(--brass);}
+.mc-client b{font-size:15px;overflow-wrap:anywhere;}
+.mc-client span{font-size:13px;color:var(--ivory-dim);overflow-wrap:anywhere;}
+.mc-new-link{display:block;margin:4px 0 10px;}
+.mc-new{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.mc-new[hidden]{display:none;}
+.mc-new input{font-size:16px;}
+.mc-who{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:10px;border:1px solid var(--brass);border-radius:12px;background:rgba(var(--brass-rgb),0.06);}
+.mc-who div{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.mc-who b{font-size:15px;color:var(--ivory);overflow-wrap:anywhere;}
+.mc-who span{font-size:13px;color:var(--ivory-dim);overflow-wrap:anywhere;}
+.mc-who .btn-ghost{flex:0 0 auto;}
+#mcGrid input{font-size:16px;}

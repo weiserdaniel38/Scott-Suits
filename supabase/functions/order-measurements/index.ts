@@ -17,6 +17,21 @@
 //       Shop admin only. -> { ok: true, suits: [{ order_id, suit_number }] }
 //       for the admin page's "Waiting for measurements" tags.
 //
+// Measure a Client (Daniel, 2026-11-17: "an option for me when I measure
+// clients"). Shop admin only; My Account > Measure a Client.
+//   { action: "find_clients", q }
+//       -> { ok, clients: [{ id, email, name, measurements }] } (up to 12),
+//       matching email or name. Empty q = most recently signed up.
+//   { action: "save_client", user_id, measurements }
+//       Merges the numbers into that client's saved measurements (same
+//       merge as the site's own save), so their cart and next suits use
+//       them. -> { ok, measurements }
+//   { action: "create_client", email, full_name }
+//       Client with no account yet: makes one with no password. They get the
+//       usual welcome email (auth trigger) and sign in later with Google or
+//       "Forgot password".
+//       -> { ok, client }
+//
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -88,6 +103,107 @@ async function caller(req: Request) {
   return { id: data.user.id, admin: !!adminRow };
 }
 
+// ---- Measure a Client (admin) ----
+type Client = { id: string; email: string; name: string; measurements: Record<string, unknown> | null };
+
+async function allUsers() {
+  const out: { id: string; email?: string; created_at?: string; user_metadata?: Record<string, unknown> }[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(error.message);
+    out.push(...(data?.users || []));
+    if (!data?.users || data.users.length < 1000) break;
+  }
+  return out;
+}
+
+export function clientName(meta: Record<string, unknown> | undefined, profileName: unknown): string {
+  const m = meta || {};
+  return String(profileName || m.full_name || m.name || [m.given_name, m.family_name].filter(Boolean).join(" ") || "").trim();
+}
+
+// Only the measurement ids, measure_type and fits, with sane numbers.
+export function cleanClientMeasurements(m: Record<string, unknown>): { values?: Record<string, unknown>; error?: string } {
+  if (!m || typeof m !== "object") return { error: "no measurements" };
+  const values: Record<string, unknown> = {};
+  for (const col of MEASUREMENT_COLUMNS) {
+    if (m[col] === undefined || m[col] === null || m[col] === "") continue;
+    const v = Number(m[col]);
+    if (!isFinite(v) || v <= 0 || v >= 1000) return { error: "bad value for " + col };
+    values[col] = v;
+  }
+  if (!Object.keys(values).length) return { error: "no measurements" };
+  if (m.measure_type === "body" || m.measure_type === "finished") values.measure_type = m.measure_type;
+  for (const k of ["jacket_fit", "pants_fit"]) {
+    if (m[k] && FITS.includes(String(m[k]))) values[k] = String(m[k]);
+  }
+  return { values };
+}
+
+async function clientAction(input: Record<string, unknown>) {
+  if (input.action === "find_clients") {
+    const q = String(input.q || "").trim().toLowerCase().slice(0, 100);
+    const users = await allUsers();
+    const { data: profiles, error } = await supabase.from("profiles").select("id, email, full_name, measurements").limit(5000);
+    if (error) throw new Error(error.message);
+    const byId = new Map((profiles || []).map((p) => [p.id, p]));
+    const list = users
+      .map((u) => {
+        const p = byId.get(u.id) || {};
+        return {
+          id: u.id,
+          email: String(u.email || (p as { email?: string }).email || ""),
+          name: clientName(u.user_metadata, (p as { full_name?: string }).full_name),
+          measurements: ((p as { measurements?: Record<string, unknown> }).measurements) || null,
+          created: u.created_at || "",
+        };
+      })
+      .filter((c) => !q || c.email.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+      .sort((a, b) => (a.created < b.created ? 1 : -1))
+      .slice(0, 12)
+      .map(({ created: _c, ...c }) => c as Client);
+    return { ok: true, clients: list };
+  }
+
+  if (input.action === "save_client") {
+    const id = String(input.user_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: "user_id missing" };
+    const { values, error: bad } = cleanClientMeasurements((input.measurements || {}) as Record<string, unknown>);
+    if (!values) return { error: bad };
+    const { data: user, error: uErr } = await supabase.auth.admin.getUserById(id);
+    if (uErr || !user?.user) return { error: "That client couldn't be found." };
+    const { data: p } = await supabase.from("profiles").select("measurements").eq("id", id).maybeSingle();
+    const merged = Object.assign({}, (p?.measurements as Record<string, unknown>) || {}, values);
+    const { error } = await supabase.from("profiles").upsert({
+      id,
+      email: user.user.email,
+      measurements: merged,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, measurements: merged };
+  }
+
+  if (input.action === "create_client") {
+    const email = String(input.email || "").trim().toLowerCase();
+    const name = String(input.full_name || "").trim().slice(0, 120);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Please enter a valid email." };
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: name ? { full_name: name } : {},
+    });
+    if (error) {
+      if (/already|registered|exists/i.test(error.message)) return { error: "That email already has an account. Search for it above." };
+      throw new Error(error.message);
+    }
+    const id = data.user!.id;
+    await supabase.from("profiles").upsert({ id, email, full_name: name || null, updated_at: new Date().toISOString() });
+    return { ok: true, client: { id, email, name, measurements: null } };
+  }
+  return { error: "unknown action" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -125,6 +241,11 @@ Deno.serve(async (req) => {
       const { error: upErr } = await supabase.from("orders").update(update).eq("id", row.id).eq("measure_type", "pending");
       if (upErr) throw new Error(upErr.message);
       return json({ ok: true });
+    }
+
+    if (input.action === "find_clients" || input.action === "save_client" || input.action === "create_client") {
+      if (!who.admin) return json({ error: "only the shop admin can use this" }, 403);
+      return json(await clientAction(input));
     }
 
     return json({ error: "unknown action" }, 400);
