@@ -3583,3 +3583,11 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
   html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer svg{width:1.15vw;height:1.15vw;margin-right:0.45vw !important;vertical-align:-0.2vw !important;}
   html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{font-size:0.85vw !important;padding-top:1.4vw;padding-bottom:1.8vw;}
 }
+
+/* Fabric step: quiet "Show: All · Solid · Pinstripe ..." type filter (2026-11-17). */
+.fabric-type-filter{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0;margin:2px 0 8px;font-size:9.5px;letter-spacing:0.9px;text-transform:uppercase;line-height:1.9;}
+.fabric-type-filter .ftf-label{color:var(--ivory-dim);opacity:.8;margin-right:7px;}
+.fabric-type-filter .ftf-btn{background:none;border:0;border-radius:0;box-shadow:none;padding:0 1px;margin:0;min-height:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ivory-dim);cursor:pointer;border-bottom:1px solid transparent;}
+.fabric-type-filter .ftf-btn:hover{color:var(--ivory);}
+.fabric-type-filter .ftf-btn.active{color:var(--brass);border-bottom-color:var(--brass);}
+.fabric-type-filter .ftf-sep{color:var(--ivory-dim);opacity:.5;margin:0 4px;}
