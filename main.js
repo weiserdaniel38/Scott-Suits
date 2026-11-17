@@ -2679,7 +2679,8 @@ async function loadAdminOrders() {
     // show here; they appear once paid. His own no-payment orders and S.W.
     // Atelier requests still show. Only filtered when payments loaded.
     const rowsShown = data.map((o) => Object.assign({}, payments[o.order_id], o))
-      .filter((o) => pay.error || !adminAwaitingPayment(o));
+      .filter((o) => pay.error || !adminAwaitingPayment(o))
+      .filter((o) => !adminIsTestAccount(o.customer_email));
     adminOrdersList.innerHTML = "";
     if (!rowsShown.length) {
       adminOrdersList.innerHTML = '<p class="account-section-note">No orders yet.</p>';
@@ -3158,42 +3159,73 @@ function mcMeasureStatus(meas) {
 }
 let mcSearchTimer = null;
 let mcSearchSeq = 0;
-async function mcSearch() {
+// Every account, 20 at a time with "Show more" (Daniel, 2026-11-17: "go
+// through every single account created"). Test accounts are left out by
+// the server (isTestAccount in order-measurements).
+function mcClientButton(c) {
+  const b = document.createElement("button");
+  b.type = "button";
+  const status = mcMeasureStatus(c.measurements);
+  const has = status !== "none";
+  // Daniel (2026-11-17): clients who already have measurements in bold.
+  b.className = "mc-client" + (has ? " mc-has" : "");
+  const name = document.createElement("b");
+  name.textContent = c.name || c.email;
+  const sub = document.createElement("span");
+  if (c.name) sub.append(c.email + " \u00b7 ");
+  const tag = document.createElement(has ? "strong" : "span");
+  tag.textContent = status === "full" ? "Full measurements" : status === "partial" ? "Partial measurements" : "No measurements yet";
+  sub.appendChild(tag);
+  b.append(name, sub);
+  b.addEventListener("click", () => mcOpen(c));
+  return b;
+}
+async function mcSearch(more) {
   const input = document.getElementById("mcSearch");
   const box = document.getElementById("mcResults");
   if (!input || !box) return;
-  const seq = ++mcSearchSeq;
-  box.innerHTML = '<p class="account-section-note">Searching...</p>';
+  const seq = more ? mcSearchSeq : ++mcSearchSeq;
+  const q = input.value.trim();
+  const moreBtn = box.querySelector(".mc-more");
+  const offset = more ? box.querySelectorAll(".mc-client").length : 0;
+  if (more && moreBtn) {
+    moreBtn.disabled = true;
+    moreBtn.textContent = "Loading...";
+  } else {
+    box.innerHTML = '<p class="account-section-note">Searching...</p>';
+  }
   try {
-    const data = await mcCall({ action: "find_clients", q: input.value.trim() });
+    const data = await mcCall({ action: "find_clients", q, offset });
     if (seq !== mcSearchSeq) return;
-    box.innerHTML = "";
     const list = data.clients || [];
-    if (!list.length) {
-      box.innerHTML = '<p class="account-section-note">No account found. Make one below.</p>';
-      return;
+    if (!more) {
+      box.innerHTML = "";
+      if (!list.length) {
+        box.innerHTML = '<p class="account-section-note">No account found. Make one below.</p>';
+        return;
+      }
+      const total = data.total || list.length;
+      box.appendChild(Object.assign(document.createElement("p"), {
+        className: "account-section-note mc-count",
+        textContent: q ? total + (total === 1 ? " match" : " matches") + ", newest first:" : "All accounts (" + total + "), newest first:",
+      }));
     }
-    if (!input.value.trim()) box.appendChild(Object.assign(document.createElement("p"), { className: "account-section-note", textContent: "Newest accounts:" }));
-    list.forEach((c) => {
+    if (moreBtn) moreBtn.remove();
+    list.forEach((c) => box.appendChild(mcClientButton(c)));
+    if (data.more) {
       const b = document.createElement("button");
       b.type = "button";
-      const status = mcMeasureStatus(c.measurements);
-      const has = status !== "none";
-      // Daniel (2026-11-17): clients who already have measurements in bold.
-      b.className = "mc-client" + (has ? " mc-has" : "");
-      const name = document.createElement("b");
-      name.textContent = c.name || c.email;
-      const sub = document.createElement("span");
-      if (c.name) sub.append(c.email + " · ");
-      const tag = document.createElement(has ? "strong" : "span");
-      tag.textContent = status === "full" ? "Full measurements" : status === "partial" ? "Partial measurements" : "No measurements yet";
-      sub.appendChild(tag);
-      b.append(name, sub);
-      b.addEventListener("click", () => mcOpen(c));
+      b.className = "btn-ghost mc-more";
+      b.textContent = "Show more";
+      b.addEventListener("click", () => mcSearch(true));
       box.appendChild(b);
-    });
+    }
   } catch (e) {
-    if (seq === mcSearchSeq) box.innerHTML = "";
+    if (seq !== mcSearchSeq) return;
+    if (more && moreBtn) {
+      moreBtn.disabled = false;
+      moreBtn.textContent = "Show more";
+    } else box.innerHTML = "";
     mcSay("mcFindMsg", "Couldn't search: " + e.message);
   }
 }
@@ -3687,6 +3719,15 @@ function adminRedrawOverlay(suitBox, had) {
 // Daniel (2026-11-03): an unpaid customer order can't go to the factory
 // (kute-factory refuses too). Admin no-payment orders and S.W. Atelier
 // requests are exempt.
+// Test accounts and their orders never show on the admin page (Daniel,
+// 2026-11-17). Same rule as isTestAccount in
+// supabase/functions/order-measurements (Measure a Client); change both.
+const ADMIN_TEST_EMAILS = ["never@gmail.com", "test@test.com", "dhdbbd@gmail.com", "ghfghh@gmail.com", "jhebnckew@gmail.com"];
+function adminIsTestAccount(email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return false;
+  return ADMIN_TEST_EMAILS.indexOf(e) !== -1 || /@(resend\.dev|example\.(com|org|net)|test\.com)$/.test(e);
+}
 function adminAwaitingPayment(o) {
   if (o.admin_no_payment) return false;
   // Already delivered (e.g. an order re-added by hand): not a checkout left unpaid.

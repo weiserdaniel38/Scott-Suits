@@ -19,9 +19,11 @@
 //
 // Measure a Client (Daniel, 2026-11-17: "an option for me when I measure
 // clients"). Shop admin only; My Account > Measure a Client.
-//   { action: "find_clients", q }
-//       -> { ok, clients: [{ id, email, name, measurements }] } (up to 12),
-//       matching email or name. Empty q = most recently signed up.
+//   { action: "find_clients", q, offset }
+//       -> { ok, clients: [{ id, email, name, measurements }], total, more }
+//       20 at a time from offset, newest first, matching email or name.
+//       Empty q = every account. Test accounts never show (isTestAccount;
+//       Daniel, 2026-11-17).
 //   { action: "save_client", user_id, measurements }
 //       Merges the numbers into that client's saved measurements (same
 //       merge as the site's own save), so their cart and next suits use
@@ -117,6 +119,21 @@ async function allUsers() {
   return out;
 }
 
+// Test accounts (Daniel, 2026-11-17: "do not show any test orders
+// accounts"). Kept out of Measure a Client. Same rule as
+// adminIsTestAccount in main.js (admin order lists); change both together.
+export const TEST_EMAILS = [
+  "never@gmail.com", "test@test.com", "dhdbbd@gmail.com", "ghfghh@gmail.com", "jhebnckew@gmail.com",
+];
+export function isTestAccount(email: string): boolean {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return false;
+  if (TEST_EMAILS.includes(e)) return true;
+  // Email-delivery test inboxes and placeholder domains.
+  if (/@(resend\.dev|example\.(com|org|net)|test\.com)$/.test(e)) return true;
+  return false;
+}
+
 export function clientName(meta: Record<string, unknown> | undefined, profileName: unknown): string {
   const m = meta || {};
   return String(profileName || m.full_name || m.name || [m.given_name, m.family_name].filter(Boolean).join(" ") || "").trim();
@@ -158,11 +175,13 @@ async function clientAction(input: Record<string, unknown>) {
           created: u.created_at || "",
         };
       })
+      .filter((c) => !isTestAccount(c.email))
       .filter((c) => !q || c.email.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
-      .sort((a, b) => (a.created < b.created ? 1 : -1))
-      .slice(0, 12)
-      .map(({ created: _c, ...c }) => c as Client);
-    return { ok: true, clients: list };
+      .sort((a, b) => (a.created < b.created ? 1 : -1));
+    const offset = Math.max(0, Math.floor(Number(input.offset) || 0));
+    const PAGE = 20;
+    const clients = list.slice(offset, offset + PAGE).map(({ created: _c, ...c }) => c as Client);
+    return { ok: true, clients, total: list.length, more: offset + PAGE < list.length };
   }
 
   if (input.action === "save_client") {
