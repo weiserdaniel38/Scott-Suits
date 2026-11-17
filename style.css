@@ -3382,3 +3382,67 @@ html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn span{color:#1A1
 .mc-who span{font-size:13px;color:var(--ivory-dim);overflow-wrap:anywhere;}
 .mc-who .btn-ghost{flex:0 0 auto;}
 #mcGrid input{font-size:16px;}
+
+/* === SCOTT'S SUITS LANDING PAGE (Daniel's mockup, 2026-11-17) ===
+   Home page only, Scott's Suits only (S.W. keeps its video hero). One
+   full-screen photo (sunlit wall, fabric stack) behind a see-through
+   header, a centred spaced-caps headline with a gold rule and star, two
+   outlined pill buttons near the bottom and small caps footer links.
+   Phones and tablets: the tall photo fills the screen, nothing scrolls.
+   Desktop: cream wall on the left with the text, photo on the right. */
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view){display:flex;flex-direction:column;min-height:100vh;min-height:100svh;background:#F7ECE3;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view)::before{inset:0;opacity:1;background:#F7ECE3 url("./assets/home/home-bg-tall.jpg?v=20261117landing") 58% 50%/cover no-repeat;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > nav{flex:none;position:relative;background:transparent;border-bottom:none;box-shadow:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .logo-block::after{content:"";align-self:center;width:1px;height:62px;margin-left:clamp(14px,4vw,34px);background:linear-gradient(180deg,rgba(168,122,69,0),#A87A45 18%,#A87A45 82%,rgba(168,122,69,0));}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .nav-inner{justify-content:flex-start;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .nav-right{margin-left:auto;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) #startDesigningBtn{display:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .navlinks .navlink-btn{color:#2A2420;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .nav-cart-btn svg{stroke:#2A2420;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero{flex:1 0 auto;display:flex;flex-direction:column;min-height:0;padding:0;background:transparent;border:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-photo,
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-sketch-left{display:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-grid{flex:1 0 auto;display:flex;flex-direction:column;align-items:stretch;max-width:none;width:100%;margin:0;padding:0;min-height:0;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{flex:1 0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:none;width:100%;box-sizing:border-box;margin:0;padding:clamp(18px,9svh,110px) 24px clamp(22px,7svh,72px);}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-welcome{margin:0 0 12px;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#5A4E46;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1{font-family:'Montserrat',sans-serif;font-weight:300;font-size:clamp(22px,6.6vw,44px);line-height:1.25;letter-spacing:0.2em;text-transform:uppercase;color:#1F1B18;max-width:none;margin:0 -0.2em 0 0;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1 em{display:block;margin-top:0.35em;font-style:italic;font-weight:400;font-size:0.62em;letter-spacing:0.3em;color:#1F1B18;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-rule{position:relative;width:min(170px,44vw);height:1px;margin:clamp(14px,3svh,28px) auto 0;background:linear-gradient(90deg,rgba(168,122,69,0.15),#A87A45 30%,#A87A45 70%,rgba(168,122,69,0.15));}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-rule::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:13px;transform:translate(-50%,-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 0C10.6 6.5 13.5 9.4 20 10C13.5 10.6 10.6 13.5 10 20C9.4 13.5 6.5 10.6 0 10C6.5 9.4 9.4 6.5 10 0Z' fill='%23A87A45'/%3E%3C/svg%3E") center/contain no-repeat;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta{margin-top:auto;padding-top:24px;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:stretch;gap:12px;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn){width:100%;justify-content:center;gap:16px;padding:12px 20px;min-height:44px;box-sizing:border-box;border:1px solid #74444D;border-radius:999px;background:rgba(253,248,244,0.35);color:#1F1B18;font-family:'Montserrat',sans-serif;font-weight:400;font-size:13px;letter-spacing:0.26em;text-transform:uppercase;box-shadow:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn):hover{background:rgba(116,68,77,0.08);}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn) span[aria-hidden]{color:#1F1B18;font-size:20px;line-height:1;letter-spacing:0;font-weight:300;font-family:Arial,sans-serif;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-measure-label{text-transform:uppercase;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{flex:none;background:transparent;border-top:none;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));font-size:clamp(8px,2.3vw,9.5px);line-height:1.9;letter-spacing:0.13em;text-transform:uppercase;color:#3A322D;white-space:nowrap;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer a{text-decoration:underline;text-decoration-color:rgba(58,50,45,0.45);text-underline-offset:4px;text-decoration-thickness:1px;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer svg{width:14px;height:14px;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-grid::before,html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-grid::after,html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero::before,html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero::after{display:none;}
+@media(max-width:600px){html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .navlinks{font-size:11.5px;}html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .navlinks .navlink-btn{padding:6px 7px;}}
+/* Laptops and desktops: text on the plain wall on the left, the photo
+   anchored right at full height and faded in behind the text column. */
+@media(min-width:901px){
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view){--home-tw:min(520px,42vw);--home-tm:max(24px,calc((100vw - 1180px) / 2));--home-fade:max(calc(100vw - 100vh * 1.02 + 20px),calc(var(--home-tm) + var(--home-tw) - 100px));}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view)::before{background:
+    linear-gradient(90deg,#F7ECE3 var(--home-fade),rgba(247,236,227,0.55) calc(var(--home-fade) + 140px),rgba(247,236,227,0) calc(var(--home-fade) + 320px)),
+    url("./assets/home/home-bg-wide.jpg?v=20261117landing") right center/auto 100% no-repeat,
+    #F7ECE3;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{width:var(--home-tw);margin-left:var(--home-tm);padding:clamp(40px,14vh,160px) 0 clamp(40px,10vh,110px);justify-content:flex-start;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1{font-size:clamp(24px,2.5vw,42px);}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta{margin-top:clamp(40px,9vh,90px);max-width:360px;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{font-size:11px;}
+}
+/* Tablets upright: same layout, a little larger */
+@media(min-width:601px) and (max-width:900px){
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .navlinks{display:flex;gap:22px;font-size:14px;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .navlinks .nav-fabrics-link{display:none;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .logo-mark{height:84px;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta{max-width:420px;gap:16px;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn){font-size:15px;min-height:56px;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{font-size:11.5px;}
+}
+/* Short phones (iPhone SE with Safari bars): tighter spacing */
+@media(max-width:900px) and (max-height:620px){
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{padding-top:10px;padding-bottom:14px;}
+  html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta{gap:9px;}
+}
