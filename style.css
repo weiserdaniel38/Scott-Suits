@@ -3480,3 +3480,9 @@ html[data-brand="scott"] .account-tabs button{letter-spacing:0.06em;font-size:12
   html[data-brand="scott"] body > footer{font-size:clamp(7.5px,2.2vw,9.5px) !important;letter-spacing:0.08em;white-space:nowrap;padding-left:8px;padding-right:8px;}
   html[data-brand="scott"] body > footer svg{width:12px;height:12px;margin-right:3px !important;}
 }
+/* Option cards (Daniel, 2026-11-17: "options fonts need to be changed"):
+   option names under each picture are spaced capitals like the rest of the
+   site. Fabric and lining tiles keep their own smaller size. */
+html[data-brand="scott"] .opt-name{text-transform:uppercase;letter-spacing:0.12em;line-height:1.35;}
+html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile) .opt-name{font-size:11px;}
+html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
