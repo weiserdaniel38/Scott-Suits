@@ -3381,6 +3381,9 @@ html[data-brand="sw"].hero-video-on .hero #heroStartDesigningBtn span{color:#1A1
 #mcGrid .measure-field-body{margin-bottom:10px;}
 .mc-client span{font-size:13px;color:var(--ivory-dim);overflow-wrap:anywhere;}
 .mc-new-link{display:block;margin:4px 0 10px;}
+.mc-results .mc-count{margin:0;}
+.mc-results .mc-more{align-self:center;margin-top:4px;padding:10px 22px;border:1px solid var(--brass);border-radius:999px;background:transparent;color:var(--ivory);font-size:12px;letter-spacing:0.13em;text-transform:uppercase;}
+.mc-results .mc-more:disabled{opacity:0.6;cursor:default;}
 .mc-new{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
 .mc-new[hidden]{display:none;}
 .mc-new input{font-size:16px;}
