@@ -2546,7 +2546,7 @@ function fabricDescription(pattern, colorGroup, hex) {
 // price, synced daily into the admin-only shop_costs row) puts it in a
 // tier. Rule (Daniel, 2026-11-16): every suit clears at least $150 profit
 // over factory cost (CMT + 3.5 m of fabric) and the card fee. Tiers, in
-// price order: 0 up to $17/m $375; 1 $20-27.5/m $410; 2 $28/m $415;
+// price order: 0 up to $17/m $350 (Daniel 2026-11-17: keep $350 here, ~$130 profit is fine); 1 $20-27.5/m $410; 2 $28/m $415;
 // 3 $30-36/m $445; 4 $38/m plus the $27/m DZZ stripes $450; 5 $39-42/m
 // $470; 6 $45/m $475. Keep the array in price order: the picker sorts by
 // tier index and a mixed-fabric suit takes the higher index. The admin's
@@ -2558,7 +2558,7 @@ function fabricDescription(pattern, colorGroup, hex) {
 // Pants on their own (Daniel, 2026-10-22): from $150, stepping up with the
 // fabric tier.
 const FABRIC_PRICE_TIERS = [
-  { suitUsd: 375, jacketUsd: 275, pantsUsd: 150 }, // up to $17/m
+  { suitUsd: 350, jacketUsd: 275, pantsUsd: 150 }, // up to $17/m (Daniel keeps $350, ~$130 profit)
   { suitUsd: 410, jacketUsd: 320, pantsUsd: 150 }, // $20-27.5/m
   { suitUsd: 415, jacketUsd: 320, pantsUsd: 150 }, // $28/m
   { suitUsd: 445, jacketUsd: 345, pantsUsd: 165 }, // $30-36/m
