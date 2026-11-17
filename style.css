@@ -3453,21 +3453,17 @@ html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(
    light spaced capitals, buttons in spaced capitals, reading text and form
    fields in normal Montserrat. Ticks, crosses, hearts and the warning sign
    are not in Montserrat, so a tiny matching symbol font (Scott Symbols,
-   top of the Montserrat block) draws them. !important because many older
-   rules set heavier weights with IDs. */
-html[data-brand="scott"] :is(h1,h2,h3,.suit-type-name,.level-name){font-weight:300 !important;text-transform:uppercase !important;letter-spacing:0.14em !important;line-height:1.25;text-wrap:balance;}
-html[data-brand="scott"] :is(h1,h2,h3) em{font-weight:400 !important;font-style:italic;}
+   top of the Montserrat block) draws them. Weights are NOT set here: whatever
+   was bold before the restyle stays bold (Daniel, 2026-11-17). */
+html[data-brand="scott"] :is(h1,h2,h3,.suit-type-name,.level-name){text-transform:uppercase !important;letter-spacing:0.14em !important;line-height:1.25;text-wrap:balance;}
+html[data-brand="scott"] :is(h1,h2,h3) em{font-style:italic;}
 html[data-brand="scott"] body:not(.home-page) .hero h1,html[data-brand="scott"] h1:not(.hero h1){font-size:clamp(22px,5.6vw,36px) !important;}
 html[data-brand="scott"] h2{font-size:clamp(19px,4.8vw,26px) !important;}
 html[data-brand="scott"] h3{font-size:clamp(16px,4vw,21px) !important;}
 html[data-brand="scott"] .suit-type-name{font-size:16px !important;letter-spacing:0.12em !important;}
 html[data-brand="scott"] .level-name{font-size:16px !important;}
-html[data-brand="scott"] :is(.suit-type-price,.wiz-price,.suit-type-preset-link,.suit-type-preset-link button,.wiz-cheer,.wiz-pct,.suit-type-photo-text b){font-weight:400 !important;}
-html[data-brand="scott"] :is(b,strong){font-weight:500;}
-html[data-brand="scott"] :is(.suit-type-eyebrow,.hero-eyebrow,.wiz-step,.wiz-group,.wiz-review-link,.level-rec,.step-label,.opt-section-divider){font-weight:500 !important;letter-spacing:0.16em;}
-html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta,.nav-cart-checkout-btn,.order-done-home,.nav-startover-btn){font-weight:400 !important;text-transform:uppercase;letter-spacing:0.16em;}
-html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta) *{font-weight:inherit !important;}
-html[data-brand="scott"] :is(input,select,textarea){font-weight:400;}
+html[data-brand="scott"] :is(.suit-type-eyebrow,.hero-eyebrow,.wiz-step,.wiz-group,.wiz-review-link,.level-rec,.step-label,.opt-section-divider){letter-spacing:0.16em;}
+html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta,.nav-cart-checkout-btn,.order-done-home,.nav-startover-btn){text-transform:uppercase;letter-spacing:0.16em;}
 /* Short text too (Daniel, 2026-11-17: "change all the lower case letters
    too"): menu links, footer links, field labels, tabs, prices and every
    button are spaced capitals like the landing page. Sentences people read
