@@ -2863,29 +2863,103 @@ function mcRenderGrid(values, mode) {
     pick.appendChild(b);
   });
   grid.appendChild(pick);
-  let lastPart = null;
-  MEASUREMENTS.forEach((m) => {
-    if (m.factoryOptional) return;
-    if (m.part !== "body" && (m.mode || "finished") !== mcMode) return;
-    if (m.part !== lastPart) {
-      const h = document.createElement("h4");
-      h.className = "measure-part-heading";
-      h.textContent = measurePartHeading(m.part);
-      grid.appendChild(h);
-    }
-    lastPart = m.part;
+  // Height and weight as in My Account; every other number in the same
+  // numbered list as the "At the tailor" page (Daniel, 2026-11-17): name,
+  // bold instruction, box + cm, red/amber check under it.
+  MEASUREMENTS.filter((m) => m.part === "body").forEach((m) => {
     const field = document.createElement("div");
-    field.className = "measure-field" + (m.part === "body" ? " measure-field-body" + (m.id === "height" ? " measure-field-wide" : "") : "");
+    field.className = "measure-field measure-field-body" + (m.id === "height" ? " measure-field-wide" : "");
     field.innerHTML = '<label for="cm_' + m.id + '">' + m.label + "</label>" + measureInputHtml("cm_", m);
     bindBodyMeasure(field, "cm_", m);
     bindMeasureRange(field, "cm_", m);
     grid.appendChild(field);
+  });
+  const sheet = document.createElement("div");
+  sheet.className = "tc-sheet mc-sheet";
+  sheet.innerHTML = '<p class="tc-title">' + (mcMode === "body" ? "Body measurements" : "Finished suit sizes") + "</p>" +
+    '<p class="tc-note">' + (mcMode === "body"
+      ? "Measured around the body. <b>The factory adds room for the fit.</b> <b>All in centimeters.</b>"
+      : "How the suit should fit. <b>Finished suit sizes, not tight body measurements.</b> <b>All in centimeters.</b> The factory adds nothing.") + "</p>";
+  const list = document.createElement("ol");
+  list.className = "tailor-checklist-list tc-list";
+  sheet.appendChild(list);
+  grid.appendChild(sheet);
+  const extraTips = {
+    back_jacket: "Back of the collar seam down to the hem",
+    crotch: "FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband",
+    sleeve_length: "Shoulder to wrist, NOT from the neck",
+    body_sleeve: "Shoulder to wrist, NOT from the neck",
+    leg_length: "Outseam: top of waistband to hem",
+  };
+  let lastPart = null;
+  let n = 0;
+  MEASUREMENTS.forEach((m) => {
+    if (m.factoryOptional || m.part === "body") return;
+    if ((m.mode || "finished") !== mcMode) return;
+    if (m.part !== lastPart) {
+      const h = document.createElement("li");
+      h.className = "tailor-checklist-part";
+      h.textContent = measurePartHeading(m.part);
+      list.appendChild(h);
+      lastPart = m.part;
+    }
+    n++;
+    const li = document.createElement("li");
+    li.className = "tailor-checklist-item";
+    const num = document.createElement("span");
+    num.className = "tc-num";
+    num.textContent = String(n);
+    const name = document.createElement("span");
+    name.className = "tailor-checklist-name";
+    const label = m.id === "back_jacket" ? "Jacket Length" : m.label;
+    name.textContent = label + ":";
+    const how = m.hint || (typeof MEAS_WIZ_HINTS !== "undefined" && MEAS_WIZ_HINTS[m.id]);
+    const tip = String(extraTips[m.id] || how || "").trim().replace(/\.$/, "");
+    if (tip) {
+      const hint = document.createElement("small");
+      hint.textContent = tip;
+      name.appendChild(hint);
+    }
+    const field = document.createElement("label");
+    field.className = "tc-field";
+    const box = document.createElement("input");
+    box.type = "text";
+    box.inputMode = "decimal";
+    box.className = "tc-input";
+    box.id = "cm_" + m.id;
+    box.setAttribute("aria-label", label + " in " + (m.unit || "cm"));
+    field.append(box, document.createTextNode(m.unit || "cm"));
+    const warn = document.createElement("p");
+    warn.className = "tc-warn";
+    warn.hidden = true;
+    const check = (strict) => {
+      const v = parseFloat(box.value);
+      const issue = isNaN(v) ? null : measureIssue(m, v, measureFieldGetter("cm_"));
+      if (issue && !strict && warn.hidden) return;
+      warn.hidden = !issue;
+      if (issue) warn.textContent = issue.text;
+      warn.classList.toggle("tc-warn-hard", !!issue && issue.hard);
+    };
+    box.measureCheck = check;
+    box.addEventListener("input", () => {
+      const v = box.value.replace(",", ".").replace(/[^0-9.]/g, "");
+      if (v !== box.value) box.value = v;
+      check(false);
+    });
+    box.addEventListener("change", () => check(true));
+    box.addEventListener("blur", () => {
+      check(true);
+      list.querySelectorAll(".tc-input").forEach((o) => { if (o !== box && o.value && o.measureCheck) o.measureCheck(true); });
+    });
+    li.append(num, name, field, warn);
+    list.appendChild(li);
   });
   if (values) {
     MEASUREMENTS.forEach((m) => {
       const el = document.getElementById("cm_" + m.id);
       if (el && values[m.id] !== undefined && values[m.id] !== null) el.value = values[m.id];
     });
+    grid.querySelectorAll(".tc-input").forEach((o) => { if (o.value && o.measureCheck) o.measureCheck(true); });
   }
 }
 async function mcSave(manual) {
@@ -2896,7 +2970,11 @@ async function mcSave(manual) {
   const values = mcCollect();
   const get = measureValuesGetter(Object.assign({}, values));
   const bad = MEASUREMENTS.filter((m) => values[m.id] !== undefined && !measureHardOk(m, values[m.id], get));
-  bad.forEach((m) => delete values[m.id]);
+  bad.forEach((m) => {
+    delete values[m.id];
+    const el = document.getElementById("cm_" + m.id);
+    if (el && el.measureCheck) el.measureCheck(true);
+  });
   if (!MEASUREMENTS.some((m) => values[m.id] !== undefined)) {
     if (manual) mcSay("mcMsg", bad.length ? "Fix the numbers marked in red first." : "Type at least one measurement first.");
     return;
@@ -2949,12 +3027,16 @@ async function mcSearch() {
     list.forEach((c) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "mc-client";
       const has = c.measurements && MEASUREMENTS.some((m) => c.measurements[m.id] != null);
+      // Daniel (2026-11-17): clients who already have measurements in bold.
+      b.className = "mc-client" + (has ? " mc-has" : "");
       const name = document.createElement("b");
       name.textContent = c.name || c.email;
       const sub = document.createElement("span");
-      sub.textContent = (c.name ? c.email + " · " : "") + (has ? "Has measurements" : "No measurements yet");
+      if (c.name) sub.append(c.email + " · ");
+      const tag = document.createElement(has ? "strong" : "span");
+      tag.textContent = has ? "Has measurements" : "No measurements yet";
+      sub.appendChild(tag);
       b.append(name, sub);
       b.addEventListener("click", () => mcOpen(c));
       box.appendChild(b);
