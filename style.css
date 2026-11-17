@@ -1356,7 +1356,7 @@ nav{position:sticky;top:0;}
 #suitTypeSection .suit-type-card{aspect-ratio:auto;min-height:min(39vh,430px);padding:32px 16px;gap:12px;}
 #suitTypeSection .suit-type-icon img{width:192px;height:192px;max-width:100%;}
 #suitTypeSection .suit-type-name{font-size:36px;margin-top:6px;}
-#suitTypeSection .suit-type-desc{font-size:17px;letter-spacing:1.1px;}
+#suitTypeSection .suit-type-desc{font-size:17px;letter-spacing:0.55px;}
 #suitTypeSection .suit-type-price{font-size:31px;margin-top:4px;}
 @media(max-width:900px){
   #suitTypeSection .suit-type-grid{grid-template-columns:minmax(0,236px);justify-content:center;gap:12px;max-width:100%;margin-top:18px;}
@@ -1587,7 +1587,7 @@ body:not(.qa-allowed) .qa-nav,body:not(.qa-allowed) #qaNavBar,body:not(.qa-allow
 #suitTypeSection .suit-type-icon img{width:170px;height:170px;}
 .suit-type-body{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 18px 24px;}
 #suitTypeSection .suit-type-name{font-family:inherit;font-size:28px;font-weight:500;margin:0;}
-#suitTypeSection .suit-type-desc{font-size:12px;letter-spacing:1.6px;}
+#suitTypeSection .suit-type-desc{font-size:12px;letter-spacing:0.8px;}
 #suitTypeSection .suit-type-price{font-family:inherit;font-size:24px;font-weight:600;color:var(--ivory);margin-top:6px;}
 .suit-type-go{display:inline-flex;align-items:center;gap:6px;margin-top:12px;border:1.5px solid var(--brass);border-radius:999px;padding:9px 22px;font-size:13.5px;font-weight:600;color:var(--ivory);transition:background .15s ease,color .15s ease;}
 .suit-type-go span{transition:transform .15s ease;}
@@ -1604,7 +1604,7 @@ body:not(.qa-allowed) .qa-nav,body:not(.qa-allowed) #qaNavBar,body:not(.qa-allow
   #suitTypeSection .suit-type-icon img{width:88px;height:88px;}
   .suit-type-body{padding:14px 8px 16px;gap:3px;}
   #suitTypeSection .suit-type-name{font-size:19px;}
-  #suitTypeSection .suit-type-desc{font-size:9.5px;letter-spacing:1.2px;}
+  #suitTypeSection .suit-type-desc{font-size:9.5px;letter-spacing:0.6px;}
   #suitTypeSection .suit-type-price{font-size:19px;margin-top:4px;}
   .suit-type-go{margin-top:8px;padding:7px 16px;font-size:12px;}
   .suit-type-note{font-size:11.5px;margin-top:16px;}
@@ -2121,7 +2121,7 @@ body.order-done-view > .process{display:none !important;}
   #suitTypeSection .suit-type-icon img{width:64px;height:64px;}
   #suitTypeSection .suit-type-card .suit-type-body{padding:10px 4px 12px;}
   #suitTypeSection .suit-type-name{font-size:15px;}
-  #suitTypeSection .suit-type-desc{font-size:8.5px;letter-spacing:0.8px;}
+  #suitTypeSection .suit-type-desc{font-size:8.5px;letter-spacing:0.4px;}
   #suitTypeSection .suit-type-price{font-size:14px;}
   #suitTypeSection .suit-type-go{margin-top:6px;padding:5px 10px;font-size:11px;}
 }
@@ -2945,7 +2945,7 @@ html.meas-wiz-lock,html.meas-wiz-lock body{overflow:hidden;}
   #suitTypeSection .suit-type-icon img{width:80px;height:80px;}
   #suitTypeSection .suit-type-card .suit-type-body{flex:1 1 auto;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:10px;row-gap:1px;padding:10px 14px 10px 16px;}
   #suitTypeSection .suit-type-name{grid-column:1;font-size:22px;font-weight:600;line-height:1.15;}
-  #suitTypeSection .suit-type-desc{grid-column:1;font-size:11px;letter-spacing:1.3px;}
+  #suitTypeSection .suit-type-desc{grid-column:1;font-size:11px;letter-spacing:0.65px;}
   #suitTypeSection .suit-type-price{grid-column:1;font-size:17px;font-weight:600;margin-top:3px;color:var(--brass);}
   #suitTypeSection .suit-type-go{grid-column:2;grid-row:1 / span 3;margin:0;width:40px;height:40px;padding:0;justify-content:center;border-radius:50%;font-size:0;color:var(--brass);}
   #suitTypeSection .suit-type-go span{font-size:18px;}
@@ -3412,17 +3412,17 @@ html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-sketch-left{display:none;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-grid{flex:1 0 auto;display:flex;flex-direction:column;align-items:stretch;max-width:none;width:100%;margin:0;padding:0;min-height:0;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-text{flex:1 0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:none;width:100%;box-sizing:border-box;margin:0;padding:clamp(18px,9svh,110px) 24px clamp(22px,7svh,72px);}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-welcome{margin:0 0 12px;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#5A4E46;}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1{font-family:'Montserrat',sans-serif;font-weight:300;font-size:clamp(22px,6.6vw,44px);line-height:1.25;letter-spacing:0.2em;text-transform:uppercase;color:#1F1B18;max-width:none;margin:0 -0.2em 0 0;}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1 em{display:block;margin-top:0.35em;font-style:italic;font-weight:400;font-size:0.62em;letter-spacing:0.3em;color:#1F1B18;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-welcome{margin:0 0 12px;font-size:12px;letter-spacing:0.09em;text-transform:uppercase;color:#5A4E46;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1{font-family:'Montserrat',sans-serif;font-weight:300;font-size:clamp(22px,6.6vw,44px);line-height:1.25;letter-spacing:0.1em;text-transform:uppercase;color:#1F1B18;max-width:none;margin:0 -0.2em 0 0;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero h1 em{display:block;margin-top:0.35em;font-style:italic;font-weight:400;font-size:0.62em;letter-spacing:0.15em;color:#1F1B18;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-rule{position:relative;width:min(170px,44vw);height:1px;margin:clamp(14px,3svh,28px) auto 0;background:linear-gradient(90deg,rgba(168,122,69,0.15),#A87A45 30%,#A87A45 70%,rgba(168,122,69,0.15));}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-rule::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:13px;transform:translate(-50%,-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 0C10.6 6.5 13.5 9.4 20 10C13.5 10.6 10.6 13.5 10 20C9.4 13.5 6.5 10.6 0 10C6.5 9.4 9.4 6.5 10 0Z' fill='%23A87A45'/%3E%3C/svg%3E") center/contain no-repeat;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta{margin-top:auto;padding-top:24px;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:stretch;gap:12px;}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn){width:100%;justify-content:center;gap:16px;padding:12px 20px;min-height:44px;box-sizing:border-box;border:1px solid #74444D;border-radius:999px;background:rgba(253,248,244,0.35);color:#1F1B18;font-family:'Montserrat',sans-serif;font-weight:400;font-size:13px;letter-spacing:0.26em;text-transform:uppercase;box-shadow:none;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn){width:100%;justify-content:center;gap:16px;padding:12px 20px;min-height:44px;box-sizing:border-box;border:1px solid #74444D;border-radius:999px;background:rgba(253,248,244,0.35);color:#1F1B18;font-family:'Montserrat',sans-serif;font-weight:400;font-size:13px;letter-spacing:0.13em;text-transform:uppercase;box-shadow:none;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn):hover{background:rgba(116,68,77,0.08);}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-cta :is(#heroStartDesigningBtn,#heroMeasureFirstBtn) span[aria-hidden]{color:#1F1B18;font-size:20px;line-height:1;letter-spacing:0;font-weight:300;font-family:Arial,sans-serif;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-measure-label{text-transform:uppercase;}
-html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{flex:none;background:transparent;border-top:none;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));font-size:clamp(8px,2.3vw,9.5px);line-height:1.9;letter-spacing:0.13em;text-transform:uppercase;color:#3A322D;white-space:nowrap;}
+html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer{flex:none;background:transparent;border-top:none;padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));font-size:clamp(8px,2.3vw,9.5px);line-height:1.9;letter-spacing:0.065em;text-transform:uppercase;color:#3A322D;white-space:nowrap;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer a{text-decoration:underline;text-decoration-color:rgba(58,50,45,0.45);text-underline-offset:4px;text-decoration-thickness:1px;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) > footer svg{width:14px;height:14px;}
 html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-grid::before,html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero-grid::after,html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero::before,html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(.order-done-view) .hero::after{display:none;}
@@ -3462,21 +3462,21 @@ html[data-brand="scott"]:not(.hero-video-on) body.home-page:not(.designing):not(
    are not in Montserrat, so a tiny matching symbol font (Scott Symbols,
    top of the Montserrat block) draws them. Weights are NOT set here: whatever
    was bold before the restyle stays bold (Daniel, 2026-11-17). */
-html[data-brand="scott"] :is(h1,h2,h3,.suit-type-name,.level-name){text-transform:uppercase !important;letter-spacing:0.14em !important;line-height:1.25;text-wrap:balance;}
+html[data-brand="scott"] :is(h1,h2,h3,.suit-type-name,.level-name){text-transform:uppercase !important;letter-spacing:0.07em !important;line-height:1.25;text-wrap:balance;}
 html[data-brand="scott"] :is(h1,h2,h3) em{font-style:italic;}
 html[data-brand="scott"] body:not(.home-page) .hero h1,html[data-brand="scott"] h1:not(.hero h1){font-size:clamp(22px,5.6vw,36px) !important;}
 html[data-brand="scott"] h2{font-size:clamp(19px,4.8vw,26px) !important;}
 html[data-brand="scott"] h3{font-size:clamp(16px,4vw,21px) !important;}
-html[data-brand="scott"] .suit-type-name{font-size:16px !important;letter-spacing:0.12em !important;}
+html[data-brand="scott"] .suit-type-name{font-size:16px !important;letter-spacing:0.06em !important;}
 html[data-brand="scott"] .level-name{font-size:16px !important;}
-html[data-brand="scott"] :is(.suit-type-eyebrow,.hero-eyebrow,.wiz-step,.wiz-group,.wiz-review-link,.level-rec,.step-label,.opt-section-divider){letter-spacing:0.16em;}
-html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta,.nav-cart-checkout-btn,.order-done-home,.nav-startover-btn){text-transform:uppercase;letter-spacing:0.16em;}
+html[data-brand="scott"] :is(.suit-type-eyebrow,.hero-eyebrow,.wiz-step,.wiz-group,.wiz-review-link,.level-rec,.step-label,.opt-section-divider){letter-spacing:0.08em;}
+html[data-brand="scott"] :is(.btn-primary,.btn-ghost,.wiz-next,.wiz-back,.wiz-more,.nav-cta,.how-it-works-cta,.nav-cart-checkout-btn,.order-done-home,.nav-startover-btn){text-transform:uppercase;letter-spacing:0.08em;}
 /* Short text too (Daniel, 2026-11-17: "change all the lower case letters
    too"): menu links, footer links, field labels, tabs, prices and every
    button are spaced capitals like the landing page. Sentences people read
    (paragraphs, FAQ answers, descriptions, what they type) stay in normal
    letters, slightly opened up, so they remain easy to read. */
-html[data-brand="scott"] :is(button,.navlink-btn,footer,label,legend,th,summary,.suit-type-price,.suit-type-preset-link,.wiz-cheer,.wiz-price,a.btn-primary,a.btn-ghost){text-transform:uppercase;letter-spacing:0.12em;}
+html[data-brand="scott"] :is(button,.navlink-btn,footer,label,legend,th,summary,.suit-type-price,.suit-type-preset-link,.wiz-cheer,.wiz-price,a.btn-primary,a.btn-ghost){text-transform:uppercase;letter-spacing:0.06em;}
 html[data-brand="scott"] :is(summary,label,.suit-type-price){font-size:0.92em;}
 html[data-brand="scott"] :is(p,li,dd,td,.level-desc,.suit-type-sub){letter-spacing:0.02em;}
 html[data-brand="scott"] :is(input,textarea,select){text-transform:none;letter-spacing:0.01em;}
@@ -3484,15 +3484,15 @@ html[data-brand="scott"] button :is(.level-desc,.suit-type-sub,p){text-transform
 html[data-brand="scott"] .account-tabs button{letter-spacing:0.06em;font-size:12px;white-space:nowrap;}
 @media(max-width:600px){
   html[data-brand="scott"] .navlinks .navlink-btn{letter-spacing:0.05em;font-size:10px;padding-left:5px;padding-right:5px;}
-  html[data-brand="scott"] body > footer{font-size:clamp(7.5px,2.2vw,9.5px) !important;letter-spacing:0.08em;white-space:nowrap;padding-left:8px;padding-right:8px;}
+  html[data-brand="scott"] body > footer{font-size:clamp(7.5px,2.2vw,9.5px) !important;letter-spacing:0.04em;white-space:nowrap;padding-left:8px;padding-right:8px;}
   html[data-brand="scott"] body > footer svg{width:12px;height:12px;margin-right:3px !important;}
 }
 /* Option cards (Daniel, 2026-11-17: "options fonts need to be changed"):
    option names under each picture are spaced capitals like the rest of the
    site. Fabric and lining tiles keep their own smaller size. */
-html[data-brand="scott"] .opt-name{text-transform:uppercase;letter-spacing:0.12em;line-height:1.35;}
+html[data-brand="scott"] .opt-name{text-transform:uppercase;letter-spacing:0.06em;line-height:1.35;}
 html[data-brand="scott"] .designer-grid .opt-card:not(.fabric-tile) .opt-name{font-size:11px;}
-html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
+html[data-brand="scott"] .opt-badge{letter-spacing:0.06em;}
 /* Phone landing header: keep the cart icon fully on screen (it touched or
    passed the right edge at 360 to 393 wide once the links became capitals). */
 @media(max-width:600px){
@@ -3551,11 +3551,11 @@ html[data-brand="scott"] .opt-badge{letter-spacing:0.12em;}
   /* Short Preview / Measurements / Order / Complete pages sit in the middle. */
   html[data-brand="scott"] body.designing > :is(#previewSection,#measurementsSection,#personalInfoSection,#confirmationSection).active{align-content:center;}
   /* Back / Continue stay on one line each in the bottom bar. */
-  html[data-brand="scott"] body.designing :is(#previewSection,#measurementsSection) .meas-bar :is(.wiz-back,.wiz-next){white-space:nowrap;letter-spacing:0.08em;padding-left:14px;padding-right:14px;}
+  html[data-brand="scott"] body.designing :is(#previewSection,#measurementsSection) .meas-bar :is(.wiz-back,.wiz-next){white-space:nowrap;letter-spacing:0.04em;padding-left:14px;padding-right:14px;}
   /* Order page bar: the Pay button already says the price, so the separate
      price is dropped here and the button keeps a normal pill shape. */
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar #persPrice{display:none;}
-  html[data-brand="scott"] body.designing #personalInfoSection .meas-bar .wiz-back{white-space:nowrap;letter-spacing:0.08em;padding-left:14px;padding-right:14px;flex:none;}
+  html[data-brand="scott"] body.designing #personalInfoSection .meas-bar .wiz-back{white-space:nowrap;letter-spacing:0.04em;padding-left:14px;padding-right:14px;flex:none;}
   html[data-brand="scott"] body.designing #personalInfoSection .meas-bar #submitOrderBtn{flex:1 1 auto;font-size:12px;letter-spacing:0.06em;line-height:1.35;padding:10px 16px;}
 }
 
@@ -3577,9 +3577,9 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
 }
 
 /* Fabric step: quiet "Show: All · Solid · Pinstripe ..." type filter (2026-11-17). */
-.fabric-type-filter{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0;margin:2px 0 8px;font-size:9.5px;letter-spacing:0.9px;text-transform:uppercase;line-height:1.9;}
+.fabric-type-filter{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0;margin:2px 0 8px;font-size:10.5px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;line-height:1.9;}
 .fabric-type-filter .ftf-label{color:var(--ivory-dim);opacity:.8;margin-right:7px;}
-.fabric-type-filter .ftf-btn{background:none;border:0;border-radius:0;box-shadow:none;padding:0 1px;margin:0;min-height:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ivory-dim);cursor:pointer;border-bottom:1px solid transparent;}
+.fabric-type-filter .ftf-btn{background:none;border:0;border-radius:0;box-shadow:none;padding:0 1px;margin:0;min-height:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--ivory);cursor:pointer;border-bottom:1px solid transparent;}
 .fabric-type-filter .ftf-btn:hover{color:var(--ivory);}
 .fabric-type-filter .ftf-btn.active{color:var(--brass);border-bottom-color:var(--brass);}
 .fabric-type-filter .ftf-sep{color:var(--ivory-dim);opacity:.5;margin:0 4px;}
