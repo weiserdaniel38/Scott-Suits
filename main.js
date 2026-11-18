@@ -1678,6 +1678,8 @@ function applyAdminStatus(user, admin) {
   }
   const fabricSearchSection = document.getElementById("adminFabricSearchSection");
   if (fabricSearchSection) fabricSearchSection.hidden = !admin;
+  const picturesSection = document.getElementById("adminPicturesSection");
+  if (picturesSection) picturesSection.hidden = !admin;
   const measureClientSection = document.getElementById("adminMeasureClientSection");
   if (measureClientSection) measureClientSection.hidden = !admin;
   if (adminNotificationsSection) {
@@ -3126,6 +3128,61 @@ async function searchFabricByPhoto(file) {
     fabricSearchLoadStock().then(renderFabricSearch);
     if (window.matchMedia && window.matchMedia("(pointer:fine)").matches) input.focus();
   });
+})();
+
+// ---- Admin: Customer Pictures (Daniel, 2026-11-18) ----
+// Customers' latest suit pictures (generate-suit-image admin_previews), each
+// with Redraw: ONE new picture drawn into the same preview, so the
+// customer's cart and My Designs show it (preview_redraw, admin only).
+async function renderAdminPictures() {
+  const box = document.getElementById("adminPicturesList");
+  if (!box) return;
+  box.textContent = "Loading\u2026";
+  let r;
+  try { r = await callSuitImageFn({ admin_previews: true }); } catch (e) { r = null; }
+  if (!r || !r.ok || !r.data || !Array.isArray(r.data.previews)) { box.textContent = "Couldn\u2019t load pictures. Try again."; return; }
+  box.innerHTML = "";
+  if (!r.data.previews.length) { box.textContent = "No customer pictures yet."; return; }
+  r.data.previews.forEach((p) => {
+    const card = document.createElement("div");
+    card.className = "fs-card ap-card";
+    const img = document.createElement(p.image_url ? "a" : "div");
+    img.className = "fs-photo ap-photo";
+    if (p.image_url) { img.href = p.image_url; img.target = "_blank"; img.rel = "noopener"; img.style.backgroundImage = "url('" + p.image_url + "')"; }
+    const info = document.createElement("div");
+    info.className = "fs-info";
+    const when = new Date(p.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const name = document.createElement("span"); name.className = "fs-name"; name.textContent = p.customer || "Customer";
+    const meta = document.createElement("span"); meta.className = "fs-meta"; meta.textContent = (p.fabric ? p.fabric + " \u00b7 " : "") + when;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-ghost ap-redraw";
+    const idle = p.status === "pending" ? "Drawing\u2026" : p.status === "failed" ? "Draw again" : "Redraw";
+    btn.textContent = idle;
+    btn.disabled = p.status === "pending";
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "Drawing\u2026 (a few minutes)";
+      const start = await callSuitImageFn({ preview_redraw: p.id }).catch(() => null);
+      if (!start || !start.data || !start.data.preview_id) { btn.disabled = false; btn.textContent = "Couldn\u2019t start. Try again"; return; }
+      const res = await pollSuitImage({ preview_check: p.id }, () => document.body.contains(btn));
+      if (res && res.status === "done" && res.url) {
+        img.style.backgroundImage = "url('" + res.url + "')";
+        if (img.tagName === "A") img.href = res.url;
+        btn.textContent = "New picture ready";
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Didn\u2019t finish. Draw again";
+      }
+    });
+    info.append(name, meta, btn);
+    card.append(img, info);
+    box.appendChild(card);
+  });
+}
+(function () {
+  const section = document.getElementById("adminPicturesSection");
+  if (section) section.addEventListener("toggle", () => { if (section.open) renderAdminPictures(); });
 })();
 
 // ---- Admin: Measure a Client (Daniel, 2026-11-17) ----

@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261118monocase">
+<link rel="stylesheet" href="./style.css?v=20261118redrawcust">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261117trim"></script>
 <link rel="stylesheet" href="./brand.css?v=20261117halfdouble">
@@ -1081,6 +1081,14 @@
         <div id="fabricSearchResults" class="fs-results brand-keep" aria-live="polite"></div>
       </details>
 
+      <!-- Shop admin only (Daniel, 2026-11-18): customers' latest suit
+           pictures, each with a one-picture Redraw. -->
+      <details class="account-collapse" id="adminPicturesSection" hidden>
+        <summary><h3>Customer Pictures</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <p class="account-section-note">Only you see this (shop admin). Customers' latest suit pictures. Redraw draws one new picture with today's wording and replaces theirs.</p>
+        <div id="adminPicturesList" class="fs-results brand-keep" aria-live="polite"></div>
+      </details>
+
       <!-- Shop admin only (Daniel, 2026-11-17): type in the measurements you
            took of a client, saved straight to their account. See
            initMeasureClient() in main.js and order-measurements function. -->
@@ -1260,7 +1268,7 @@
 <script src="./catalog.js?v=20261118semipeak"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261118monocase"></script>
+<script src="./main.js?v=20261118redrawcust"></script>
 <script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>
