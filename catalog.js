@@ -3686,7 +3686,7 @@ const VEST_CATALOG = {
     column: "vest_pick_stitch",
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { name: "Pick Stitch", displayName: "0.6 cm Pick Stitch", factoryCode: "4576", img: "./assets/vest-stitch-pick.jpg" },
+      { name: "Pick Stitch", displayName: "Lapel Edges, Seams & Pockets", specName: "0.6 cm Pick Stitch", factoryCode: "4576", img: "./assets/vest-stitch-pick.jpg" },
       { name: "No Stitching", displayName: "No Stitching", noFactoryCode: true, img: "./assets/vest-stitch-none.jpg" },
     ],
   },
