@@ -8243,7 +8243,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
       '<button type="button" class="back-to-families-btn">&larr; ' + (cat.familyBackLabel || "All Colors") + "</button>" +
       '<p class="sub">' + fam.name + " -- choose one.</p>" +
-      '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' + gridId + '"></div>';
+      '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + (/^monogram/.test(activeTab) ? " mono-step" : "") + '" id="' + gridId + '"></div>';
     // Back from a color's shades goes all the way to the step's first page,
     // never just one level up.
     optionsEl.querySelector(".back-to-families-btn").onclick = () => {
@@ -8600,7 +8600,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       : "";
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      "" + backdropNote + '<div class="opt-grid fabric-palette-grid' + (backdrop ? " mono-backdrop-grid" : "") + '" id="' + gridId + '"></div>';
+      "" + backdropNote + '<div class="opt-grid fabric-palette-grid' + (backdrop ? " mono-backdrop-grid" : "") + (/^monogram/.test(activeTab) ? " mono-step" : "") + '" id="' + gridId + '"></div>';
     const grid = document.getElementById(gridId);
     renderSameAsCard(cat, grid);
     const sameAsResolver = sameAsResolvers[activeTab];
@@ -8732,7 +8732,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       : "";
     optionsEl.innerHTML =
       "<h3>" + cat.label + "</h3>" + descriptionHtml +
-      "" + textBoxHtml + '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + '" id="' +
+      "" + textBoxHtml + '<div class="opt-grid' + (cat.compactCards ? " compact-cards" : "") + (/^monogram/.test(activeTab) ? " mono-step" : "") + '" id="' +
       gridId + '"></div>';
     if (showTextBox && textKey === "monogram" && !cat.fontCards) renderInlineFonts();
     if (showTextBox) {

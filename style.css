@@ -3665,3 +3665,11 @@ html[data-brand="sw"] :is(.meas-fix-save,.mcheck-fix){color:#1A1416;}
 @media(min-width:1900px){ body.designing > :is(#designer,#pantsSection){--wz:1.1;} }
 @media(min-width:2200px){ body.designing > :is(#designer,#pantsSection){--wz:1.15;} }
 @media(min-width:2500px){ body.designing > :is(#designer,#pantsSection){--wz:1.2;} }
+
+/* Monogram step (Daniel, 2026-11-18: "not all is supposed to be caps"):
+   placement names, thread color names, the "Your monogram" label and the
+   font buttons are in normal letters, first letter capital, not spaced
+   capitals. The typed monogram itself is never changed. */
+.designer-grid .opt-grid.mono-step .opt-card .opt-name,
+html[data-brand] .designer-grid .opt-grid.mono-step .opt-card .opt-name{text-transform:none;letter-spacing:0.02em;}
+html[data-brand] .mono-text-card label,html[data-brand] .mono-text-card .mono-font-chip{text-transform:none;letter-spacing:0.02em;}
