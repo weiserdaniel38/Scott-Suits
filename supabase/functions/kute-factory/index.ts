@@ -197,13 +197,13 @@ async function syncCodes() {
 }
 
 // The live site's catalog.js (option names and their factory codes).
-async function loadCatalog(): Promise<{ jacket: Catalog; pants: Catalog }> {
+async function loadCatalog(): Promise<{ jacket: Catalog; pants: Catalog; vest?: Catalog }> {
   const url = env("SITE_URL", "https://scottssuits.com").replace(/\/$/, "") + "/catalog.js?t=" + Date.now();
   const res = await fetch(url);
   if (!res.ok) throw new Error("couldn't load the site catalog (" + res.status + ")");
   const src = await res.text();
-  const got = new Function("window", "document", src + "\n;return { jacket: JACKET_CATALOG, pants: PANTS_CATALOG };")({}, {});
-  return got as { jacket: Catalog; pants: Catalog };
+  const got = new Function("window", "document", src + "\n;return { jacket: JACKET_CATALOG, pants: PANTS_CATALOG, vest: typeof VEST_CATALOG !== 'undefined' ? VEST_CATALOG : undefined };")({}, {});
+  return got as { jacket: Catalog; pants: Catalog; vest?: Catalog };
 }
 
 async function loadEmbCodes(): Promise<{ MXF?: EmbCodes; MXK?: EmbCodes }> {
@@ -218,9 +218,9 @@ async function loadEmbCodes(): Promise<{ MXF?: EmbCodes; MXK?: EmbCodes }> {
 
 // The factory's allowed range for each measurement position, for body or
 // finished measurements.
-async function loadSizeRanges(body: boolean): Promise<{ MXF?: SizeRanges; MXK?: SizeRanges }> {
+async function loadSizeRanges(body: boolean): Promise<{ MXF?: SizeRanges; MXK?: SizeRanges; MMJ?: SizeRanges }> {
   const { data } = await supabase.from("factory_codes").select("category, data")
-    .eq("list", body ? "bodyMeasurements" : "finishedMeasurements").in("category", ["MXF", "MXK"]);
+    .eq("list", body ? "bodyMeasurements" : "finishedMeasurements").in("category", ["MXF", "MXK", "MMJ"]);
   const out: Record<string, SizeRanges> = {};
   for (const r of data || []) {
     const list = ((r.data as Record<string, any>)?.data || []) as Record<string, any>[];
@@ -250,7 +250,7 @@ async function loadRow(id: string) {
 
 async function factoryOrder(input: Record<string, unknown>) {
   const row = await loadRow(String(input.id || ""));
-  const [{ jacket, pants }, emb, ranges] = await Promise.all([
+  const [{ jacket, pants, vest }, emb, ranges] = await Promise.all([
     loadCatalog(), loadEmbCodes(), loadSizeRanges(String(row.measure_type || "") === "body"),
   ]);
   // The customer's own height (inches) and weight (pounds) from the order,
@@ -258,7 +258,7 @@ async function factoryOrder(input: Record<string, unknown>) {
   const typedHeight = Number(input.height) || 0;
   const typedWeight = Number(input.weight) || 0;
   const built = buildFactoryOrder({
-    row, jacket, pants, emb, ranges,
+    row, jacket, pants, vest, emb, ranges,
     height: typedHeight || Number(row.height) || 0,
     heightUnit: typedHeight ? (input.heightUnit === "cm" ? "cm" : "in") : "in",
     weight: typedWeight || Number(row.weight) || 0,
@@ -464,11 +464,11 @@ async function probeDraft(input: Record<string, unknown>) {
   for (const [k, v] of Object.entries(set)) {
     if (k in row && (v === null || typeof v === "string" || typeof v === "number")) row[k] = v;
   }
-  const [{ jacket, pants }, emb, ranges] = await Promise.all([
+  const [{ jacket, pants, vest }, emb, ranges] = await Promise.all([
     loadCatalog(), loadEmbCodes(), loadSizeRanges(String(row.measure_type || "") === "body"),
   ]);
   const { body, warnings, blocking } = buildFactoryOrder({
-    row, jacket, pants, emb, ranges,
+    row, jacket, pants, vest, emb, ranges,
     height: Number(row.height) || 70, heightUnit: "in",
     weight: Number(row.weight) || 170, weightUnit: "lb",
     orderNo: String(input.orderNo || ""),

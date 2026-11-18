@@ -226,7 +226,7 @@ const STATUS: Record<string, string> = {
   shipped: "Shipped",
   delivered: "Delivered",
 };
-const TYPE: Record<string, string> = { full_suit: "Full suit", jacket_only: "Jacket", pants_only: "Pants" };
+const TYPE: Record<string, string> = { full_suit: "Full suit", jacket_only: "Jacket", pants_only: "Pants", three_piece: "Three-piece suit", vest_only: "Vest" };
 
 // ---------------------------------------------------------------------------
 async function account(userId: string) {

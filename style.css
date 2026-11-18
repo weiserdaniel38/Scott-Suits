@@ -3680,3 +3680,12 @@ html[data-brand="sw"] :is(.meas-fix-save,.mcheck-fix){color:#1A1416;}
 .designer-grid .opt-grid.mono-step .opt-card .opt-name,
 html[data-brand] .designer-grid .opt-grid.mono-step .opt-card .opt-name{text-transform:none;letter-spacing:0.02em;}
 html[data-brand] .mono-text-card label,html[data-brand] .mono-text-card .mono-font-chip{text-transform:none;letter-spacing:0.02em;}
+
+/* Four suit-type cards with Vest Only (2026-11-18): one row of four on
+   wide screens, two by two on tablets; phones keep the stacked list. */
+@media(min-width:901px){
+  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(4,minmax(0,1fr));max-width:1120px;gap:22px;}
+}
+@media(max-width:900px) and (min-width:601px){
+  #suitTypeSection .suit-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:640px;}
+}
