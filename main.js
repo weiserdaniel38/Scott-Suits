@@ -585,7 +585,7 @@ function checkSuitMeasurements(values, suitType, mode) {
       labels: [],
       text: (mix.suspect === "body" ? "Look like BODY measurements, but entered as fitted suit sizes" : "Look like FITTED suit sizes, but entered as body measurements") +
         (mix.reasons.length ? ": " + mix.reasons.join("; ") : "") + ". Confirm which they are.",
-      ids: [],
+      ids: mix.ids || [],
       mixup: mix.suspect,
     });
   }
@@ -742,10 +742,15 @@ function measureBodyChestGuess(get) {
 function measureTypeMixup(get, mode) {
   mode = mode === "body" ? "body" : "finished";
   const reasons = [];
+  const ids = [];
   let score = 0;
-  const tell = (pts, why) => {
+  // ids: the fields behind a reason, for "Fix just these".
+  const tell = (pts, why, fields) => {
     score += pts;
-    if (pts > 0 && why) reasons.push(why);
+    if (pts > 0 && why) {
+      reasons.push(why);
+      if (reasons.length <= 2) (fields || []).forEach((id) => { if (ids.indexOf(id) < 0) ids.push(id); });
+    }
   };
   const guess = measureBodyChestGuess(get);
   if (mode === "finished") {
@@ -755,46 +760,46 @@ function measureTypeMixup(get, mode) {
       // Stomach under Waist by more than 3 is a typo, not a mix-up (the
       // range checks flag it). The size estimate can land close too, so
       // this alone never flags.
-      if (d >= -3 && d < 7) tell(1, "Jacket Stomach is only " + r1(Math.max(d, 0)) + " cm over Pants Waist (fitted is usually 8 to 14 over)");
+      if (d >= -3 && d < 7) tell(1, "Jacket Stomach is only " + r1(Math.max(d, 0)) + " cm over Pants Waist (fitted is usually 8 to 14 over)", ["stomach", "waist"]);
       else if (d >= 9) tell(-1);
     }
     if (ch && guess) {
       const d = ch - guess;
-      if (d < 3) tell(2, "Chest " + ch + " is about body size for your height and weight");
-      else if (d < 5) tell(1, "Chest " + ch + " is close to body size for your height and weight");
+      if (d < 3) tell(2, "Chest " + ch + " is about body size for your height and weight", ["chest"]);
+      else if (d < 5) tell(1, "Chest " + ch + " is close to body size for your height and weight", ["chest"]);
       else if (d > 10) tell(-1);
     }
     const wr = get("wrist");
-    if (wr && wr < 22) tell(3, "Wrist " + wr + " is a body wrist (a sleeve opening is 25 to 32)");
+    if (wr && wr < 22) tell(3, "Wrist " + wr + " is a body wrist (a sleeve opening is 25 to 32)", ["wrist"]);
     const cu = get("cuff");
-    if (cu && cu < 28) tell(3, "Cuff " + cu + " is an ankle size (a leg opening is 30 to 46)");
+    if (cu && cu < 28) tell(3, "Cuff " + cu + " is an ankle size (a leg opening is 30 to 46)", ["cuff"]);
     const sh = get("shoulder");
-    if (sh && sh < 43 && ch && ch >= 100) tell(1, "Shoulder " + sh + " is narrow for a jacket (usually 45 to 49)");
+    if (sh && sh < 43 && ch && ch >= 100) tell(1, "Shoulder " + sh + " is narrow for a jacket (usually 45 to 49)", ["shoulder"]);
     const kn = get("knee"), hp = get("hips");
-    if (kn && kn < 37 && hp && hp >= 100) tell(1, "Knee " + kn + " is closer to a body size (pants knee is usually 38 or more)");
+    if (kn && kn < 37 && hp && hp >= 100) tell(1, "Knee " + kn + " is closer to a body size (pants knee is usually 38 or more)", ["knee"]);
     const bi = get("bicep");
-    if (bi && bi < 33 && ch && ch >= 95) tell(1, "Bicep " + bi + " is closer to a body size (a sleeve is usually 35 or more)");
+    if (bi && bi < 33 && ch && ch >= 95) tell(1, "Bicep " + bi + " is closer to a body size (a sleeve is usually 35 or more)", ["bicep"]);
   } else {
     const st = get("body_stomach"), wa = get("body_waist"), ch = get("body_chest");
     if (st && wa) {
       const d = st - wa;
-      if (d >= 8) tell(2, "Stomach is " + r1(d) + " cm over Waist, like a fitted jacket over pants (on the body they're close)");
-      else if (d >= 6) tell(1, "Stomach is " + r1(d) + " cm over Waist (on the body they're usually close)");
+      if (d >= 8) tell(2, "Stomach is " + r1(d) + " cm over Waist, like a fitted jacket over pants (on the body they're close)", ["body_stomach", "body_waist"]);
+      else if (d >= 6) tell(1, "Stomach is " + r1(d) + " cm over Waist (on the body they're usually close)", ["body_stomach", "body_waist"]);
       else if (d <= 3) tell(-1);
     }
     if (ch && guess) {
       const d = ch - guess;
-      if (d > 11) tell(2, "Chest " + ch + " is roomy for your height and weight, like a fitted jacket");
-      else if (d > 8) tell(1, "Chest " + ch + " is large for your height and weight");
+      if (d > 11) tell(2, "Chest " + ch + " is roomy for your height and weight, like a fitted jacket", ["body_chest"]);
+      else if (d > 8) tell(1, "Chest " + ch + " is large for your height and weight", ["body_chest"]);
       else if (d < 4) tell(-1);
     }
     const bi = get("body_bicep");
-    if (bi && ch && bi > ch * 0.36) tell(1, "Bicep " + bi + " is roomy next to Chest, like a sleeve");
+    if (bi && ch && bi > ch * 0.36) tell(1, "Bicep " + bi + " is roomy next to Chest, like a sleeve", ["body_bicep"]);
     const sh = get("body_shoulder");
-    if (sh && sh > 50) tell(1, "Shoulder " + sh + " is wide for body width");
+    if (sh && sh > 50) tell(1, "Shoulder " + sh + " is wide for body width", ["body_shoulder"]);
   }
   const suspect = score >= 2 ? (mode === "finished" ? "body" : "finished") : null;
-  return { suspect, score, reasons: reasons.slice(0, 2) };
+  return { suspect, score, reasons: reasons.slice(0, 2), ids };
 }
 // Same numbers moved to the other kind's fields when the customer says
 // "these are actually body (or fitted) measurements".
