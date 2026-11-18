@@ -6142,6 +6142,8 @@ if (isSupabaseConfigured()) {
   try {
     getSupabase().auth.onAuthStateChange((event, session) => {
       currentUser = session ? session.user : null;
+      // Per-customer fabric exceptions (FABRIC_STOCK_EXCEPTIONS) depend on who's signed in.
+      try { jacketDesigner.refreshDisplay(); pantsDesigner.refreshDisplay(); } catch (e) {}
       if (event === "PASSWORD_RECOVERY" && currentUser) {
         // Defer so the rest of this file (overlay helpers) has loaded.
         setTimeout(enterPasswordRecovery, 0);
@@ -8443,7 +8445,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // stock.
     const typeCounts = {};
     cat.colorFirst.forEach((g) => g.patterns.forEach((b) => b.options.forEach((o) => {
-      if (o.outOfStock && order[activeTab] !== o.name) return;
+      if (fabricHiddenForCustomer(o, order[activeTab])) return;
       typeCounts[b.name] = (typeCounts[b.name] || 0) + 1;
     })));
     const typeNames = Object.keys(typeCounts).sort((a, b) => {
@@ -8492,7 +8494,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       g.patterns.filter((b) => !fabricTypeFilter || b.name === fabricTypeFilter).reduce((all, b) => all.concat(b.options), []).forEach((opt) => {
         // Not enough cloth at the factory (see loadFabricStock), unless it's
         // already this customer's pick.
-        if (opt.outOfStock && order[activeTab] !== opt.name) return;
+        if (fabricHiddenForCustomer(opt, order[activeTab])) return;
         const lab = toLab(opt.hex || g.swatchHex);
         tiles.push({ opt, group: g.name, L: lab[0], hue: Math.atan2(lab[2], lab[1]), chroma: Math.hypot(lab[1], lab[2]) });
       });
@@ -9174,6 +9176,18 @@ const pantsDesigner = createDesigner(
 // of the fabric grid (Daniel, 2026-11-01). If the lookup fails, every
 // fabric stays visible.
 const FABRIC_MIN_STOCK_M = 4; // a suit takes about 3.5 m
+// Out-of-stock fabrics Daniel still wants one customer to see, by account
+// id (Supabase auth user id). Their fabric grid shows these even when the
+// daily stock file hides them for everyone else.
+const FABRIC_STOCK_EXCEPTIONS = {
+  // Hershy Farkas, 2026-11-18: Charcoal Herringbone (factory had 0 m).
+  "f61f7b09-d4e7-48e3-9e7b-75cccfd2f45d": ["26SU118.DBV386A"],
+};
+function fabricHiddenForCustomer(opt, currentPick) {
+  if (!opt.outOfStock || currentPick === opt.name) return false;
+  const allowed = currentUser && FABRIC_STOCK_EXCEPTIONS[currentUser.id];
+  return !(allowed && allowed.indexOf(opt.name) !== -1);
+}
 async function loadFabricStock() {
   try {
     if (typeof SUPABASE_URL === "undefined" || !SUPABASE_URL) return;
