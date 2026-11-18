@@ -443,6 +443,13 @@ const INSIDE_VIEW: Record<string, string> = {
 };
 
 function layoutFor(jacketOnly: boolean, spec = ""): string {
+  if (vestOnly(spec)) {
+    const st = stitchChoice(spec);
+    const stitchNote = st ? ", with each button's thread sewn in a " + (st.key === "x" ? "X" : st.key) + " pattern (" + st.look + ")" : "";
+    return `Layout: one landscape presentation sheet on a clean white background with four panels, like a tailor's lookbook. Only the vest appears: ${VEST_ONLY_RULE}.
+Left side, two tall panels side by side, each showing the WHOLE vest at its natural, real-life proportions (never squeezed narrow, stretched tall or cropped): (1) the vest front view, buttoned, with the inside of the vest's back lining visible through the neck opening; (2) the vest back view.
+Right side, two square close-up panels stacked: (3) a close-up of the vest's front buttons and buttonholes${stitchNote}; (4) a close-up of the lower front of the vest showing a lower pocket, the bottom edge and the fabric texture.`;
+  }
   const insideStyle = (spec.match(/^Inside Pocket Style: (.+)$/m) || [])[1] || "";
   const inside = (OPTION_LOOKS["Inside Pocket Style"] || {})[insideStyle];
   const insideNote = insideStyle === "No Inner Pockets"
@@ -879,7 +886,8 @@ const MATCHED_BUTTONS = "plain four-hole suit buttons in a matte-to-satin tone m
 function buttonText(spec: string, photo: boolean): string {
   const b = buttonChoice(spec);
   if (!b) return "";
-  const where = "EVERY button on the jacket front and sleeve cuffs" + (/^Suit type: Full suit/m.test(spec) ? " and on the trousers (waistband tab, back pockets)" : "");
+  const where = vestOnly(spec) ? "EVERY button on the vest front"
+    : "EVERY button on the jacket front and sleeve cuffs" + (/^Suit type: (Full suit|Three-piece)/m.test(spec) ? " and on the trousers (waistband tab, back pockets)" : "");
   if (b.matched) return where + ": " + MATCHED_BUTTONS;
   return where + " is the customer's chosen button \"" + b.name + "\"" +
     (buttonWords(b) ? ": " + buttonWords(b) : "") +
@@ -915,13 +923,14 @@ const STITCH: Record<string, { key: string; look: string; not: string; ref: stri
 // The chosen stitch, unless the chosen button has only two holes (then there
 // is no pattern to show and the button photo wins).
 function stitchChoice(spec: string): (typeof STITCH)[string] & { name: string; thread: string } | null {
-  const section = /^Suit type: Pants only/m.test(spec) ? "PANTS" : "JACKET";
-  const name = sectionValue(spec, section, "Button Nail Method");
+  const vest = vestOnly(spec);
+  const section = /^Suit type: Pants only/m.test(spec) ? "PANTS" : vest ? "VEST" : "JACKET";
+  const name = sectionValue(spec, section, vest ? "Vest Button Stitching" : "Button Nail Method");
   const st = STITCH[name];
   if (!st) return null;
   const b = buttonChoice(spec);
   if (b && /\bTWO\b[^;]*holes/i.test(b.look)) return null;
-  const t = sectionValue(spec, section, "Button Thread Color");
+  const t = sectionValue(spec, section, vest ? "Vest Button Thread" : "Button Thread Color");
   const thread = !t || /^matched to the fabric/i.test(t)
     ? "thread in a tone matching the suit fabric, slightly lighter or darker than the button so the pattern is still clearly visible"
     : "thread in " + t.replace(/\s*\(.*$/, "");
@@ -930,14 +939,21 @@ function stitchChoice(spec: string): (typeof STITCH)[string] & { name: string; t
 function stitchText(spec: string): string {
   const st = stitchChoice(spec);
   if (!st) return "";
-  const where = /^Suit type: Pants only/m.test(spec) ? "on the trousers" : "(front and sleeve cuffs)";
+  const where = /^Suit type: Pants only/m.test(spec) ? "on the trousers" : vestOnly(spec) ? "on the vest front" : "(front and sleeve cuffs)";
   return "every four-hole button " + where + " is sewn on with the \"" + st.name + "\" pattern: " + st.look + "; " + st.not +
     ". Use " + st.thread + ". The same pattern on every button, clearly visible as raised thread on each button" +
-    (/^Suit type: Pants only/m.test(spec) ? " wherever a trouser button shows" : " in the cuff close-up and on the front buttons");
+    (/^Suit type: Pants only/m.test(spec) ? " wherever a trouser button shows" : vestOnly(spec) ? " in the button close-up and on the vest front" : " in the cuff close-up and on the front buttons");
 }
 
 function keyDetails(spec: string, ownLining = false, buttonPhoto = false): string {
   const out: string[] = [];
+  if (vestOnly(spec)) {
+    out.push("- VEST ONLY: " + VEST_ONLY_RULE + ".");
+    out.push("- THE VEST: " + vestText(spec) + ".");
+    if (buttonText(spec, buttonPhoto)) out.push("- BUTTONS: " + buttonText(spec, buttonPhoto) + ".");
+    if (stitchText(spec)) out.push("- BUTTON STITCHING: " + stitchText(spec) + ".");
+    return "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n");
+  }
   // First: the image model kept drawing level hip pockets when this came later.
   const lower = (spec.match(/^Lower Pockets: (.+)$/m) || [])[1] || "";
   if (/Slant/.test(lower)) out.push("- HIP POCKETS (" + lower + "): " + SLANT_HIP + ".");
@@ -1015,17 +1031,45 @@ const VEST_LOOKS: Record<string, Record<string, string>> = {
     "Shawl Lapel with Collar Band": "a small shawl lapel on a collar that goes around the back of the neck",
   },
 };
+const vestOnly = (spec: string) => /^Suit type: Vest only/m.test(spec);
+const VEST_ONLY_RULE = "draw ONLY the vest (waistcoat): no jacket, no trousers, no shirt sleeves, no tie and no person; the vest stands on its own on an invisible ghost mannequin, the neck and armholes open and empty";
+const VEST_PICK_STITCH = "fine pick stitching: a row of small, evenly spaced hand-look stitches in thread matching the fabric, about 0.6 cm in from the edge, along the vest's front edges, neckline or lapel edges, the seams and around the pockets; subtle, visible up close";
+const VEST_BUCKLES: Record<string, string> = {
+  "Silver Buckle": "a small polished silver metal slide buckle",
+  "Gunmetal Buckle": "a small dark gunmetal-grey metal slide buckle",
+  "Pointed Black Buckle": "a small black metal slide buckle with a pointed tip",
+};
 function vestText(spec: string): string {
   if (!/^VEST$/m.test(spec)) return "";
+  const only = vestOnly(spec);
   const v = (label: string) => sectionValue(spec, "VEST", label);
   const look = (label: string) => (VEST_LOOKS[label] || {})[v(label)] || v(label).toLowerCase();
-  const parts = ["a matching vest in the SAME fabric as the jacket is worn buttoned under the jacket and shows between the jacket fronts in the front view, above the trouser waistband"];
-  if (v("Vest Buttons")) parts.push(look("Vest Buttons") + ", in the same buttons as the jacket");
+  const parts = [only
+    ? "a tailored suit vest (waistcoat) on its own, buttoned, in the given fabric"
+    : "a matching vest in the SAME fabric as the jacket is worn buttoned under the jacket and shows between the jacket fronts in the front view, above the trouser waistband"];
+  // 3-piece: the vest can have its own buttons (Vest Button Type).
+  const vButton = v("Button Color"), jButton = sectionValue(spec, "JACKET", "Button Color");
+  const buttonKey = (x: string) => /^(matched to the fabric|Best Match)/i.test(x) ? "matched" : x.replace(/\s*\(.*$/, "").trim();
+  const ownButtons = !only && vButton && jButton && buttonKey(vButton) !== buttonKey(jButton);
+  if (v("Vest Buttons")) parts.push(look("Vest Buttons") + (only ? "" : ownButtons
+    ? ", in DIFFERENT buttons from the jacket: \"" + vButton.replace(/\s*\(.*$/, "") + "\""
+    : ", in the same buttons as the jacket"));
   if (v("Vest Lapel")) parts.push(look("Vest Lapel"));
   if (v("Vest Bottom")) parts.push(look("Vest Bottom"));
   const chest = v("Vest Chest Pocket"), lower = v("Vest Lower Pockets");
   if (chest) parts.push(/^No /.test(chest) ? "no chest pocket on the vest" : "vest chest pocket: " + chest.toLowerCase());
   if (lower) parts.push(/^No /.test(lower) ? "no lower pockets on the vest" : "vest lower pockets: " + lower.toLowerCase());
+  if (/Pick Stitch/i.test(v("Vest Pick Stitching"))) parts.push(VEST_PICK_STITCH);
+  // Button stitching on a 3-piece vest, when it differs from the jacket's.
+  const vNail = v("Vest Button Stitching"), jNail = sectionValue(spec, "JACKET", "Button Nail Method");
+  if (!only && STITCH[vNail] && vNail !== jNail) parts.push("the vest buttons are sewn on with the \"" + vNail + "\" pattern: " + STITCH[vNail].look);
+  if (only) {
+    const strap = v("Vest Back Adjuster");
+    const buckle = VEST_BUCKLES[v("Vest Buckle")] || VEST_BUCKLES["Silver Buckle"];
+    parts.push("the vest BACK (back view) is cut from the lining fabric, " + (strap === "No Adjuster"
+      ? "plain, with no strap or buckle"
+      : "with a narrow cloth adjuster strap across the small of the back closed by " + buckle));
+  }
   return parts.join("; ");
 }
 
@@ -1080,6 +1124,14 @@ function monogramRules(spec: string): string[] {
 // to correct mistakes the image model tends to make.
 function fixedRules(spec: string, buttonPhoto = false): string {
   const rules = ["Strict accuracy rules:"];
+  if (vestOnly(spec)) {
+    rules.push("- " + VEST_ONLY_RULE.charAt(0).toUpperCase() + VEST_ONLY_RULE.slice(1) + ".");
+    if (buttonText(spec, buttonPhoto)) rules.push("- Buttons: " + buttonText(spec, buttonPhoto) + ".");
+    rules.push("- The vest front is the suit fabric; the vest back is the lining fabric. Lining shows only on the back and through the armholes and neck opening.");
+    rules.push("- The vest front edge, buttons, neckline, pockets and bottom edge are exactly as described; nothing is added (no watch chain, no lapel pin, no pocket square).");
+    rules.push("- No people, faces, hands, logos, watermarks, text or labels anywhere on the sheet.");
+    return rules.join("\n");
+  }
   if (buttonText(spec, buttonPhoto)) rules.push("- Buttons: " + buttonText(spec, buttonPhoto) + ".");
   // First, because the image model ignores it most.
   if (/slant/i.test((spec.match(/^Buttons On Sleeve Cuff: (.+)$/m) || [])[1] || "")) {
@@ -1318,6 +1370,7 @@ You receive the sheet layout, notes on the reference images the image model will
 - Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, the button stitching pattern (how the thread runs between the four holes: X, square or parallel bars) and button thread color, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: every button (front, cuffs, trousers) is the one chosen button: name its material and look in words (e.g. iridescent mother-of-pearl shell, streaked horn, grained corozo) and tell the image model to copy the button photo exactly; never let it fall back to generic plain buttons. "Matched to the fabric" means plain buttons in a tone matching the cloth.
+- Vest only: when the suit type says "Vest only", the sheet shows ONLY the vest described in the VEST section (no jacket, no trousers); its front is the fabric, its back the lining; describe its buttons, neckline or lapels, bottom edge, pockets, back strap and buckle as given.
 - Three-piece suit: when the description has a VEST section, the jacket is worn over a matching vest in the same fabric, buttoned, visible between the jacket fronts in the front view; describe its buttons, neckline or lapels, bottom edge and pockets as given. No vest otherwise.
 - Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
 - "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
