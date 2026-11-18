@@ -1820,7 +1820,7 @@ async function emailPreview(id: string, brand: string) {
 }
 const brandId = (b: unknown) => (b === "sw" ? "sw" : "scott");
 
-async function generatePreview(id: string, raw: string, round = 1, brand = "scott", email = true) {
+async function generatePreview(id: string, raw: string, round = 1, brand = "scott", oneRound = false, email = true) {
   const set = async (fields: Record<string, unknown>) => {
     const { error } = await supabase
       .from("suit_previews")
@@ -1841,7 +1841,7 @@ async function generatePreview(id: string, raw: string, round = 1, brand = "scot
       const { data } = await supabase.from("suit_previews").select("image_url, image_prompt").eq("id", id).maybeSingle();
       fallback = data || null;
     }
-    const r = await withDeadline(drawSheet(raw, "previews", id, round >= ROUNDS(), cancelled, fallback?.image_prompt || ""), startedAt);
+    const r = await withDeadline(drawSheet(raw, "previews", id, oneRound || round >= ROUNDS(), cancelled, fallback?.image_prompt || ""), startedAt);
     if (await cancelled()) {
       console.log("Preview cancelled", id);
       return;
@@ -1947,7 +1947,7 @@ async function startPreview(req: Request, raw: string, brand = "scott", forUser 
       .select("id")
       .single();
     if (error || !data) return json({ error: "Could not start" }, 500);
-    const p = runInBackground(generatePreview(data.id, raw, 1, brand, false));
+    const p = runInBackground(generatePreview(data.id, raw, 1, brand, false, false));
     // @ts-ignore see runInBackground
     if (typeof EdgeRuntime === "undefined") await p;
     return json({ status: "pending", preview_id: data.id }, 202);
@@ -2105,6 +2105,51 @@ Deno.serve(async (req) => {
     }
     return json({ designs });
   }
+  // Admin (Daniel, 2026-11-18): customers' recent pictures, and redraw one
+  // in place (same row, so the customer's cart and My Designs get the new
+  // picture). Exactly ONE drawing, with today's prompt wording.
+  if (body?.admin_previews || body?.preview_redraw) {
+    const userId = await requestUserId(req);
+    if (!userId) return SIGN_IN_NEEDED();
+    if (!(await isAdmin(userId))) return json({ error: "Admins only" }, 403);
+    if (body?.preview_redraw) {
+      const id = String(body.preview_redraw);
+      if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
+      const { data: prev } = await supabase.from("suit_previews").select("status, visual_spec").eq("id", id).maybeSingle();
+      if (!prev?.visual_spec) return json({ error: "Not found" }, 404);
+      if (prev.status === "pending") return json({ status: "pending", preview_id: id }, 202);
+      await supabase.from("suit_previews")
+        .update({ status: "pending", image_error: null, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      const p = runInBackground(generatePreview(id, String(prev.visual_spec), 1, brandId(body?.brand), true));
+      // @ts-ignore see runInBackground
+      if (typeof EdgeRuntime === "undefined") await p;
+      return json({ status: "pending", preview_id: id }, 202);
+    }
+    const { data: admins } = await supabase.from("admins").select("user_id");
+    const skip = new Set(((admins || []) as any[]).map((a) => String(a.user_id)));
+    const { data: rows, error } = await supabase
+      .from("suit_previews")
+      .select("id, created_at, updated_at, status, image_url, user_id, visual_spec")
+      .not("user_id", "is", null)
+      .in("status", ["done", "pending"])
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (error) return json({ error: "Lookup failed" }, 500);
+    const list = ((rows || []) as any[]).filter((r) => !skip.has(String(r.user_id))).slice(0, 30);
+    const ids = [...new Set(list.map((r) => String(r.user_id)))];
+    const { data: people } = ids.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", ids)
+      : { data: [] };
+    const who = new Map<string, string>(((people || []) as any[]).map((x) => [String(x.id), String(x.full_name || x.email || "")]));
+    const fab = (spec: string) => ((spec.match(/^Fabric: ([^(\n]+)/m) || [])[1] || "").trim();
+    return json({
+      previews: list.map((r) => ({
+        id: r.id, created_at: r.created_at, status: r.status, image_url: r.image_url,
+        customer: who.get(String(r.user_id)) || "", fabric: fab(String(r.visual_spec || "")),
+      })),
+    });
+  }
   if (body?.preview_check) {
     const id = String(body.preview_check);
     return UUID.test(id) ? checkPreview(id) : json({ error: "Bad id" }, 400);
@@ -2130,7 +2175,7 @@ Deno.serve(async (req) => {
       if (row) work = generate(row, round);
     } else if (body?.retry === "preview") {
       const { data: prev } = await supabase.from("suit_previews").select("visual_spec").eq("id", id).maybeSingle();
-      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round, brandId(body?.brand), body?.no_email !== true);
+      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round, brandId(body?.brand), false, body?.no_email !== true);
     }
     if (!work) return json({ error: "Not found" }, 404);
     const p = runInBackground(work);
