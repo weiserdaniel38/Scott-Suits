@@ -3564,14 +3564,14 @@ const VEST_CATALOG = {
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { section: "No Lapel", name: "V-Neck", displayName: "V-Neck", factoryCode: "4000", img: "./assets/vest-lapel-v.jpg" },
-      { section: "No Lapel", name: "U-Neck", displayName: "U-Neck", factoryCode: "4001", img: "./assets/vest-lapel-u.jpg" },
       { section: "Lapel", name: "Notch Lapel", displayName: "Notch", factoryCode: "4004", img: "./assets/vest-lapel-notch.jpg" },
       { section: "Lapel", name: "Peak Lapel", displayName: "Peak", factoryCode: "4006", img: "./assets/vest-lapel-peak.jpg" },
       { section: "Lapel", name: "Shawl Lapel", displayName: "Shawl", factoryCode: "4003", img: "./assets/vest-lapel-shawl.jpg" },
       { section: "Lapel + Collar Around the Neck", name: "Notch Lapel with Collar Band", displayName: "Notch", factoryCode: "4005", img: "./assets/vest-lapel-notch-band.jpg" },
       { section: "Lapel + Collar Around the Neck", name: "Peak Lapel with Collar Band", displayName: "Peak", factoryCode: "4007", img: "./assets/vest-lapel-peak-band.jpg" },
       { section: "Lapel + Collar Around the Neck", name: "Shawl Lapel with Collar Band", displayName: "Shawl", factoryCode: "4002", img: "./assets/vest-lapel-shawl-band.jpg" },
+      { section: "No Lapel", name: "V-Neck", displayName: "V-Neck", factoryCode: "4000", img: "./assets/vest-lapel-v.jpg" },
+      { section: "No Lapel", name: "U-Neck", displayName: "U-Neck", factoryCode: "4001", img: "./assets/vest-lapel-u.jpg" },
     ],
   },
   lapelbuttonhole: {
@@ -3584,10 +3584,10 @@ const VEST_CATALOG = {
     // U-Neck (kute-factory sends "No Lapel Buttonhole").
     hiddenWhenEquals: { key: "collar", value: ["V-Neck", "U-Neck"] },
     options: [
-      { name: "No Lapel Buttonhole", displayName: "None", factoryCode: "4544", img: "./assets/vest-hole-none.jpg" },
       { name: "Left Lapel", displayName: "Left Lapel", factoryCode: "4541", img: "./assets/vest-hole-left.jpg" },
       { name: "Left Lapel, Two", displayName: "Two on Left Lapel", factoryCode: "4545", img: "./assets/vest-hole-left-two.jpg" },
       { name: "Both Lapels", displayName: "Both Lapels", factoryCode: "4543", img: "./assets/vest-hole-both.jpg" },
+      { name: "No Lapel Buttonhole", displayName: "None", factoryCode: "4544", img: "./assets/vest-hole-none.jpg" },
     ],
   },
   chestpocket: {
@@ -3597,7 +3597,6 @@ const VEST_CATALOG = {
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { section: "None", name: "No Chest Pocket", displayName: "None", factoryCode: "4X06", img: "./assets/vest-chest-none.jpg" },
       { section: "Left Side", name: "Left Welt", displayName: "Welt", factoryCode: "4111", img: "./assets/vest-chest-left-welt.jpg" },
       { section: "Left Side", name: "Left Besom", displayName: "Slit", factoryCode: "4112", img: "./assets/vest-chest-left-besom.jpg" },
       { section: "Left Side", name: "Left Besom with Flap", displayName: "Flap", factoryCode: "4113", img: "./assets/vest-chest-left-flap.jpg" },
@@ -3606,6 +3605,7 @@ const VEST_CATALOG = {
       { section: "Both Sides", name: "Both Besom", displayName: "Slit", factoryCode: "4143", img: "./assets/vest-chest-both-besom.jpg" },
       { section: "Both Sides", name: "Both Besom with Flap", displayName: "Flap", factoryCode: "4144", img: "./assets/vest-chest-both-flap.jpg" },
       { section: "Both Sides", name: "Both Patch", displayName: "Patch", factoryCode: "4185", img: "./assets/vest-chest-both-patch.jpg" },
+      { section: "None", name: "No Chest Pocket", displayName: "None", factoryCode: "4X06", img: "./assets/vest-chest-none.jpg" },
     ],
   },
   lowerpocket: {
@@ -3686,8 +3686,8 @@ const VEST_CATALOG = {
     column: "vest_pick_stitch",
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { name: "No Stitching", displayName: "No Stitching", noFactoryCode: true, img: "./assets/vest-stitch-none.jpg" },
       { name: "Pick Stitch", displayName: "0.6 cm Pick Stitch", factoryCode: "4576", img: "./assets/vest-stitch-pick.jpg" },
+      { name: "No Stitching", displayName: "No Stitching", noFactoryCode: true, img: "./assets/vest-stitch-none.jpg" },
     ],
   },
 };
