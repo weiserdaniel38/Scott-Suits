@@ -3627,3 +3627,33 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
 @media(min-width:901px) and (max-height:760px){
   #designPreview.is-drawing .suit-preview-loading{width:170px;height:170px;margin-bottom:10px;}
 }
+
+/* === FIX JUST THESE (Daniel, 2026-11-18): only the flagged measurements,
+   corrected in place before paying / sending to the factory. === */
+.meas-fix-card{max-width:460px;}
+.meas-fix-lead{font-size:14px;color:var(--ivory-dim);}
+.meas-fix-probs li.is-hard{color:#a8402f;}
+.meas-fix-probs li.is-ok{list-style:none;margin-left:-18px;color:#3f7a4a;font-weight:600;}
+.meas-fix-list{display:flex;flex-direction:column;gap:8px;}
+.meas-fix-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 10px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid #b8860b;border-radius:12px;}
+.meas-fix-row.is-hard{border-left-color:#a8402f;}
+.meas-fix-row.is-ok{border-left-color:#3f7a4a;}
+.meas-fix-label{font-size:14px;font-weight:600;}
+.meas-fix-field{display:flex;align-items:center;gap:6px;color:var(--ivory-dim);font-size:14px;white-space:nowrap;}
+.meas-fix-input{width:72px;padding:8px;border:1.5px solid rgba(var(--brass-rgb),0.55);border-radius:10px;background:var(--surface);color:var(--ivory);font:600 16px 'Inter',sans-serif;text-align:center;}
+.meas-fix-input:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 3px rgba(var(--brass-rgb),0.18);}
+.meas-fix-warn{flex-basis:100%;margin:0;font-size:12.5px;line-height:1.35;color:#8a5a00;}
+.meas-fix-warn.is-hard{color:#a8402f;}
+.meas-fix-row .measure-half-note{flex-basis:100%;margin:0;font-size:12.5px;}
+.meas-fix-msg{margin:0;font-size:13px;font-weight:600;color:#a8402f;}
+.meas-fix-actions{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.meas-fix-save,.meas-fix-accept{width:100%;min-height:44px;padding:11px 18px;border-radius:999px;font-family:inherit;font-size:12.5px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;}
+.meas-fix-save{background:var(--brass);border:1px solid var(--brass);color:#FDF8F4;}
+.meas-fix-save:disabled{opacity:0.6;cursor:wait;}
+.meas-fix-accept{background:transparent;border:1px solid var(--brass);color:var(--ivory);}
+.meas-fix-cancel{align-self:center;padding:6px 10px;border:none;background:none;color:var(--ivory-dim);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;}
+.mcheck-fix{display:inline-block;margin:8px 10px 0 0;padding:7px 16px;border:1px solid var(--brass);border-radius:999px;background:var(--brass);color:#FDF8F4;font:inherit;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;}
+.mc-fixbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:10px 12px;border-left:3px solid #b8860b;background:rgba(var(--brass-rgb),0.06);font-size:13.5px;}
+.mc-fix-btn{padding:7px 16px;border:1px solid var(--brass);border-radius:999px;background:transparent;color:var(--ivory);font:inherit;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;}
+.tc-list.only-flagged .tailor-checklist-item:not(.mc-flagged),.tc-list.only-flagged .tailor-checklist-part{display:none;}
+html[data-brand="sw"] :is(.meas-fix-save,.mcheck-fix){color:#1A1416;}

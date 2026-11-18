@@ -482,7 +482,8 @@ function measureHardOk(m, val, get) {
 // way the Avi/David/Nathan reviews were done by hand: missing fields, out of
 // range, inches typed as cm, half-way-around numbers, proportions between
 // fields (and against height), and the same number in many fields.
-// Returns { status: "pass" | "warn" | "block", items: [{ level, labels, text }] }.
+// Returns { status: "pass" | "warn" | "block", items: [{ level, labels, text, ids }] }
+// (ids = the fields to look at for that item, for "Fix just these").
 // Admin uses it before Save draft / Submit to factory; customers see the
 // "warn" items once before paying.
 // ---------------------------------------------------------------------------
@@ -526,21 +527,24 @@ function checkSuitMeasurements(values, suitType, mode) {
     (m) => !m.factoryOptional && (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, type)
   );
   const items = [];
-  const add = (level, label, text) => {
+  const add = (level, label, text, ids) => {
     const same = items.find((x) => x.level === level && x.text === text);
     if (same) {
       if (label && same.labels.indexOf(label) < 0) same.labels.push(label);
+      (ids || []).forEach((id) => { if (same.ids.indexOf(id) < 0) same.ids.push(id); });
       return;
     }
-    items.push({ level, labels: label ? [label] : [], text });
+    items.push({ level, labels: label ? [label] : [], text, ids: (ids || []).slice() });
   };
   const bad = {};
   const warned = {};
   const missing = [];
+  const missingIds = [];
   fields.forEach((m) => {
     const val = get(m.id);
     if (val === null) {
       missing.push(m.label);
+      missingIds.push(m.id);
       bad[m.id] = true;
       return;
     }
@@ -559,17 +563,19 @@ function checkSuitMeasurements(values, suitType, mode) {
       else if (inch) text += " " + val + " looks like inches (" + r1(inch) + " cm).";
     }
     const ownField = /^Must be|^Looks unusual/.test(issue.text);
+    let ids = [m.id];
     if (!ownField) {
       // Cross-field: name both numbers.
       const rule = MEASURE_CROSS_RULES.find((r) => issue.text.indexOf(r.text) === 0);
+      if (rule) ids = rule.ids.slice();
       if (rule) text = text.replace(rule.text, rule.text + " (" + rule.ids.map((id) => {
         const om = MEASUREMENTS.find((x) => x.id === id);
         return (om ? om.label : id) + " " + (id === "height" ? heightText(get(id)) : get(id));
       }).join(", ") + ")");
     }
-    add(issue.hard ? "block" : "warn", ownField ? m.label + " " + (m.id === "height" ? heightText(val) : val) : "", text);
+    add(issue.hard ? "block" : "warn", ownField ? m.label + " " + (m.id === "height" ? heightText(val) : val) : "", text, ids);
   });
-  if (missing.length) items.unshift({ level: "block", labels: [], text: "Missing: " + missing.join(", ") + "." });
+  if (missing.length) items.unshift({ level: "block", labels: [], text: "Missing: " + missing.join(", ") + ".", ids: missingIds });
   // Body measurements entered as fitted suit sizes, or the other way round
   // (Blake's suits, 2026-11). Amber: must be confirmed before the factory.
   const mix = measureTypeMixup(get, mode);
@@ -579,6 +585,8 @@ function checkSuitMeasurements(values, suitType, mode) {
       labels: [],
       text: (mix.suspect === "body" ? "Look like BODY measurements, but entered as fitted suit sizes" : "Look like FITTED suit sizes, but entered as body measurements") +
         (mix.reasons.length ? ": " + mix.reasons.join("; ") : "") + ". Confirm which they are.",
+      ids: [],
+      mixup: mix.suspect,
     });
   }
   // Proportions, only between fields that are each fine on their own.
@@ -592,17 +600,18 @@ function checkSuitMeasurements(values, suitType, mode) {
       if (v[id] === null) return;
     }
     const msg = r.test(v);
-    if (msg) add("warn", "", msg + ". Please double-check.");
+    if (msg) add("warn", "", msg + ". Please double-check.", r.ids);
   });
   // The same number in three or more fields: usually a copy-paste slip.
   const byVal = {};
   fields.forEach((m) => {
     if (m.part === "body" || bad[m.id]) return;
     const val = get(m.id);
-    (byVal[val] = byVal[val] || []).push(m.label);
+    (byVal[val] = byVal[val] || []).push(m);
   });
   Object.keys(byVal).forEach((val) => {
-    if (byVal[val].length >= 3) add("warn", "", "Same number (" + val + ") in " + byVal[val].join(", ") + ". Please double-check.");
+    const ms = byVal[val];
+    if (ms.length >= 3) add("warn", "", "Same number (" + val + ") in " + ms.map((m) => m.label).join(", ") + ". Please double-check.", ms.map((m) => m.id));
   });
   const status = items.some((x) => x.level === "block") ? "block" : items.length ? "warn" : "pass";
   return { status, items };
@@ -872,6 +881,206 @@ function askMeasureType(r, mode, onPick) {
   document.body.appendChild(box);
   const first = card.querySelector("button");
   if (first) setTimeout(() => { try { first.focus({ preventScroll: true }); } catch (e) {} }, 50);
+}
+
+// ---------------------------------------------------------------------------
+// FIX JUST THESE (Daniel, 2026-11-18: "when correcting measurements before
+// submitting have an option to fix just those mistakes"). When the
+// whole-suit check flags numbers, this sheet shows only the flagged fields,
+// so they're changed in place instead of going back through every
+// measurement. The list of problems updates as they type.
+// opts: { values, type, mode, title, lead, saveLabel, acceptLabel (null =
+// no "They're right" button), cancelLabel, onSave(changed, merged) ->
+// Promise<string|null> (an error message, or null when saved), onAccept(),
+// onCancel() }. Returns the sheet element.
+// ---------------------------------------------------------------------------
+function measureFixFieldIds(r) {
+  const ids = [];
+  r.items.forEach((x) => (x.ids || []).forEach((id) => {
+    if (ids.indexOf(id) < 0 && MEASUREMENTS.some((m) => m.id === id)) ids.push(id);
+  }));
+  return MEASUREMENTS.filter((m) => ids.indexOf(m.id) >= 0).map((m) => m.id);
+}
+function openMeasureFixSheet(opts) {
+  const old = document.getElementById("measFixSheet");
+  if (old) old.remove();
+  const base = Object.assign({}, opts.values || {});
+  const mode = opts.mode === "body" ? "body" : "finished";
+  let shown = measureFixFieldIds(checkSuitMeasurements(base, opts.type, mode));
+  const box = document.createElement("div");
+  box.id = "measFixSheet";
+  box.className = "meas-type-ask meas-fix";
+  box.setAttribute("role", "dialog");
+  box.setAttribute("aria-modal", "true");
+  box.setAttribute("aria-labelledby", "measFixQ");
+  const card = document.createElement("div");
+  card.className = "meas-type-card meas-fix-card";
+  const h = document.createElement("h3");
+  h.id = "measFixQ";
+  h.textContent = opts.title || "Fix just these";
+  const lead = document.createElement("p");
+  lead.className = "meas-type-lead meas-fix-lead";
+  lead.textContent = opts.lead || "Only the numbers that look off are here. The rest stay as they are.";
+  const probs = document.createElement("ul");
+  probs.className = "meas-type-why meas-fix-probs";
+  const list = document.createElement("div");
+  list.className = "meas-fix-list";
+  const msg = document.createElement("p");
+  msg.className = "meas-fix-msg";
+  msg.hidden = true;
+  const actions = document.createElement("div");
+  actions.className = "meas-fix-actions";
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "meas-fix-save";
+  saveBtn.textContent = opts.saveLabel || "Save";
+  const acceptBtn = document.createElement("button");
+  acceptBtn.type = "button";
+  acceptBtn.className = "meas-fix-accept";
+  acceptBtn.textContent = opts.acceptLabel || "They’re right";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "meas-fix-cancel";
+  cancelBtn.textContent = opts.cancelLabel || "Cancel";
+  actions.append(saveBtn);
+  if (opts.acceptLabel !== null) actions.append(acceptBtn);
+  actions.append(cancelBtn);
+  card.append(h, lead, probs, list, msg, actions);
+  box.appendChild(card);
+
+  const inputs = {};
+  const merged = () => {
+    const v = Object.assign({}, base);
+    Object.keys(inputs).forEach((id) => {
+      const n = parseFloat(inputs[id].value);
+      if (inputs[id].value.trim() === "" || isNaN(n) || n <= 0) delete v[id];
+      else v[id] = n;
+    });
+    return v;
+  };
+  const getNow = () => measureValuesGetter(merged());
+  const addField = (id) => {
+    const m = MEASUREMENTS.find((x) => x.id === id);
+    if (!m || inputs[id]) return;
+    const row = document.createElement("div");
+    row.className = "meas-fix-row";
+    const lab = document.createElement("label");
+    lab.className = "meas-fix-label";
+    lab.htmlFor = "mfix_" + id;
+    lab.textContent = measurePartLabel(m);
+    const field = document.createElement("span");
+    field.className = "meas-fix-field";
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.inputMode = "decimal";
+    inp.id = "mfix_" + id;
+    inp.className = "meas-fix-input";
+    inp.autocomplete = "off";
+    inp.value = base[id] !== undefined && base[id] !== null && base[id] !== "" ? String(base[id]) : "";
+    field.append(inp, document.createTextNode(" " + (m.unit || "cm")));
+    const warn = document.createElement("p");
+    warn.className = "meas-fix-warn";
+    warn.hidden = true;
+    row.append(lab, field, warn);
+    list.appendChild(row);
+    inputs[id] = inp;
+    inp.fixCheck = (stillFlagged) => {
+      const raw = inp.value.trim();
+      const v = parseFloat(raw);
+      const issue = raw === "" || isNaN(v) ? { hard: true, text: "Please enter a number." } : measureIssue(m, v, getNow());
+      warn.hidden = !issue;
+      if (issue) warn.textContent = issue.text;
+      warn.classList.toggle("is-hard", !!issue && issue.hard);
+      row.classList.toggle("is-hard", !!issue && issue.hard);
+      row.classList.toggle("is-ok", !issue && !stillFlagged);
+      return !issue || !issue.hard;
+    };
+    inp.addEventListener("input", () => {
+      const v = inp.value.replace(",", ".").replace(/[^0-9.]/g, "");
+      if (v !== inp.value) inp.value = v;
+      refresh();
+    });
+    inp.addEventListener("blur", () => {
+      if (MEASURE_AROUND_IDS.indexOf(id) >= 0) measureAutoDouble(inp, m, getNow(), row, refresh);
+    });
+  };
+  function refresh() {
+    const r = checkSuitMeasurements(merged(), opts.type, mode);
+    // A new problem in a field that isn't here yet gets its box too.
+    measureFixFieldIds(r).forEach((id) => { if (shown.indexOf(id) < 0) { shown.push(id); addField(id); } });
+    probs.innerHTML = "";
+    r.items.forEach((x) => {
+      const li = document.createElement("li");
+      li.className = x.level === "block" ? "is-hard" : "";
+      li.textContent = measureCheckItemText(x);
+      probs.appendChild(li);
+    });
+    if (!r.items.length) {
+      const li = document.createElement("li");
+      li.className = "is-ok";
+      li.textContent = "✓ Looks right now.";
+      probs.appendChild(li);
+    }
+    let allOk = true;
+    const still = measureFixFieldIds(r);
+    Object.keys(inputs).forEach((id) => { if (!inputs[id].fixCheck(still.indexOf(id) >= 0)) allOk = false; });
+    acceptBtn.hidden = r.status === "block";
+    msg.hidden = true;
+    return { r, allOk };
+  }
+  shown.forEach(addField);
+  if (!shown.length) {
+    list.hidden = true;
+    lead.textContent = opts.leadNoFields || "Nothing to type here. Check these with the customer.";
+  }
+  const close = () => box.remove();
+  const changedValues = () => {
+    const now = merged();
+    const changed = {};
+    Object.keys(inputs).forEach((id) => {
+      if (now[id] !== undefined && String(now[id]) !== String(base[id])) changed[id] = now[id];
+    });
+    return changed;
+  };
+  saveBtn.addEventListener("click", async () => {
+    const { allOk } = refresh();
+    if (!allOk) {
+      msg.textContent = "Fix the numbers in red first.";
+      msg.hidden = false;
+      return;
+    }
+    const changed = changedValues();
+    saveBtn.disabled = true;
+    const label = saveBtn.textContent;
+    saveBtn.textContent = "Saving...";
+    let err = null;
+    try {
+      err = await opts.onSave(changed, merged());
+    } catch (e) {
+      err = e.message || String(e);
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = label;
+    if (err) {
+      msg.textContent = err;
+      msg.hidden = false;
+      return;
+    }
+    close();
+  });
+  acceptBtn.addEventListener("click", () => {
+    close();
+    if (opts.onAccept) opts.onAccept();
+  });
+  cancelBtn.addEventListener("click", () => {
+    close();
+    if (opts.onCancel) opts.onCancel();
+  });
+  document.body.appendChild(box);
+  refresh();
+  const first = list.querySelector(".is-hard input") || list.querySelector("input");
+  if (first) setTimeout(() => { try { first.focus({ preventScroll: true }); } catch (e) {} }, 50);
+  return box;
 }
 
 function measureTypText(m) {
@@ -3015,10 +3224,43 @@ function mcRenderGrid(values, mode) {
     '<p class="tc-note">' + (mcMode === "body"
       ? "Measured around the body. <b>The factory adds room for the fit.</b> <b>All in centimeters.</b>"
       : "How the suit should fit. <b>Finished suit sizes, not tight body measurements.</b> <b>All in centimeters.</b> The factory adds nothing.") + "</p>";
+  // "Fix just these" (Daniel, 2026-11-18): hides every box without a red or
+  // amber note, so only the flagged numbers are left to correct. The set
+  // stays put while typing; tapping again shows them all.
+  const fixBar = document.createElement("div");
+  fixBar.className = "mc-fixbar";
+  fixBar.hidden = true;
+  const fixCount = document.createElement("span");
+  const fixBtn = document.createElement("button");
+  fixBtn.type = "button";
+  fixBtn.className = "mc-fix-btn";
+  fixBar.append(fixCount, fixBtn);
   const list = document.createElement("ol");
   list.className = "tailor-checklist-list tc-list";
-  sheet.appendChild(list);
+  sheet.append(fixBar, list);
   grid.appendChild(sheet);
+  const flaggedItems = () => Array.from(list.querySelectorAll(".tailor-checklist-item")).filter((li) => {
+    const w = li.querySelector(".tc-warn");
+    return w && !w.hidden;
+  });
+  const fixSync = () => {
+    const on = list.classList.contains("only-flagged");
+    const n = flaggedItems().length;
+    fixBar.hidden = !on && !n;
+    fixCount.textContent = on ? "Showing the flagged numbers only." : n + (n === 1 ? " number looks off." : " numbers look off.");
+    fixBtn.textContent = on ? "Show all" : "Fix just these";
+  };
+  fixBtn.addEventListener("click", () => {
+    const on = !list.classList.contains("only-flagged");
+    list.querySelectorAll(".tailor-checklist-item").forEach((li) => li.classList.remove("mc-flagged"));
+    if (on) flaggedItems().forEach((li) => li.classList.add("mc-flagged"));
+    list.classList.toggle("only-flagged", on);
+    fixSync();
+    const first = on && list.querySelector(".mc-flagged .tc-input");
+    if (first) first.focus({ preventScroll: true });
+    fixBar.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  list.addEventListener("focusout", () => setTimeout(fixSync, 0));
   const extraTips = {
     back_jacket: "Back of the collar seam down to the hem",
     crotch: "FULL crotch of the suit pants, snug, NOT baggy: front waistband, between the legs, to the back waistband",
@@ -3074,6 +3316,7 @@ function mcRenderGrid(values, mode) {
       warn.hidden = !issue;
       if (issue) warn.textContent = issue.text;
       warn.classList.toggle("tc-warn-hard", !!issue && issue.hard);
+      fixSync();
     };
     box.measureCheck = check;
     box.addEventListener("input", () => {
@@ -4579,6 +4822,7 @@ function adminFactorySuitState(suit, noDue) {
 // remembered on this device until the numbers change. Returns { ok() }.
 function adminMeasureCheck(el, suit, orderId, onChange) {
   let state = "loading";
+  let orderRows = [];
   let confirmed = false;
   const key = "scott_mcheck_" + suit.id;
   const submitted = () => !!suit.factory_order_no && FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") === -1;
@@ -4611,8 +4855,9 @@ function adminMeasureCheck(el, suit, orderId, onChange) {
     el.className = "mcheck is-" + r.status;
     el.innerHTML =
       '<p class="mcheck-head"></p>' +
-      (blocks.length ? '<p class="mcheck-sub">Fix before sending (Edit suit):</p>' + list(blocks) : "") +
+      (blocks.length ? '<p class="mcheck-sub">Fix before sending:</p>' + list(blocks) : "") +
       (warns.length ? '<p class="mcheck-sub">Double-check with the customer:</p>' + list(warns) : "") +
+      (r.status !== "pass" && measureFixFieldIds(r).length ? '<button type="button" class="mcheck-fix">Fix just these</button>' : "") +
       (r.status === "warn" ? '<label class="mcheck-ok"><input type="checkbox"> I confirmed these with the customer</label>' : "") +
       '<button type="button" class="mcheck-again">Check again</button>';
     el.querySelector(".mcheck-head").textContent =
@@ -4630,8 +4875,42 @@ function adminMeasureCheck(el, suit, orderId, onChange) {
         onChange();
       });
     }
+    const fixBtn = el.querySelector(".mcheck-fix");
+    if (fixBtn) fixBtn.addEventListener("click", () => adminFixMeasurements(row));
     el.querySelector(".mcheck-again").addEventListener("click", load);
     onChange();
+  };
+  // Only the flagged numbers, saved straight onto this suit's order row
+  // (admin_update_order changes just the columns sent; every suit of the
+  // order is listed so none is dropped). The spec text gets the new lines.
+  const adminFixMeasurements = (row) => {
+    openMeasureFixSheet({
+      values: row,
+      type: row.suit_type,
+      mode: row.measure_type,
+      title: "Fix just these \u00b7 " + (row.customer_name || "Suit " + (row.suit_number || 1)),
+      lead: "Only the flagged numbers. Saved to this suit\u2019s order; the rest stay as they are.",
+      saveLabel: "Save to order",
+      acceptLabel: null,
+      onSave: async (changed) => {
+        if (!Object.keys(changed).length) return null;
+        const patch = Object.assign({ id: row.id }, changed);
+        let text = row.client_form_text || "";
+        Object.keys(changed).forEach((id) => {
+          const m = MEASUREMENTS.find((x) => x.id === id);
+          if (m) text = measureSummaryTextPatch(text, m, changed[id]);
+        });
+        if (text !== (row.client_form_text || "")) patch.client_form_text = text;
+        const suits = (orderRows.length ? orderRows : [row]).map((x) => (x.id === row.id ? patch : { id: x.id }));
+        const { error } = await getSupabase().rpc("admin_update_order", { p_order_id: orderId, p_suits: suits });
+        if (error) return "Couldn\u2019t save: " + error.message;
+        load();
+        if (suit.factory_order_no && FACTORY_DRAFT_STATUSES.indexOf(suit.factory_status || "Draft") !== -1) {
+          setTimeout(() => alert("Saved. Tap Update draft at factory to send the new numbers."), 50);
+        }
+        return null;
+      },
+    });
   };
   async function load() {
     state = "loading";
@@ -4641,7 +4920,10 @@ function adminMeasureCheck(el, suit, orderId, onChange) {
     let row = null;
     try {
       const { data, error } = await getSupabase().rpc("admin_order_rows", { p_order_id: orderId });
-      if (!error && data) row = data.find((x) => x.id === suit.id) || null;
+      if (!error && data) {
+        orderRows = data;
+        row = data.find((x) => x.id === suit.id) || null;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -8981,6 +9263,28 @@ function orderSummaryGarmentLines(catalog, groups, sel, part, extras) {
   });
   return lines;
 }
+// One measurement's line in the order's spec text.
+function measureSummaryLabel(m) {
+  return MEASUREMENT_FORM_LABELS[m.id] || (m.label + (m.mode === "body" ? " (body):" : "-"));
+}
+function measureSummaryLine(m, val) {
+  let shown = val === undefined ? "" : val + " " + (m.unit || "cm");
+  if (m.id === "height" && val !== undefined) shown = Math.floor(val / 12) + " ft " + Math.round((val % 12) * 10) / 10 + " in (" + val + " in)";
+  return measureSummaryLabel(m) + " " + shown;
+}
+// Swaps one measurement's line in a saved spec text (the first match after
+// the MEASUREMENTS heading); text without that line is left as it is.
+function measureSummaryTextPatch(text, m, val) {
+  const at = text.indexOf("MEASUREMENTS");
+  if (at < 0) return text;
+  const head = text.slice(0, at);
+  const lines = text.slice(at).split("\n");
+  const prefix = measureSummaryLabel(m) + " ";
+  const i = lines.findIndex((l) => l.indexOf(prefix) === 0);
+  if (i < 0) return text;
+  lines[i] = measureSummaryLine(m, val);
+  return head + lines.join("\n");
+}
 function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, measurements, extras) {
   const isJacketOnly = isJacketOnlyType(suitType);
   const isPantsOnly = isPantsOnlyType(suitType);
@@ -9013,13 +9317,7 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
     (m) => (m.part === "body" || (m.mode || "finished") === mode) && measurementForType(m, suitType)
   );
   if (mode === "body") lines.push("Body measurements");
-  measurementList.forEach((m) => {
-    const label = MEASUREMENT_FORM_LABELS[m.id] || (m.label + (m.mode === "body" ? " (body):" : "-"));
-    const val = measurements[m.id];
-    let shown = val === undefined ? "" : val + " " + (m.unit || "cm");
-    if (m.id === "height" && val !== undefined) shown = Math.floor(val / 12) + " ft " + Math.round((val % 12) * 10) / 10 + " in (" + val + " in)";
-    lines.push(label + " " + shown);
-  });
+  measurementList.forEach((m) => lines.push(measureSummaryLine(m, measurements[m.id])));
   if (mode === "body" && extras && extras.bodyScan) bodyScanSummaryLines(extras.bodyScan, measurements).forEach((l) => lines.push(l));
   if (extras && extras.measuredBy) lines.push("", "Measured by: " + extras.measuredBy);
 
@@ -12494,35 +12792,77 @@ customerPhoneInput.addEventListener("input", () => {
 // Doesn't touch measurements -- those are validated per-suit and captured
 // into the cart already (see commitCurrentSuitToCart), not collected fresh
 // here. This only checks that there's actually at least one suit to submit.
-// Lists each suit's "double-check" measurement items in one confirm before
-// paying (Daniel, 2026-11-12). Shown once per set of numbers in a visit.
-function measureCheckBeforePay() {
-  const parts = [];
+// Before paying, each suit's flagged measurements open in the "Fix just
+// these" sheet (Daniel, 2026-11-12 check; 2026-11-18 fix in place): only
+// the flagged numbers, changed right there. Save or "They're right" moves to
+// the next flagged suit, then the pay button runs again (retry). Shown once
+// per set of numbers in a visit. Returns true to go ahead now.
+function measureCheckBeforePay(retry) {
   let sig = "";
+  const flagged = [];
   cartItems.forEach((item, i) => {
     const m = item.measurements;
     if (!m || m.measure_type === MEASUREMENTS_PENDING) return;
-    const r = checkSuitMeasurements(m, item.type, m.measure_type);
     sig += i + ":" + measureCheckSignature(m) + ";";
-    if (r.status === "pass") return;
-    const lines = r.items.map((x) => "\u2022 " + measureCheckItemText(x));
-    parts.push((cartItems.length > 1 ? "Suit " + (i + 1) + ":\n" : "") + lines.join("\n"));
+    const r = checkSuitMeasurements(m, item.type, m.measure_type);
+    if (r.status !== "pass") flagged.push(i);
   });
-  if (!parts.length) return true;
+  if (!flagged.length) return true;
   try {
     if (sessionStorage.getItem("scott_mcheck_pay") === sig) return true;
   } catch (e) { /* ask again */ }
-  const ok = window.confirm(
-    "Please double-check these measurements before you " + (typeof PRICES_HIDDEN !== "undefined" && PRICES_HIDDEN ? "send your order" : "pay") + ":\n\n" + parts.join("\n\n") +
-    "\n\nTap OK if they\u2019re right, or Cancel to go back and fix them."
-  );
-  if (ok) {
-    try { sessionStorage.setItem("scott_mcheck_pay", sig); } catch (e) { /* ask again next time */ }
-  }
-  return ok;
+  const sendWord = typeof PRICES_HIDDEN !== "undefined" && PRICES_HIDDEN ? "send" : "pay";
+  const done = () => {
+    // The numbers as they are now count as checked for this visit.
+    let now = "";
+    cartItems.forEach((item, i) => {
+      const m = item.measurements;
+      if (m && m.measure_type !== MEASUREMENTS_PENDING) now += i + ":" + measureCheckSignature(m) + ";";
+    });
+    try { sessionStorage.setItem("scott_mcheck_pay", now); } catch (e) { /* ask again next time */ }
+    if (retry) retry();
+  };
+  const step = (k) => {
+    if (k >= flagged.length) return done();
+    const i = flagged[k];
+    const item = cartItems[i];
+    if (!item || !item.measurements) return step(k + 1);
+    const m = item.measurements;
+    openMeasureFixSheet({
+      values: m,
+      type: item.type,
+      mode: m.measure_type,
+      title: "Check your measurements" + (cartItems.length > 1 ? " · Suit " + (i + 1) : ""),
+      lead: "Only the numbers that look off are here. Fix them below, or keep them if they’re right.",
+      leadNoFields: "Please check these before you " + sendWord + ".",
+      saveLabel: k + 1 < flagged.length ? "Save and next suit" : "Save and " + sendWord,
+      acceptLabel: "They’re right, " + (k + 1 < flagged.length ? "next suit" : sendWord),
+      cancelLabel: "Not now",
+      onSave: async (changed) => {
+        if (Object.keys(changed).length) {
+          Object.assign(item.measurements, changed);
+          item.savedAt = Date.now();
+          saveDraft();
+          if (typeof scheduleCloudCartSync === "function") scheduleCloudCartSync();
+          if (typeof updateOrderSummaryUI === "function") updateOrderSummaryUI();
+          // Signed in: the account's saved measurements get the fix too, so
+          // the next suit doesn't pull the old number.
+          const prof = currentProfile && currentProfile.measurements;
+          if (currentUser && !adminEditState && !orderMeasureTarget && prof && (prof.measure_type || "finished") === (m.measure_type || "finished")) {
+            saveProfileMeasurements(changed);
+          }
+        }
+        setTimeout(() => step(k + 1), 0);
+        return null;
+      },
+      onAccept: () => step(k + 1),
+    });
+  };
+  step(0);
+  return false;
 }
 
-function collectAndValidateOrderInput() {
+function collectAndValidateOrderInput(retry) {
   if (!cartItems.length) {
     alert("Your cart is empty -- please go back and finish designing at least one suit before submitting.");
     return null;
@@ -12547,7 +12887,7 @@ function collectAndValidateOrderInput() {
   }
   // Whole-suit measurement check (soft for customers): anything that looks
   // off is listed once before paying; OK goes on, Cancel stops to fix it.
-  if (!adminEditState && !measureCheckBeforePay()) return null;
+  if (!adminEditState && !measureCheckBeforePay(retry)) return null;
 
   const customerName = customerNameInput.value.trim();
   const customerPhone = customerPhoneInput.value.trim();
@@ -13732,7 +14072,7 @@ function handlePayPalReturn() {
 
 submitBtn.addEventListener("click", async () => {
   if (adminEditState) return saveAdminOrderEdit();
-  const input = collectAndValidateOrderInput();
+  const input = collectAndValidateOrderInput(() => submitBtn.click());
   if (!input) return;
 
   if (!PAYPAL_ENABLED || STRIPE_ENABLED) {
@@ -13753,7 +14093,7 @@ const adminNoPayBtn = document.getElementById("adminNoPayBtn");
 if (adminNoPayBtn) {
   adminNoPayBtn.addEventListener("click", async () => {
     if (!currentIsAdmin || adminEditState) return;
-    const input = collectAndValidateOrderInput();
+    const input = collectAndValidateOrderInput(() => adminNoPayBtn.click());
     if (!input) return;
     adminNoPayBtn.disabled = true;
     try {
@@ -16128,7 +16468,7 @@ if (qaSkipPaymentBtn) {
     qaSkipPaymentBtn.title = "No payment is configured (PAYPAL_BUSINESS_EMAIL is blank in config.js) -- this does exactly what the real Submit Order button already does.";
   }
   qaSkipPaymentBtn.addEventListener("click", async () => {
-    const input = collectAndValidateOrderInput();
+    const input = collectAndValidateOrderInput(() => qaSkipPaymentBtn.click());
     if (!input) return;
     await finalizeOrder(input, { skipPayment: true });
   });
