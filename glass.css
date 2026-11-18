@@ -306,3 +306,63 @@ html[data-brand="scott"] .hero-rule{position:relative;height:1px;width:120px;bac
 html[data-brand="scott"] .hero-rule::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 0C10.6 6.5 13.5 9.4 20 10C13.5 10.6 10.6 13.5 10 20C9.4 13.5 6.5 10.6 0 10C6.5 9.4 9.4 6.5 10 0Z' fill='%23A87A45'/%3E%3C/svg%3E") center/contain no-repeat;}
 /* Small labels above titles in burgundy */
 html[data-brand="scott"] :is(.hero-eyebrow,.suit-type-eyebrow,.hiw-eyebrow){color:var(--brass);}
+
+/* === STITCH PILL BUTTONS (2026-11-18) ===
+   Daniel picked these from the test page: solid burgundy pills; on hover a
+   faded dusty-rose fill rises from the bottom, a fine dashed "stitch" line
+   appears just inside the edge and the arrow eases forward. Quiet buttons are
+   burgundy-outline pills whose fill rises burgundy. The landing page buttons
+   stay outlined (Daniel: "landing page should not be filled") but get the same
+   hover. :not(#ss#ss) only lifts specificity over older id-scoped rules. */
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss){
+  position:relative;isolation:isolate;overflow:hidden;border-radius:999px;
+  transition:color .55s cubic-bezier(.22,.61,.36,1),border-color .55s cubic-bezier(.22,.61,.36,1),box-shadow .55s cubic-bezier(.22,.61,.36,1);
+  -webkit-tap-highlight-color:transparent;}
+/* the fill that rises from the hem */
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss)::before{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:#8E6169;
+  transform:scaleY(0);transform-origin:bottom;transition:transform .55s cubic-bezier(.22,.61,.36,1);pointer-events:none;}
+/* the stitch line just inside the edge */
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss)::after{
+  content:"";position:absolute;inset:4px;border-radius:999px;border:1px dashed rgba(255,255,255,0.6);
+  opacity:0;transition:opacity .55s cubic-bezier(.22,.61,.36,1) .08s;pointer-events:none;}
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss) > span[aria-hidden="true"]{display:inline-block;transition:transform .55s cubic-bezier(.22,.61,.36,1);}
+
+/* main buttons: solid burgundy, flat */
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn):not(#ss#ss){background:#74444D;color:#FFF9F4;border:1px solid #74444D;box-shadow:none;}
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn):not(#ss#ss):hover{background:#74444D;color:#FFF9F4;border-color:#8E6169;}
+/* quiet buttons: burgundy outline, burgundy fill on hover */
+html[data-brand="scott"] :is(.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss){color:#74444D;border:1px solid #74444D;box-shadow:none;}
+html[data-brand="scott"] :is(.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss)::before{background:#74444D;}
+html[data-brand="scott"] :is(.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):hover{color:#FFF9F4;border-color:#74444D;background:rgba(253,248,244,0.5);}
+html[data-brand="scott"] :is(.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss) svg{transition:color .55s cubic-bezier(.22,.61,.36,1);}
+
+/* landing page: keep the outlined look, same hover */
+html[data-brand="scott"] body.home-page:not(.designing) .hero-cta .btn-primary:not(#ss#ss){background:rgba(253,248,244,0.35);color:#1F1B18;border:1px solid #74444D;}
+html[data-brand="scott"] body.home-page:not(.designing) .hero-cta .btn-primary:not(#ss#ss)::before{background:#74444D;}
+html[data-brand="scott"] body.home-page:not(.designing) .hero-cta .btn-primary:not(#ss#ss):hover{color:#FFF9F4;border-color:#74444D;background:rgba(253,248,244,0.35);}
+
+/* hover / press (hover only on devices that really hover, so phones don't stick) */
+@media (hover:hover){
+  html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):not(:disabled):hover::before{transform:scaleY(1);}
+  html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):not(:disabled):hover::after{opacity:1;}
+  html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):not(:disabled):hover > span[aria-hidden="true"]{transform:translateX(4px);}
+}
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):not(:disabled):active::before{transform:scaleY(1);transition-duration:.18s;}
+html[data-brand="scott"] :is(.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):not(:disabled):active,
+html[data-brand="scott"] body.home-page:not(.designing) .hero-cta .btn-primary:not(#ss#ss):not(:disabled):active{color:#FFF9F4;}
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss):focus-visible{outline:1px solid #74444D;outline-offset:3px;}
+html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn):not(#ss#ss):disabled{background:#74444D;opacity:.45;}
+@media (prefers-reduced-motion:reduce){
+  html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss),
+  html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss)::before,
+  html[data-brand="scott"] :is(.btn-primary,.lightbox-confirm-btn,.btn-ghost,.wiz-back,.nav-cta,.nav-startover-btn,.admin-order-btn):not(#ss#ss)::after{transition-duration:.01s;}
+}
+
+/* My Account section arrows: thin burgundy circle, fills burgundy with a white arrow on hover or when open */
+html[data-brand="scott"] .account-collapse-chevron:not(#ss#ss){position:relative;width:32px;height:32px;box-sizing:border-box;border:1px solid #74444D;border-radius:50%;transform:none;background:transparent;color:#74444D;transition:background .55s cubic-bezier(.22,.61,.36,1),color .55s cubic-bezier(.22,.61,.36,1);}
+html[data-brand="scott"] .account-collapse-chevron:not(#ss#ss)::after{content:"";position:absolute;left:50%;top:50%;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translate(-50%,-70%) rotate(45deg);transition:transform .55s cubic-bezier(.22,.61,.36,1);}
+html[data-brand="scott"] [open] > summary .account-collapse-chevron:not(#ss#ss){background:#74444D;color:#FFF9F4;}
+html[data-brand="scott"] [open] > summary .account-collapse-chevron:not(#ss#ss)::after{transform:translate(-50%,-30%) rotate(-135deg);}
+@media (hover:hover){html[data-brand="scott"] summary:hover .account-collapse-chevron:not(#ss#ss){background:#74444D;color:#FFF9F4;}}
+html[data-brand="scott"] .account-collapse > summary .account-collapse-chevron:not(#ss#ss){margin-top:22px;}
