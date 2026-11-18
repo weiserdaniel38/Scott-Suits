@@ -9535,6 +9535,7 @@ const vestDesigner = createDesigner(
     lining: () => vestMatchJacketSame("lining"),
     buttoncolor: () => vestMatchJacketSame("buttoncolor"),
     threadColor: () => vestMatchJacketSame("threadColor"),
+    buttonNail: () => vestMatchJacketSame("buttonNail"),
   },
   VEST_CATALOG_GROUPS
 );
