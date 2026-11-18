@@ -3657,3 +3657,11 @@ html[data-brand="scott"] #howItWorksStartBtn{background:var(--glass-dark) !impor
 .mc-fix-btn{padding:7px 16px;border:1px solid var(--brass);border-radius:999px;background:transparent;color:var(--ivory);font:inherit;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;}
 .tc-list.only-flagged .tailor-checklist-item:not(.mc-flagged),.tc-list.only-flagged .tailor-checklist-part{display:none;}
 html[data-brand="sw"] :is(.meas-fix-save,.mcheck-fix){color:#1A1416;}
+
+/* Jacket and Pants option pages: a gentler scale-up on wide screens
+   (Daniel, 2026-11-18: "on desktop all the options are too zoomed in").
+   The other steps (preview, measurements, order) keep the bigger scale. */
+@media(min-width:1600px){ body.designing > :is(#designer,#pantsSection){--wz:1.05;} }
+@media(min-width:1900px){ body.designing > :is(#designer,#pantsSection){--wz:1.1;} }
+@media(min-width:2200px){ body.designing > :is(#designer,#pantsSection){--wz:1.15;} }
+@media(min-width:2500px){ body.designing > :is(#designer,#pantsSection){--wz:1.2;} }
