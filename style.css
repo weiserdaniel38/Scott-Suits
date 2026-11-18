@@ -2292,6 +2292,8 @@ body.order-done-view > .process{display:none !important;}
 }
 /* Admin: fabric search */
 .fs-field{margin:4px 0 12px;}
+.ap-photo{flex-basis:108px;width:108px;}
+.ap-redraw{align-self:flex-start;margin-top:4px;padding:6px 14px;font-size:12px;}
 .fs-field input{font-size:16px;}
 .fs-results{display:flex;flex-direction:column;gap:10px;}
 .fs-card{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(var(--surface-rgb),0.6);}
