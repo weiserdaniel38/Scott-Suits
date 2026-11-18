@@ -3569,9 +3569,9 @@ const VEST_CATALOG = {
       { section: "Lapel", name: "Notch Lapel", displayName: "Notch", factoryCode: "4004", img: "./assets/vest-lapel-notch.jpg" },
       { section: "Lapel", name: "Peak Lapel", displayName: "Peak", factoryCode: "4006", img: "./assets/vest-lapel-peak.jpg" },
       { section: "Lapel", name: "Shawl Lapel", displayName: "Shawl", factoryCode: "4003", img: "./assets/vest-lapel-shawl.jpg" },
-      { section: "Lapel With Collar Band", name: "Notch Lapel with Collar Band", displayName: "Notch", factoryCode: "4005", img: "./assets/vest-lapel-notch-band.jpg" },
-      { section: "Lapel With Collar Band", name: "Peak Lapel with Collar Band", displayName: "Peak", factoryCode: "4007", img: "./assets/vest-lapel-peak-band.jpg" },
-      { section: "Lapel With Collar Band", name: "Shawl Lapel with Collar Band", displayName: "Shawl", factoryCode: "4002", img: "./assets/vest-lapel-shawl-band.jpg" },
+      { section: "Lapel + Collar Around the Neck", name: "Notch Lapel with Collar Band", displayName: "Notch", factoryCode: "4005", img: "./assets/vest-lapel-notch-band.jpg" },
+      { section: "Lapel + Collar Around the Neck", name: "Peak Lapel with Collar Band", displayName: "Peak", factoryCode: "4007", img: "./assets/vest-lapel-peak-band.jpg" },
+      { section: "Lapel + Collar Around the Neck", name: "Shawl Lapel with Collar Band", displayName: "Shawl", factoryCode: "4002", img: "./assets/vest-lapel-shawl-band.jpg" },
     ],
   },
   lapelbuttonhole: {
@@ -3580,8 +3580,9 @@ const VEST_CATALOG = {
     sameAsLabel: "Match Jacket",
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
-    // Only a lapel has a buttonhole; V-Neck and U-Neck leave this as None.
-    allowedBySelection: { collar: { "V-Neck": ["No Lapel Buttonhole"], "U-Neck": ["No Lapel Buttonhole"] } },
+    // Only a lapel has a buttonhole: the step is skipped on a V-Neck or
+    // U-Neck (kute-factory sends "No Lapel Buttonhole").
+    hiddenWhenEquals: { key: "collar", value: ["V-Neck", "U-Neck"] },
     options: [
       { name: "No Lapel Buttonhole", displayName: "None", factoryCode: "4544", img: "./assets/vest-hole-none.jpg", badge: "Classic" },
       { name: "Left Lapel", displayName: "Left Lapel", factoryCode: "4541", img: "./assets/vest-hole-left.jpg" },
@@ -3598,11 +3599,11 @@ const VEST_CATALOG = {
     options: [
       { section: "None", name: "No Chest Pocket", displayName: "None", factoryCode: "4X06", img: "./assets/vest-chest-none.jpg", badge: "Classic" },
       { section: "Left Side", name: "Left Welt", displayName: "Welt", factoryCode: "4111", img: "./assets/vest-chest-left-welt.jpg" },
-      { section: "Left Side", name: "Left Besom", displayName: "Slim Besom", factoryCode: "4112", img: "./assets/vest-chest-left-besom.jpg" },
+      { section: "Left Side", name: "Left Besom", displayName: "Slit", factoryCode: "4112", img: "./assets/vest-chest-left-besom.jpg" },
       { section: "Left Side", name: "Left Besom with Flap", displayName: "Flap", factoryCode: "4113", img: "./assets/vest-chest-left-flap.jpg" },
       { section: "Left Side", name: "Left Patch", displayName: "Patch", factoryCode: "4125", img: "./assets/vest-chest-left-patch.jpg" },
       { section: "Both Sides", name: "Both Welt", displayName: "Welt", factoryCode: "4142", img: "./assets/vest-chest-both-welt.jpg" },
-      { section: "Both Sides", name: "Both Besom", displayName: "Slim Besom", factoryCode: "4143", img: "./assets/vest-chest-both-besom.jpg" },
+      { section: "Both Sides", name: "Both Besom", displayName: "Slit", factoryCode: "4143", img: "./assets/vest-chest-both-besom.jpg" },
       { section: "Both Sides", name: "Both Besom with Flap", displayName: "Flap", factoryCode: "4144", img: "./assets/vest-chest-both-flap.jpg" },
       { section: "Both Sides", name: "Both Patch", displayName: "Patch", factoryCode: "4185", img: "./assets/vest-chest-both-patch.jpg" },
     ],
@@ -3616,22 +3617,37 @@ const VEST_CATALOG = {
     options: [
       { section: "Straight", name: "Welt", displayName: "Welt", factoryCode: "4300", img: "./assets/vest-lower-welt.jpg", badge: "Classic" },
       { section: "Straight", name: "Narrow Welt", displayName: "Narrow Welt", factoryCode: "430B", img: "./assets/vest-lower-welt-slim.jpg" },
-      { section: "Straight", name: "Besom", displayName: "Slim Besom", factoryCode: "4301", img: "./assets/vest-lower-besom.jpg" },
+      { section: "Straight", name: "Besom", displayName: "Slit", factoryCode: "4301", img: "./assets/vest-lower-besom.jpg" },
       { section: "Straight", name: "Besom with Flap", displayName: "Flap", factoryCode: "4302", img: "./assets/vest-lower-flap.jpg" },
       { section: "Straight", name: "Patch", displayName: "Patch", factoryCode: "4162", img: "./assets/vest-lower-patch.jpg" },
       { section: "Slanted", name: "Slant Welt", displayName: "Welt", factoryCode: "4169", img: "./assets/vest-lower-slant-welt.jpg" },
-      { section: "Slanted", name: "Slant Besom", displayName: "Slim Besom", factoryCode: "4170", img: "./assets/vest-lower-slant-besom.jpg" },
+      { section: "Slanted", name: "Slant Besom", displayName: "Slit", factoryCode: "4170", img: "./assets/vest-lower-slant-besom.jpg" },
       { section: "Slanted", name: "Slant Besom with Flap", displayName: "Flap", factoryCode: "4171", img: "./assets/vest-lower-slant-flap.jpg" },
       { section: "None", name: "No Lower Pockets", displayName: "None", factoryCode: "4151", img: "./assets/vest-lower-none.jpg" },
     ],
   },
   backstyle: {
     label: "Vest Back Adjuster",
+    description: "A small strap and buckle on the back to tighten the waist.",
     column: "vest_back",
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
       { name: "Adjuster Strap", displayName: "Adjuster Strap", factoryCode: "4200", img: "./assets/vest-back-strap.jpg", badge: "Classic" },
       { name: "No Adjuster", displayName: "No Strap", factoryCode: "4202", img: "./assets/vest-back-no-strap.jpg" },
+    ],
+  },
+  // The buckle on the back strap: the factory's three vest buckles (2326
+  // STYLISH BUTTON catalog, page "Pant adjustment buckle and vest buckle"),
+  // sent as 42C1 (With strap & buckle) with the buckle number.
+  buckle: {
+    label: "Vest Buckle",
+    column: "vest_buckle",
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    requiresEquals: { key: "backstyle", value: "Adjuster Strap" },
+    options: [
+      { name: "Silver Buckle", displayName: "Silver", factoryCode: "42C1:QZMAB01-2", img: "./assets/vest-buckle-silver.jpg", badge: "Classic" },
+      { name: "Gunmetal Buckle", displayName: "Gunmetal", factoryCode: "42C1:QZMAB02-2", img: "./assets/vest-buckle-gunmetal.jpg" },
+      { name: "Pointed Black Buckle", displayName: "Pointed Black", factoryCode: "42C1:QMJQZ03-2", img: "./assets/vest-buckle-black.jpg" },
     ],
   },
   // Vest Only: lining, buttons and thread (a 3-piece suit uses the jacket's).
@@ -3653,17 +3669,20 @@ const VEST_CATALOG = {
   }),
 };
 const VEST_CATALOG_GROUPS = [
+  // Top to bottom on the front, then the back, then the inside (Daniel,
+  // 2026-11-18: "the order should make sense").
   { label: "Vest", keys: ["addVest", "fabric"] },
-  { label: "Style", keys: ["frontbutton", "bottom", "collar", "lapelbuttonhole"] },
-  { label: "Pockets & Back", keys: ["chestpocket", "lowerpocket", "backstyle"] },
+  { label: "Front & Lapel", keys: ["frontbutton", "collar", "lapelbuttonhole"] },
+  { label: "Pockets", keys: ["chestpocket", "lowerpocket"] },
+  { label: "Bottom & Back", keys: ["bottom", "backstyle", "buckle"] },
   { label: "Lining & Buttons", keys: ["lining", "buttoncolor", "threadColor"] },
 ];
 // The vest designer always runs with one of these presets: it keeps "Vest
 // Only" out of the suit's Add a Vest question, and the Minimal / Basic
 // levels ask fewer vest questions (the rest are the classic answers).
 const VEST_PRESETS = (function () {
-  const all = ["addVest", "frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle"];
-  const classic = { frontbutton: "5 Buttons", bottom: "Pointed", collar: "V-Neck", lapelbuttonhole: "No Lapel Buttonhole", chestpocket: "No Chest Pocket", lowerpocket: "Welt", backstyle: "Adjuster Strap" };
+  const all = ["addVest", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buckle"];
+  const classic = { frontbutton: "5 Buttons", collar: "V-Neck", lapelbuttonhole: "No Lapel Buttonhole", chestpocket: "No Chest Pocket", lowerpocket: "Welt", bottom: "Pointed", backstyle: "Adjuster Strap", buckle: "Silver Buckle" };
   const suit = (steps) => {
     const fixed = {};
     Object.keys(classic).forEach((k) => { if (steps.indexOf(k) === -1) fixed[k] = classic[k]; });
@@ -3673,11 +3692,11 @@ const VEST_PRESETS = (function () {
     advanced: suit(all),
     basic: suit(["addVest", "frontbutton", "collar", "lowerpocket"]),
     minimal: suit(["addVest"]),
-    vestOnly: { steps: ["fabric", "frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle", "lining", "buttoncolor", "threadColor"], allowed: {}, fixed: { addVest: "Vest Only" } },
+    vestOnly: { steps: ["fabric", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buckle", "lining", "buttoncolor", "threadColor"], allowed: {}, fixed: { addVest: "Vest Only" } },
   };
 })();
 // The suit picture spec names each vest choice by its full option name
 // (VEST_LOOKS in generate-suit-image keys on it), not the short card name.
-["frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle"].forEach((k) => {
+["frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle", "buckle"].forEach((k) => {
   VEST_CATALOG[k].options.forEach((o) => { if (!o.specName) o.specName = o.name; });
 });

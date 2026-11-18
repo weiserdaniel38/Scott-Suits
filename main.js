@@ -7589,9 +7589,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const reqEq = cat.requiresEquals;
     if (reqEq && order[reqEq.key] !== reqEq.value) return false;
     // `hiddenWhenEquals: { key, value }`: dropped while another category is
-    // set to that value (e.g. no Lining step on an unlined jacket).
+    // set to that value, or one of a list of values (e.g. no Lining step on
+    // an unlined jacket, no vest lapel buttonhole on a V-Neck).
     const hidEq = cat.hiddenWhenEquals;
-    if (hidEq && order[hidEq.key] === hidEq.value) return false;
+    if (hidEq && [].concat(hidEq.value).indexOf(order[hidEq.key]) !== -1) return false;
     // `hiddenWhenOnlyOption: { key, value }`: dropped while the other
     // category's only allowed choice is that value (e.g. no Lapel Buttonhole
     // Color on a Shawl, where the only lapel buttonhole is "No").
@@ -10887,7 +10888,7 @@ function showSuitReveal() {
   let details = [pantsDesigner.displayValue("frontPleat"), pantsDesigner.displayValue("frontPocket"), pantsDesigner.displayValue("bottomStyle")];
   if (jacket) {
     const front = JACKET_CATALOG.frontbutton.options.find((o) => o.name === sel.frontbutton) || {};
-    kind = (front.section ? front.section + " " : "") + (isJacketOnlyType(currentSuitType) ? "Jacket" : "Suit");
+    kind = (front.section ? front.section + " " : "") + (isJacketOnlyType(currentSuitType) ? "Jacket" : currentSuitType === "threePiece" ? "Three-Piece Suit" : "Suit");
     sketch = front.img || "./assets/suit-type-jacket-only.png?v=20261101fast";
     const buttons = String(front.displayName || "").split(", ").slice(1).join(", ");
     const lining = jacketDesigner.displayValue("lining");

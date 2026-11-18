@@ -465,7 +465,17 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     if (!input.vest) blocking.push("The vest choices couldn't be read from the site; try again.");
     else {
       const vrow: Row = { ...row, ...vestCols };
-      const vc = catalogCodes(input.vest, vrow, VEST_BY_HAND, "Vest", warnings);
+      let vc = catalogCodes(input.vest, vrow, VEST_BY_HAND, "Vest", warnings);
+      // Lapel buttonhole: none on a V-Neck / U-Neck (the site skips the
+      // step there) or when nothing was picked.
+      const HOLES = ["4544", "4541", "4545", "4543"];
+      if (vc.includes("4000") || vc.includes("4001")) vc = vc.filter((c) => !HOLES.includes(c));
+      if (!vc.some((c) => HOLES.includes(c))) vc.push("4544");
+      // Buckle (42C1:<buckle>) only with the back strap; older orders
+      // without a buckle pick get the silver one.
+      if (vc.includes("4200")) {
+        if (!vc.some((c) => c.startsWith("42C1"))) vc.push("42C1:QZMAB01-2");
+      } else vc = vc.filter((c) => !c.startsWith("42C1"));
       // Back in the lining (the factory's matched lining).
       vc.push("4210");
       // Lining, buttons and thread: the vest's own on a vest alone, the
