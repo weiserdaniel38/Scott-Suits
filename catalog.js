@@ -76,30 +76,37 @@ const JACKET_CATALOG = {
     // (DWNYP2611004, 2026-11-16) and listed 4.2, 5.0, 5.7, 6.5, 7.6, 8.3,
     // 8.9 and 11.4 cm. So Shawl is Thin 7.6 / Standard 8.9 / Wide 11.4.
     // Arc Lapel (factory "Arc bottom shawl") gets the same (Daniel, 2026-11-16).
+    // Semi-Peak: Place Order refused 9 cm (00N5) on Avigdor's DB semi-peak
+    // (DWNYP2611008, 2026-11-18) and listed only 6.5, 8.3 and 9.6 cm. So
+    // Semi-Peak is Thin 6.5 / Standard 8.3 / Wide 9.6, no Extra Wide.
     options: [
       { name: "9 cm", displayName: "Standard", factoryCode: "00N5", img: "./assets/jacket-lapelwidth-new-9.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["8.9 cm", "8.3 cm"] },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel", "Semi-Peak Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["8.9 cm", "8.3 cm"] },
       { name: "8.9 cm", displayName: "Standard", factoryCode: "00N4", img: "./assets/jacket-lapelwidth-new-9.jpg",
         onlyWhen: { collar: ["Peak Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["9 cm", "8.3 cm"] },
       { name: "8.3 cm", displayName: "Standard", factoryCode: "00N2", img: "./assets/jacket-lapelwidth-new-9.jpg",
-        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["9 cm", "8.9 cm"] },
+        onlyWhen: { collar: ["Semi-Notch Lapel", "Semi-Peak Lapel"] }, replaceWith: ["9 cm", "8.9 cm"] },
       { name: "8 cm", displayName: "Thin", factoryCode: "00X6", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        hiddenWhen: { collar: ["Semi-Notch Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["7.4 cm", "7.6 cm"] },
+        hiddenWhen: { collar: ["Semi-Notch Lapel", "Semi-Peak Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["7.4 cm", "7.6 cm", "6.5 cm"] },
       { name: "7.4 cm", displayName: "Thin", factoryCode: "00X3", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["8 cm", "7.6 cm"] },
+        onlyWhen: { collar: ["Semi-Notch Lapel"] }, replaceWith: ["8 cm", "7.6 cm", "6.5 cm"] },
       { name: "7.6 cm", displayName: "Thin", factoryCode: "00W9", img: "./assets/jacket-lapelwidth-new-8.jpg",
-        onlyWhen: { collar: ["Shawl", "Arc Lapel"] }, replaceWith: ["8 cm", "7.4 cm"] },
+        onlyWhen: { collar: ["Shawl", "Arc Lapel"] }, replaceWith: ["8 cm", "7.4 cm", "6.5 cm"] },
+      { name: "6.5 cm", displayName: "Thin", factoryCode: "00W6", img: "./assets/jacket-lapelwidth-new-8.jpg",
+        onlyWhen: { collar: ["Semi-Peak Lapel"] }, replaceWith: ["8 cm", "7.4 cm", "7.6 cm"] },
       { name: "10 cm", displayName: "Wide", factoryCode: "00N0", img: "./assets/jacket-lapelwidth-new-10.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["9.7 cm", "11.4 cm"] },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Peak Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["9.7 cm", "11.4 cm", "9.6 cm"] },
       { name: "9.7 cm", displayName: "Wide", factoryCode: "00Y3", img: "./assets/jacket-lapelwidth-new-10.jpg",
-        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["10 cm", "11.4 cm"] },
+        onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["10 cm", "11.4 cm", "9.6 cm"] },
+      { name: "9.6 cm", displayName: "Wide", factoryCode: "00Y2", img: "./assets/jacket-lapelwidth-new-10.jpg",
+        onlyWhen: { collar: ["Semi-Peak Lapel"] }, replaceWith: ["10 cm", "9.7 cm", "11.4 cm"] },
       { name: "11 cm", displayName: "Extra Wide", factoryCode: "00S2", img: "./assets/jacket-lapelwidth-new-11.jpg",
-        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["10.8 cm", "10 cm", "11.4 cm"] },
+        hiddenWhen: { collar: ["Peak Lapel", "Semi-Notch Lapel", "Semi-Peak Lapel", "Shawl", "Arc Lapel"] }, replaceWith: ["10.8 cm", "10 cm", "11.4 cm", "9.6 cm"] },
       { name: "10.8 cm", displayName: "Extra Wide", factoryCode: "00S1", img: "./assets/jacket-lapelwidth-new-11.jpg",
         onlyWhen: { collar: ["Peak Lapel"] }, replaceWith: ["11 cm", "10 cm", "11.4 cm"] },
       // Shawl has no 9.7-11 cm at the factory: its Wide is 11.4 cm.
       { name: "11.4 cm", displayName: "Wide", factoryCode: "00S3", img: "./assets/jacket-lapelwidth-new-11.jpg",
-        onlyWhen: { collar: ["Shawl", "Arc Lapel"] }, replaceWith: ["10 cm", "11 cm", "9.7 cm"] },
+        onlyWhen: { collar: ["Shawl", "Arc Lapel"] }, replaceWith: ["10 cm", "11 cm", "9.7 cm", "9.6 cm"] },
     ],
   },
   lapelbuttonhole: {
