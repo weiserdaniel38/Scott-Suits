@@ -13,7 +13,7 @@ const personalInfoSection = document.getElementById("personalInfoSection");
 const confirmationSection = document.getElementById("confirmationSection");
 const measureGrid = document.getElementById("measureGrid");
 const vestSection = document.getElementById("vestSection");
-const ALL_STEPS = [suitTypeSection, jacketSection, pantsSection, vestSection, previewSection, measurementsSection, personalInfoSection, confirmationSection];
+const ALL_STEPS = [suitTypeSection, jacketSection, vestSection, pantsSection, previewSection, measurementsSection, personalInfoSection, confirmationSection];
 // Index (into ALL_STEPS) of the furthest page the customer has reached for
 // the suit being designed. Pages up to here can be jumped to from the
 // progress bar in either direction (see goToStepById); picking a suit type
@@ -60,10 +60,11 @@ function isVestOnlyType(type) {
 function hasVestInOrder(type) {
   return type === "threePiece" || type === "vestOnly";
 }
-// Whether the order has a Vest step: every full suit (to ask Add a Vest)
-// and a vest on its own.
+// Whether the order has a Vest step: a 3-piece suit (designed right after
+// the jacket, before the pants; Daniel 2026-11-18) and a vest on its own.
+// A Minimal 3-piece asks no vest questions (classic vest), so it skips it.
 function hasVestStep() {
-  return currentSuitType === "full" || currentSuitType === "threePiece" || currentSuitType === "vestOnly";
+  return currentSuitType === "vestOnly" || (currentSuitType === "threePiece" && currentLevel !== "minimal");
 }
 
 // Pants ordered on their own ("pantsOnly"): no jacket in the order, so the
@@ -7095,7 +7096,7 @@ function designProgressState() {
   const pantsComplete = p.total > 0 && p.done >= p.total;
   const v = wizProgressCounts.vest || { done: 0, total: 0 };
   const vestComplete = !hasVestStep() || (v.total > 0 && v.done >= v.total);
-  return { jacketOnly, pantsOnly, vestOnly, noPantsStep, jacketDone, pantsDone: p.done, allDone: jacketDone && (noPantsStep || pantsComplete) && vestComplete };
+  return { jacketOnly, pantsOnly, vestOnly, noPantsStep, jacketDone, pantsDone: p.done, vestStep: hasVestStep() && !vestOnly, vestDone: v.done, vestComplete, allDone: jacketDone && (noPantsStep || pantsComplete) && vestComplete };
 }
 function orderProgressCheer(pct, stage) {
   if (stage === "pers") return "Last step. Your suit is nearly on its way!";
@@ -7105,8 +7106,11 @@ function orderProgressCheer(pct, stage) {
   if (pct <= 0) return "Let\u2019s get started!";
   const d = designProgressState();
   if (d.allDone) return "\uD83C\uDF89 Your " + (d.jacketOnly ? "jacket is" : d.pantsOnly ? "pants are" : d.vestOnly ? "vest is" : "suit is") + " fully designed! It\u2019s going to look incredible.";
-  if (d.jacketDone && !d.noPantsStep && !d.pantsOnly) {
-    if (d.pantsDone === 0) return "Jacket done! Now let\u2019s design the pants.";
+  // A 3-piece suit designs the vest between the jacket and the pants.
+  if (d.jacketDone && d.vestStep && !d.vestComplete) {
+    if (d.vestDone === 0) return "Jacket done! Now let\u2019s design the vest.";
+  } else if (d.jacketDone && !d.noPantsStep && !d.pantsOnly) {
+    if (d.pantsDone === 0) return d.vestStep ? "Vest done! Now let\u2019s design the pants." : "Jacket done! Now let\u2019s design the pants.";
   }
   const lines = [
     "Great start!",
@@ -7572,7 +7576,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       if (cat.retiredOptions && cat.retiredOptions.indexOf(order[k]) !== -1) order[k] = null;
       // The lining catalog was replaced outright (Oct 2026): a saved draft or
       // cart pointing at a lining that no longer exists asks again.
-      if (k === "lining" && order[k] && !(cat.options || []).some((o) => o.name === order[k])) order[k] = null;
+      if (k === "lining" && order[k] && !isSameAs(k) && !(cat.options || []).some((o) => o.name === order[k])) order[k] = null;
       // "Upload Your Own Photo" with no photo behind it (e.g. a restored draft
       // whose photo is gone) can't be ordered -- ask again.
       if (order[k] && selectedIsUpload(k) && !customPhotos[k]) order[k] = null;
@@ -9477,6 +9481,11 @@ const pantsDesigner = createDesigner(
 
 // The jacket's choice as the vest's matching option, or null when the vest
 // has no version of it.
+// Lining, buttons and thread: the jacket's own pick, when the vest offers it.
+function vestMatchJacketSame(key) {
+  const v = jacketDesigner.getSelections()[key];
+  return v && VEST_CATALOG[key].options.some((o) => o.name === v) ? v : null;
+}
 function vestMatchJacket(key) {
   const j = jacketDesigner.rawSelections();
   if (key === "collar") {
@@ -9523,21 +9532,15 @@ const vestDesigner = createDesigner(
     lapelbuttonhole: () => vestMatchJacket("lapelbuttonhole"),
     chestpocket: () => vestMatchJacket("chestpocket"),
     lowerpocket: () => vestMatchJacket("lowerpocket"),
+    lining: () => vestMatchJacketSame("lining"),
+    buttoncolor: () => vestMatchJacketSame("buttoncolor"),
+    threadColor: () => vestMatchJacketSame("threadColor"),
   },
   VEST_CATALOG_GROUPS
 );
-// Add a Vest / No Vest turns a full suit into a 3-piece and back: the
-// suit type drives the price, the measurements and the factory order.
-vestDesigner.onChange(() => {
-  if (currentSuitType !== "full" && currentSuitType !== "threePiece") return;
-  const want = vestDesigner.rawSelections().addVest === "Add a Vest" ? "threePiece" : "full";
-  if (want === currentSuitType) return;
-  currentSuitType = want;
-  setMeasureMode(measureMode);
-  updateProcessBarForSuitType();
-  refreshDesignerPrice();
-  updateContinueBackLabelsForSuitType();
-});
+// The suit type (Two-Piece / Three-Piece) is picked up front, so the vest
+// designer never switches it; its Add a Vest answer follows the type (see
+// applySuitType).
 
 // Fabric stock: a daily job (kute-factory fabric_stock_all, supabase/sql/37)
 // saves the factory's metres of every site fabric as suit-images/fabric-stock.json.
@@ -10725,6 +10728,12 @@ document.getElementById("continueBtn").addEventListener("click", () => {
     alert("Select an option for: " + jacketDesigner.missingLabels().join(", "));
     return;
   }
+  // A 3-piece suit designs its vest next, then the pants.
+  if (hasVestStep()) {
+    if (furthestStepIndex < ALL_STEPS.indexOf(vestSection)) vestDesigner.resetToFirstTab();
+    goToStep(jacketSection, vestSection);
+    return;
+  }
   // "Jacket Only" and the Classic Suit preset have no Pants step -- skip
   // straight to Measurements.
   if (!hasPantsStep()) {
@@ -10743,6 +10752,11 @@ document.getElementById("backToJacketBtn").addEventListener("click", () => {
     goToStep(pantsSection, suitTypeSection);
     return;
   }
+  // A 3-piece suit's pants come after its vest.
+  if (hasVestStep()) {
+    goToStep(pantsSection, vestSection);
+    return;
+  }
   // Unlike Continue (which always starts the next designer fresh at its
   // first tab), Back returns to whichever category tab was last open --
   // so reviewing an earlier step doesn't lose your place in it.
@@ -10754,12 +10768,6 @@ document.getElementById("continuePantsBtn").addEventListener("click", () => {
     alert("Select an option for: " + pantsDesigner.missingLabels().join(", "));
     return;
   }
-  // A full suit asks Add a Matching Vest next.
-  if (hasVestStep()) {
-    if (furthestStepIndex < ALL_STEPS.indexOf(vestSection)) vestDesigner.resetToFirstTab();
-    goToStep(pantsSection, vestSection);
-    return;
-  }
   finishDesign(pantsSection);
 });
 
@@ -10769,12 +10777,18 @@ document.getElementById("backFromVestBtn").addEventListener("click", () => {
     goToStep(vestSection, suitTypeSection);
     return;
   }
-  goToStep(vestSection, pantsSection);
+  goToStep(vestSection, jacketSection);
 });
 
 document.getElementById("continueVestBtn").addEventListener("click", () => {
   if (!vestDesigner.isComplete()) {
     alert("Select an option for: " + vestDesigner.missingLabels().join(", "));
+    return;
+  }
+  // A 3-piece suit goes on to its pants.
+  if (hasPantsStep()) {
+    if (furthestStepIndex < ALL_STEPS.indexOf(pantsSection)) pantsDesigner.resetToFirstTab();
+    goToStep(vestSection, pantsSection);
     return;
   }
   finishDesign(vestSection);
@@ -16442,7 +16456,7 @@ window.startOver = startOver;
 
 // The order the order flow actually happens in (used below to gate the
 // progress bar, and to know which designer -- if any -- lives on a page).
-const STEP_ORDER = ["designer", "pantsSection", "vestSection", "previewSection", "measurementsSection", "personalInfoSection"];
+const STEP_ORDER = ["designer", "vestSection", "pantsSection", "previewSection", "measurementsSection", "personalInfoSection"];
 const STEP_LABELS = {
   designer: "Design your jacket",
   pantsSection: "Customize your pants",
@@ -16595,18 +16609,20 @@ function updatePriceTextForSuitType() {
 // to go to or not.
 function updateContinueBackLabelsForSuitType() {
   const continueBtnEl = document.getElementById("continueBtn");
-  if (continueBtnEl) continueBtnEl.textContent = !hasPantsStep() ? (previewStepOn ? "Continue to Preview" : "Continue to Measurements") : "Continue to Pants";
+  if (continueBtnEl) continueBtnEl.textContent = hasVestStep() ? "Continue to Vest" : !hasPantsStep() ? (previewStepOn ? "Continue to Preview" : "Continue to Measurements") : "Continue to Pants";
   const continuePantsBtnEl = document.getElementById("continuePantsBtn");
-  if (continuePantsBtnEl) continuePantsBtnEl.textContent = hasVestStep() ? "Continue to Vest" : previewStepActive() ? "Continue to Preview" : "Continue to Measurements";
+  if (continuePantsBtnEl) continuePantsBtnEl.textContent = previewStepActive() ? "Continue to Preview" : "Continue to Measurements";
+  const backToJacketBtnEl = document.getElementById("backToJacketBtn");
+  if (backToJacketBtnEl) backToJacketBtnEl.innerHTML = hasVestStep() ? "&larr; Back to Vest" : "&larr; Back to Jacket";
   const continueVestBtnEl = document.getElementById("continueVestBtn");
-  if (continueVestBtnEl) continueVestBtnEl.textContent = previewStepActive() ? "Continue to Preview" : "Continue to Measurements";
+  if (continueVestBtnEl) continueVestBtnEl.textContent = hasPantsStep() ? "Continue to Pants" : previewStepActive() ? "Continue to Preview" : "Continue to Measurements";
   const backFromVestBtnEl = document.getElementById("backFromVestBtn");
-  if (backFromVestBtnEl) backFromVestBtnEl.innerHTML = isVestOnlyType(currentSuitType) ? "&larr; Back" : "&larr; Back to Pants";
+  if (backFromVestBtnEl) backFromVestBtnEl.innerHTML = isVestOnlyType(currentSuitType) ? "&larr; Back" : "&larr; Back to Jacket";
   const vestOnly = isVestOnlyType(currentSuitType);
   const vestTitle = document.getElementById("vestHeadTitle");
-  if (vestTitle) vestTitle.textContent = vestOnly ? "Design your vest" : "Add a vest";
+  if (vestTitle) vestTitle.textContent = "Design your vest";
   const vestText = document.getElementById("vestHeadText");
-  if (vestText) vestText.textContent = vestOnly ? "Choose your fabric and every detail." : "Make it a three-piece suit, cut from the same fabric.";
+  if (vestText) vestText.textContent = vestOnly ? "Choose your fabric and every detail." : "Cut from the same fabric as your suit.";
   const backToDesignerBtnEl = document.getElementById("backToDesignerBtn");
   if (backToDesignerBtnEl) backToDesignerBtnEl.innerHTML = "&larr; Back";
 }
@@ -16631,8 +16647,10 @@ function applySuitType(type, level) {
   pantsDesigner.setSameAsEnabled(hasJacketStep());
   vestDesigner.setSameAsEnabled(!isVestOnlyType(currentSuitType));
   vestDesigner.setPreset(isVestOnlyType(currentSuitType) ? VEST_PRESETS.vestOnly : VEST_PRESETS[currentLevel] || VEST_PRESETS.advanced);
-  // A 3-piece suit restored or reloaded: its vest question is already yes.
+  // The vest is chosen up front (Two-Piece / Three-Piece after Full Suit),
+  // so the vest designer's Add a Vest answer just follows the suit type.
   if (currentSuitType === "threePiece" && vestDesigner.rawSelections().addVest !== "Add a Vest") vestDesigner.setSelections({ addVest: "Add a Vest" });
+  if (currentSuitType === "full" && vestDesigner.rawSelections().addVest !== "No Vest") vestDesigner.setSelections({ addVest: "No Vest" });
   setMeasureMode(measureMode); // rebuilds the fields for this suit type
   updateSamePreviousMeasurementsBanner();
   updateProcessBarForSuitType();
@@ -16645,9 +16663,15 @@ function applySuitType(type, level) {
 // moves straight into the jacket designer, same "scroll up before hiding"
 // swap every other step transition uses (see goToStep()).
 function chooseSuitType(type, level) {
-  // Full Suit and Jacket Only first ask how much to customize (Minimal /
-  // Basic / Advanced, see CUSTOMIZATION_LEVELS in catalog.js).
-  if ((type === "full" || type === "jacketOnly") && !level) {
+  // Full Suit first asks Two-Piece or Three-Piece (with a vest; Daniel,
+  // 2026-11-18: "in full suit right away ask for vest").
+  if (type === "full" && !level) {
+    showVestPicker();
+    return;
+  }
+  // Then Full Suit (2 or 3 pieces) and Jacket Only ask how much to customize
+  // (Minimal / Basic / Advanced, see CUSTOMIZATION_LEVELS in catalog.js).
+  if ((type === "full" || type === "threePiece" || type === "jacketOnly") && level === "ask") {
     showLevelPicker(type);
     return;
   }
@@ -16676,7 +16700,7 @@ if (chooseClassicSuitBtn) chooseClassicSuitBtn.addEventListener("click", () => c
 const choosePresetJacketBtn = document.getElementById("choosePresetJacketBtn");
 if (choosePresetJacketBtn) choosePresetJacketBtn.addEventListener("click", () => chooseSuitType("presetJacket"));
 if (chooseFullSuitBtn) chooseFullSuitBtn.addEventListener("click", () => chooseSuitType("full"));
-if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => chooseSuitType("jacketOnly"));
+if (chooseJacketOnlyBtn) chooseJacketOnlyBtn.addEventListener("click", () => chooseSuitType("jacketOnly", "ask"));
 // The level picker replaces the suit-type cards in place (same section), so
 // it needs no step of its own in the progress bar.
 let levelPickerType = null;
@@ -16686,7 +16710,7 @@ function showLevelPicker(type) {
   if (!panel) { chooseSuitType(type, "advanced"); return; }
   suitTypeSection.classList.add("level-picking");
   const what = document.getElementById("levelPickerWhat");
-  if (what) what.textContent = type === "jacketOnly" ? "jacket" : "suit";
+  if (what) what.textContent = type === "jacketOnly" ? "jacket" : type === "threePiece" ? "three-piece suit" : "two-piece suit";
   panel.classList.toggle("jacket-only", type === "jacketOnly");
   panel.hidden = false;
   const top = window.scrollY + suitTypeSection.getBoundingClientRect().top - getNavClearance();
@@ -16698,11 +16722,45 @@ function hideLevelPicker() {
   const panel = document.getElementById("levelPicker");
   if (panel) panel.hidden = true;
 }
+// Two-Piece / Three-Piece, asked right after Full Suit. Same in-place swap
+// as the level picker below.
+function showVestPicker() {
+  const panel = document.getElementById("vestPicker");
+  if (!panel) { chooseSuitType("full", "ask"); return; }
+  hideLevelPicker();
+  suitTypeSection.classList.add("level-picking");
+  const addon = document.getElementById("vestPickerAddon");
+  if (addon) {
+    const tiers = FABRIC_PRICE_TIERS.map((t) => t.vestAddonUsd).filter((n) => n > 0);
+    addon.textContent = tiers.length ? "Add a matching vest from $" + Math.min.apply(null, tiers) + "." : "";
+  }
+  panel.hidden = false;
+  const top = window.scrollY + suitTypeSection.getBoundingClientRect().top - getNavClearance();
+  if (window.scrollY > top + 2) window.scrollTo(0, top);
+}
+function hideVestPicker() {
+  const panel = document.getElementById("vestPicker");
+  if (panel) panel.hidden = true;
+  if (!levelPickerType) suitTypeSection.classList.remove("level-picking");
+}
+document.querySelectorAll("#vestPicker [data-pieces]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    hideVestPicker();
+    chooseSuitType(btn.getAttribute("data-pieces") === "3" ? "threePiece" : "full", "ask");
+  });
+});
+const vestPickerBackBtn = document.getElementById("vestPickerBackBtn");
+if (vestPickerBackBtn) vestPickerBackBtn.addEventListener("click", hideVestPicker);
 document.querySelectorAll("#levelPicker [data-level]").forEach((btn) => {
   btn.addEventListener("click", () => { if (levelPickerType) chooseSuitType(levelPickerType, btn.getAttribute("data-level")); });
 });
 const levelBackBtn = document.getElementById("levelBackBtn");
-if (levelBackBtn) levelBackBtn.addEventListener("click", hideLevelPicker);
+// Back from the level picker of a full suit returns to Two-Piece / Three-Piece.
+if (levelBackBtn) levelBackBtn.addEventListener("click", () => {
+  const wasSuit = levelPickerType === "full" || levelPickerType === "threePiece";
+  hideLevelPicker();
+  if (wasSuit) showVestPicker();
+});
 const choosePantsOnlyBtn = document.getElementById("choosePantsOnlyBtn");
 if (choosePantsOnlyBtn) choosePantsOnlyBtn.addEventListener("click", () => chooseSuitType("pantsOnly"));
 const chooseVestOnlyBtn = document.getElementById("chooseVestOnlyBtn");

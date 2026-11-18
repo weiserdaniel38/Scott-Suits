@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261118vest2">
+<link rel="stylesheet" href="./style.css?v=20261118vest4">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261117trim"></script>
 <link rel="stylesheet" href="./brand.css?v=20261117halfdouble">
@@ -339,16 +339,16 @@
       <span class="step-label">Jacket</span>
     </div>
     <span class="process-divider"></span>
-    <div class="process-step" data-step="pantsSection" data-milestone="pants">
-      <span class="step-num">02</span>
-      <img class="step-icon" src="./assets/step-pants.png" alt="Pants">
-      <span class="step-label">Pants</span>
-    </div>
-    <span class="process-divider"></span>
     <div class="process-step" data-step="vestSection" data-milestone="vest">
       <span class="step-num">03</span>
       <img class="step-icon" src="./assets/step-vest.png" alt="Vest">
       <span class="step-label">Vest</span>
+    </div>
+    <span class="process-divider"></span>
+    <div class="process-step" data-step="pantsSection" data-milestone="pants">
+      <span class="step-num">02</span>
+      <img class="step-icon" src="./assets/step-pants.png" alt="Pants">
+      <span class="step-label">Pants</span>
     </div>
     <span class="process-divider"></span>
     <!-- Hidden until the suit-picture service answers (see
@@ -459,7 +459,7 @@
     </button>
     <button type="button" class="suit-type-card" id="chooseVestOnlyBtn" data-suit-type="vestOnly">
       <span class="suit-type-icon">
-        <img src="./assets/suit-type-vest-only.png?v=20261118vest2" alt="Vest only">
+        <img src="./assets/suit-type-vest-only.png?v=20261118vest4" alt="Vest only">
       </span>
       <span class="suit-type-body">
         <span class="suit-type-name">Vest Only</span>
@@ -486,6 +486,27 @@
        Only, pick Minimal / Basic / Advanced. Replaces the cards above in
        place (showLevelPicker in main.js); the steps each level asks are in
        CUSTOMIZATION_LEVELS (catalog.js). -->
+  <!-- Two-Piece / Three-Piece (Daniel, 2026-11-18: "in full suit right away
+       ask for vest"). Shown right after Full Suit, before the level picker
+       (showVestPicker in main.js). -->
+  <div class="level-picker vest-picker" id="vestPicker" hidden>
+    <span class="suit-type-eyebrow">Your suit</span>
+    <h2>Two pieces or three?</h2>
+    <p class="level-price-note" id="vestPickerAddon"></p>
+    <div class="level-grid">
+      <button type="button" class="level-card" data-pieces="2">
+        <img class="level-img" src="./assets/suit-type-full-suit.png?v=20261101fast" alt="" width="83" height="95"><span class="level-divider" aria-hidden="true"></span>
+        <span class="level-text"><span class="level-name">Two-Piece</span><span class="level-desc">Jacket and pants.</span></span>
+        <span class="level-go" aria-hidden="true">&rarr;</span>
+      </button>
+      <button type="button" class="level-card" data-pieces="3">
+        <img class="level-img" src="./assets/suit-type-vest-only.png?v=20261118vest" alt="" width="83" height="95"><span class="level-divider" aria-hidden="true"></span>
+        <span class="level-text"><span class="level-name">Three-Piece</span><span class="level-desc">Jacket, vest and pants, all in one fabric.</span></span>
+        <span class="level-go" aria-hidden="true">&rarr;</span>
+      </button>
+    </div>
+    <button type="button" class="level-back" id="vestPickerBackBtn">&larr; Back</button>
+  </div>
   <div class="level-picker" id="levelPicker" hidden>
     <span class="suit-type-eyebrow">Your <span id="levelPickerWhat">suit</span></span>
     <h2>How much would you like to customize?</h2>
@@ -1328,10 +1349,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261022protect"></script>
-<script src="./catalog.js?v=20261118vest2"></script>
+<script src="./catalog.js?v=20261118vest4"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261118vest2"></script>
+<script src="./main.js?v=20261118vest4"></script>
 <script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>

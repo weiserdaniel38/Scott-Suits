@@ -12,7 +12,7 @@
 
 type Row = Record<string, unknown>;
 type Allowance = { depth: number; seat: number; thigh: number };
-type Option = { name: string; factoryCode?: string; matchesFabric?: boolean; options?: Option[]; allowances?: Record<string, Allowance> };
+type Option = { name: string; factoryCode?: string; noFactoryCode?: boolean; matchesFabric?: boolean; options?: Option[]; allowances?: Record<string, Allowance> };
 type Category = { column: string; options?: Option[]; pleatDepthCode?: string; colorFamilies?: { options?: Option[] }[]; patternTypes?: { colorFamilies?: { options?: Option[] }[] }[] };
 export type Catalog = Record<string, Category>;
 // Embroidery fonts and colors from public.factory_codes (list "embroideries").
@@ -166,6 +166,7 @@ function catalogCodes(cat: Catalog, row: Row, skip: Set<string>, label: string, 
     const opts = allOptions(c);
     if (!opts.some((o) => o.factoryCode)) continue;
     const o = opts.find((x) => x.name === value);
+    if (o && o.noFactoryCode) continue; // the factory's "No" with no code (e.g. vest stitching)
     if (o && o.factoryCode) codes.push(...o.factoryCode.split(",").map((x) => x.trim()).filter(Boolean));
     else warnings.push(label + ": no factory code for \"" + value + "\" (" + key + "); set it on the factory site.");
   }
@@ -478,18 +479,19 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       } else vc = vc.filter((c) => !c.startsWith("42C1"));
       // Back in the lining (the factory's matched lining).
       vc.push("4210");
-      // Lining, buttons and thread: the vest's own on a vest alone, the
-      // jacket's on a 3-piece suit.
-      const lining = vestOnly ? s(vrow.vest_lining) : s(row.jacket_lining);
+      // Lining, buttons and thread: the vest's own picks (on a 3-piece suit
+      // "Match Jacket" is saved as the jacket's pick); older 3-piece orders
+      // without them use the jacket's.
+      const lining = vestOnly ? s(vrow.vest_lining) : s(vrow.vest_lining) || s(row.jacket_lining);
       const liningCat = vestOnly ? input.vest.lining : jacket.lining;
       if (!lining || matched(liningCat, lining) || s(row.facing_style) === "No Lining Construction") vc.push("4711");
       else if (lining === "Customer's Own Photo") {
         warnings.push("Vest lining: the customer sent their own lining photo; pick the lining on the factory site.");
       } else vc.push("4714:" + lining);
-      const vButton = vestOnly ? s(vrow.vest_button_color) : button;
+      const vButton = vestOnly ? s(vrow.vest_button_color) : s(vrow.vest_button_color) || button;
       const buttonCat = vestOnly ? input.vest.buttoncolor : jacket.buttoncolor;
       if (vButton && !matched(buttonCat, vButton)) vc.push("4240:" + vButton);
-      const vThread = vestOnly ? s(vrow.vest_thread_color) : s(row.jacket_thread_color);
+      const vThread = vestOnly ? s(vrow.vest_thread_color) : s(vrow.vest_thread_color) || s(row.jacket_thread_color);
       const threadCat = vestOnly ? input.vest.threadColor : jacket.threadColor;
       vc.push(matched(threadCat, vThread) ? "464F" : "464D:" + vThread);
       details.push({
