@@ -366,3 +366,23 @@ html[data-brand="scott"] [open] > summary .account-collapse-chevron:not(#ss#ss){
 html[data-brand="scott"] [open] > summary .account-collapse-chevron:not(#ss#ss)::after{transform:translate(-50%,-30%) rotate(-135deg);}
 @media (hover:hover){html[data-brand="scott"] summary:hover .account-collapse-chevron:not(#ss#ss){background:#74444D;color:#FFF9F4;}}
 html[data-brand="scott"] .account-collapse > summary .account-collapse-chevron:not(#ss#ss){margin-top:22px;}
+
+/* === PILL CLEAN-UP (2026-11-18) ===
+   Daniel: "find places where the pill doesn't fit properly and just remove the pill".
+   Small inline actions sitting in a sentence or a tight row go back to plain
+   underlined text (no outline, no fill, no stitch). */
+html[data-brand="scott"] :is(#accountLogoutBtn,#adminNotifClearAll,#mcChangeBtn,.fs-photo-btn,.promo-admin-card-actions .btn-ghost,.ap-redraw):not(#ss#ss){
+  background:none;border:0;border-bottom:1px solid currentColor;border-radius:0;box-shadow:none;padding:2px 0;min-height:0;overflow:visible;
+  color:#74444D;transition:color .3s ease;}
+html[data-brand="scott"] :is(#accountLogoutBtn,#adminNotifClearAll,#mcChangeBtn,.fs-photo-btn,.promo-admin-card-actions .btn-ghost,.ap-redraw):not(#ss#ss)::before,
+html[data-brand="scott"] :is(#accountLogoutBtn,#adminNotifClearAll,#mcChangeBtn,.fs-photo-btn,.promo-admin-card-actions .btn-ghost,.ap-redraw):not(#ss#ss)::after{content:none;}
+html[data-brand="scott"] :is(#accountLogoutBtn,#adminNotifClearAll,#mcChangeBtn,.fs-photo-btn,.promo-admin-card-actions .btn-ghost,.ap-redraw):not(#ss#ss):is(:hover,:active){color:#8E6169;background:none;border-color:currentColor;}
+html[data-brand="scott"] .promo-admin-card-actions .promo-admin-delete:not(#ss#ss){color:#a8402f;}
+html[data-brand="scott"] #accountLogoutBtn:not(#ss#ss){margin-left:6px;}
+/* the Pay button wraps to two lines on phones: soft rounded box there, not a pill */
+@media (max-width:600px){
+  html[data-brand="scott"] #submitOrderBtn:not(#ss#ss){border-radius:16px;}
+  html[data-brand="scott"] #submitOrderBtn:not(#ss#ss)::after{border-radius:12px;}
+}
+/* two buttons side by side in the small pop-ups: keep each on one line */
+html[data-brand="scott"] .confirm-actions :is(.btn-primary,.btn-ghost):not(#ss#ss){white-space:nowrap;padding-left:14px;padding-right:14px;font-size:13px;}
