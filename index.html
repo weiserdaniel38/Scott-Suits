@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261118dclient">
+<link rel="stylesheet" href="./style.css?v=20261118vest">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261117trim"></script>
 <link rel="stylesheet" href="./brand.css?v=20261117halfdouble">
@@ -345,6 +345,12 @@
       <span class="step-label">Pants</span>
     </div>
     <span class="process-divider"></span>
+    <div class="process-step" data-step="vestSection" data-milestone="vest">
+      <span class="step-num">03</span>
+      <img class="step-icon" src="./assets/step-vest.png" alt="Vest">
+      <span class="step-label">Vest</span>
+    </div>
+    <span class="process-divider"></span>
     <!-- Hidden until the suit-picture service answers (see
          initPreviewStep()). -->
     <div class="process-step" data-step="previewSection" data-milestone="preview" style="display:none">
@@ -451,6 +457,17 @@
         <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
       </span>
     </button>
+    <button type="button" class="suit-type-card" id="chooseVestOnlyBtn" data-suit-type="vestOnly">
+      <span class="suit-type-icon">
+        <img src="./assets/suit-type-vest-only.png?v=20261118vest" alt="Vest only">
+      </span>
+      <span class="suit-type-body">
+        <span class="suit-type-name">Vest Only</span>
+      <span class="suit-type-desc">No Jacket or Pants</span>
+      <span class="suit-type-price">From $150</span>
+        <span class="suit-type-go">Choose <span aria-hidden="true">&rarr;</span></span>
+      </span>
+    </button>
   </div>
   <!-- Build From a Photo (photo-suit.js, edge function suit-from-photo):
        upload a picture of a suit, get the closest design, change anything
@@ -538,6 +555,31 @@
       <div class="measure-actions">
         <button class="btn-ghost" id="backToJacketBtn">&larr; Back to Jacket</button>
         <button class="btn-primary" id="continuePantsBtn">Continue to Measurements</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Vest (2026-11-18): "Add a Matching Vest" for a full suit (makes it a
+     three-piece), or the whole design of a vest on its own. -->
+<section class="designer step" id="vestSection">
+  <div class="designer-head">
+    <h2 id="vestHeadTitle">Add a vest</h2>
+    <p id="vestHeadText">Make it a three-piece suit, cut from the same fabric.</p>
+  </div>
+
+  <div class="designer-grid" id="vestGrid">
+    <div class="tabs" id="vestTabs"></div>
+    <p class="tabs-hint">Swipe for more categories →</p>
+    <div class="options" id="vestOptions"></div>
+    <div class="summary">
+      <h3>Your Vest</h3>
+      <div id="vestSummaryRows"></div>
+      <div class="summary-total"><span>Estimated Total</span><b id="vestTotalPrice">$350</b></div>
+      <p class="my-cost-line" id="vestMyCostLine" hidden></p>
+      <div class="measure-actions">
+        <button class="btn-ghost" id="backFromVestBtn">&larr; Back to Pants</button>
+        <button class="btn-primary" id="continueVestBtn">Continue to Measurements</button>
       </div>
     </div>
   </div>
@@ -1286,10 +1328,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js?v=20261022protect"></script>
-<script src="./catalog.js?v=20261118semipeak"></script>
+<script src="./catalog.js?v=20261118vest"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261118dclient"></script>
+<script src="./main.js?v=20261118vest"></script>
 <script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>

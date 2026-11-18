@@ -634,26 +634,35 @@ const MEASUREMENTS = [
   { id: "knee", label: "Knee", part: "pants", min: 32, max: 70, typ: [36, 50] },
   { id: "calf", label: "Calf", part: "pants", min: 28, max: 70, typ: [32, 50], factoryOptional: true },
   { id: "cuff", label: "Cuff", part: "pants", min: 28, max: 60, typ: [29, 46] },
+  // Vest (3-piece suit or vest only, 2026-11-18): the finished vest, like
+  // the jacket fields. Factory positions MJ01 / MJ02 / MJ04.
+  { id: "vest_chest", label: "Vest Chest", part: "vest", hint: "Around the finished vest at the chest, buttoned", min: 76, max: 160, typ: [88, 125] },
+  { id: "vest_stomach", label: "Vest Stomach", part: "vest", hint: "Around the finished vest at the stomach, buttoned", min: 66, max: 165, typ: [80, 125] },
+  { id: "vest_length", label: "Vest Length", part: "vest", hint: "Back of the collar down to the bottom of the vest at the back", min: 45, max: 75, typ: [52, 66] },
   // Body measurements (mode "body"): the customer measures themselves and
   // picks a fit; the factory adds its own allowances. Every entry above
   // without a `mode` is a finished-garment measurement. Each id is its
   // orders column; kute-factory maps them to the factory's body positions.
-  { id: "body_neck", label: "Neck", part: "jacket", mode: "body", hint: "Around the base of your neck", min: 30, max: 55, typ: [36, 47] },
-  { id: "body_chest", label: "Chest", part: "jacket", mode: "body", hint: "Around the fullest part, under your arms", min: 76, max: 165, typ: [88, 130] },
-  { id: "body_stomach", label: "Stomach", part: "jacket", mode: "body", hint: "Around your belly at the navel", min: 60, max: 170, typ: [75, 130] },
+  { id: "body_neck", vestToo: true, label: "Neck", part: "jacket", mode: "body", hint: "Around the base of your neck", min: 30, max: 55, typ: [36, 47] },
+  { id: "body_chest", vestToo: true, label: "Chest", part: "jacket", mode: "body", hint: "Around the fullest part, under your arms", min: 76, max: 165, typ: [88, 130] },
+  { id: "body_stomach", vestToo: true, label: "Stomach", part: "jacket", mode: "body", hint: "Around your belly at the navel", min: 60, max: 170, typ: [75, 130] },
   { id: "body_seat", label: "Seat", part: "jacket", pantsToo: true, mode: "body", hint: "Around the fullest part of your seat", min: 76, max: 165, typ: [88, 125] },
   { id: "body_bicep", label: "Bicep", part: "jacket", mode: "body", hint: "Around the fullest part of your upper arm", min: 22, max: 55, typ: [27, 42] },
   { id: "body_shoulder", label: "Shoulder Width", part: "jacket", mode: "body", hint: "Across your back, shoulder point to shoulder point", min: 36, max: 60, typ: [41, 51] },
   { id: "body_sleeve", label: "Arm Length", part: "jacket", mode: "body", hint: "Shoulder point to wrist bone, arm relaxed. Not from the neck", min: 48, max: 75, typ: [55, 68] },
-  { id: "body_nape_waist", label: "Nape to Waist", part: "jacket", mode: "body", hint: "Back of your neck down to your natural waist", min: 33, max: 55, typ: [40, 50] },
+  { id: "body_nape_waist", vestToo: true, label: "Nape to Waist", part: "jacket", mode: "body", hint: "Back of your neck down to your natural waist", min: 33, max: 55, typ: [40, 50] },
   { id: "body_back_length", label: "Jacket Length", part: "jacket", mode: "body", hint: "Back of your neck down to where the jacket should end", min: 60, max: 90, typ: [68, 80] },
-  { id: "body_front_waist", label: "Front Waist Length", part: "jacket", mode: "body", hint: "Shoulder at the neck, down the front to your natural waist", min: 35, max: 62, typ: [40, 55] },
+  { id: "body_front_waist", vestToo: true, label: "Front Waist Length", part: "jacket", mode: "body", hint: "Shoulder at the neck, down the front to your natural waist", min: 35, max: 62, typ: [40, 55] },
   { id: "body_waist", label: "Waist", part: "pants", mode: "body", hint: "Around where you wear your trousers", min: 60, max: 160, typ: [70, 120] },
   { id: "body_thigh", label: "Thigh", part: "pants", mode: "body", hint: "Around the fullest part of your upper thigh", min: 40, max: 85, typ: [48, 70] },
   { id: "body_u_rise", label: "U-Rise", part: "pants", mode: "body", hint: "Front waist, between your legs, to the back waist", min: 55, max: 100, typ: [60, 80] },
-  { id: "body_front_waist_h", label: "Front Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the front", min: 1, max: 20, typ: [2, 10] },
-  { id: "body_back_waist_h", label: "Back Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the back", min: 1, max: 20, typ: [2, 10] },
+  { id: "body_front_waist_h", vestToo: true, label: "Front Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the front", min: 1, max: 20, typ: [2, 10] },
+  { id: "body_back_waist_h", vestToo: true, label: "Back Waist Height", part: "pants", mode: "body", hint: "How far below your natural waist the trousers sit at the back", min: 1, max: 20, typ: [2, 10] },
   { id: "body_outseam", label: "Outseam", part: "pants", mode: "body", hint: "Side of your waist down to where the trousers should end", min: 75, max: 125, typ: [88, 112] },
+  // The vest's length is always the finished length (factory position 27,
+  // "Vest Back Length (Finished)"); the other vest sizes come from the
+  // body fields marked vestToo.
+  { id: "body_vest_length", label: "Vest Length", part: "vest", mode: "body", hint: "Back of your neck down to where the vest should end, at the back", min: 45, max: 75, typ: [52, 66] },
 ];
 // Fits offered with body measurements (the factory's fit names).
 const BODY_FITS = ["Slim", "Regular", "Loose"];
@@ -2564,14 +2573,16 @@ function fabricDescription(pattern, colorGroup, hex) {
 // ---------------------------------------------------------------------
 // Pants on their own (Daniel, 2026-10-22): from $150, stepping up with the
 // fabric tier.
+// vestAddonUsd: a matching vest added to a suit; vest only = pantsUsd
+// (vest: $50 to make + ~1 m fabric, 2026-11-18).
 const FABRIC_PRICE_TIERS = [
-  { suitUsd: 350, jacketUsd: 275, pantsUsd: 150 }, // up to $17/m (Daniel keeps $350, ~$130 profit)
-  { suitUsd: 410, jacketUsd: 320, pantsUsd: 150 }, // $20-27.5/m
-  { suitUsd: 415, jacketUsd: 320, pantsUsd: 150 }, // $28/m
-  { suitUsd: 445, jacketUsd: 345, pantsUsd: 165 }, // $30-36/m
-  { suitUsd: 450, jacketUsd: 345, pantsUsd: 165 }, // $38/m and the $27/m DZZ stripes
-  { suitUsd: 470, jacketUsd: 360, pantsUsd: 180 }, // $39-42/m
-  { suitUsd: 475, jacketUsd: 360, pantsUsd: 180 }, // $45/m
+  { suitUsd: 350, jacketUsd: 275, pantsUsd: 150, vestAddonUsd: 125 }, // up to $17/m (Daniel keeps $350, ~$130 profit)
+  { suitUsd: 410, jacketUsd: 320, pantsUsd: 150, vestAddonUsd: 135 }, // $20-27.5/m
+  { suitUsd: 415, jacketUsd: 320, pantsUsd: 150, vestAddonUsd: 135 }, // $28/m
+  { suitUsd: 445, jacketUsd: 345, pantsUsd: 165, vestAddonUsd: 145 }, // $30-36/m
+  { suitUsd: 450, jacketUsd: 345, pantsUsd: 165, vestAddonUsd: 145 }, // $38/m and the $27/m DZZ stripes
+  { suitUsd: 470, jacketUsd: 360, pantsUsd: 180, vestAddonUsd: 150 }, // $39-42/m
+  { suitUsd: 475, jacketUsd: 360, pantsUsd: 180, vestAddonUsd: 150 }, // $45/m
 ];
 const FABRIC_PRICE_TIER = {
   "26SU210.DBP325A": 0, // $15/m Soft Ivory
@@ -3484,3 +3495,189 @@ const CUSTOMIZATION_LEVELS = (function () {
     advanced: { label: "Advanced", jacket: null, pants: null },
   };
 })();
+
+// ---------------------------------------------------------------------
+// VEST (Daniel, 2026-11-18): a matching vest added to a full suit (the
+// "Add a Matching Vest" step after the pants, which makes it a 3-piece
+// suit) or a vest on its own ("Vest Only" card). The factory's Men Vest
+// category is MMJ; a 3-piece suit is category S (jacket + pants + vest).
+// Choices are saved together in the order's `vest` column (jsonb, keyed
+// by each step's column). In a 3-piece suit the vest uses the suit's
+// fabric, lining, buttons and thread; only Vest Only asks for them.
+// Pictures: Daniel's drawings (Scott-Suits-Vest-Options.pdf, 2026-11-18),
+// cropped without their factory code labels.
+// ---------------------------------------------------------------------
+// Prices: a vest costs the factory $50 to make plus about 1 m of fabric
+// (contract 2026-10-08). Vest Only is priced like pants (pantsUsd); a vest
+// added to a suit adds vestAddonUsd of the suit's fabric tier (both set in
+// FABRIC_PRICE_TIERS).
+const VEST_CATALOG = {
+  addVest: {
+    label: "Add a Matching Vest",
+    column: "vest_add",
+    description: "Make it a three-piece suit: same fabric, lining and buttons as your jacket.",
+    options: [
+      { name: "No Vest", displayName: "No Vest", img: "./assets/suit-type-full-suit.png?v=20261101fast" },
+      { name: "Add a Vest", displayName: "Add a Vest", img: "./assets/suit-type-vest-only.png?v=20261118vest" },
+      // Vest Only orders (set by the Vest Only card, never offered here).
+      { name: "Vest Only", displayName: "Vest Only", img: "./assets/vest-btn-5.jpg" },
+    ],
+  },
+  fabric: {
+    label: "Fabric",
+    column: "vest_fabric",
+    patternTypes: FABRIC_PATTERN_TYPES,
+    colorFirst: FABRIC_COLOR_FIRST,
+    options: flattenPatternTypes(FABRIC_PATTERN_TYPES),
+    requiresEquals: { key: "addVest", value: "Vest Only" },
+  },
+  frontbutton: {
+    label: "Vest Buttons",
+    column: "vest_front_button",
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { section: "Single Breasted", name: "3 Buttons", displayName: "3 Buttons", factoryCode: "401C", img: "./assets/vest-btn-3.jpg" },
+      { section: "Single Breasted", name: "4 Buttons", displayName: "4 Buttons", factoryCode: "401D", img: "./assets/vest-btn-4.jpg" },
+      { section: "Single Breasted", name: "5 Buttons", displayName: "5 Buttons", factoryCode: "401G", img: "./assets/vest-btn-5.jpg", badge: "Classic" },
+      { section: "Single Breasted", name: "6 Buttons", displayName: "6 Buttons", factoryCode: "401P", img: "./assets/vest-btn-6.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 4 Buttons", displayName: "4 Buttons", factoryCode: "401M", img: "./assets/vest-btn-db4.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 6 Buttons Low", displayName: "6 Buttons, Low", factoryCode: "4031", img: "./assets/vest-btn-db6x2.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 6 Buttons", displayName: "6 Buttons", factoryCode: "401K", img: "./assets/vest-btn-db6.jpg" },
+      { section: "Double Breasted", name: "Double Breasted 8 Buttons", displayName: "8 Buttons", factoryCode: "401L", img: "./assets/vest-btn-db8.jpg" },
+    ],
+  },
+  bottom: {
+    label: "Vest Bottom",
+    column: "vest_bottom",
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { name: "Pointed", displayName: "Pointed", factoryCode: "401J", img: "./assets/vest-bottom-regular.jpg", badge: "Classic" },
+      { name: "Small Point", displayName: "Small Point", factoryCode: "401Q", img: "./assets/vest-bottom-small.jpg" },
+      { name: "Straight", displayName: "Straight", factoryCode: "401Z", img: "./assets/vest-bottom-square.jpg" },
+      { name: "Rounded", displayName: "Rounded", factoryCode: "401Y", img: "./assets/vest-bottom-round.jpg" },
+    ],
+  },
+  collar: {
+    label: "Vest Lapel",
+    column: "vest_lapel",
+    sameAsLabel: "Match Jacket",
+    sameAsOptional: true,
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { section: "No Lapel", name: "V-Neck", displayName: "V-Neck", factoryCode: "4000", img: "./assets/vest-lapel-v.jpg", badge: "Classic" },
+      { section: "No Lapel", name: "U-Neck", displayName: "U-Neck", factoryCode: "4001", img: "./assets/vest-lapel-u.jpg" },
+      { section: "Lapel", name: "Notch Lapel", displayName: "Notch", factoryCode: "4004", img: "./assets/vest-lapel-notch.jpg" },
+      { section: "Lapel", name: "Peak Lapel", displayName: "Peak", factoryCode: "4006", img: "./assets/vest-lapel-peak.jpg" },
+      { section: "Lapel", name: "Shawl Lapel", displayName: "Shawl", factoryCode: "4003", img: "./assets/vest-lapel-shawl.jpg" },
+      { section: "Lapel With Collar Band", name: "Notch Lapel with Collar Band", displayName: "Notch", factoryCode: "4005", img: "./assets/vest-lapel-notch-band.jpg" },
+      { section: "Lapel With Collar Band", name: "Peak Lapel with Collar Band", displayName: "Peak", factoryCode: "4007", img: "./assets/vest-lapel-peak-band.jpg" },
+      { section: "Lapel With Collar Band", name: "Shawl Lapel with Collar Band", displayName: "Shawl", factoryCode: "4002", img: "./assets/vest-lapel-shawl-band.jpg" },
+    ],
+  },
+  lapelbuttonhole: {
+    label: "Vest Lapel Buttonhole",
+    column: "vest_lapel_buttonhole",
+    sameAsLabel: "Match Jacket",
+    sameAsOptional: true,
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    // Only a lapel has a buttonhole; V-Neck and U-Neck leave this as None.
+    allowedBySelection: { collar: { "V-Neck": ["No Lapel Buttonhole"], "U-Neck": ["No Lapel Buttonhole"] } },
+    options: [
+      { name: "No Lapel Buttonhole", displayName: "None", factoryCode: "4544", img: "./assets/vest-hole-none.jpg", badge: "Classic" },
+      { name: "Left Lapel", displayName: "Left Lapel", factoryCode: "4541", img: "./assets/vest-hole-left.jpg" },
+      { name: "Left Lapel, Two", displayName: "Two on Left Lapel", factoryCode: "4545", img: "./assets/vest-hole-left-two.jpg" },
+      { name: "Both Lapels", displayName: "Both Lapels", factoryCode: "4543", img: "./assets/vest-hole-both.jpg" },
+    ],
+  },
+  chestpocket: {
+    label: "Vest Chest Pocket",
+    column: "vest_chest_pocket",
+    sameAsLabel: "Match Jacket",
+    sameAsOptional: true,
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { section: "None", name: "No Chest Pocket", displayName: "None", factoryCode: "4X06", img: "./assets/vest-chest-none.jpg", badge: "Classic" },
+      { section: "Left Side", name: "Left Welt", displayName: "Welt", factoryCode: "4111", img: "./assets/vest-chest-left-welt.jpg" },
+      { section: "Left Side", name: "Left Besom", displayName: "Slim Besom", factoryCode: "4112", img: "./assets/vest-chest-left-besom.jpg" },
+      { section: "Left Side", name: "Left Besom with Flap", displayName: "Flap", factoryCode: "4113", img: "./assets/vest-chest-left-flap.jpg" },
+      { section: "Left Side", name: "Left Patch", displayName: "Patch", factoryCode: "4125", img: "./assets/vest-chest-left-patch.jpg" },
+      { section: "Both Sides", name: "Both Welt", displayName: "Welt", factoryCode: "4142", img: "./assets/vest-chest-both-welt.jpg" },
+      { section: "Both Sides", name: "Both Besom", displayName: "Slim Besom", factoryCode: "4143", img: "./assets/vest-chest-both-besom.jpg" },
+      { section: "Both Sides", name: "Both Besom with Flap", displayName: "Flap", factoryCode: "4144", img: "./assets/vest-chest-both-flap.jpg" },
+      { section: "Both Sides", name: "Both Patch", displayName: "Patch", factoryCode: "4185", img: "./assets/vest-chest-both-patch.jpg" },
+    ],
+  },
+  lowerpocket: {
+    label: "Vest Lower Pockets",
+    column: "vest_lower_pocket",
+    sameAsLabel: "Match Jacket",
+    sameAsOptional: true,
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { section: "Straight", name: "Welt", displayName: "Welt", factoryCode: "4300", img: "./assets/vest-lower-welt.jpg", badge: "Classic" },
+      { section: "Straight", name: "Narrow Welt", displayName: "Narrow Welt", factoryCode: "430B", img: "./assets/vest-lower-welt-slim.jpg" },
+      { section: "Straight", name: "Besom", displayName: "Slim Besom", factoryCode: "4301", img: "./assets/vest-lower-besom.jpg" },
+      { section: "Straight", name: "Besom with Flap", displayName: "Flap", factoryCode: "4302", img: "./assets/vest-lower-flap.jpg" },
+      { section: "Straight", name: "Patch", displayName: "Patch", factoryCode: "4162", img: "./assets/vest-lower-patch.jpg" },
+      { section: "Slanted", name: "Slant Welt", displayName: "Welt", factoryCode: "4169", img: "./assets/vest-lower-slant-welt.jpg" },
+      { section: "Slanted", name: "Slant Besom", displayName: "Slim Besom", factoryCode: "4170", img: "./assets/vest-lower-slant-besom.jpg" },
+      { section: "Slanted", name: "Slant Besom with Flap", displayName: "Flap", factoryCode: "4171", img: "./assets/vest-lower-slant-flap.jpg" },
+      { section: "None", name: "No Lower Pockets", displayName: "None", factoryCode: "4151", img: "./assets/vest-lower-none.jpg" },
+    ],
+  },
+  backstyle: {
+    label: "Vest Back Adjuster",
+    column: "vest_back",
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { name: "Adjuster Strap", displayName: "Adjuster Strap", factoryCode: "4200", img: "./assets/vest-back-strap.jpg", badge: "Classic" },
+      { name: "No Adjuster", displayName: "No Strap", factoryCode: "4202", img: "./assets/vest-back-no-strap.jpg" },
+    ],
+  },
+  // Vest Only: lining, buttons and thread (a 3-piece suit uses the jacket's).
+  lining: Object.assign({}, JACKET_CATALOG.lining, {
+    column: "vest_lining",
+    hiddenWhenEquals: undefined,
+    specialOptions: [LINING_MATCH_OPTION],
+    options: [LINING_MATCH_OPTION].concat(flattenPatternTypes(LINING_PATTERN_TYPES)),
+    requiresEquals: { key: "addVest", value: "Vest Only" },
+  }),
+  buttoncolor: Object.assign({}, JACKET_CATALOG.buttoncolor, {
+    column: "vest_button_color",
+    requiresEquals: { key: "addVest", value: "Vest Only" },
+  }),
+  threadColor: Object.assign({}, JACKET_CATALOG.threadColor, {
+    label: "Button Thread Color",
+    column: "vest_thread_color",
+    requiresEquals: { key: "addVest", value: "Vest Only" },
+  }),
+};
+const VEST_CATALOG_GROUPS = [
+  { label: "Vest", keys: ["addVest", "fabric"] },
+  { label: "Style", keys: ["frontbutton", "bottom", "collar", "lapelbuttonhole"] },
+  { label: "Pockets & Back", keys: ["chestpocket", "lowerpocket", "backstyle"] },
+  { label: "Lining & Buttons", keys: ["lining", "buttoncolor", "threadColor"] },
+];
+// The vest designer always runs with one of these presets: it keeps "Vest
+// Only" out of the suit's Add a Vest question, and the Minimal / Basic
+// levels ask fewer vest questions (the rest are the classic answers).
+const VEST_PRESETS = (function () {
+  const all = ["addVest", "frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle"];
+  const classic = { frontbutton: "5 Buttons", bottom: "Pointed", collar: "V-Neck", lapelbuttonhole: "No Lapel Buttonhole", chestpocket: "No Chest Pocket", lowerpocket: "Welt", backstyle: "Adjuster Strap" };
+  const suit = (steps) => {
+    const fixed = {};
+    Object.keys(classic).forEach((k) => { if (steps.indexOf(k) === -1) fixed[k] = classic[k]; });
+    return { steps, allowed: { addVest: ["No Vest", "Add a Vest"] }, fixed };
+  };
+  return {
+    advanced: suit(all),
+    basic: suit(["addVest", "frontbutton", "collar", "lowerpocket"]),
+    minimal: suit(["addVest"]),
+    vestOnly: { steps: ["fabric", "frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle", "lining", "buttoncolor", "threadColor"], allowed: {}, fixed: { addVest: "Vest Only" } },
+  };
+})();
+// The suit picture spec names each vest choice by its full option name
+// (VEST_LOOKS in generate-suit-image keys on it), not the short card name.
+["frontbutton", "bottom", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "backstyle"].forEach((k) => {
+  VEST_CATALOG[k].options.forEach((o) => { if (!o.specName) o.specName = o.name; });
+});

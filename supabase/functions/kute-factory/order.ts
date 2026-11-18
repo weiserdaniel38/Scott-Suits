@@ -25,9 +25,10 @@ export type BuildInput = {
   row: Row;
   jacket: Catalog;
   pants: Catalog;
+  vest?: Catalog;
   emb: { MXF?: EmbCodes; MXK?: EmbCodes };
   // For the measurement type of this suit (body or finished).
-  ranges?: { MXF?: SizeRanges; MXK?: SizeRanges };
+  ranges?: { MXF?: SizeRanges; MXK?: SizeRanges; MMJ?: SizeRanges };
   height: number;
   heightUnit: "cm" | "in";
   weight: number;
@@ -110,6 +111,18 @@ const PANTS_BODY: [string, string][] = [
 // The fits offered on the site (BODY_FITS in catalog.js) -> factory fit codes.
 const FIT_CODES: Record<string, number> = { Slim: 1, Regular: 2, Loose: 3 };
 
+// The vest (Men Vest, MMJ). Body: the factory's required vest positions
+// come from the jacket and trouser body fields; the vest length is the
+// finished length (position 27). Finished: chest, stomach, back length.
+const VEST_BODY: [string, string][] = [
+  ["body_neck", "1"], ["body_chest", "2"], ["body_stomach", "3"], ["body_nape_waist", "18"], ["body_front_waist", "19"],
+  ["body_front_waist_h", "20"], ["body_back_waist_h", "21"], ["body_vest_length", "27"],
+];
+const VEST_SIZES: [string, string][] = [["vest_chest", "MJ01"], ["vest_stomach", "MJ02"], ["vest_length", "MJ04"]];
+// Steps handled by hand below (lining, buttons, thread, fabric) or that
+// only exist on the site (Add a Vest).
+const VEST_BY_HAND = new Set(["addVest", "fabric", "lining", "buttoncolor", "threadColor"]);
+
 // Finished measurements (cm) -> the factory's measurement position codes.
 const JACKET_SIZES: [string, string][] = [
   ["chest", "XF01"], ["stomach", "XF02"], ["bicep", "XF04"], ["sleeve_length", "XF05"], ["sleeve_length", "XF06"],
@@ -117,7 +130,7 @@ const JACKET_SIZES: [string, string][] = [
 ];
 // Positions the factory doesn't require that the site no longer asks for
 // (front length), so a missing one is no warning.
-const OPTIONAL_SIZES = new Set(["XF11"]);
+const OPTIONAL_SIZES = new Set(["XF11", "27"]);
 const PANTS_SIZES: [string, string][] = [
   ["waist", "XK01"], ["hips", "XK02"], ["thigh", "XK03"], ["crotch", "XK04"], ["leg_length", "XK05"], ["leg_length", "XK06"],
   ["knee", "XK08"], ["cuff", "XK07"],
@@ -247,9 +260,9 @@ function splitName(full: string) {
 
 // The factory's fabric number: the site stores "26SU218.DBV3529", the
 // factory's number is the part after the dot. Pants on their own use the
-// pants fabric.
+// pants fabric; a vest on its own saves its fabric as the order's fabric.
 function factoryFabric(row: Row, hasJacket: boolean): string {
-  const v = hasJacket ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
+  const v = hasJacket || s(row.suit_type) === "vest_only" ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
   return v.includes(".") ? v.split(".").pop() || "" : v;
 }
 
@@ -258,10 +271,14 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
   const warnings: string[] = [];
   const blocking: string[] = [];
   const notes: string[] = [];
-  // Jacket only, pants only, or both (a suit).
-  const hasJacket = s(row.suit_type) !== "pants_only";
-  const hasPants = s(row.suit_type) !== "jacket_only";
+  // Jacket only, pants only, both (a suit), a 3-piece suit (suit + vest)
+  // or a vest on its own.
+  const vestOnly = s(row.suit_type) === "vest_only";
+  const hasJacket = s(row.suit_type) !== "pants_only" && !vestOnly;
+  const hasPants = s(row.suit_type) !== "jacket_only" && !vestOnly;
   const isSuit = hasJacket && hasPants;
+  const vestCols = row.vest && typeof row.vest === "object" ? (row.vest as Row) : null;
+  const hasVest = !!vestCols && (vestOnly || s(row.suit_type) === "three_piece");
   const bodyMode = s(row.measure_type) === "body";
   const fit = (v: unknown) => FIT_CODES[s(v)] || FIT_CODES.Regular;
 
@@ -443,9 +460,41 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     // (Daniel 2026-11-16), so knee + cuff do the work; nothing is sent.
   }
 
+  // ---- Vest ----
+  if (hasVest && vestCols) {
+    if (!input.vest) blocking.push("The vest choices couldn't be read from the site; try again.");
+    else {
+      const vrow: Row = { ...row, ...vestCols };
+      const vc = catalogCodes(input.vest, vrow, VEST_BY_HAND, "Vest", warnings);
+      // Back in the lining (the factory's matched lining).
+      vc.push("4210");
+      // Lining, buttons and thread: the vest's own on a vest alone, the
+      // jacket's on a 3-piece suit.
+      const lining = vestOnly ? s(vrow.vest_lining) : s(row.jacket_lining);
+      const liningCat = vestOnly ? input.vest.lining : jacket.lining;
+      if (!lining || matched(liningCat, lining) || s(row.facing_style) === "No Lining Construction") vc.push("4711");
+      else if (lining === "Customer's Own Photo") {
+        warnings.push("Vest lining: the customer sent their own lining photo; pick the lining on the factory site.");
+      } else vc.push("4714:" + lining);
+      const vButton = vestOnly ? s(vrow.vest_button_color) : button;
+      const buttonCat = vestOnly ? input.vest.buttoncolor : jacket.buttoncolor;
+      if (vButton && !matched(buttonCat, vButton)) vc.push("4240:" + vButton);
+      const vThread = vestOnly ? s(vrow.vest_thread_color) : s(row.jacket_thread_color);
+      const threadCat = vestOnly ? input.vest.threadColor : jacket.threadColor;
+      vc.push(matched(threadCat, vThread) ? "464F" : "464D:" + vThread);
+      details.push({
+        categoryCode: "MMJ",
+        crafts: [...new Set(vc)].join(","),
+        orderSizes: sizes(vrow, bodyMode ? VEST_BODY : VEST_SIZES, "Vest", warnings, input.ranges?.MMJ),
+        orderEmbs: [],
+        ...(bodyMode ? { versionStyle: fit(row.jacket_fit) } : {}),
+      });
+    }
+  }
+
   // Fabric: the site stores "26SU218.DBV3529"; the factory's number is the part after the dot.
   // Pants on their own use the pants fabric.
-  const fabricValue = hasJacket ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
+  const fabricValue = hasJacket || vestOnly ? s(row.fabric) : s(row.pants_fabric) || s(row.fabric);
   const fabric = factoryFabric(row, hasJacket);
   if (!fabric) blocking.push("No fabric on this suit.");
   const pantsFabric = s(row.pants_fabric);
@@ -471,7 +520,8 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
     addProduct: false,
     amount: 1,
     isSample: 0,
-    category: isSuit ? "T" : hasJacket ? "MXF" : "MXK",
+    // T = 2-piece suit, S = 3-piece suit (jacket, trousers, vest).
+    category: vestOnly ? "MMJ" : isSuit ? (hasVest ? "S" : "T") : hasJacket ? "MXF" : "MXK",
     measuresType: bodyMode ? 10001 : 10002,
     fabric,
     customer: {

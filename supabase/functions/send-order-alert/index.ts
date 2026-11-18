@@ -49,6 +49,8 @@ const SUIT_TYPES: Record<string, string> = {
   full_suit: "Full suit",
   jacket_only: "Jacket only",
   pants_only: "Pants only",
+  three_piece: "Three-piece suit",
+  vest_only: "Vest only",
 };
 
 export type AlertRow = {

@@ -972,6 +972,8 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
   if (/^Lower Pockets: Flat Welt Pocket$/m.test(spec)) {
     out.push("- HIP POCKETS: " + WELT_NOT_FLAP + "." + weltHipNote(spec) + (weltHipNote(spec) ? "." : ""));
   }
+  const vest = vestText(spec);
+  if (vest) out.push("- VEST (three-piece suit): " + vest + ".");
   out.push(...monogramRules(spec));
   if (buttonText(spec, buttonPhoto)) out.push("- BUTTONS: " + buttonText(spec, buttonPhoto) + ".");
   if (stitchText(spec)) out.push("- BUTTON STITCHING: " + stitchText(spec) + ".");
@@ -983,12 +985,56 @@ function keyDetails(spec: string, ownLining = false, buttonPhoto = false): strin
   return out.length ? "KEY DETAILS THAT MUST BE VISIBLE (the customer chose these specifically; do not draw the common default instead):\n" + out.join("\n") : "";
 }
 
+// Three-piece suits (2026-11-18): the VEST section of the spec, as one
+// sentence for the prompt. Empty for a two-piece suit.
+const VEST_LOOKS: Record<string, Record<string, string>> = {
+  "Vest Buttons": {
+    "3 Buttons": "single-breasted with 3 buttons in one vertical row",
+    "4 Buttons": "single-breasted with 4 buttons in one vertical row",
+    "5 Buttons": "single-breasted with 5 buttons in one vertical row",
+    "6 Buttons": "single-breasted with 6 buttons in one vertical row",
+    "Double Breasted 4 Buttons": "double-breasted with 4 buttons in two columns of 2",
+    "Double Breasted 6 Buttons Low": "double-breasted with 6 buttons in two columns of 3 set low on the front",
+    "Double Breasted 6 Buttons": "double-breasted with 6 buttons in two columns of 3",
+    "Double Breasted 8 Buttons": "double-breasted with 8 buttons in two columns of 4",
+  },
+  "Vest Bottom": {
+    "Pointed": "the front bottom edge ends in two classic points below the last button",
+    "Small Point": "the front bottom edge ends in two small, short points",
+    "Straight": "the front bottom edge is cut straight across, no points",
+    "Rounded": "the front bottom edge curves away in rounded corners",
+  },
+  "Vest Lapel": {
+    "V-Neck": "no lapels, a plain V neckline",
+    "U-Neck": "no lapels, a deep rounded U neckline",
+    "Notch Lapel": "small notch lapels",
+    "Peak Lapel": "small peak lapels",
+    "Shawl Lapel": "a small rounded shawl lapel",
+    "Notch Lapel with Collar Band": "small notch lapels on a collar that goes around the back of the neck",
+    "Peak Lapel with Collar Band": "small peak lapels on a collar that goes around the back of the neck",
+    "Shawl Lapel with Collar Band": "a small shawl lapel on a collar that goes around the back of the neck",
+  },
+};
+function vestText(spec: string): string {
+  if (!/^VEST$/m.test(spec)) return "";
+  const v = (label: string) => sectionValue(spec, "VEST", label);
+  const look = (label: string) => (VEST_LOOKS[label] || {})[v(label)] || v(label).toLowerCase();
+  const parts = ["a matching vest in the SAME fabric as the jacket is worn buttoned under the jacket and shows between the jacket fronts in the front view, above the trouser waistband"];
+  if (v("Vest Buttons")) parts.push(look("Vest Buttons") + ", in the same buttons as the jacket");
+  if (v("Vest Lapel")) parts.push(look("Vest Lapel"));
+  if (v("Vest Bottom")) parts.push(look("Vest Bottom"));
+  const chest = v("Vest Chest Pocket"), lower = v("Vest Lower Pockets");
+  if (chest) parts.push(/^No /.test(chest) ? "no chest pocket on the vest" : "vest chest pocket: " + chest.toLowerCase());
+  if (lower) parts.push(/^No /.test(lower) ? "no lower pockets on the vest" : "vest lower pockets: " + lower.toLowerCase());
+  return parts.join("; ");
+}
+
 // One line of a section (JACKET or PANTS) of the spec.
 function sectionValue(spec: string, section: string, label: string): string {
   let cur = "";
   for (const line of spec.split("\n")) {
     const t = line.trim();
-    if (t === "JACKET" || t === "PANTS" || t === "REFERENCE SWATCHES") cur = t;
+    if (t === "JACKET" || t === "PANTS" || t === "VEST" || t === "REFERENCE SWATCHES") cur = t;
     else if (cur === section && t.startsWith(label + ": ")) return t.slice(label.length + 2).trim();
   }
   return "";
@@ -1254,7 +1300,7 @@ function looksLikeSuitSpec(spec: string): boolean {
   if (spec.length > 8000 || !spec.startsWith("Suit type: ")) return false;
   return spec.split("\n").every((line) => {
     const t = line.trim();
-    if (!t || t === "JACKET" || t === "PANTS" || t === "REFERENCE SWATCHES") return true;
+    if (!t || t === "JACKET" || t === "PANTS" || t === "VEST" || t === "REFERENCE SWATCHES") return true;
     if (/^Swatch [^:]{1,60}: \S{1,300}$/.test(t)) return true;
     return /^[A-Za-z0-9 &'()\/-]{1,60}: .{1,240}$/.test(t);
   });
@@ -1272,6 +1318,7 @@ You receive the sheet layout, notes on the reference images the image model will
 - Describe every construction detail the description gives that is visible in one of the panels: lapel style and width, lapel buttonhole and its thread color, front button stance and count, button color and finish, the button stitching pattern (how the thread runs between the four holes: X, square or parallel bars) and button thread color, chest and lower pockets, sleeve cuff style and number of cuff buttons, vents (back view), and for trousers the waistband style and extension, pleats, belt loops, pockets, back pockets (back view) and hem/cuff style.
 - Thread colors: topstitching and buttonhole stitching must use the given thread colors; "matched to the fabric color" means tonal thread the same color as the cloth.
 - Buttons: every button (front, cuffs, trousers) is the one chosen button: name its material and look in words (e.g. iridescent mother-of-pearl shell, streaked horn, grained corozo) and tell the image model to copy the button photo exactly; never let it fall back to generic plain buttons. "Matched to the fabric" means plain buttons in a tone matching the cloth.
+- Three-piece suit: when the description has a VEST section, the jacket is worn over a matching vest in the same fabric, buttoned, visible between the jacket fronts in the front view; describe its buttons, neckline or lapels, bottom edge and pockets as given. No vest otherwise.
 - Lining: if the facing style says the jacket is unlined, show no lining anywhere. Otherwise show the given lining color/pattern only inside the jacket body (inside the neck opening, or the front edge folded open). On the sleeves, at most a small sliver of lining may peek out at the bottom corner of the cuff vent; the sleeve cuff close-up shows a closed, buttoned cuff, never folded open.
 - "Opening" or "working" sleeve cuffs only means the cuff buttonholes are real and functional; draw them closed and buttoned, never unbuttoned or folded open.
 - Monograms: only where a "Monogram Text" is given and its placement shows in a panel (the rules after your prompt say which panel): the exact letters, in the given font style and monogram thread color, small. Otherwise no monogram is visible.
