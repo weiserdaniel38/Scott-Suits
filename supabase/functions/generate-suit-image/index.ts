@@ -172,7 +172,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Notch Lapel": "classic notch lapel: the collar meets the lapel at a small V-shaped notch opening outward, and the lapel tip points sideways/slightly down",
     "Peak Lapel": "peak lapel: the lapel's upper edge sweeps UP into a sharp point aimed at the shoulder, nearly touching the collar, with only a narrow gap between them",
     "Semi-Notch Lapel": "semi-notch lapel: like a classic notch lapel, but the notch between collar and lapel is a SMALL, shallow V and the lapel tip points straight out sideways (level, not down), sitting close under the collar",
-    "Semi-Peak Lapel": "semi-peak lapel: a softer, shorter peak; the lapel's upper edge rises slightly UPWARD to a modest point that stays well below the collar, with a clear open gap between point and collar (less dramatic than a full peak lapel)",
+    "Semi-Peak Lapel": "semi-peak lapel: a small, shorter PEAK lapel: the lapel's top edge runs UPWARD from the collar seam toward the shoulder and ends in a SHARP, POINTED tip aimed up and outward, with only a narrow V-shaped gap between the collar end and that point (a lower, softer point than a full peak lapel, but clearly a point, never a squared notch)",
     "Shawl": "shawl collar: one continuous smoothly rounded lapel-and-collar edge from the back of the neck down to the button, with NO notch, NO peak and NO break between collar and lapel",
     "Arc Lapel": "arc lapel (an arc-bottom shawl collar): like a SHAWL, collar and lapel are one continuous smooth piece from the back of the neck down, with NO notch, NO peak and NO corner. It is a shawl collar with no notch whose opening is a deep V, but each lapel is shaped like a long TONGUE with a BLUNT ROUNDED END, not like a tapering crescent. Only in the last short stretch does the lapel's outer edge turn through a tight round bend (like the end of a tongue or a butter knife) and run almost SIDEWAYS, close to horizontal, in to the top button. So the two lapels end side by side as two wide rounded lobes that meet at the button, and the outer edges of the two lapels together draw a wide round-bottomed shape that dips to a small point at the button, like the bottom of a heart turned upside down or a curly bracket lying on its side. The lapel's outer edge does NOT run as one long diagonal line into the jacket's front edge and the lapel does NOT taper to a thin point. The lapels do NOT form a U, oval or horseshoe and do NOT bulge outward. A thin horizontal seam line crosses the collar at the back of the neck",
     "Diamond Lapel": "diamond lapel, a cross between a shawl collar and a peak lapel: like a SHAWL, collar and lapel are one continuous piece starting right at the back of the neck, with NO notch, gap or step between them; like a PEAK lapel, it has one SHARP pointed corner. From the neck the edge runs in a straight line down and OUTWARD to that sharp point in the UPPER third of the lapel (about level with the chest pocket), then a much longer straight edge runs back INWARD to where the lapels meet at the top button, so each lapel is a tall kite shape. Both lapels are identical mirror images; the lapel is no wider than the chosen lapel width",
@@ -273,7 +273,7 @@ const OPTION_LOOKS: Record<string, Record<string, string>> = {
     "Above Left Sleeve Cuff": MONO + " about 2 cm above the hem of the wearer's left sleeve, beside the cuff buttons",
     "Above Right Sleeve Cuff": MONO + " about 2 cm above the hem of the wearer's right sleeve, beside the cuff buttons",
     // Pants
-    "Left Back Pocket": MONO + " just above the wearer's left back pocket",
+    "Left Back Pocket": MONO + " just above the wearer's left back pocket; it is TINY and discreet: no wider than a quarter of the back pocket opening, letters no taller than the pocket's button",
     "Right Side Below Waistband Seam": MONO + " on the front of the trousers just below the waistband on the wearer's right",
     "Inside Left Waist": MONO + " on the inside of the waistband (not visible from the outside)",
   },
@@ -554,7 +554,7 @@ const LAPEL_NOT: Record<string, string> = {
   "Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up toward the shoulder and has NO sharp upward point; a clear open V-shaped gap separates the collar from the lapel. This holds even on a double-breasted jacket, which here has NOTCH lapels, not the peak lapels double-breasted suits often have.",
   "Peak Lapel": "It is NOT a notch lapel: the lapel points sharply UP toward the shoulder.",
   "Semi-Notch Lapel": "It is NOT a peak lapel: the lapel tip does NOT point up; a small V-shaped notch separates the collar from the lapel.",
-  "Semi-Peak Lapel": "It is NOT a full peak lapel: the point rises only slightly and does NOT reach up toward the collar or shoulder. It is NOT a notch lapel: the tip angles a little upward, not down.",
+  "Semi-Peak Lapel": "MOST IMPORTANT: it is NOT a notch lapel. A notch lapel has a flat or downward-sloping top edge and a blunt, squared tip with a wide step-shaped gap below the collar; this lapel has neither: its top edge slopes UP and finishes in a sharp point. It is also NOT a full peak lapel: the point stays lower and shorter and does not reach up to the collar or shoulder. Copy the lapel line drawing exactly.",
   Shawl: "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge.",
   "Arc Lapel": "It is NOT a notch or peak lapel: there is no notch, no corner and no gap anywhere along the edge. It is NOT a plain shawl collar: on a plain shawl the lapel edge glides smoothly and invisibly into the front edge in one unbroken line and the lapel narrows steadily to a thin sharp point; that is WRONG here. Here each lapel ENDS VISIBLY at the button in a blunt rounded end, like the end of a tongue, its edge bending round and running sideways into the button. It is NOT a U, oval or horseshoe: the opening is a V and only the last short bit of each lapel edge curves.",
   "Diamond Lapel": "It is NOT a notch lapel (no notch or V-cut anywhere), NOT an ordinary peak lapel (no separate collar and no gap above the point) and NOT a fully rounded shawl (the edges are straight and the point is sharp). It is NOT an oversized or extra-wide lapel.",
@@ -1021,7 +1021,9 @@ function monogramRules(spec: string): string[] {
       "- MONOGRAM (" + section.toLowerCase() + "): embroider exactly the letters \"" + lines.join(" ") + "\"" +
         (lines.length > 1 ? " on " + lines.length + " lines (\"" + lines.join("\" / \"") + "\")" : "") +
         ", spelled letter for letter with the same capitals and lowercase, in " + (fontLook || "the " + (font || "chosen") + " font") +
-        ", stitched in " + (thread ? thread + " thread" : "the monogram thread color") + ", small (about 4 cm wide), in " + spot +
+        ", stitched in " + (thread ? thread + " thread" : "the monogram thread color") + (section === "PANTS"
+          ? ", TINY and discreet (about 3 cm wide, letters about 1 cm tall: no wider than a quarter of the back pocket opening and no taller than the pocket's button; never a large signature across the pocket), in "
+          : ", small (about 4 cm wide), in ") + spot +
         ". It is the only lettering on the sheet and appears nowhere else.",
     );
   }
