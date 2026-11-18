@@ -9700,7 +9700,7 @@ function buildOrderSummaryText(customerName, suitType, jacketSel, pantsSel, meas
     lines.push("");
   }
   if (hasVestInOrder(suitType)) {
-    lines.push("VEST" + (isVestOnly ? "" : " (same fabric, lining, buttons and thread as the jacket)"));
+    lines.push("VEST" + (isVestOnly ? "" : " (same fabric as the jacket)"));
     const vestSel = Object.assign({}, (extras && extras.vest) || {});
     delete vestSel.addVest;
     orderSummaryGarmentLines(VEST_CATALOG, VEST_CATALOG_GROUPS, vestSel, "vest", extras).forEach((l) => lines.push(l));
@@ -10800,7 +10800,8 @@ document.getElementById("continueVestBtn").addEventListener("click", () => {
 let previewStepOn = false;
 // Pants or a vest on their own skip it: the suit picture is drawn around a jacket.
 function previewStepActive() {
-  return previewStepOn && hasJacketStep();
+  // Vest Only has a picture too (Daniel 2026-11-18).
+  return previewStepOn && (hasJacketStep() || isVestOnlyType(currentSuitType));
 }
 function stepAfterDesign() {
   return previewStepActive() ? previewSection : measurementsSection;
@@ -10942,7 +10943,7 @@ function showSuitReveal() {
   title.append(el("span", "", "Your " + fabricName), el("span", "", kind));
   const list = el("ul", "suit-reveal-details");
   details.filter(Boolean).forEach((d) => list.appendChild(el("li", "", d)));
-  const go = el("button", "btn-primary suit-reveal-go", (previewStepActive() ? "Preview your suit" : "Add your measurements") + " →");
+  const go = el("button", "btn-primary suit-reveal-go", (previewStepActive() ? (isVestOnlyType(currentSuitType) ? "Preview your vest" : "Preview your suit") : "Add your measurements") + " →");
   go.type = "button";
 
   card.append(close, art, el("div", "suit-reveal-eyebrow", "Designed by you"), title, list, go);
@@ -10969,7 +10970,7 @@ function showSuitReveal() {
 }
 
 document.getElementById("backFromPreviewBtn").addEventListener("click", () => {
-  goToStep(previewSection, !hasPantsStep() ? jacketSection : pantsSection);
+  goToStep(previewSection, isVestOnlyType(currentSuitType) ? vestSection : !hasPantsStep() ? jacketSection : pantsSection);
 });
 document.getElementById("continueFromPreviewBtn").addEventListener("click", () => {
   goToStep(previewSection, measurementsSection);
@@ -12119,11 +12120,14 @@ function buildVisualSpecText(item, opts) {
     if (src && !swatches.some((s) => s.endsWith(" " + src))) swatches.push("Swatch " + label + ": " + src);
   };
   const threePiece = item.type === "threePiece" && !!item.vest;
-  lines.push("Suit type: " + (isJacketOnly ? "Jacket only (no pants)" : isPantsOnly ? "Pants only (no jacket)" : threePiece ? "Three-piece suit (jacket + vest + pants)" : "Full suit (jacket + pants)"));
-  const sections = isPantsOnly ? [] : [["JACKET", JACKET_CATALOG, item.jacket || {}]];
-  if (!isJacketOnly) sections.push(["PANTS", PANTS_CATALOG, item.pants || {}]);
-  // The vest is cut from the jacket's fabric, with its lining and buttons.
-  if (threePiece) {
+  // Vest Only (Daniel 2026-11-18: "When designing just a vest, I wanna be
+  // able to preview that too"): the sheet shows only the vest.
+  const vestOnly = isVestOnlyType(item.type) && !!item.vest;
+  lines.push("Suit type: " + (vestOnly ? "Vest only (no jacket, no pants)" : isJacketOnly ? "Jacket only (no pants)" : isPantsOnly ? "Pants only (no jacket)" : threePiece ? "Three-piece suit (jacket + vest + pants)" : "Full suit (jacket + pants)"));
+  const sections = isPantsOnly || vestOnly ? [] : [["JACKET", JACKET_CATALOG, item.jacket || {}]];
+  if (!isJacketOnly && !vestOnly) sections.push(["PANTS", PANTS_CATALOG, item.pants || {}]);
+  // The vest is cut from the jacket's fabric (Vest Only: its own fabric).
+  if (threePiece || vestOnly) {
     const vestSel = Object.assign({}, item.vest);
     delete vestSel.addVest;
     sections.push(["VEST", VEST_CATALOG, vestSel]);
@@ -13606,7 +13610,7 @@ function suitSpecRow(item, i, count, customerName, liningPhotoUrl) {
   // this order completed (see add_order_status_and_suit_image_migration.sql).
   // No picture for pants on their own (the picture sheets are built
   // around a jacket).
-  row.visual_spec = isPantsOnlyType(item.type) || vestOnly ? null : buildVisualSpecText(item, { liningPhotoUrl: liningPhotoUrl });
+  row.visual_spec = isPantsOnlyType(item.type) ? null : buildVisualSpecText(item, { liningPhotoUrl: liningPhotoUrl });
   return row;
 }
 
@@ -13718,6 +13722,9 @@ const SUIT_LOADING_STEPS = [
   { text: "Cutting the buttonholes..." },
   { text: "Sewing on your buttons..." },
   { text: "Adding the pockets..." },
+  { text: "Cutting your matching vest...", vest: true },
+  { text: "Shaping the vest neckline...", vest: true },
+  { text: "Buttoning up the vest...", vest: true },
   { text: "Pressing the trousers...", pants: true },
   { text: "Hemming the trouser legs...", pants: true },
   { text: "Setting the waistband...", pants: true },
@@ -13739,9 +13746,22 @@ const PANTS_LOADING_STEPS = [
   "Checking every stitch...",
   "Giving the trousers a final press...",
 ];
-// "jacket", "pants" or "full": which loading lines fit this suit type.
+const VEST_LOADING_STEPS = [
+  "Cutting your vest fabric...",
+  "Matching the pattern at the seams...",
+  "Stitching the lining back...",
+  "Shaping the neckline...",
+  "Cutting the buttonholes...",
+  "Sewing on your buttons...",
+  "Adding the pockets...",
+  "Fitting the back strap...",
+  "Checking every stitch...",
+  "Giving the vest a final press...",
+];
+// "jacket", "pants", "vest", "threePiece" or "full": which loading lines
+// fit this suit type (Daniel 2026-11-18: vest lines while a vest is drawn).
 function loadingKindForType(type) {
-  return isJacketOnlyType(type) ? "jacket" : isPantsOnlyType(type) ? "pants" : "full";
+  return isJacketOnlyType(type) ? "jacket" : isPantsOnlyType(type) ? "pants" : isVestOnlyType(type) ? "vest" : type === "threePiece" ? "threePiece" : "full";
 }
 
 // Full-screen view of a finished suit picture. Opening it adds one history
@@ -13803,7 +13823,7 @@ function buildSuitImageCard(labelText) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn-primary suit-preview-btn";
-  btn.textContent = "Generate My Suit";
+  btn.textContent = isVestOnlyType(currentSuitType) ? "Generate My Vest" : "Generate My Suit";
   const status = document.createElement("p");
   status.className = "suit-preview-status";
   status.setAttribute("aria-live", "polite");
@@ -13844,7 +13864,7 @@ function buildSuitImageCard(labelText) {
       caption.className = "suit-preview-loading-text";
       caption.innerHTML = '<strong></strong><span>This takes a few minutes.</span>';
       const line = caption.querySelector("strong");
-      const steps = kind === "pants" ? PANTS_LOADING_STEPS : SUIT_LOADING_STEPS.filter((s) => !(kind === "jacket" && s.pants)).map((s) => s.text);
+      const steps = kind === "pants" ? PANTS_LOADING_STEPS : kind === "vest" ? VEST_LOADING_STEPS : SUIT_LOADING_STEPS.filter((s) => !(kind === "jacket" && s.pants) && !(s.vest && kind !== "threePiece")).map((s) => s.text);
       let step = 0;
       line.textContent = steps[0];
       const timer = setInterval(() => {
@@ -13982,6 +14002,8 @@ async function updateDesignPreviewPanel() {
   if (typeof syncPreviewCartButton === "function") syncPreviewCartButton();
   const box = document.getElementById("designPreview");
   if (!box) return;
+  const headTitle = document.querySelector("#previewSection .designer-head h2");
+  if (headTitle) headTitle.textContent = isVestOnlyType(currentSuitType) ? "Preview your vest" : "Preview your suit";
   if (!(await suitImagesReady())) {
     box.hidden = true;
     return;
@@ -13998,7 +14020,7 @@ async function updateDesignPreviewPanel() {
   // "Preview your suit", so the card has no second heading, and this short
   // line only shows next to the Generate button (hidden while drawing and
   // once the picture is in; see .is-busy in style.css).
-  head.innerHTML = '<p>Free: we draw your suit with the fabric, buttons, lining and thread you chose. It takes a few minutes.</p>';
+  head.innerHTML = '<p>Free: we draw your ' + (isVestOnlyType(currentSuitType) ? "vest" : "suit") + ' with the fabric, buttons, lining and thread you chose. It takes a few minutes.</p>';
   box.appendChild(head);
   const ui = buildSuitImageCard("");
   box.appendChild(ui.card);
@@ -14127,7 +14149,7 @@ async function updateDesignPreviewPanel() {
   // and ask them to sign in again.
   function signInAgain() {
     ui.fail("", true);
-    ui.btn.textContent = "Generate My Suit";
+    ui.btn.textContent = isVestOnlyType(currentSuitType) ? "Generate My Vest" : "Generate My Suit";
     requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
   }
 }
@@ -14184,7 +14206,7 @@ async function renderSuitPreview(suits) {
         if (start.data && start.data.status === "done" && start.data.image_url) return ui.showImage(start.data.image_url);
         if (start.status === 401) {
           ui.fail("", true);
-          ui.btn.textContent = "Generate My Suit";
+          ui.btn.textContent = isVestOnlyType(currentSuitType) ? "Generate My Vest" : "Generate My Suit";
           return requireSignIn(ui.btn, SUIT_IMAGE_SIGN_IN, startDrawing);
         }
         if (!start.ok && start.status !== 202) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
