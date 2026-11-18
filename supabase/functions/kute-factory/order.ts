@@ -494,6 +494,12 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       const vThread = vestOnly ? s(vrow.vest_thread_color) : s(vrow.vest_thread_color) || s(row.jacket_thread_color);
       const threadCat = vestOnly ? input.vest.threadColor : jacket.threadColor;
       vc.push(matched(threadCat, vThread) ? "464F" : "464D:" + vThread);
+      // Button stitching: the vest's pick; older 3-piece orders without it
+      // follow the jacket's (X / parallel / square).
+      if (!vestOnly && !vc.some((c) => ["4643", "4644", "4646"].includes(c))) {
+        const nail = ({ "X Shape Sewing Button": "4644", "II Shape Sewing Button": "4643", "Square Shape Sewing Button": "4646" } as Record<string, string>)[s(row.jacket_button_nail_method)];
+        if (nail) vc.push(nail);
+      }
       details.push({
         categoryCode: "MMJ",
         crafts: [...new Set(vc)].join(","),

@@ -3679,6 +3679,20 @@ const VEST_CATALOG = {
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
   }),
+  // How the buttons are sewn on, like the jacket's Button Stitching
+  // (factory MMJ "Bttn thread > Style": Cross 4644, Parallel 4643, Square 4646).
+  buttonNail: {
+    label: "Vest Button Stitching",
+    column: "vest_button_nail_method",
+    sameAsLabel: "Match Jacket",
+    sameAsOptional: true,
+    requiresOtherThan: { key: "addVest", value: "No Vest" },
+    options: [
+      { name: "X Shape Sewing Button", displayName: "X Stitch", specName: "X Shape Sewing", factoryCode: "4644", img: "./assets/buttonnail-new-x.jpg" },
+      { name: "II Shape Sewing Button", displayName: "Parallel Stitch", specName: "Parallel Sewing", factoryCode: "4643", img: "./assets/buttonnail-new-parallel.jpg" },
+      { name: "Square Shape Sewing Button", displayName: "Square Stitch", specName: "Square Sewing", factoryCode: "4646", img: "./assets/buttonnail-square-sewing.jpg" },
+    ],
+  },
   // Pick stitching along the front edges and pockets (Daniel's drawing,
   // factory "Stitch style": No = no code, 0.6 cm pick stitch 4576).
   pickStitch: {
@@ -3698,16 +3712,16 @@ const VEST_CATALOG_GROUPS = [
   { label: "Front & Lapel", keys: ["frontbutton", "collar", "lapelbuttonhole"] },
   { label: "Pockets", keys: ["chestpocket", "lowerpocket"] },
   { label: "Bottom & Back", keys: ["bottom", "backstyle", "buckle"] },
-  { label: "Lining & Buttons", keys: ["lining", "buttoncolor", "threadColor", "pickStitch"] },
+  { label: "Lining & Buttons", keys: ["lining", "buttoncolor", "threadColor", "buttonNail", "pickStitch"] },
 ];
 // The vest designer always runs with one of these presets: it keeps "Vest
 // Only" out of the suit's Add a Vest question, and the Minimal / Basic
 // levels ask fewer vest questions (the rest are the classic answers).
 const VEST_PRESETS = (function () {
-  const all = ["addVest", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buckle", "lining", "buttoncolor", "threadColor", "pickStitch"];
+  const all = ["addVest", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buckle", "lining", "buttoncolor", "threadColor", "buttonNail", "pickStitch"];
   // Unasked lining / buttons / thread match the jacket.
   const classic = { frontbutton: "5 Buttons", collar: "V-Neck", lapelbuttonhole: "No Lapel Buttonhole", chestpocket: "No Chest Pocket", lowerpocket: "Welt", bottom: "Pointed", backstyle: "Adjuster Strap", buckle: "Silver Buckle",
-    lining: "__same_as__lining", buttoncolor: "__same_as__buttoncolor", threadColor: "__same_as__threadColor", pickStitch: "No Stitching" };
+    lining: "__same_as__lining", buttoncolor: "__same_as__buttoncolor", threadColor: "__same_as__threadColor", buttonNail: "__same_as__buttonNail", pickStitch: "No Stitching" };
   const suit = (steps) => {
     const fixed = {};
     Object.keys(classic).forEach((k) => { if (steps.indexOf(k) === -1) fixed[k] = classic[k]; });
@@ -3719,7 +3733,7 @@ const VEST_PRESETS = (function () {
     advanced: suit(all.slice(1)),
     basic: suit(["frontbutton", "collar", "lowerpocket", "lining", "buttoncolor"]),
     minimal: suit([]),
-    vestOnly: { steps: ["fabric", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buckle", "lining", "buttoncolor", "threadColor", "pickStitch"], allowed: {}, fixed: { addVest: "Vest Only" } },
+    vestOnly: { steps: ["fabric", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buckle", "lining", "buttoncolor", "threadColor", "buttonNail", "pickStitch"], allowed: {}, fixed: { addVest: "Vest Only" } },
   };
 })();
 // The suit picture spec names each vest choice by its full option name
