@@ -1565,6 +1565,24 @@ function readAdminEditState() {
     return null;
   }
 }
+// The client the admin is designing a suit for (My Account > Design a Suit
+// for a Client), or null: { id, email, name, measurements, savedDraft,
+// savedPhotos }. Kept in this tab so a reload stays in that mode. See
+// startClientDesign() below.
+const ADMIN_CLIENT_KEY = "scottSuitsAdminForClient";
+let adminClientDesign = (function () {
+  try {
+    return JSON.parse(sessionStorage.getItem(ADMIN_CLIENT_KEY) || "null");
+  } catch (e) {
+    return null;
+  }
+})();
+// The admin is working on someone else's suit (editing an order, or
+// designing for a client): nothing touches the admin's own cart, wishlist
+// or saved measurements.
+function adminActingForOther() {
+  return !!(adminEditState || adminClientDesign);
+}
 
 // Admin status is asked from the database (is_admin) every time the sign-in
 // changes -- including the silent hourly token refresh and the refresh a
@@ -1682,6 +1700,8 @@ function applyAdminStatus(user, admin) {
   if (picturesSection) picturesSection.hidden = !admin;
   const measureClientSection = document.getElementById("adminMeasureClientSection");
   if (measureClientSection) measureClientSection.hidden = !admin;
+  const designClientSection = document.getElementById("adminDesignClientSection");
+  if (designClientSection) designClientSection.hidden = !admin;
   if (adminNotificationsSection) {
     adminNotificationsSection.hidden = !admin;
     if (admin) loadAdminNotifications();
@@ -3463,11 +3483,10 @@ function mcMeasureStatus(meas) {
   return needed.every(filled) ? "full" : "partial";
 }
 let mcSearchTimer = null;
-let mcSearchSeq = 0;
 // Every account, 20 at a time with "Show more" (Daniel, 2026-11-17: "go
 // through every single account created"). Test accounts are left out by
 // the server (isTestAccount in order-measurements).
-function mcClientButton(c) {
+function mcClientButton(c, onPick) {
   const b = document.createElement("button");
   b.type = "button";
   const status = mcMeasureStatus(c.measurements);
@@ -3482,14 +3501,19 @@ function mcClientButton(c) {
   tag.textContent = status === "full" ? "Full measurements" : status === "partial" ? "Partial measurements" : "No measurements yet";
   sub.appendChild(tag);
   b.append(name, sub);
-  b.addEventListener("click", () => mcOpen(c));
+  b.addEventListener("click", () => (onPick || mcOpen)(c));
   return b;
 }
-async function mcSearch(more) {
-  const input = document.getElementById("mcSearch");
-  const box = document.getElementById("mcResults");
+// The same client list serves Measure a Client and Design a Suit for a
+// Client (Daniel, 2026-11-18); each has its own search box and list.
+const MC_LIST = { input: "mcSearch", box: "mcResults", msg: "mcFindMsg", pick: (c) => mcOpen(c), seq: 0 };
+async function mcSearch(more, list) {
+  const L = list && list.input ? list : MC_LIST;
+  more = more === true;
+  const input = document.getElementById(L.input);
+  const box = document.getElementById(L.box);
   if (!input || !box) return;
-  const seq = more ? mcSearchSeq : ++mcSearchSeq;
+  const seq = more ? L.seq : ++L.seq;
   const q = input.value.trim();
   const moreBtn = box.querySelector(".mc-more");
   const offset = more ? box.querySelectorAll(".mc-client").length : 0;
@@ -3501,12 +3525,12 @@ async function mcSearch(more) {
   }
   try {
     const data = await mcCall({ action: "find_clients", q, offset });
-    if (seq !== mcSearchSeq) return;
+    if (seq !== L.seq) return;
     const list = data.clients || [];
     if (!more) {
       box.innerHTML = "";
       if (!list.length) {
-        box.innerHTML = '<p class="account-section-note">No account found. Make one below.</p>';
+        box.innerHTML = '<p class="account-section-note">No account found. ' + (L === MC_LIST ? "Make one below." : "Make one under Measure a Client.") + "</p>";
         return;
       }
       const total = data.total || list.length;
@@ -3516,22 +3540,22 @@ async function mcSearch(more) {
       }));
     }
     if (moreBtn) moreBtn.remove();
-    list.forEach((c) => box.appendChild(mcClientButton(c)));
+    list.forEach((c) => box.appendChild(mcClientButton(c, L.pick)));
     if (data.more) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "btn-ghost mc-more";
       b.textContent = "Show more";
-      b.addEventListener("click", () => mcSearch(true));
+      b.addEventListener("click", () => mcSearch(true, L));
       box.appendChild(b);
     }
   } catch (e) {
-    if (seq !== mcSearchSeq) return;
+    if (seq !== L.seq) return;
     if (more && moreBtn) {
       moreBtn.disabled = false;
       moreBtn.textContent = "Show more";
     } else box.innerHTML = "";
-    mcSay("mcFindMsg", "Couldn't search: " + e.message);
+    mcSay(L.msg, "Couldn't search: " + e.message);
   }
 }
 (function initMeasureClient() {
@@ -5382,6 +5406,154 @@ function endAdminOrderEdit() {
   }
 })();
 
+// ---------------------------------------------------------------------------
+// Admin: Design a Suit for a Client (Daniel, 2026-11-18: "add design a suit
+// for client to admin page"). Daniel picks a client in My Account, and the
+// normal designer opens for that client with a bar at the top:
+// - "Generate My Suit" saves the picture on the CLIENT's account (their My
+//   Designs), one picture per design as always. No automatic email; "Email
+//   picture to client" on the bar sends it when Daniel is happy.
+// - The finished picture (or Add to cart) puts the suit in the client's own
+//   cart (order-measurements client_cart), with their saved measurements
+//   when they have a full set, else "measurements needed" as usual.
+// - The admin's own cart, design and wishlist are put aside and come back
+//   on Done. Checkout is off: the client pays from their own cart.
+// ---------------------------------------------------------------------------
+function clientFirstName() {
+  const c = adminClientDesign;
+  if (!c) return "";
+  return String(c.name || "").trim().split(/\s+/)[0] || c.email || "Client";
+}
+function clientDesignNoCheckout() {
+  alert("You're designing for " + (adminClientDesign.name || adminClientDesign.email) + ". Their suits are in their own cart, and they pay from their account. Tap Done on the bar at the top to go back to your own cart.");
+}
+function startClientDesign(c) {
+  if (!currentIsAdmin || !c || !c.id) return;
+  if (adminEditState) {
+    alert("You're editing " + (adminEditState.name || "an order") + "'s order. Save or cancel that first.");
+    return;
+  }
+  if (adminClientDesign) {
+    if (adminClientDesign.id !== c.id) alert("You're already designing for " + (adminClientDesign.name || adminClientDesign.email) + ". Tap Done on the bar at the top first.");
+    if (closeAccountOverlay) closeAccountOverlay();
+    return;
+  }
+  if (designPreview && designPreview.status === "pending") cancelPreviewOnServer(designPreview.id);
+  saveDraft();
+  let draft = null;
+  let photos = null;
+  try {
+    draft = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+    photos = sessionStorage.getItem(DRAFT_STORAGE_KEY + "_photos");
+  } catch (e) {
+    // nothing to put back later
+  }
+  resetDesignerForNewSuit();
+  designPreview = null;
+  cartItems = [];
+  adminClientDesign = { id: c.id, email: c.email || "", name: c.name || "", measurements: c.measurements || null, savedDraft: draft, savedPhotos: photos };
+  try {
+    sessionStorage.setItem(ADMIN_CLIENT_KEY, JSON.stringify(adminClientDesign));
+  } catch (e) {
+    // the mode just won't survive a reload
+  }
+  if (closeAccountOverlay) closeAccountOverlay();
+  renderCartBar();
+  updateOrderSummaryUI();
+  updateProcessBar();
+  updateDesignPreviewPanel();
+  updateClientDesignUI();
+  startDesigning();
+}
+// Puts the admin's own cart and design back.
+function endClientDesign() {
+  const state = adminClientDesign;
+  if (designPreview && designPreview.status === "pending") cancelPreviewOnServer(designPreview.id);
+  try {
+    sessionStorage.removeItem(ADMIN_CLIENT_KEY);
+    if (state && state.savedDraft) sessionStorage.setItem(DRAFT_STORAGE_KEY, state.savedDraft);
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    if (state && state.savedPhotos) sessionStorage.setItem(DRAFT_STORAGE_KEY + "_photos", state.savedPhotos);
+    else sessionStorage.removeItem(DRAFT_STORAGE_KEY + "_photos");
+  } catch (e) {
+    // ignore
+  }
+  adminClientDesign = null;
+  window.location.reload();
+}
+let clientCartQueue = Promise.resolve();
+function clientCartChange(change) {
+  const c = adminClientDesign;
+  if (!c) return;
+  clientCartQueue = clientCartQueue
+    .then(() => mcCall(Object.assign({ action: "client_cart", user_id: c.id }, change)))
+    .catch((e) => {
+      console.error(e);
+      alert("Couldn't update " + (c.name || c.email) + "'s cart: " + e.message);
+    });
+}
+// The finished picture of the design on screen, if there is one.
+function clientDesignPicture() {
+  return designPreview && designPreview.status === "done" && designPreview.spec === currentDesignSpec() ? designPreview : null;
+}
+function updateClientDesignUI() {
+  document.body.classList.toggle("admin-designing-client", !!adminClientDesign);
+  const bar = document.getElementById("adminClientBar");
+  if (!bar) return;
+  bar.hidden = !adminClientDesign;
+  if (!adminClientDesign) return;
+  const who = document.getElementById("adminClientWho");
+  if (who) who.textContent = "Designing for " + (adminClientDesign.name || adminClientDesign.email);
+  const help = document.getElementById("adminClientHelp");
+  if (help) {
+    const status = mcMeasureStatus(adminClientDesign.measurements);
+    help.textContent = "The picture and Add to cart go to their account. " + (status === "full" ? "Their saved measurements are used." : status === "partial" ? "Their measurements aren't complete yet." : "No measurements saved yet.");
+  }
+  const email = document.getElementById("adminClientEmailBtn");
+  if (email) {
+    const pic = clientDesignPicture();
+    email.hidden = !pic;
+    if (pic && email.dataset.sentFor !== pic.id) {
+      email.disabled = false;
+      email.textContent = "Email picture to " + clientFirstName();
+    }
+  }
+}
+(function initDesignForClient() {
+  const section = document.getElementById("adminDesignClientSection");
+  if (!section) return;
+  const DC_LIST = { input: "dcSearch", box: "dcResults", msg: "dcFindMsg", pick: startClientDesign, seq: 0 };
+  let timer = null;
+  document.getElementById("dcSearch").addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => mcSearch(false, DC_LIST), 300);
+  });
+  section.addEventListener("toggle", () => {
+    if (section.open) mcSearch(false, DC_LIST);
+  });
+  const done = document.getElementById("adminClientDoneBtn");
+  if (done) done.addEventListener("click", endClientDesign);
+  const email = document.getElementById("adminClientEmailBtn");
+  if (email) {
+    email.addEventListener("click", async () => {
+      const pic = clientDesignPicture();
+      if (!pic || !adminClientDesign) return;
+      email.disabled = true;
+      email.textContent = "Sending...";
+      try {
+        const r = await callSuitImageFn({ preview_email: pic.id, brand: typeof SITE_BRAND !== "undefined" && SITE_BRAND ? SITE_BRAND.id : "scott" });
+        if (!r.ok || !r.data || !r.data.sent) throw new Error((r.data && (r.data.error || r.data.reason)) || "status " + r.status);
+        email.dataset.sentFor = pic.id;
+        email.textContent = "\u2713 Emailed to " + clientFirstName();
+      } catch (e) {
+        email.disabled = false;
+        email.textContent = "Email picture to " + clientFirstName();
+        alert("Couldn't send the email: " + e.message);
+      }
+    });
+  }
+})();
+
 if (shippingLiveToggle) {
   shippingLiveToggle.addEventListener("change", async () => {
     const want = shippingLiveToggle.checked;
@@ -6071,6 +6243,10 @@ if (useSavedMeasurementsBtn) {
 var savedFillDeclined = false; // "Measure again" / "Clear measurements" on this suit
 var savedFillBusy = false; // filling rebuilds the fields, which re-renders this page
 function savedProfileMeasurements() {
+  if (adminClientDesign) {
+    const c = adminClientDesign.measurements;
+    return c && MEASUREMENTS.some((m) => c[m.id] > 0) ? c : null;
+  }
   if (!currentUser || adminEditState || !currentProfile || !currentProfile.measurements) return null;
   const saved = currentProfile.measurements;
   return MEASUREMENTS.some((m) => saved[m.id] > 0) ? saved : null;
@@ -9776,7 +9952,7 @@ function refreshMeasHub() {}
       render();
       return;
     }
-    if (!skipProfile && currentUser && !adminEditState) saveMeasToAccount(currentMeasValues());
+    if (!skipProfile && currentUser && !adminActingForOther()) saveMeasToAccount(currentMeasValues());
     close();
   }
 
@@ -10640,7 +10816,8 @@ function syncPreviewCartButton(justAdded) {
   if (!btn) return;
   const inCart = !!justAdded || (pendingCommitIndex !== null && !!cartItems[pendingCommitIndex] && !designerHasUnsavedWork());
   btn.classList.toggle("is-added", inCart);
-  btn.innerHTML = inCart ? '<span aria-hidden="true">\u2713</span> Added to cart' : "Add to cart";
+  const whose = adminClientDesign ? clientFirstName() + "\u2019s cart" : "cart";
+  btn.innerHTML = inCart ? '<span aria-hidden="true">\u2713</span> Added to ' + whose : "Add to " + whose;
   if (note) note.hidden = inCart;
   if (done) done.hidden = !inCart;
   // Not when the suit already took the account's saved measurements.
@@ -12011,6 +12188,8 @@ function renderCartBar() {
 }
 
 function removeCartItem(index) {
+  const removedItem = cartItems[index];
+  if (adminClientDesign && removedItem && removedItem.cartId) clientCartChange({ remove: removedItem.cartId });
   cartItems.splice(index, 1);
   // Keep pointing at the same suit after the ones before it shift down. If
   // the removed suit is the one in the designer, forget it, so continuing
@@ -12185,6 +12364,7 @@ if (resetMeasurementsBtn) {
 // the cart simply isn't part of the order, same as any other cart/checkout
 // flow -- its draft stays saved, so nothing is lost, just not submitted yet.
 function goToCheckout() {
+  if (adminClientDesign) return clientDesignNoCheckout();
   if (orderMeasureTarget) {
     orderMeasureTarget = null;
     applyOrderMeasureMode();
@@ -12650,6 +12830,8 @@ function commitCurrentSuitToCart(opts) {
   renderCartBar();
   updateOrderSummaryUI();
   saveDraft();
+  // Designing for a client: the suit goes into the client's own cart.
+  if (adminClientDesign) clientCartChange({ put: cloudCartItem(item) });
 
   // Fire-and-forget: a signed-in customer with the checkbox left checked
   // (see saveMeasurementsToggleWrap in index.html) gets this order's
@@ -12658,7 +12840,7 @@ function commitCurrentSuitToCart(opts) {
   // someone else -- and nothing about their own saved profile changes.
   // Never while the admin edits a customer's order (it would overwrite the
   // admin's own saved measurements).
-  if (!measureLater && currentUser && !adminEditState && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
+  if (!measureLater && currentUser && !adminActingForOther() && saveMeasurementsToProfileCheckbox && saveMeasurementsToProfileCheckbox.checked) {
     saveProfileMeasurements(measurementValues);
   }
 
@@ -13689,6 +13871,7 @@ async function updateDesignPreviewPanel() {
       if (r.status === "done") { try { wishlistAttachPicture(preview); } catch (e) { console.warn(e); } }
       if (r.status === "done") autoAddPreviewToCart(preview);
       saveDraft();
+      updateClientDesignUI();
       if (box.contains(ui.card)) {
         if (r.status === "done") showImage(r.url);
         else ui.fail(SUIT_IMAGE_MESSAGES[r.status] || SUIT_IMAGE_MESSAGES.failed, true);
@@ -13719,7 +13902,10 @@ async function updateDesignPreviewPanel() {
         ? buildVisualSpecText({ type: currentSuitType, jacket: jacketDesigner.getSelections(), pants: isJacketOnlyType(currentSuitType) ? {} : pantsDesigner.getSelections(), texts: currentDesignTexts() }, { liningPhotoUrl: photoUrl })
         : spec;
       // brand: the "your suit design" email comes from the same storefront.
-      const start = await callSuitImageFn({ preview: true, visual_spec: sent, brand: typeof SITE_BRAND !== "undefined" && SITE_BRAND ? SITE_BRAND.id : "scott" });
+      const payload = { preview: true, visual_spec: sent, brand: typeof SITE_BRAND !== "undefined" && SITE_BRAND ? SITE_BRAND.id : "scott" };
+      // Designing for a client: the picture is saved on their account.
+      if (adminClientDesign) payload.for_user = adminClientDesign.id;
+      const start = await callSuitImageFn(payload);
       if (start.status === 401) return signInAgain();
       if (start.data && start.data.status === "limit") return ui.fail(SUIT_IMAGE_MESSAGES.limit, false);
       if (!start.data || !start.data.preview_id) return ui.fail(SUIT_IMAGE_MESSAGES.start, true);
@@ -14169,6 +14355,7 @@ const adminNoPayBtn = document.getElementById("adminNoPayBtn");
 if (adminNoPayBtn) {
   adminNoPayBtn.addEventListener("click", async () => {
     if (!currentIsAdmin || adminEditState) return;
+    if (adminClientDesign) return clientDesignNoCheckout();
     const input = collectAndValidateOrderInput(() => adminNoPayBtn.click());
     if (!input) return;
     adminNoPayBtn.disabled = true;
@@ -14391,7 +14578,7 @@ function clearMeasBackup() {
   }
 }
 function measProfileSaveAllowed() {
-  return !!(currentUser && !currentIsAdmin && !adminEditState &&
+  return !!(currentUser && !currentIsAdmin && !adminActingForOther() &&
     (!saveMeasurementsToProfileCheckbox || saveMeasurementsToProfileCheckbox.checked));
 }
 // The small "Saved ..." line on the At the tailor page (Daniel, 2026-11-10:
@@ -14723,6 +14910,7 @@ updateMeasureFirstBtn();
 handlePayPalReturn();
 handleStripeReturn();
 updateAdminEditUI();
+updateClientDesignUI();
 updateNavActionButtons();
 updateProcessBar();
 
@@ -14788,7 +14976,7 @@ function cloudCartSignature(items) {
   return JSON.stringify((items || []).map((it) => [it.cartId, it.savedAt]));
 }
 function cloudCartCanSync() {
-  return cloudCartPageReady && !cloudCartOff && !!currentUser && !adminEditState && isSupabaseConfigured();
+  return cloudCartPageReady && !cloudCartOff && !!currentUser && !adminActingForOther() && isSupabaseConfigured();
 }
 // Any change to the cart (renderCartBar) saves it to the account shortly after.
 function scheduleCloudCartSync(delay) {
@@ -14846,7 +15034,7 @@ async function syncCloudCart() {
       else console.error("Couldn't read the saved cart:", error);
       return;
     }
-    if (!currentUser || currentUser.id !== user.id || adminEditState) return;
+    if (!currentUser || currentUser.id !== user.id || adminActingForOther()) return;
     cloudCartLastPull = Date.now();
     const remote = data && data.cart && Array.isArray(data.cart.items) ? data.cart.items : [];
     ensureCartIds();
@@ -14915,7 +15103,7 @@ function cloudCartOnAuth() {
       cloudCartSyncedIds = [];
       cloudCartLastSig = null;
       writeCloudCartSync();
-      if (kept.length !== cartItems.length && !adminEditState) applyCloudCart(kept);
+      if (kept.length !== cartItems.length && !adminActingForOther()) applyCloudCart(kept);
     }
     return;
   }
@@ -15067,7 +15255,7 @@ function syncWishlistButton() {
 // The "Editing a saved suit" bar with Save changes / Cancel.
 function updateWishlistEditUI() {
   const bar = document.getElementById("wishlistEditBar");
-  if (bar) bar.hidden = !(currentUser && !adminEditState && wishlistEditingEntry());
+  if (bar) bar.hidden = !(currentUser && !adminActingForOther() && wishlistEditingEntry());
 }
 // Save changes on the bar: writes the design back to the same wishlist
 // suit, then back to My Account > Wishlist with a fresh designer.
@@ -15311,7 +15499,7 @@ function cartItemFromWish(w) {
 // Once an order is placed, the wishlist suits in it come off the wishlist:
 // those added from it (fromWishId) and any with exactly the same design.
 function removeOrderedFromWishlist(items) {
-  if (!currentUser || adminEditState || !items || !items.length) return;
+  if (!currentUser || adminActingForOther() || !items || !items.length) return;
   const ids = items.map((it) => it && it.fromWishId).filter(Boolean);
   const specs = items.map((it) => { try { return buildVisualSpecText(it); } catch (e) { return null; } }).filter(Boolean);
   wishlistUpdate((l) => l.filter((w) => ids.indexOf(w.wishId) === -1 && specs.indexOf(w.spec) === -1), null, { ordered: true })
@@ -16080,7 +16268,12 @@ function updateProcessBar() {
   // even be on. Hide the whole bar for that one screen; it reappears the
   // moment a type is chosen and jacketSection becomes active.
   const processBarEl = document.querySelector(".process");
-  if (processBarEl) processBarEl.hidden = Boolean(suitTypeSection && suitTypeSection.classList.contains("active"));
+  const onTypeStep = Boolean(suitTypeSection && suitTypeSection.classList.contains("active"));
+  // Designing for a client: the "Designing for ..." bar inside it still shows.
+  if (processBarEl) {
+    processBarEl.hidden = onTypeStep && !adminClientDesign;
+    processBarEl.classList.toggle("process-notices-only", onTypeStep && !!adminClientDesign);
+  }
 
   const activeStepEl = document.querySelector(".step.active");
   const activeStepId = activeStepEl ? activeStepEl.id : "";

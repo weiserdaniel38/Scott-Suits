@@ -1802,6 +1802,11 @@ html[data-brand="scott"] body:has(#previewSection.active) .process{background:rg
 body.admin-editing-order #adminOrderWrap,
 body.admin-editing-order #alterationBlock,
 body.admin-editing-order #addAnotherSuitBtn{display:none !important;}
+/* Designing for a client: no checkout or wishlist of the admin's own. */
+body.admin-designing-client #adminOrderWrap,
+body.admin-designing-client #saveToWishlistBtn{display:none !important;}
+.process.process-notices-only .process-inner{display:none;}
+@media (max-width:700px){#adminClientHelp{display:none;}}
 .editing-cart-tag{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:var(--brass);}
 .editing-cart-text{color:var(--ivory-dim);}
 @media(max-width:600px){

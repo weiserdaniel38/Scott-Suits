@@ -1820,7 +1820,7 @@ async function emailPreview(id: string, brand: string) {
 }
 const brandId = (b: unknown) => (b === "sw" ? "sw" : "scott");
 
-async function generatePreview(id: string, raw: string, round = 1, brand = "scott", oneRound = false) {
+async function generatePreview(id: string, raw: string, round = 1, brand = "scott", oneRound = false, email = true) {
   const set = async (fields: Record<string, unknown>) => {
     const { error } = await supabase
       .from("suit_previews")
@@ -1851,18 +1851,18 @@ async function generatePreview(id: string, raw: string, round = 1, brand = "scot
     if (!good) {
       // Keep the wrong picture as the fallback, then draw ONE more.
       await set({ status: "pending", image_url: url, image_prompt: prompt });
-      await chainRound({ retry: "preview", id, round: round + 1, brand });
+      await chainRound({ retry: "preview", id, round: round + 1, brand, no_email: !email });
       return;
     }
     await set({ status: "done", image_url: url, image_prompt: prompt, image_error: null });
-    await emailPreview(id, brand);
+    if (email) await emailPreview(id, brand);
   } catch (err) {
     if (await cancelled()) return;
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Suit preview failed for", id, "round", round, msg);
     if (fallback?.image_url) {
       await set({ status: "done", image_error: ("Round " + round + ": " + msg).slice(0, 1000) });
-      await emailPreview(id, brand);
+      if (email) await emailPreview(id, brand);
       return;
     }
     await set({ status: "failed", image_error: msg.slice(0, 1000) });
@@ -1929,10 +1929,29 @@ async function extraPictures(userId: string): Promise<number> {
 
 const SIGN_IN_NEEDED = () => json({ status: "signin", error: "Sign in to have your suit drawn" }, 401);
 
-async function startPreview(req: Request, raw: string, brand = "scott"): Promise<Response> {
+async function startPreview(req: Request, raw: string, brand = "scott", forUser = ""): Promise<Response> {
   if (!looksLikeSuitSpec(raw)) return json({ error: "Not a suit description" }, 400);
   const userId = await requestUserId(req);
   if (!userId) return SIGN_IN_NEEDED();
+  // Admin "Design a Suit for a Client" (Daniel, 2026-11-18): the picture is
+  // saved on the CLIENT's account (their My Designs), still one picture per
+  // design, and no automatic email: Daniel sends it with "Email picture to
+  // client" when he's happy with it.
+  if (forUser) {
+    if (!UUID.test(forUser) || !(await isAdmin(userId))) return json({ error: "Only the shop admin can design for a client" }, 403);
+    const { data: client } = await supabase.auth.admin.getUserById(forUser);
+    if (!client?.user) return json({ error: "That client couldn't be found" }, 404);
+    const { data, error } = await supabase
+      .from("suit_previews")
+      .insert({ visitor: await visitorKey(req), user_id: forUser, visual_spec: raw, status: "pending" })
+      .select("id")
+      .single();
+    if (error || !data) return json({ error: "Could not start" }, 500);
+    const p = runInBackground(generatePreview(data.id, raw, 1, brand, false, false));
+    // @ts-ignore see runInBackground
+    if (typeof EdgeRuntime === "undefined") await p;
+    return json({ status: "pending", preview_id: data.id }, 202);
+  }
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const visitor = await visitorKey(req);
   // Each account gets PREVIEW_PER_ACCOUNT_PER_DAY pictures (3 by default,
@@ -2026,7 +2045,23 @@ Deno.serve(async (req) => {
   // Before the order: previews of the suit being designed.
   if (body?.preview) {
     if (!env("OPENAI_API_KEY")) return json({ status: "unavailable" }, 503);
-    return startPreview(req, String(body?.visual_spec || "").trim(), brandId(body?.brand));
+    return startPreview(req, String(body?.visual_spec || "").trim(), brandId(body?.brand), String(body?.for_user || ""));
+  }
+  // Admin "Email picture to client": sends a finished picture drawn for a
+  // client (see startPreview) to that client. Sends what exists; never draws.
+  if (body?.preview_email) {
+    const id = String(body.preview_email);
+    if (!UUID.test(id)) return json({ error: "Bad id" }, 400);
+    const userId = await requestUserId(req);
+    if (!userId) return SIGN_IN_NEEDED();
+    if (!(await isAdmin(userId))) return json({ error: "Only the shop admin can send this" }, 403);
+    const res = await fetch(SUPABASE_URL + "/functions/v1/send-suit-preview", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-webhook-secret": env("WEBHOOK_SECRET") },
+      body: JSON.stringify({ preview_id: id, brand: brandId(body?.brand), force: true, by_shop: true }),
+    });
+    const out = await res.json().catch(() => ({}));
+    return json(out, res.ok ? 200 : 502);
   }
   // Admin "Cancel" on the preview page: no further drawing rounds for this
   // preview. Pictures already being drawn are still billed by OpenAI.
@@ -2140,7 +2175,7 @@ Deno.serve(async (req) => {
       if (row) work = generate(row, round);
     } else if (body?.retry === "preview") {
       const { data: prev } = await supabase.from("suit_previews").select("visual_spec").eq("id", id).maybeSingle();
-      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round, brandId(body?.brand));
+      if (prev?.visual_spec) work = generatePreview(id, String(prev.visual_spec), round, brandId(body?.brand), false, body?.no_email !== true);
     }
     if (!work) return json({ error: "Not found" }, 404);
     const p = runInBackground(work);

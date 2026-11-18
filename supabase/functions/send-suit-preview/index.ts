@@ -11,6 +11,8 @@
 //       suit there by itself). One email per design: a redraw of a design
 //       that was already drawn sends nothing. Admin accounts get nothing.
 //       { force: true } skips both checks (one-off sends).
+//       { by_shop: true }: the admin designed it for the client ("Design a
+//       Suit for a Client"), so it says "we designed for you".
 //
 //   { orders_for_user: "<auth user id>" }
 //       One email to a customer covering every suit they have ordered (paid
@@ -199,13 +201,13 @@ ${o.suits.map((s) => suitHtml(s, o.link)).join("\n")}
   return { subject: o.subject, text, html };
 }
 
-export function previewEmail(brand: Brand, firstName: string, raw: string, imageUrl: string) {
+export function previewEmail(brand: Brand, firstName: string, raw: string, imageUrl: string, byShop = false) {
   const { type } = summaryRows(raw);
   return suitEmail({
     brand,
     firstName,
     heading: "Your suit design",
-    intro: "Here is the picture of the suit you designed.",
+    intro: byShop ? "Here is the picture of the suit we designed for you." : "Here is the picture of the suit you designed.",
     suits: [{ title: type, imageUrl, raw }],
     after: "It's saved in your cart. Add your measurements whenever you're ready to order.",
     button: "View my cart",
@@ -253,7 +255,7 @@ async function send(to: string, mail: { subject: string; text: string; html: str
   return { sent: true, to };
 }
 
-async function forPreview(id: string, brandId: unknown, force: boolean) {
+async function forPreview(id: string, brandId: unknown, force: boolean, byShop = false) {
   const { data: prev } = await supabase
     .from("suit_previews")
     .select("id, user_id, status, image_url, visual_spec, created_at")
@@ -279,7 +281,7 @@ async function forPreview(id: string, brandId: unknown, force: boolean) {
   }
   const who = await account(prev.user_id);
   if (!who) return json({ sent: false, reason: "no email" });
-  const r = await send(who.email, previewEmail(brandFor(brandId), who.firstName, prev.visual_spec, prev.image_url));
+  const r = await send(who.email, previewEmail(brandFor(brandId), who.firstName, prev.visual_spec, prev.image_url, byShop));
   return json(r, r.sent ? 200 : 502);
 }
 
@@ -331,7 +333,7 @@ Deno.serve(async (req) => {
   }
   const UUID = /^[0-9a-f-]{36}$/i;
   if (typeof body.preview_id === "string" && UUID.test(body.preview_id)) {
-    return forPreview(body.preview_id, body.brand, body.force === true);
+    return forPreview(body.preview_id, body.brand, body.force === true, body.by_shop === true);
   }
   if (typeof body.orders_for_user === "string" && UUID.test(body.orders_for_user)) {
     return forOrders(body.orders_for_user);
