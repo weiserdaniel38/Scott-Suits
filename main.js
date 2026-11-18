@@ -9813,8 +9813,54 @@ function renderMeasurementFields() {
     const el = document.getElementById("m_" + id);
     if (el) el.value = previousValues[id];
   });
+  ["chest", "stomach", "back_jacket"].forEach((id) => {
+    const el = document.getElementById("m_" + id);
+    if (el) { el.addEventListener("input", prefillVestFromJacket); el.addEventListener("change", prefillVestFromJacket); }
+  });
+  prefillVestFromJacket();
   if (typeof renderMeasureChrome === "function") renderMeasureChrome();
   if (typeof renderTailorChecklist === "function") renderTailorChecklist();
+}
+
+// Finished vest sizes from the jacket's (Daniel 2026-11-18, "Yes"): the
+// factory's vest charts average out at vest chest = jacket chest - 6, vest
+// stomach = jacket stomach + 1, vest length = jacket back length - 13 (see
+// /mnt/project-files/kute-tailor/size-charts/vest-sizing-notes.md). Only
+// fills a vest field that is empty or still holds our own earlier guess,
+// so a number the customer typed is never overwritten.
+const VEST_FROM_JACKET = [["vest_chest", "chest", -6], ["vest_stomach", "stomach", 1], ["vest_length", "back_jacket", -13]];
+function prefillVestFromJacket() {
+  VEST_FROM_JACKET.forEach(([vestId, jacketId, diff]) => {
+    const vEl = document.getElementById("m_" + vestId);
+    const jEl = document.getElementById("m_" + jacketId);
+    if (!vEl || !jEl) return;
+    const ours = vEl.dataset.prefill !== undefined && vEl.value === vEl.dataset.prefill;
+    if (vEl.value !== "" && !ours) return;
+    const j = parseFloat(jEl.value);
+    const m = MEASUREMENTS.find((x) => x.id === vestId);
+    if (!(j > 0) || !m || !measureInRange(MEASUREMENTS.find((x) => x.id === jacketId) || {}, j)) {
+      if (ours) { vEl.value = ""; delete vEl.dataset.prefill; markVestPrefill(vEl, false); saveDraft(); }
+      return;
+    }
+    const v = String(Math.round((j + diff) * 2) / 2);
+    if (vEl.value === v) return;
+    vEl.value = v;
+    vEl.dataset.prefill = v;
+    markVestPrefill(vEl, true);
+    saveDraft();
+  });
+}
+function markVestPrefill(input, on) {
+  const field = input.closest(".measure-field");
+  if (!field) return;
+  let note = field.querySelector(".measure-prefill-note");
+  if (on && !note) {
+    note = document.createElement("p");
+    note.className = "measure-field-hint measure-prefill-note";
+    note.textContent = "Filled in from your jacket. Change it if your vest fits differently.";
+    field.appendChild(note);
+    input.addEventListener("input", () => { if (input.value !== input.dataset.prefill) markVestPrefill(input, false); });
+  } else if (!on && note) note.remove();
 }
 renderMeasurementFields();
 
