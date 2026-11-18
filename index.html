@@ -136,7 +136,7 @@
 <meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<link rel="stylesheet" href="./style.css?v=20261118monocase">
+<link rel="stylesheet" href="./style.css?v=20261118dclient">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261117trim"></script>
 <link rel="stylesheet" href="./brand.css?v=20261117halfdouble">
@@ -394,6 +394,14 @@
     <span class="admin-edit-help">Change any step, then press Save changes to order. Contact details are on the Order page.</span>
     <button type="button" class="admin-order-btn" id="adminEditSaveBtn">Save changes to order</button>
     <button type="button" class="admin-edit-cancel" id="adminEditCancelBtn">Cancel</button>
+  </div>
+  <!-- Admin only, while designing a suit for a client (My Account > Design
+       a Suit for a Client). See startClientDesign() in main.js. -->
+  <div class="admin-edit-bar" id="adminClientBar" hidden>
+    <span class="admin-edit-who"><strong>Admin</strong> <span id="adminClientWho">Designing for a client</span></span>
+    <span class="admin-edit-help" id="adminClientHelp">The picture and Add to cart go to their account.</span>
+    <button type="button" class="admin-order-btn" id="adminClientEmailBtn" hidden>Email picture to client</button>
+    <button type="button" class="admin-edit-cancel" id="adminClientDoneBtn">Done</button>
   </div>
 </div>
 
@@ -1107,6 +1115,19 @@
         <p class="account-status-msg" id="mcFindMsg" hidden></p>
       </details>
 
+      <!-- Shop admin only (Daniel, 2026-11-18): design a suit for a client.
+           Pick the client, then the normal designer opens; the picture and
+           Add to cart go to the client's account. See initDesignForClient()
+           in main.js. -->
+      <details class="account-collapse" id="adminDesignClientSection" hidden>
+        <summary><h3>Design a Suit for a Client</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
+        <p class="account-section-note">Only you see this (shop admin). Pick the client, then design the suit as usual. The picture goes to their My Designs, Add to cart puts the suit in their cart, and their saved measurements are used.</p>
+        <div class="measure-field fs-field"><label for="dcSearch">Client name or email</label><div class="measure-input-wrap"><input type="search" id="dcSearch" placeholder="e.g. david or david@email.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search"></div></div>
+        <div id="dcResults" class="mc-results brand-keep" aria-live="polite"></div>
+        <p class="account-section-note">No account yet? Make one under Measure a Client first.</p>
+        <p class="account-status-msg" id="dcFindMsg" hidden></p>
+      </details>
+
       <details class="account-collapse" id="adminPromoSection" hidden>
         <summary><h3>Promo Codes</h3><span class="account-collapse-chevron" aria-hidden="true"></span></summary>
         <p class="account-section-note">Only you see this (shop admin). Customers type the code on the order page. Percent off is taken first, then dollars off, from the suits and Alteration Protection (never shipping or tax).</p>
@@ -1260,7 +1281,7 @@
 <script src="./catalog.js?v=20261118semipeak"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261118monocase"></script>
+<script src="./main.js?v=20261118dclient"></script>
 <script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>

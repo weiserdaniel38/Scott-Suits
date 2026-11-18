@@ -34,6 +34,13 @@
 //       "Forgot password".
 //       -> { ok, client }
 //
+// Design a Suit for a Client (Daniel, 2026-11-18). Shop admin only.
+//   { action: "client_cart", user_id, put: <cart suit> }
+//   { action: "client_cart", user_id, remove: "<cartId>" }
+//       Adds (or updates, same cartId) / removes one suit in that client's
+//       cart (profiles.cart.items, the same cart their own devices sync).
+//       -> { ok, count }
+//
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -220,6 +227,38 @@ async function clientAction(input: Record<string, unknown>) {
     await supabase.from("profiles").upsert({ id, email, full_name: name || null, updated_at: new Date().toISOString() });
     return { ok: true, client: { id, email, name, measurements: null } };
   }
+  if (input.action === "client_cart") {
+    const id = String(input.user_id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: "user_id missing" };
+    const { data: user, error: uErr } = await supabase.auth.admin.getUserById(id);
+    if (uErr || !user?.user) return { error: "That client couldn't be found." };
+    const { data: p, error: pErr } = await supabase.from("profiles").select("cart").eq("id", id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    const cart = ((p?.cart as Record<string, unknown>) || {});
+    let items = Array.isArray(cart.items) ? (cart.items as Record<string, unknown>[]) : [];
+    const put = input.put as Record<string, unknown> | undefined;
+    if (put && typeof put === "object") {
+      const cartId = String(put.cartId || "");
+      if (!/^c[a-z0-9]{4,40}$/.test(cartId)) return { error: "bad cart suit" };
+      const item = Object.assign({}, put, { savedAt: Date.now() });
+      // A lining photo too big for the account stays on the admin's phone,
+      // same limit as the site's own cart sync.
+      if (item.liningPhoto && String(item.liningPhoto).length > 1500000) delete item.liningPhoto;
+      if (JSON.stringify(item).length > 2000000) return { error: "That suit is too big to save" };
+      const at = items.findIndex((it) => it && it.cartId === cartId);
+      if (at === -1) items = items.concat([item]);
+      else items[at] = item;
+    } else if (input.remove) {
+      items = items.filter((it) => !it || it.cartId !== String(input.remove));
+    } else return { error: "nothing to change" };
+    const { error } = await supabase.from("profiles").upsert({
+      id,
+      email: user.user.email,
+      cart: Object.assign({}, cart, { items, savedAt: new Date().toISOString() }),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, count: items.length };
+  }
   return { error: "unknown action" };
 }
 
@@ -262,7 +301,7 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
-    if (input.action === "find_clients" || input.action === "save_client" || input.action === "create_client") {
+    if (input.action === "find_clients" || input.action === "save_client" || input.action === "create_client" || input.action === "client_cart") {
       if (!who.admin) return json({ error: "only the shop admin can use this" }, 403);
       return json(await clientAction(input));
     }
