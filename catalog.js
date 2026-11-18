@@ -3538,7 +3538,7 @@ const VEST_CATALOG = {
     options: [
       { section: "Single Breasted", name: "3 Buttons", displayName: "3 Buttons", factoryCode: "401C", img: "./assets/vest-btn-3.jpg" },
       { section: "Single Breasted", name: "4 Buttons", displayName: "4 Buttons", factoryCode: "401D", img: "./assets/vest-btn-4.jpg" },
-      { section: "Single Breasted", name: "5 Buttons", displayName: "5 Buttons", factoryCode: "401G", img: "./assets/vest-btn-5.jpg", badge: "Classic" },
+      { section: "Single Breasted", name: "5 Buttons", displayName: "5 Buttons", factoryCode: "401G", img: "./assets/vest-btn-5.jpg" },
       { section: "Single Breasted", name: "6 Buttons", displayName: "6 Buttons", factoryCode: "401P", img: "./assets/vest-btn-6.jpg" },
       { section: "Double Breasted", name: "Double Breasted 4 Buttons", displayName: "4 Buttons", factoryCode: "401M", img: "./assets/vest-btn-db4.jpg" },
       { section: "Double Breasted", name: "Double Breasted 6 Buttons Low", displayName: "6 Buttons, Low", factoryCode: "4031", img: "./assets/vest-btn-db6x2.jpg" },
@@ -3551,7 +3551,7 @@ const VEST_CATALOG = {
     column: "vest_bottom",
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { name: "Pointed", displayName: "Pointed", factoryCode: "401J", img: "./assets/vest-bottom-regular.jpg", badge: "Classic" },
+      { name: "Pointed", displayName: "Pointed", factoryCode: "401J", img: "./assets/vest-bottom-regular.jpg" },
       { name: "Small Point", displayName: "Small Point", factoryCode: "401Q", img: "./assets/vest-bottom-small.jpg" },
       { name: "Straight", displayName: "Straight", factoryCode: "401Z", img: "./assets/vest-bottom-square.jpg" },
       { name: "Rounded", displayName: "Rounded", factoryCode: "401Y", img: "./assets/vest-bottom-round.jpg" },
@@ -3564,7 +3564,7 @@ const VEST_CATALOG = {
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { section: "No Lapel", name: "V-Neck", displayName: "V-Neck", factoryCode: "4000", img: "./assets/vest-lapel-v.jpg", badge: "Classic" },
+      { section: "No Lapel", name: "V-Neck", displayName: "V-Neck", factoryCode: "4000", img: "./assets/vest-lapel-v.jpg" },
       { section: "No Lapel", name: "U-Neck", displayName: "U-Neck", factoryCode: "4001", img: "./assets/vest-lapel-u.jpg" },
       { section: "Lapel", name: "Notch Lapel", displayName: "Notch", factoryCode: "4004", img: "./assets/vest-lapel-notch.jpg" },
       { section: "Lapel", name: "Peak Lapel", displayName: "Peak", factoryCode: "4006", img: "./assets/vest-lapel-peak.jpg" },
@@ -3584,7 +3584,7 @@ const VEST_CATALOG = {
     // U-Neck (kute-factory sends "No Lapel Buttonhole").
     hiddenWhenEquals: { key: "collar", value: ["V-Neck", "U-Neck"] },
     options: [
-      { name: "No Lapel Buttonhole", displayName: "None", factoryCode: "4544", img: "./assets/vest-hole-none.jpg", badge: "Classic" },
+      { name: "No Lapel Buttonhole", displayName: "None", factoryCode: "4544", img: "./assets/vest-hole-none.jpg" },
       { name: "Left Lapel", displayName: "Left Lapel", factoryCode: "4541", img: "./assets/vest-hole-left.jpg" },
       { name: "Left Lapel, Two", displayName: "Two on Left Lapel", factoryCode: "4545", img: "./assets/vest-hole-left-two.jpg" },
       { name: "Both Lapels", displayName: "Both Lapels", factoryCode: "4543", img: "./assets/vest-hole-both.jpg" },
@@ -3597,7 +3597,7 @@ const VEST_CATALOG = {
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { section: "None", name: "No Chest Pocket", displayName: "None", factoryCode: "4X06", img: "./assets/vest-chest-none.jpg", badge: "Classic" },
+      { section: "None", name: "No Chest Pocket", displayName: "None", factoryCode: "4X06", img: "./assets/vest-chest-none.jpg" },
       { section: "Left Side", name: "Left Welt", displayName: "Welt", factoryCode: "4111", img: "./assets/vest-chest-left-welt.jpg" },
       { section: "Left Side", name: "Left Besom", displayName: "Slit", factoryCode: "4112", img: "./assets/vest-chest-left-besom.jpg" },
       { section: "Left Side", name: "Left Besom with Flap", displayName: "Flap", factoryCode: "4113", img: "./assets/vest-chest-left-flap.jpg" },
@@ -3615,7 +3615,7 @@ const VEST_CATALOG = {
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { section: "Straight", name: "Welt", displayName: "Welt", factoryCode: "4300", img: "./assets/vest-lower-welt.jpg", badge: "Classic" },
+      { section: "Straight", name: "Welt", displayName: "Welt", factoryCode: "4300", img: "./assets/vest-lower-welt.jpg" },
       { section: "Straight", name: "Narrow Welt", displayName: "Narrow Welt", factoryCode: "430B", img: "./assets/vest-lower-welt-slim.jpg" },
       { section: "Straight", name: "Besom", displayName: "Slit", factoryCode: "4301", img: "./assets/vest-lower-besom.jpg" },
       { section: "Straight", name: "Besom with Flap", displayName: "Flap", factoryCode: "4302", img: "./assets/vest-lower-flap.jpg" },
@@ -3632,7 +3632,7 @@ const VEST_CATALOG = {
     column: "vest_back",
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { name: "Adjuster Strap", displayName: "Adjuster Strap", factoryCode: "4200", img: "./assets/vest-back-strap.jpg", badge: "Classic" },
+      { name: "Adjuster Strap", displayName: "Adjuster Strap", factoryCode: "4200", img: "./assets/vest-back-strap.jpg" },
       { name: "No Adjuster", displayName: "No Strap", factoryCode: "4202", img: "./assets/vest-back-no-strap.jpg" },
     ],
   },
@@ -3645,7 +3645,7 @@ const VEST_CATALOG = {
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     requiresEquals: { key: "backstyle", value: "Adjuster Strap" },
     options: [
-      { name: "Silver Buckle", displayName: "Silver", factoryCode: "42C1:QZMAB01-2", img: "./assets/vest-buckle-silver.jpg", badge: "Classic" },
+      { name: "Silver Buckle", displayName: "Silver", factoryCode: "42C1:QZMAB01-2", img: "./assets/vest-buckle-silver.jpg" },
       { name: "Gunmetal Buckle", displayName: "Gunmetal", factoryCode: "42C1:QZMAB02-2", img: "./assets/vest-buckle-gunmetal.jpg" },
       { name: "Pointed Black Buckle", displayName: "Pointed Black", factoryCode: "42C1:QMJQZ03-2", img: "./assets/vest-buckle-black.jpg" },
     ],
@@ -3686,7 +3686,7 @@ const VEST_CATALOG = {
     column: "vest_pick_stitch",
     requiresOtherThan: { key: "addVest", value: "No Vest" },
     options: [
-      { name: "No Stitching", displayName: "No Stitching", noFactoryCode: true, img: "./assets/vest-stitch-none.jpg", badge: "Classic" },
+      { name: "No Stitching", displayName: "No Stitching", noFactoryCode: true, img: "./assets/vest-stitch-none.jpg" },
       { name: "Pick Stitch", displayName: "0.6 cm Pick Stitch", factoryCode: "4576", img: "./assets/vest-stitch-pick.jpg" },
     ],
   },
