@@ -1335,7 +1335,7 @@
     const side = !!r && r.width > 0 && room >= 200;
     peek.classList.toggle("side", side);
     if (side) {
-      const w = Math.min(176, room - 48);
+      const w = Math.min(118, room - 48);
       peek.style.width = w + "px";
       peek.style.left = Math.round(r.right + Math.min(56, (room - w) / 2)) + "px";
       peek.style.right = "auto";
