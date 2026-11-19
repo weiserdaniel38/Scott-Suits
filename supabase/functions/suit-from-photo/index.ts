@@ -29,6 +29,10 @@
 // they are read as one suit.
 // Deploy with verify_jwt false (the site calls it like generate-suit-image).
 // POST {"ping":true} -> {"ok":true,"ready":true}.
+// Vests (2026-11-19, Daniel: "have it also include and create a three piece
+// suit or vest"): when the site sends vestSteps, the same single reading
+// also says whether a vest is worn with the suit (three-piece) or shown on
+// its own (Vest Only), and answers the vest's steps. No extra calls.
 
 import Anthropic from "npm:@anthropic-ai/sdk";
 
@@ -70,7 +74,7 @@ function cleanSteps(raw: unknown): Step[] {
 const NOT_VISIBLE = "Not visible";
 const HEX = { type: "string", description: "Colour as #rrggbb, as it would look in even daylight (correct for shadows and camera tint)." };
 
-function buildSchema(jacket: Step[], pants: Step[]) {
+function buildSchema(jacket: Step[], pants: Step[], vest: Step[]) {
   const stepProps = (steps: Step[]) => {
     const props: Record<string, unknown> = {};
     steps.forEach((s) => { props[s.key] = { type: "string", enum: [...s.options, NOT_VISIBLE] }; });
@@ -79,7 +83,7 @@ function buildSchema(jacket: Step[], pants: Step[]) {
   return {
     type: "object",
     properties: {
-      isSuit: { type: "boolean", description: "true if the photo shows a suit, a tailored jacket/blazer or tailored trousers" },
+      isSuit: { type: "boolean", description: "true if the photo shows a suit, a tailored jacket/blazer, tailored trousers" + (vest.length ? " or a tailored vest (waistcoat)" : "") },
       message: { type: "string", description: "If isSuit is false: one short friendly sentence saying what you see instead. Otherwise an empty string." },
       pantsVisible: { type: "boolean" },
       fabric: {
@@ -120,8 +124,16 @@ function buildSchema(jacket: Step[], pants: Step[]) {
       },
       jacket: stepProps(jacket),
       pants: stepProps(pants),
+      ...(vest.length ? {
+        vestPresent: {
+          type: "string",
+          enum: ["none", "with_jacket", "alone"],
+          description: "none = no vest anywhere in the photos; with_jacket = a vest (waistcoat) worn or shown with the suit jacket, i.e. a three-piece suit; alone = only a vest, with no suit jacket worn or shown",
+        },
+        vest: stepProps(vest),
+      } : {}),
     },
-    required: ["isSuit", "message", "pantsVisible", "fabric", "buttons", "lining", "contrastButtonholes", "jacket", "pants"],
+    required: ["isSuit", "message", "pantsVisible", "fabric", "buttons", "lining", "contrastButtonholes", "jacket", "pants", ...(vest.length ? ["vestPresent", "vest"] : [])],
     additionalProperties: false,
   };
 }
@@ -142,6 +154,8 @@ const SYSTEM =
   "Closure tab: look at the front centre of the waistband: does the waistband extend past the fly as a tab (rounded, pointed or square, with or without a visible button), or do both sides simply meet at the centre with nothing showing? " +
   "Front pockets: side seam pockets are hidden in the outer leg seam (no visible opening on the front), slanted pockets show a diagonal opening from the waistband. Pleats: look for folds at the waistband; a clean front is flat. " +
   "Hem: a turned-up cuff shows a horizontal band at the bottom; otherwise plain. " +
+  "Vests (when vest steps are given): look for a waistcoat under the jacket, visible in the V between the lapels (a row of small buttons above the jacket's own button, cloth instead of shirt at the chest). A vest with the jacket = with_jacket (three-piece suit); a vest with no jacket in any photo = alone; no vest = none, and then answer every vest step \"Not visible\". " +
+  "Vest steps: count the vest buttons that show (on a vest under a buttoned jacket count the ones in the V plus the usual hidden ones: most single breasted vests have 5 or 6); V-Neck and U-Neck are vests with no lapel (V-Neck pointed, U-Neck rounded/scooped opening); a lapel only on the front is a lapel, one that runs around the back of the neck is a lapel \"with Collar Band\"; Besom means a slit pocket with no welt; Pointed / Small Point / Straight / Rounded is the shape of the vest's front hem; the back adjuster is a small strap and buckle on the back. Under a jacket, the vest's lower pockets, bottom and back are usually Not visible. " +
   "Tuxedo details we don't offer (a satin side stripe, satin waistband) can be ignored. " +
   "For colours give what the cloth would look like in neutral daylight; dark navy and black are easy to confuse, look for blue undertones.";
 
@@ -404,17 +418,19 @@ Deno.serve(async (req) => {
   }
   const jacket = cleanSteps(body.jacketSteps);
   const pants = cleanSteps(body.pantsSteps);
+  const vest = cleanSteps(body.vestSteps);
   if (!jacket.length) return json({ error: "Bad request" }, 400);
 
   const stepText = (title: string, steps: Step[]) =>
     title + "\n" + steps.map((s) => "- " + s.key + " (" + s.label + "): " + s.options.map((o) => '"' + o + '"').join(", ")).join("\n");
 
-  const schema = buildSchema(jacket, pants);
+  const schema = buildSchema(jacket, pants, vest);
   const question = (linked.length > 1
-      ? "These " + pics.length + " photos come from one web page (a shop or article). Most should show the same suit from different angles or details (the jacket, the trousers, the back); ignore any that show something else, like other products, models' faces or banners. Combine what the suit photos show. If none of them shows a suit, jacket or suit trousers, set isSuit to false. "
-      : fromLink ? "This photo comes from a web link. If it does not show a suit, jacket or suit trousers, set isSuit to false. "
+      ? "These " + pics.length + " photos come from one web page (a shop or article). Most should show the same suit from different angles or details (the jacket, the trousers, the back); ignore any that show something else, like other products, models' faces or banners. Combine what the suit photos show. If none of them shows a suit, jacket, vest or suit trousers, set isSuit to false. "
+      : fromLink ? "This photo comes from a web link. If it does not show a suit, jacket, vest or suit trousers, set isSuit to false. "
       : pics.length > 1 ? "These " + pics.length + " photos show the same suit from different angles or details (e.g. the jacket, the trousers, the back). Combine what they show. " : "") +
-    "Match this suit to our options.\n\n" + stepText("JACKET STEPS", jacket) + "\n\n" + stepText("TROUSER STEPS", pants);
+    "Match this suit to our options.\n\n" + stepText("JACKET STEPS", jacket) + "\n\n" + stepText("TROUSER STEPS", pants) +
+    (vest.length ? "\n\n" + stepText("VEST STEPS (only if a vest shows)", vest) : "");
   try {
     const out = key
       ? await readWithClaude(key, pics, schema, question)
