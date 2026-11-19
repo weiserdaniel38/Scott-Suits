@@ -3,23 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scott's Suits: Custom Men's Suits Made to Measure From $350</title>
+<title>Scott's Suits: Custom Made Suits From Anywhere</title>
 <!-- Site icon (browser tab, bookmarks, phone home screen) and the preview
      image shown when the link is shared in texts / social media. Both are
-     made from assets/icon-source.png (icons) and assets/logo-full-new.png (share image). Share-image URLs must be absolute,
-     so they point at the live domain. -->
-<link rel="icon" href="./favicon.ico?v=20261109muted2" sizes="any">
-<link rel="icon" type="image/png" href="./assets/icon-192.png?v=20261109muted2" sizes="192x192">
-<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20261109muted2">
+     made from assets/icon-source.png (icons, on the site's cream #F7ECE3)
+     and the landing photo + logo + tagline (assets/share-image.jpg, 1200x630,
+     logo and words kept inside the centre 630x630 so WhatsApp's square crop
+     keeps them whole). Share-image URLs must be absolute, so they point at
+     the live domain. -->
+<link rel="icon" href="./favicon.ico?v=20261119cream" sizes="any">
+<link rel="icon" type="image/png" href="./assets/icon-192.png?v=20261119cream" sizes="192x192">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20261119cream">
 <!-- Home Screen app: opens full screen (no Safari bars) when added
      from Share > Add to Home Screen. See manifest.webmanifest and sw.js. -->
-<link rel="manifest" href="./manifest.webmanifest?v=20261109muted2">
+<link rel="manifest" href="./manifest.webmanifest?v=20261119cream">
 <meta name="theme-color" content="#F7ECE3">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Scott Suits">
-<meta name="description" content="Custom men's suits made to measure from $350. Design yours online, choosing the fabric, lapels, pockets and buttons, and get it delivered to your door.">
+<meta name="description" content="Custom made suits from anywhere. Design yours online, pick the fabric, lapels, pockets and buttons, made to your measurements from $350 and delivered to you.">
 <!-- Search engines: the one official address for this page, plus a short
      business summary Google can show in results. -->
 <meta name="keywords" content="custom suits, made to measure suits, custom suits online, design your own suit, tailored suits, bespoke suits, custom tuxedo, custom suit jacket, custom blazer, men's custom suits, affordable custom suits, Scott's Suits, Scott Suits">
@@ -32,9 +35,10 @@
   "name": "Scott's Suits",
   "alternateName": ["Scott Suits", "Scotts Suits", "ScottsSuits"],
   "url": "https://scottssuits.com/",
-  "logo": "https://scottssuits.com/assets/icon-192.png",
-  "image": "https://scottssuits.com/assets/share-image-square-safe.jpg",
-  "description": "Affordable custom men's suits made to measure from $350, designed online and delivered to your door. No showroom visit or fitting needed.",
+  "logo": "https://scottssuits.com/assets/icon-512.png",
+  "image": "https://scottssuits.com/assets/share-image.jpg",
+  "slogan": "Custom made suits from anywhere.",
+  "description": "Custom made suits from anywhere: men's suits made to measure from $350, designed online and delivered to you. No showroom visit or fitting needed.",
   "email": "hello@scottssuits.com",
   "priceRange": "$150 - $475",
   "currenciesAccepted": "USD",
@@ -123,19 +127,17 @@
 </script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Scott's Suits">
-<meta property="og:title" content="Scott's Suits: Custom Men's Suits Made to Measure From $350">
-<meta property="og:description" content="Custom men's suits from just $350, designed by you and tailored to your measurements.">
+<meta property="og:title" content="Scott's Suits: Custom Made Suits From Anywhere">
+<meta property="og:description" content="Custom made suits from anywhere. Designed by you online, made to your measurements, from $350.">
 <meta property="og:url" content="https://scottssuits.com/">
-<!-- WhatsApp often crops the preview to a center square, so the logo sits
-     inside the middle 630x630 of the image to stay whole either way. -->
-<meta property="og:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
-<meta property="og:image:secure_url" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
+<meta property="og:image" content="https://scottssuits.com/assets/share-image.jpg?v=20261119cream">
+<meta property="og:image:secure_url" content="https://scottssuits.com/assets/share-image.jpg?v=20261119cream">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Scott Suits — Custom Tailoring logo">
+<meta property="og:image:alt" content="Scott Suits logo with the words Custom made suits from anywhere, beside a stack of suit fabrics">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://scottssuits.com/assets/share-image-square-safe.jpg">
+<meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg?v=20261119cream">
 <link rel="stylesheet" href="./style.css?v=20261118vest12">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261119cmsuits"></script>
@@ -1352,7 +1354,7 @@
 <script src="./catalog.js?v=20261119wide"></script>
 <script src="./supabaseClient.js?v=20261006c"></script>
 <script src="./fabric-drape.js?v=20261030matte"></script>
-<script src="./main.js?v=20261118vest12"></script>
+<script src="./main.js?v=20261119cream"></script>
 <script src="./photo-suit.js?v=20261117trim"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>

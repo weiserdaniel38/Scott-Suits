@@ -155,7 +155,7 @@ def build(brand_id, out, domain=None):
     # Home Screen app name/icons for this brand (see manifest.webmanifest).
     with open(os.path.join(ROOT, "manifest.webmanifest"), encoding="utf-8") as f:
         man = json.load(f)
-    man.update(name=b["name"], short_name=b["name"], background_color=b["app_color"], theme_color=b["app_color"])
+    man.update(name=b["name"], short_name=b["name"], description=b["description"], background_color=b["app_color"], theme_color=b["app_color"])
     man["icons"] = [
         {"src": b["icon"].lstrip("."), "sizes": "192x192", "type": "image/png"},
         {"src": b["icon_512"].lstrip("."), "sizes": "512x512", "type": "image/png"},
