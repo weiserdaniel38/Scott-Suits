@@ -1,8 +1,6 @@
 try { if (window.self !== window.top) document.documentElement.classList.add("is-framed"); } catch (e) { document.documentElement.classList.add("is-framed"); }
-// Step background graphics (cloth / lapel / felt / button / pocket sketches) are
-// switched OFF for now and saved for later -- see saved_step_backgrounds.css.txt
-// and the hero-*-sketch.jpg / hero-fabric-drape.jpg files in assets/. Set to
-// true (and paste the saved CSS back into style.css) to bring them back.
+// Step background graphics (old pre-redesign sketches) are OFF; their image
+// files were removed 2026-11-19 with the rest of the old look. Leave false.
 const STEP_BACKGROUNDS_ENABLED = false;
 const suitTypeSection = document.getElementById("suitTypeSection");
 const jacketSection = document.getElementById("designer");
