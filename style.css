@@ -3747,3 +3747,15 @@ html[data-brand="scott"] .suit-peek-eyebrow{color:#74444D;}
 }
 html[data-brand="sw"] .suit-peek{background:var(--ink);border-color:rgba(var(--brass-rgb),0.35);box-shadow:0 6px 20px rgba(0,0,0,0.35);}
 html[data-brand="sw"] .suit-peek.side .suit-peek-label{color:var(--brass);}
+/* Quieter (Daniel 2026-11-19 "more subtle"): smaller, no card shadow, faded until hovered. */
+.suit-peek{width:46px;padding:3px;border-radius:9px;box-shadow:none;opacity:0.78;background:rgba(var(--ink-rgb),0.7);}
+.suit-peek:hover,.suit-peek:focus-visible{opacity:1;transform:none;box-shadow:none;}
+.suit-peek-pic{border-radius:6px;}
+.suit-peek:not(.side) .suit-peek-icon{display:none;}
+.suit-peek.side{padding:6px 6px 7px;border-radius:10px;gap:5px;background:transparent;border-color:var(--line);}
+.suit-peek.side .suit-peek-pic{border-radius:7px;}
+.suit-peek.side .suit-peek-label{font-size:9px;letter-spacing:2px;}
+.suit-peek.side .suit-peek-icon{right:10px;top:10px;width:16px;height:16px;opacity:0.8;}
+.suit-peek.side .suit-peek-icon svg{width:9px;height:9px;}
+html[data-brand="sw"] .suit-peek{box-shadow:none;background:rgba(var(--ink-rgb),0.7);}
+html[data-brand="sw"] .suit-peek.side{background:transparent;}
