@@ -267,6 +267,9 @@ DBLAPEL = {
     'diamond': [(500, 68), (558, 238), (397, 452)],
     # One smooth rounded edge from the neck down.
     'shawl': cubic((500, 68), (556, 104), (585, 250), (397, 452)),
+    # Arc: wide like the shawl, then only the end above the button turns in
+    # to a blunt rounded tip.
+    'arc': cubic((500, 68), (560, 108), (598, 270), (528, 366))[:-1] + cubic((528, 366), (498, 410), (446, 436), (397, 452)),
 }
 for style, edge in DBLAPEL.items():
     v = Ls.copy()
