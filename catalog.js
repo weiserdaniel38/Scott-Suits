@@ -3660,11 +3660,12 @@ const VEST_CATALOG = {
   // each starts with a Match Jacket card.
   lining: Object.assign({}, JACKET_CATALOG.lining, {
     label: "Vest Lining",
+    description: "Lines the inside of your vest and makes up the whole back.",
     column: "vest_lining",
     hiddenWhenEquals: undefined,
     specialOptions: [LINING_MATCH_OPTION],
     options: [LINING_MATCH_OPTION].concat(flattenPatternTypes(LINING_PATTERN_TYPES)),
-    sameAsLabel: "Match Jacket",
+    sameAsLabel: "Match Suit Lining",
     sameAsOptional: true,
     requiresOtherThan: { key: "addVest", value: "No Vest" },
   }),

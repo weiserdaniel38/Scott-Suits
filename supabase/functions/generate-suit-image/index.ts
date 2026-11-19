@@ -1063,6 +1063,14 @@ function vestText(spec: string): string {
   // Button stitching on a 3-piece vest, when it differs from the jacket's.
   const vNail = v("Vest Button Stitching"), jNail = sectionValue(spec, "JACKET", "Button Nail Method");
   if (!only && STITCH[vNail] && vNail !== jNail) parts.push("the vest buttons are sewn on with the \"" + vNail + "\" pattern: " + STITCH[vNail].look);
+  // The vest back is always the lining (Daniel 2026-11-19), the same lining
+  // that lines the inside of the vest.
+  if (!only) {
+    const vLining = v("Lining"), jLining = sectionValue(spec, "JACKET", "Lining");
+    parts.push("the vest back is cut from the lining fabric, " + (vLining && vLining !== jLining
+      ? "the vest's own lining (" + vLining + "), not the jacket's"
+      : "the same lining as the jacket") + "; never the suit fabric");
+  }
   if (only) {
     const strap = v("Vest Back Adjuster");
     const buckle = VEST_BUCKLES[v("Vest Buckle")] || VEST_BUCKLES["Silver Buckle"];
