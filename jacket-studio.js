@@ -1,9 +1,13 @@
 // ============================================================
-// INTERACTIVE JACKET ("Interactive Jacket" mode)
-// A photo of a jacket the customer can click to customize, shown on the
-// homepage and, as an alternative to the step-by-step questions, on the
-// Jacket page.
+// YOUR JACKET PEEK (was "Interactive Jacket" mode)
+// Since 2026-11-19 (Daniel): a small read-only picture of the jacket beside
+// the step-by-step questions on the Jacket page, following every pick; tap
+// it to see the jacket big (Front / Back / Inside, zoom). The questions stay
+// the only way to choose. See "Peek" near the end of this file. The code
+// below still holds the old clickable mode (parts with markers that opened
+// the designer's own option cards); it is no longer offered.
 //
+// Original notes:
 // It keeps NO selections of its own. Everything it shows is read from the
 // jacket designer (jacketDesigner in main.js), and every pick is made with the
 // designer's own option cards: clicking a part of the jacket moves the
@@ -1020,6 +1024,7 @@
       pg.drawImage(next, 0, 0);
       anchors = a;
       canvasBox.classList.remove("loading");
+      if (typeof copyToPeek === "function") copyToPeek();
     }
     renderMarkers();
     syncChips();
@@ -1268,68 +1273,136 @@
     if (typeof startDesigning === "function") startDesigning();
   };
 
-  // ---- Modes ------------------------------------------------------------------------
-  function getMode() {
-    try { return sessionStorage.getItem(MODE_KEY) === "browse" ? "browse" : "interactive"; } catch (e) { return "interactive"; }
-  }
-  let mode = getMode();
-  function setMode(m) {
-    mode = m;
-    try { sessionStorage.setItem(MODE_KEY, m); } catch (e) { /* not fatal */ }
-    renderModeBars();
-    place();
-  }
-  const ICON_LIST = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>';
-  const ICON_CLICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9l5 12 1.8-5.2L21 14z"/><path d="M7.2 2.2L8 5.1M2.2 7.2L5.1 8M12.5 3.8l-2.1 2.1M3.8 12.5l2.1-2.1"/></svg>';
-  function modeBarHtml(active) {
-    return '<div class="studio-modes" role="tablist" aria-label="How to customize">' +
-      '<button type="button" role="tab" data-mode="interactive" class="' + (active === "interactive" ? "active" : "") + '" aria-selected="' + (active === "interactive") + '">' + ICON_CLICK + "<span>Interactive Jacket</span></button>" +
-      '<button type="button" role="tab" data-mode="browse" class="' + (active === "browse" ? "active" : "") + '" aria-selected="' + (active === "browse") + '">' + ICON_LIST + "<span>Browse Options</span></button>" +
-      "</div>";
-  }
-  function renderModeBars() {
-    if (homeModeBar) {
-      homeModeBar.innerHTML = modeBarHtml("interactive");
-      homeModeBar.querySelector('[data-mode="browse"]').onclick = () => {
-        closePanel();
-        setMode("browse");
-        if (typeof startDesigning === "function") startDesigning();
-      };
-    }
-    if (designerModeBar) {
-      designerModeBar.innerHTML = modeBarHtml(mode);
-      designerModeBar.querySelectorAll("button").forEach((b) => {
-        b.onclick = () => {
-          if (b.dataset.mode === mode) return;
-          closePanel();
-          setMode(b.dataset.mode);
-          const sec = document.getElementById("designer");
-          if (sec && typeof scrollToStepTop === "function") scrollToStepTop(sec);
-        };
-      });
-    }
-  }
+  // ---- Peek (2026-11-19, Daniel) -------------------------------------------
+  // The step-by-step designer stays the only way to choose. This jacket is a
+  // small, read-only picture on the side of the Jacket page that follows the
+  // picks as they are made; tapping it opens the same jacket big (Front /
+  // Back / Inside, zoom) with nothing to click on it. The old "Interactive
+  // Jacket" mode (clickable parts, mode switch) is kept in the code but no
+  // longer offered.
+  const mode = "browse";
+  function setMode() { /* Interactive Jacket mode is no longer offered */ }
+  if (designerModeBar) designerModeBar.innerHTML = "";
+  if (homeModeBar) homeModeBar.innerHTML = "";
+  shell.classList.add("studio-readonly");
 
-  // Shows the jacket where it belongs right now: the homepage (before
-  // designing), or the Jacket page in Interactive Jacket mode.
+  const ICON_EXPAND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>';
+  const peek = document.createElement("button");
+  peek.type = "button";
+  peek.className = "suit-peek";
+  peek.hidden = true;
+  peek.setAttribute("aria-label", "See your jacket so far");
+  peek.innerHTML = '<span class="suit-peek-pic loading"><canvas aria-hidden="true"></canvas></span>' +
+    '<span class="suit-peek-label">Your jacket</span><span class="suit-peek-icon">' + ICON_EXPAND + "</span>";
+  const peekCanvas = peek.querySelector("canvas");
+  const peekPic = peek.querySelector(".suit-peek-pic");
+  // The jacket fills most of the photo; crop a little of the empty edges.
+  const PEEK_CROP = { x: 40, y: 20, w: 720, h: 912 };
+  peekCanvas.width = 240;
+  peekCanvas.height = Math.round(240 * PEEK_CROP.h / PEEK_CROP.w);
+  const peekG = peekCanvas.getContext("2d");
+  document.body.appendChild(peek);
+
+  const big = document.createElement("div");
+  big.className = "suit-peek-view";
+  big.hidden = true;
+  big.setAttribute("role", "dialog");
+  big.setAttribute("aria-label", "Your jacket so far");
+  big.innerHTML = '<div class="suit-peek-card">' +
+    '<div class="suit-peek-head"><div><div class="suit-peek-eyebrow">Your jacket so far</div>' +
+    '<p class="suit-peek-sub">Updates as you choose. Anything not picked yet shows a classic look.</p></div>' +
+    '<button type="button" class="suit-peek-close" aria-label="Close">&times;</button></div>' +
+    '<div class="suit-peek-stage"></div></div>';
+  big.querySelector(".suit-peek-stage").appendChild(shell);
+  document.body.appendChild(big);
+
+  let bigOpen = false;
+  let bigPushed = false;
+  function copyToPeek() {
+    if (view !== "front" || canvasBox.classList.contains("loading")) return;
+    peekG.clearRect(0, 0, peekCanvas.width, peekCanvas.height);
+    peekG.drawImage(photoCanvas, PEEK_CROP.x * RES, PEEK_CROP.y * RES, PEEK_CROP.w * RES, PEEK_CROP.h * RES, 0, 0, peekCanvas.width, peekCanvas.height);
+    peekPic.classList.remove("loading");
+  }
+  // Where the small picture sits: in the empty space to the right of the
+  // questions when there is room, otherwise a small card in the corner just
+  // above the Back / Next bar.
+  function positionPeek() {
+    if (peek.hidden) return;
+    const grid = document.getElementById("designerGrid");
+    const r = grid ? grid.getBoundingClientRect() : null;
+    const room = r ? window.innerWidth - r.right : 0;
+    const side = !!r && r.width > 0 && room >= 200;
+    peek.classList.toggle("side", side);
+    if (side) {
+      const w = Math.min(176, room - 48);
+      peek.style.width = w + "px";
+      peek.style.left = Math.round(r.right + Math.min(56, (room - w) / 2)) + "px";
+      peek.style.right = "auto";
+      const nav = typeof getNavClearance === "function" ? getNavClearance() : 120;
+      peek.style.top = Math.round(Math.max(nav + 24, Math.min(r.top, window.innerHeight * 0.3))) + "px";
+      peek.style.bottom = "auto";
+    } else {
+      peek.style.width = "";
+      peek.style.left = "auto";
+      peek.style.right = "";
+      peek.style.top = "auto";
+      const bar = document.querySelector("#designer .wiz-bar");
+      const br = bar ? bar.getBoundingClientRect() : null;
+      const barTop = br && br.height && br.top < window.innerHeight ? br.top : window.innerHeight;
+      peek.style.bottom = Math.round(window.innerHeight - barTop + 12) + "px";
+    }
+  }
+  function openBig() {
+    if (bigOpen || !context) return;
+    bigOpen = true;
+    big.hidden = false;
+    document.documentElement.classList.add("suit-peek-open");
+    document.body.classList.add("suit-peek-open");
+    requestAnimationFrame(() => { big.classList.add("in"); applyZoom(); draw(); });
+    bigPushed = false;
+    try {
+      window.history.pushState(Object.assign({}, window.history.state || {}, { suitPeek: true }), "", window.location.href);
+      bigPushed = true;
+    } catch (e) { /* the X still closes it */ }
+  }
+  function closeBig(fromHistory) {
+    if (!bigOpen) return;
+    if (!fromHistory && bigPushed && window.history.state && window.history.state.suitPeek) { window.history.back(); return; }
+    bigOpen = false;
+    bigPushed = false;
+    big.classList.remove("in");
+    big.hidden = true;
+    document.documentElement.classList.remove("suit-peek-open");
+    document.body.classList.remove("suit-peek-open");
+    zoom = { s: 1, cx: VBW / 2, cy: VBH / 2 };
+    if (view !== "front") setView("front");
+    else applyZoom();
+  }
+  peek.onclick = openBig;
+  big.querySelector(".suit-peek-close").onclick = () => closeBig();
+  big.addEventListener("click", (e) => { if (e.target === big) closeBig(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && bigOpen) closeBig(); });
+  window.addEventListener("popstate", () => { if (bigOpen) closeBig(true); });
+  window.addEventListener("scroll", positionPeek, { passive: true });
+  window.addEventListener("resize", positionPeek);
+
+  // Shows the small picture while the customer is on the Jacket page.
   function place() {
     const jacketSec = document.getElementById("designer");
     const designing = document.body.classList.contains("designing");
     const onJacketPage = designing && jacketSec && jacketSec.classList.contains("active");
-    let next = null;
-    if (!designing && homeHost) next = "home";
-    else if (onJacketPage && mode === "interactive") next = "designer";
-    if (jacketSec) jacketSec.classList.toggle("studio-on", onJacketPage && mode === "interactive");
-    if (next === context) return;
+    const next = onJacketPage ? "peek" : null;
+    // (Only touch the class when it is there: a classList change fires the
+    // observer below, which calls place() again.)
+    if (jacketSec && jacketSec.classList.contains("studio-on")) jacketSec.classList.remove("studio-on");
+    peek.hidden = !next;
+    if (next === context) { positionPeek(); return; }
     closePanel();
+    if (!next) closeBig();
     context = next;
-    D.setReviewRowHandler(context === "designer" ? (k) => {
-      const area = AREAS.find((a) => a.keys.indexOf(k) !== -1);
-      if (area) openAreaPanel(area.id, k);
-    } : null);
-    if (context === "home" && shell.parentNode !== homeHost) homeHost.appendChild(shell);
-    if (context === "designer" && shell.parentNode !== designerHost) designerHost.appendChild(shell);
-    if (context) { applyZoom(); draw(); }
+    D.setReviewRowHandler(null);
+    if (context) { applyZoom(); draw(); positionPeek(); }
   }
 
   // Picking a fabric closes the fabric panel so the customer sees it on the
@@ -1343,7 +1416,6 @@
       if (f && openArea === "fabric" && openKey === "fabric") setTimeout(closePanel, 0);
     }
   });
-  renderModeBars();
   if (window.MutationObserver) {
     const mo = new MutationObserver(() => place());
     mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });

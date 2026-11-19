@@ -138,7 +138,7 @@
 <meta property="og:image:alt" content="Scott Suits logo with the words Custom-made suits, from anywhere, beside a stack of suit fabrics">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://scottssuits.com/assets/share-image.jpg?v=20261119cream2">
-<link rel="stylesheet" href="./style.css?v=20261119vestphoto">
+<link rel="stylesheet" href="./style.css?v=20261119peek">
 <script data-goatcounter="https://scottssuits.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="./brand.js?v=20261119cmsuits"></script>
 <link rel="stylesheet" href="./brand.css?v=20261117halfdouble">
@@ -536,9 +536,8 @@
 </section>
 
 <section class="designer step" id="designer">
-  <!-- Browse Options (the step-by-step questions below) or Interactive Jacket
-       (jacket-studio.js shows the clickable jacket in #studioDesignerHost).
-       Both edit the same selections. -->
+  <!-- The step-by-step questions below. jacket-studio.js adds the small
+       "Your jacket" picture beside them (read-only, tap to see it big). -->
   <div class="designer-mode-bar" id="designerModeBar"></div>
   <div class="studio-designer-host" id="studioDesignerHost"></div>
   <div class="designer-head">
@@ -1358,8 +1357,10 @@
 <script src="./photo-suit.js?v=20261119vestphoto"></script>
 <!-- Phone body scan: hidden test feature, loaded only with ?bodyscan=1. -->
 <script>if (/[?&]bodyscan=1\b/.test(location.search)) { var bsS = document.createElement("script"); bsS.src = "./body-scan.js?v=20261111burg"; document.body.appendChild(bsS); }</script>
-<!-- Interactive Jacket switched off for now (Daniel, 2026-10-18). To bring it back, restore:
-<script src="./jacket-studio.js?v=20261101redrawload"></script> -->
+<!-- Your Jacket peek: a small read-only picture of the jacket beside the
+     Jacket questions; tap to see it big (Daniel, 2026-11-19). The old
+     clickable "Interactive Jacket" mode is no longer offered. -->
+<script src="./jacket-studio.js?v=20261119peek"></script>
 
 </body>
 </html>
