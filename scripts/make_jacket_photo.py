@@ -253,10 +253,15 @@ LAPEL={
   # Arc (factory "Arc bottom shawl", Daniel 2026-11-19): a wide shawl edge
   # that stays wide low down, then only the last part above the top button
   # turns in to a blunt rounded end.
-  # Same top as the shawl; lower down the edge stays out longer, then only
-  # the end above the top button turns in to a blunt rounded tip.
+  # Arc (factory "Arc bottom shawl"), traced from the generator's approved
+  # Arc photo (assets/jacket-lapelref-arc-approved.jpg): wide shawl lapels.
+  # The under lapel (viewer's left) runs nearly straight down, then closes
+  # in a round bowl that meets the top button from the side; the top lapel
+  # (viewer's right) comes down to the button like a shawl and crosses over.
   'arc': dict(polys=[COLLAR,NOTCH], lines=[(OLD_EDGE,18)],
-              edges=[([q for q in cubic((515,74),(566,112),(566,250),(392,500),n=80) if q[1]<=261]+cubic((523,261),(512,330),(494,412),(458,458))[1:-1]+cubic((458,458),(436,486),(412,497),(392,500)),(1.6,1.2))]),
+              edges=[(cubic((515,74),(560,108),(570,230),(404,500)),(1.8,1.4))],
+              edges_left=[(mir(cubic((515,74),(552,96),(566,140),(566,200))[:-1]+cubic((566,200),(567,290),(562,375),(536,428))[:-1]+cubic((536,428),(506,482),(452,500),(398,502))),(1.8,1.4))],
+              panel=dict(lift=1.03,shadow=0.16,shadow_r=4)),
 }
 def soft(m,r): return np.asarray(Image.fromarray((np.clip(m,0,1)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(r))).astype(np.float32)/255
 def lapel_variant(base,style):
@@ -268,11 +273,22 @@ def lapel_variant(base,style):
             for pts,w in d['lines']: g.line(S(f(pts)),fill=255,width=int(w*SS),joint='curve')
     zone=aa_mask(zdraw)>0.3
     fill_zone(v,zone)
+    pan=d.get('panel')
+    if pan:
+        # The lapel reads as a separate layer of cloth: a little lighter on
+        # the lapel, a soft shadow just outside its edge on the body.
+        for f,sx in ((lambda q:q,1),(mir,-1)):
+            E=d['edges_left'][0][0] if (sx<0 and d.get('edges_left')) else f(d['edges'][0][0])
+            inner=E+[(401.5,E[-1][1]),(401.5,E[0][1])]
+            pm=soft(aa_mask(lambda g:g.polygon(S(inner),fill=255)),1.0)
+            ring=soft(aa_mask(lambda g:g.line(S([(x+sx*3,y+2) for x,y in E]),fill=255,width=int(8*SS),joint='curve')),pan['shadow_r'])
+            v*=1+(pan['lift']-1)*pm
+            v*=1-pan['shadow']*ring*(1-pm)
     for f,sx in ((lambda q:q,1),(mir,-1)):
         if d.get('gap'):
             v*=1-0.45*soft(aa_mask(lambda g:g.polygon(S(f(d['gap'])),fill=255)),0.6)
-        for pts,sh in d['edges']:
-            P=f(pts)
+        for pts,sh in (d['edges_left'] if (sx<0 and d.get('edges_left')) else d['edges']):
+            P=pts if (sx<0 and d.get('edges_left')) else f(pts)
             if sh:
                 m=aa_mask(lambda g:g.line(S([(x+sx*sh[0],y+sh[1]) for x,y in P]),fill=255,width=int(3.2*SS),joint='curve'))
                 v*=1-0.3*soft(m,1.8)
