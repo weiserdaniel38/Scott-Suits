@@ -51,7 +51,7 @@
     "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
     "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
     "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-arc.webp?v=1",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-arc.webp?v=2",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
@@ -60,7 +60,7 @@
   const SHADE_DB_LAPEL = {
     "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
     "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-db-arc.webp?v=1",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-db-arc.webp?v=2",
   };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.

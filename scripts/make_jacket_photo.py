@@ -253,8 +253,10 @@ LAPEL={
   # Arc (factory "Arc bottom shawl", Daniel 2026-11-19): a wide shawl edge
   # that stays wide low down, then only the last part above the top button
   # turns in to a blunt rounded end.
+  # Same top as the shawl; lower down the edge stays out longer, then only
+  # the end above the top button turns in to a blunt rounded tip.
   'arc': dict(polys=[COLLAR,NOTCH], lines=[(OLD_EDGE,18)],
-              edges=[(cubic((515,74),(570,116),(584,300),(522,405))[:-1]+cubic((522,405),(492,452),(440,478),(392,500)),(1.6,1.2))]),
+              edges=[([q for q in cubic((515,74),(566,112),(566,250),(392,500),n=80) if q[1]<=261]+cubic((523,261),(512,330),(494,412),(458,458))[1:-1]+cubic((458,458),(436,486),(412,497),(392,500)),(1.6,1.2))]),
 }
 def soft(m,r): return np.asarray(Image.fromarray((np.clip(m,0,1)*255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(r))).astype(np.float32)/255
 def lapel_variant(base,style):
