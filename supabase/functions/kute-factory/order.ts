@@ -477,17 +477,23 @@ export function buildFactoryOrder(input: BuildInput): BuildResult {
       if (vc.includes("4200")) {
         if (!vc.some((c) => c.startsWith("42C1"))) vc.push("42C1:QZMAB01-2");
       } else vc = vc.filter((c) => !c.startsWith("42C1"));
-      // Back in the lining (the factory's matched lining).
-      vc.push("4210");
       // Lining, buttons and thread: the vest's own picks (on a 3-piece suit
       // "Match Jacket" is saved as the jacket's pick); older 3-piece orders
       // without them use the jacket's.
       const lining = vestOnly ? s(vrow.vest_lining) : s(vrow.vest_lining) || s(row.jacket_lining);
       const liningCat = vestOnly ? input.vest.lining : jacket.lining;
-      if (!lining || matched(liningCat, lining) || s(row.facing_style) === "No Lining Construction") vc.push("4711");
+      // The back is always the lining, the same one that lines the inside
+      // (Daniel 2026-11-19): Back fabric "Specify lining" 4212:<lining> and
+      // the back strap in that lining too (Waist belt fabric 42B3:<lining>);
+      // a factory-matched lining uses Back fabric "Matched lining" 4210.
+      if (!lining || matched(liningCat, lining) || s(row.facing_style) === "No Lining Construction") vc.push("4711", "4210");
       else if (lining === "Customer's Own Photo") {
-        warnings.push("Vest lining: the customer sent their own lining photo; pick the lining on the factory site.");
-      } else vc.push("4714:" + lining);
+        vc.push("4210");
+        warnings.push("Vest lining: the customer sent their own lining photo; pick the lining (inside and back) on the factory site.");
+      } else {
+        vc.push("4714:" + lining, "4212:" + lining);
+        if (vc.includes("4200")) vc.push("42B3:" + lining);
+      }
       const vButton = vestOnly ? s(vrow.vest_button_color) : s(vrow.vest_button_color) || button;
       const buttonCat = vestOnly ? input.vest.buttoncolor : jacket.buttoncolor;
       if (vButton && !matched(buttonCat, vButton)) vc.push("4240:" + vButton);
