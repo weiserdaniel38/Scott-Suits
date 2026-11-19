@@ -2344,6 +2344,9 @@ body:has(#accountOverlay.open) .lightbox{z-index:180;}
 .ps-type{display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:999px;margin-bottom:6px;}
 .ps-type button{flex:1;padding:9px 10px;border:0;border-radius:999px;background:none;font:600 14px 'Inter',sans-serif;color:var(--ivory-dim);cursor:pointer;}
 .ps-type button.selected{background:var(--ivory);color:var(--ink);}
+.ps-type-4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border-radius:22px;}
+.ps-type-4 button{padding:9px 4px;white-space:nowrap;}
+@media (max-width:520px){.ps-type-4{grid-template-columns:1fr 1fr;}}
 .ps-group{margin:16px 0 2px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);font-weight:700;}
 .ps-item{border-bottom:1px solid var(--line);}
 .ps-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;background:none;border:0;text-align:left;font:14px 'Inter',sans-serif;color:var(--ivory);cursor:pointer;}

@@ -16,6 +16,11 @@
 // finishDesign, ...), so it loads after main.js. Maps only to options that
 // already exist: no new options, so the picture generator and 3D jacket
 // need nothing new.
+//
+// Vests (Daniel, 2026-11-19): the same reading also says whether a vest is
+// worn with the suit (-> Three-Piece) or shown on its own (-> Vest Only)
+// and answers the vest's steps. Unseen vest steps follow the jacket (Match
+// Jacket) or the classic vest. Still one reading per photo set.
 // ---------------------------------------------------------------------
 (function () {
   if (typeof jacketDesigner === "undefined" || typeof SUPABASE_URL === "undefined" || !SUPABASE_URL) return;
@@ -30,6 +35,18 @@
   // Rows on the quick-edit sheet.
   const JACKET_ROWS = ["fabric", "frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent", "cuffbuttons", "buttoncolor", "lining"];
   const PANTS_ROWS = ["frontPleat", "frontPocket", "waistbandStyle", "beltLoops", "waistbandExtension", "backPocket", "bottomStyle"];
+  // Vest steps read off the photo (sent by full option name: the vest's
+  // short card names repeat across sections, e.g. "Notch").
+  const VEST_PHOTO_STEPS = ["frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle"];
+  const VEST_ROWS = ["fabric", "frontbutton", "collar", "lapelbuttonhole", "chestpocket", "lowerpocket", "bottom", "backstyle", "buttoncolor", "lining"];
+  // Vest rows a 3-piece takes from the jacket (shown only on Vest Only).
+  const VEST_ONLY_ROWS = ["fabric", "buttoncolor", "lining"];
+  // The classic vest (same answers as VEST_PRESETS' classic in catalog.js).
+  const VEST_CLASSIC = { frontbutton: "5 Buttons", collar: "V-Neck", lapelbuttonhole: "No Lapel Buttonhole", chestpocket: "No Chest Pocket", lowerpocket: "Welt", bottom: "Pointed", backstyle: "Adjuster Strap", buckle: "Silver Buckle", pickStitch: "No Stitching", threadColor: "Match Fabric Color", buttonNail: "X Shape Sewing Button" };
+  // Steps with a Match Jacket card on a 3-piece.
+  const VEST_MATCH = ["collar", "lapelbuttonhole", "chestpocket", "lowerpocket"];
+  const VEST_MATCH_SAME = ["lining", "buttoncolor", "threadColor", "buttonNail"];
+  const hasVest = typeof vestDesigner !== "undefined" && typeof VEST_CATALOG !== "undefined";
   const MATCH_COUNT = 11;
 
   const label = (o) => o.displayName || o.name;
@@ -67,7 +84,7 @@
   // Fabrics (in stock, and on the customer's own list if they have one)
   // closest to the photo's cloth; a different pattern counts as far away.
   function rankedFabrics(info) {
-    const opts = jacketDesigner.allowedFor("fabric").filter((o) => o.hex && !o.outOfStock);
+    const opts = (isVestOnlyType(currentSuitType) && hasVest ? vestDesigner : jacketDesigner).allowedFor("fabric").filter((o) => o.hex && !o.outOfStock);
     if (!info || !info.hex) return opts;
     return opts
       .map((o) => ({ o, d: dist(o.hex, info.hex) + (FABRIC_PATTERN_OF[o.name] === info.pattern ? 0 : 22) }))
@@ -105,10 +122,10 @@
     const same = cat.options.filter((o) => label(o) === answer && !(cat.retiredOptions || []).includes(o.name));
     return same.find((o) => passes(o, sel)) || same[0] || null;
   }
-  function stepsPayload(catalog, keys) {
+  function stepsPayload(catalog, keys, byName) {
     return keys.filter((k) => catalog[k]).map((k) => {
       const cat = catalog[k];
-      const names = cat.options.filter((o) => !(cat.retiredOptions || []).includes(o.name)).map(label);
+      const names = cat.options.filter((o) => !(cat.retiredOptions || []).includes(o.name)).map(byName ? (o) => o.name : label);
       return { key: k, label: cat.label, options: names.filter((n, i) => names.indexOf(n) === i) };
     });
   }
@@ -174,6 +191,70 @@
     return { jsel, psel, seen };
   }
 
+  // The vest's answers for a 3-piece or Vest Only: what the photo shows,
+  // then (3-piece) the jacket's matching choice, then the classic vest.
+  // Vest Only takes the cloth, buttons and lining matched for the jacket.
+  // edits = picks made on the sheet, kept when the type is switched.
+  function vestSelections(result, type, edits) {
+    const vsel = { addVest: type === "vestOnly" ? "Vest Only" : "Add a Vest" };
+    const seen = { fabric: type === "vestOnly" };
+    const vr = (result && result.vest) || {};
+    const pres = result && result.vestPresent;
+    VEST_PHOTO_STEPS.forEach((k) => {
+      const ans = vr[k];
+      if (!pres || pres === "none" || !ans || ans === "Not visible") return;
+      if (VEST_CATALOG[k].options.some((o) => o.name === ans)) { vsel[k] = ans; seen[k] = true; }
+    });
+    const j = jacketDesigner.rawSelections();
+    if (type === "vestOnly") {
+      vsel.fabric = j.fabric;
+      const has = (k, v) => v && VEST_CATALOG[k].options.some((o) => o.name === v);
+      vsel.buttoncolor = has("buttoncolor", j.buttoncolor) ? j.buttoncolor : BEST_MATCH_FABRIC_BUTTON_OPTION.name;
+      vsel.lining = has("lining", j.lining) ? j.lining : LINING_MATCH_OPTION.name;
+      seen.buttoncolor = true;
+      seen.lining = !!(state && state.seen && state.seen.j.lining);
+    } else {
+      VEST_MATCH_SAME.forEach((k) => { vsel[k] = "__same_as__" + k; });
+    }
+    Object.keys(VEST_CLASSIC).forEach((k) => {
+      if (vsel[k]) return;
+      vsel[k] = type !== "vestOnly" && VEST_MATCH.indexOf(k) !== -1 ? "__same_as__" + k : VEST_CLASSIC[k];
+    });
+    // Sheet picks win. A Vest Only has no Match Jacket: such a pick becomes
+    // the jacket's own matching choice.
+    Object.keys(edits || {}).forEach((k) => {
+      let v = edits[k];
+      if (type === "vestOnly" && String(v).indexOf("__same_as__") === 0) v = (VEST_MATCH.indexOf(k) !== -1 ? vestMatchJacket(k) : vestMatchJacketSame(k)) || VEST_CLASSIC[k];
+      if (v) { vsel[k] = v; seen[k] = true; }
+    });
+    // No lapel (V / U cut) = no lapel buttonhole.
+    if (vsel.collar === "V-Neck" || vsel.collar === "U-Neck") vsel.lapelbuttonhole = "No Lapel Buttonhole";
+    return { vsel, seen };
+  }
+  function applyVest(type) {
+    if (!hasVest || !hasVestInOrder(type)) return;
+    const { vsel, seen } = vestSelections(state.result, type, state.vestEdits);
+    state.seen.v = seen;
+    vestDesigner.setSelections(vsel);
+    // A "Match Jacket" the jacket has no vest version of is cleared; the
+    // classic answer fills it.
+    const back = {};
+    Object.keys(VEST_CLASSIC).forEach((k) => { if (vestDesigner.isShown(k) && !vestDesigner.rawSelections()[k]) back[k] = VEST_CLASSIC[k]; });
+    if (Object.keys(back).length) vestDesigner.setSelections(back);
+    fillMissing(vestDesigner);
+  }
+  // What the photo shows: a vest with the suit, a vest alone, or no vest.
+  function typeFromResult(result) {
+    if (!hasVest) return "full";
+    if (result.vestPresent === "alone") return "vestOnly";
+    if (result.vestPresent === "with_jacket") return "threePiece";
+    return "full";
+  }
+  function switchType(t) {
+    applySuitType(t);
+    applyVest(t);
+  }
+
   // Any step still unanswered (e.g. a pick the rules cleared) gets its
   // Standard option, or the first one offered.
   function fillMissing(d) {
@@ -201,12 +282,16 @@
     applySuitType(type);
     jacketDesigner.resetSelections();
     pantsDesigner.resetSelections();
+    if (hasVest) vestDesigner.resetSelections();
     const { jsel, psel, seen } = buildSelections(result);
     state.seen = seen;
+    state.seen.v = {};
+    state.vestEdits = {};
     jacketDesigner.setSelections(jsel);
     pantsDesigner.setSelections(psel);
     fillMissing(jacketDesigner);
     fillMissing(pantsDesigner);
+    applyVest(type);
     markDesignStarted();
     saveDraft();
   }
@@ -259,13 +344,16 @@
   }
   const head = (title) => '<div class="wiz-sheet-head"><h3>' + esc(title) + '</h3><button type="button" class="wiz-close" aria-label="Close">&times;</button></div>';
 
+  const designerFor = (dKey) => (dKey === "j" ? jacketDesigner : dKey === "v" ? vestDesigner : pantsDesigner);
+  const sheetTitle = () => (isVestOnlyType(currentSuitType) ? "Your Vest" : "Your Suit");
+
   function showLoading() {
     openSheet(head(state && state.link ? "Build From a Link" : "Build From a Photo") +
       '<div class="ps-body ps-loading">' +
       photoStrip() +
       '<span class="ps-spinner" aria-hidden="true"></span>' +
       "<b>" + (state && state.link && !state.photos.length ? "Studying your link" : "Studying your photo" + (state && state.photos && state.photos.length > 1 ? "s" : "")) + "&hellip;</b>" +
-      "<p>We're matching the fabric, lapels, pockets and buttons to our options. This takes less than a minute.</p>" +
+      "<p>We're matching the fabric, lapels, pockets, buttons and any vest to our options. This takes less than a minute.</p>" +
       "</div>");
   }
   function showError(msg) {
@@ -302,8 +390,14 @@
     } else {
       opts = d.allowedFor(k).filter((o) => !o.outOfStock && !o.uploadPhoto);
     }
+    // 3-piece vest: the Match Jacket card first, when the jacket's choice
+    // has a vest version.
+    if (hasVest && d === vestDesigner && !isVestOnlyType(currentSuitType) && VEST_MATCH.concat(VEST_MATCH_SAME).indexOf(k) !== -1) {
+      const m = VEST_MATCH.indexOf(k) !== -1 ? vestMatchJacket(k) : vestMatchJacketSame(k);
+      if (m) opts = [{ name: "__same_as__" + k, displayName: "Match Jacket", img: optionImg(d, k, m) }].concat(opts);
+    }
     // Keep the current pick in view even when it isn't among the closest.
-    if (sel && !opts.some((o) => o.name === sel)) {
+    if (sel && !opts.some((o) => o.name === sel) && sel.indexOf("__same_as__") !== 0) {
       const cur = d.allowedFor(k).find((o) => o.name === sel);
       if (cur) opts = [cur].concat(opts);
     }
@@ -316,37 +410,48 @@
   function rowHtml(dKey, d, k) {
     if (!d.catalog[k] || !d.isShown(k)) return "";
     const id = dKey + ":" + k;
-    const raw = d.rawSelections()[k];
+    let raw = d.rawSelections()[k];
+    if (hasVest && d === vestDesigner && raw && raw.indexOf("__same_as__") === 0) raw = VEST_MATCH.indexOf(k) !== -1 ? vestMatchJacket(k) : vestMatchJacketSame(k);
     const img = raw ? optionImg(d, k, raw) : "";
     const open = state.open === id;
     return '<div class="ps-item' + (open ? " open" : "") + '">' +
       '<button type="button" class="ps-row" data-id="' + id + '" aria-expanded="' + open + '">' +
       (img ? '<img src="' + esc(img) + '" alt="">' : '<span class="ps-row-noimg"></span>') +
       '<span class="ps-row-text"><span class="ps-row-label">' + esc(d.catalog[k].label) +
-      (state.seen && !state.seen[dKey][k] ? ' <em class="ps-guess">not in your photo</em>' : "") + '</span><span class="ps-row-value">' + esc(d.displayValue(k) || "Choose") + "</span></span>" +
+      (state.seen && state.seen[dKey] && !state.seen[dKey][k] ? ' <em class="ps-guess">not in your photo</em>' : "") + '</span><span class="ps-row-value">' + esc(d.displayValue(k) || "Choose") + "</span></span>" +
       '<span class="ps-row-edit">' + (open ? "Done" : "Change") + "</span></button>" +
       (open ? choicesFor(d, k) : "") +
       "</div>";
   }
 
   function showSummary() {
-    const withPants = !isJacketOnlyType(currentSuitType);
+    const t = currentSuitType;
+    const vestOnly = isVestOnlyType(t);
+    const withVest = hasVest && hasVestInOrder(t);
+    const withJacket = !vestOnly;
+    const withPants = !isJacketOnlyType(t) && !vestOnly;
+    const typeBtn = (type, text) => '<button type="button" data-type="' + type + '" class="' + (t === type ? "selected" : "") + '">' + text + "</button>";
     const priceEl = document.getElementById("totalPrice");
     const fabricNote = state.result.fabric && state.result.fabric.description ? "Closest fabric to the " + state.result.fabric.description + " in your photo." : "";
     const keepOpen = sheet && sheet.querySelector(".ps-body") ? sheet.querySelector(".ps-body").scrollTop : 0;
-    openSheet(head("Your Suit") +
+    openSheet(head(sheetTitle()) +
       '<div class="ps-body">' +
       '<div class="ps-top' + (state.photos.length > 2 || state.page ? " ps-top-many" : "") + '">' + photoStrip("ps-photos-small") +
-      "<p>We matched " + (state.page ? "this page's suit" : "your photo" + (state.photos.length > 1 ? "s" : "")) + " to our closest options. Tap anything to change it.</p></div>" +
+      "<p>We matched " + (state.page ? "this page's " + (vestOnly ? "vest" : "suit") : "your photo" + (state.photos.length > 1 ? "s" : "")) + " to our closest options. Tap anything to change it.</p></div>" +
       (state.photos.length < MAX_PHOTOS
         ? '<button type="button" class="ps-add-photo">+ Add another photo (pants, back or a close-up)</button>'
         : "") +
-      '<div class="ps-type" role="group" aria-label="What are we building?">' +
-      '<button type="button" data-type="full" class="' + (withPants ? "selected" : "") + '">Full Suit</button>' +
-      '<button type="button" data-type="jacketOnly" class="' + (withPants ? "" : "selected") + '">Jacket Only</button></div>' +
-      '<h4 class="ps-group">Jacket</h4>' +
-      JACKET_ROWS.map((k) => rowHtml("j", jacketDesigner, k)).join("") +
-      (fabricNote ? '<p class="ps-note">' + esc(fabricNote) + "</p>" : "") +
+      (hasVest
+        ? '<div class="ps-type ps-type-4" role="group" aria-label="What are we building?">' +
+          typeBtn("full", "Two-Piece") + typeBtn("threePiece", "Three-Piece") + typeBtn("jacketOnly", "Jacket Only") + typeBtn("vestOnly", "Vest Only") + "</div>"
+        : '<div class="ps-type" role="group" aria-label="What are we building?">' +
+          typeBtn("full", "Full Suit") + typeBtn("jacketOnly", "Jacket Only") + "</div>") +
+      (withJacket ? '<h4 class="ps-group">Jacket</h4>' + JACKET_ROWS.map((k) => rowHtml("j", jacketDesigner, k)).join("") +
+        (fabricNote ? '<p class="ps-note">' + esc(fabricNote) + "</p>" : "") : "") +
+      (withVest
+        ? '<h4 class="ps-group">Vest</h4>' + VEST_ROWS.filter((k) => vestOnly || VEST_ONLY_ROWS.indexOf(k) === -1).map((k) => rowHtml("v", vestDesigner, k)).join("") +
+          (vestOnly ? (fabricNote ? '<p class="ps-note">' + esc(fabricNote) + "</p>" : "") : '<p class="ps-note">Same fabric, lining and buttons as your jacket.</p>')
+        : "") +
       (withPants ? '<h4 class="ps-group">Pants</h4>' + PANTS_ROWS.map((k) => rowHtml("p", pantsDesigner, k)).join("") : "") +
       '<p class="ps-note">Everything else (lining style, inside pockets, stitching and so on) is set to our standard. You can fine-tune any detail in the full designer.</p>' +
       "</div>" +
@@ -367,7 +472,8 @@
       b.onclick = () => {
         const t = b.getAttribute("data-type");
         if (t === currentSuitType) return;
-        applySuitType(t);
+        state.open = null;
+        switchType(t);
         saveDraft();
         showSummary();
       };
@@ -382,7 +488,7 @@
     sheet.querySelectorAll(".ps-choice").forEach((b) => {
       b.onclick = () => {
         const [dKey, k] = state.open.split(":");
-        const d = dKey === "j" ? jacketDesigner : pantsDesigner;
+        const d = designerFor(dKey);
         if (b.getAttribute("data-more")) {
           closeSheet();
           openInDesigner(d, k);
@@ -392,7 +498,10 @@
         one[k] = b.getAttribute("data-name");
         d.setSelections(one);
         fillMissing(d);
-        if (state.seen) state.seen[dKey][k] = true;
+        if (dKey === "v") state.vestEdits[k] = one[k];
+        // A new jacket fabric / buttons / lining carries to a Vest Only.
+        if (dKey === "j" && isVestOnlyType(currentSuitType)) applyVest(currentSuitType);
+        if (state.seen && state.seen[dKey]) state.seen[dKey][k] = true;
         saveDraft();
         state.open = null;
         showSummary();
@@ -401,24 +510,27 @@
     sheet.querySelector(".ps-continue").onclick = () => {
       fillMissing(jacketDesigner);
       fillMissing(pantsDesigner);
-      const jMissing = jacketDesigner.firstMissingKey();
-      const pMissing = isJacketOnlyType(currentSuitType) ? null : pantsDesigner.firstMissingKey();
+      if (withVest) fillMissing(vestDesigner);
+      const jMissing = withJacket ? jacketDesigner.firstMissingKey() : null;
+      const vMissing = withVest ? vestDesigner.firstMissingKey() : null;
+      const pMissing = withPants ? pantsDesigner.firstMissingKey() : null;
       closeSheet();
       if (jMissing) { openInDesigner(jacketDesigner, jMissing); return; }
+      if (vMissing) { openInDesigner(vestDesigner, vMissing); return; }
       if (pMissing) { openInDesigner(pantsDesigner, pMissing); return; }
       furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(stepAfterDesign()));
       finishDesign(suitTypeSection);
     };
     sheet.querySelector(".ps-full").onclick = () => {
       closeSheet();
-      openInDesigner(jacketDesigner, null);
+      openInDesigner(vestOnly ? vestDesigner : jacketDesigner, null);
     };
   }
 
   // Opens the jacket (or pants) designer on step k, from the suit type page.
   function openInDesigner(d, k) {
-    const section = d === pantsDesigner ? pantsSection : jacketSection;
-    if (d === pantsDesigner) furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(pantsSection));
+    const section = d === pantsDesigner ? pantsSection : hasVest && d === vestDesigner ? vestSection : jacketSection;
+    if (section !== jacketSection) furthestStepIndex = Math.max(furthestStepIndex, ALL_STEPS.indexOf(section));
     d.resetToFirstTab();
     if (k) d.setActiveTab(k);
     const from = ALL_STEPS.find((el) => el.classList.contains("active")) || suitTypeSection;
@@ -479,6 +591,7 @@
       imageUrl: link || undefined,
       jacketSteps: stepsPayload(JACKET_CATALOG, JACKET_PHOTO_STEPS),
       pantsSteps: stepsPayload(PANTS_CATALOG, PANTS_PHOTO_STEPS),
+      vestSteps: hasVest ? stepsPayload(VEST_CATALOG, VEST_PHOTO_STEPS, true) : undefined,
     });
     // A dropped connection or a busy server gets one quiet second try, so a
     // phone switching networks or a brief hiccup doesn't end in an error.
@@ -508,7 +621,7 @@
     if (!result) { showError("Sorry, something went wrong reading your photo. Please try again."); return; }
     if (!result.isSuit) { showError(link ? notSuit : (result.message || notSuit)); return; }
     state.result = result;
-    applyResult(result, "full");
+    applyResult(result, typeFromResult(result));
     showSummary();
   }
 
@@ -552,7 +665,7 @@
     state = null;
     openSheet(head("Build From a Photo or Link") +
       '<div class="ps-body ps-start">' +
-      "<p>Upload a photo of a suit you love, or paste a link to one (a shop page, an article, a post). We'll build the closest match from our options.</p>" +
+      "<p>Upload a photo of a suit (or vest) you love, or paste a link to one (a shop page, an article, a post). We'll build the closest match from our options, three-piece suits included.</p>" +
       '<button type="button" class="btn-primary wiz-continue ps-upload">Upload Photos</button>' +
       '<p class="ps-hint">Up to 3 photos of the same suit, for example the jacket, the pants and the back.</p>' +
       '<div class="ps-or"><span>or paste a link</span></div>' +
