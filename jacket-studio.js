@@ -51,7 +51,7 @@
     "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
     "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
     "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-arc.webp?v=2",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-arc.webp?v=3",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
