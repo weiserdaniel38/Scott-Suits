@@ -155,7 +155,7 @@ var SITE_BRAND_COPY = {
     "without leaving home.": "tailored to you alone.",
     // Scott's Suits landing headline since 2026-11-19; S.W. keeps its own.
     "Custom suits,": "Handcrafted,",
-    "at your convenience.": "tailored to you alone.",
+    "made simple.": "tailored to you alone.",
     "Design it online. See a free preview. Send your measurements. We make it for you.": "A private atelier for suits and formalwear, cut to your measurements and finished by hand.",
     // November 2026: wording added to the main site since.
     "Same price at every level.": "The same craftsmanship at every level.",
