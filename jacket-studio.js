@@ -55,8 +55,8 @@
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
-  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=2";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=3";
+  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=3";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=4";
   const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
@@ -670,7 +670,7 @@
     const arcFront = !db && v.collar === "Arc Lapel";
     if (arcFront) {
       g.save();
-      const clip = new Path2D("M0,0 H" + VBW + " V" + VBH + " H0 Z M548,120 L550,182 L544,235 L532,287 L511,340 L440,340 L440,120 Z");
+      const clip = new Path2D("M0,0 H" + VBW + " V" + VBH + " H0 Z M546,120 L546,160 L541,200 L537,235 L531,265 L525,295 L518,325 L512,355 L505,385 L440,385 L440,120 Z");
       g.clip(clip, "evenodd");
     }
     if (ck === "patch") patch(g, layer, CX, 268, CW, 92, -2, "roundpatch", 1);

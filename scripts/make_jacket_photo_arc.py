@@ -1,18 +1,21 @@
 """Arc lapel front for the Your Jacket picture (jacket-studio.js).
 
-Daniel (2026-11-19): the Arc must look exactly like the approved Arc photo the
-suit picture generator uses (assets/jacket-lapelref-arc-approved.jpg, a grey
-jacket). Drawing the Arc edge as a line on the notch photo never looked right,
-so the single breasted Arc front is built from that photo itself:
+Daniel (2026-11-20) sent a new Arc reference (assets/jacket-arc-reference-photo.jpg:
+grey two button Arc jacket with white shirt, burgundy tie, shirt cuffs and the
+damask lining showing below the buttons). The single breasted Arc front is
+built from that photo itself (drawing the Arc edge as lines never looked
+right):
 
-- the grey jacket (left 600 px of the reference) is warped onto the main
-  photo's layout (800x952 crop: shoulders, collar, top button and sleeve ends
-  line up with jacket-photo-front.webp, so the drawn pockets, buttons and cuffs
-  land in the same places),
-- its own buttons and sleeve buttons are painted out (the page draws them),
+- the photo is warped onto the main photo's layout (800x952: one linear map
+  in y through shoulders / top button / sleeve ends, and per row an x scale
+  that matches the silhouette width, so the drawn pockets, buttons and cuffs
+  land where they do on jacket-photo-front.webp),
+- its own buttons, buttonhole and sleeve buttons are painted out (the page
+  draws them),
 - its luminance becomes the cloth shading (same encoding as
   jacket-photo-shade-front*.webp), and
-- the lining showing in the opening and the backdrop stay in the base photo.
+- the shirt, tie, shirt cuffs and lining stay in the base photo; the backdrop
+  becomes the page glow.
 
 Writes assets/jacket-photo-front-arc.webp and
 assets/jacket-photo-shade-front-arc-photo.webp.
@@ -23,10 +26,11 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-src = Image.open(os.path.join(ROOT, 'assets', 'jacket-lapelref-arc-approved.jpg')).convert('RGB').crop((0, 0, 600, 800))
+src = Image.open(os.path.join(ROOT, 'assets', 'jacket-arc-reference-photo.jpg')).convert('RGB')
 g = np.asarray(src).astype(np.float32)
 GH, GW = g.shape[:2]
 GL = g.mean(2)
+BACKDROP = np.array([247, 239, 231], np.float32)
 
 
 def mask(polys=(), circles=(), rects=(), W=GW, H=GH, ss=4):
@@ -39,10 +43,14 @@ def mask(polys=(), circles=(), rects=(), W=GW, H=GH, ss=4):
 
 
 # ---- paint out the photo's buttons, buttonhole and sleeve buttons ----------
-holes = mask(circles=[(295, 477, 15), (275, 590, 15)],
-             rects=[(306, 469, 327, 483), (563, 670, 590, 752), (0, 680, 24, 752)]) > 0.01
-# Keep the white backdrop out of the fill so the sleeve edges stay cloth.
-cloth_known = (GL < 200) & ~holes
+# Sleeve buttons stick out past the sleeve edge (x 50 left, 1030 right): the
+# part outside becomes backdrop, the part on the sleeve becomes cloth.
+g[1168:1306, 30:50] = BACKDROP
+g[1168:1306, 1031:1050] = BACKDROP
+GL = g.mean(2)
+holes = mask(circles=[(544, 841, 21), (510, 1030, 21)],
+             rects=[(558, 831, 593, 849), (49, 1168, 56, 1306), (1023, 1168, 1031, 1306)]) > 0.01
+cloth_known = (GL < 170) & ~holes
 v = g.copy()
 v[holes] = g[cloth_known].mean(0)
 w = (cloth_known | holes).astype(np.float32)
@@ -54,30 +62,49 @@ for _ in range(1500):
     nv = s / np.maximum(sw, 1e-6)[..., None]
     v[holes] = nv[holes]
 g2 = np.where(holes[..., None], v, g)
-# a touch of the cloth's grain back on the filled spots
 rng = np.random.default_rng(3)
 g2[holes] += rng.normal(0, 2.0, (holes.sum(), 1))
 GL2 = g2.mean(2)
+R, G, B = g2[..., 0], g2[..., 1], g2[..., 2]
 
-# ---- masks: backdrop, lining in the opening, cloth ----------------------
-# The right edge sits on the damask, not on the plain grey facing strip beside
-# it, so the right lapel's cloth covers that strip (Daniel 2026-11-19).
-OPEN_TOP = [(226, 52), (359, 52), (361, 120), (355, 200), (339, 258), (317, 318), (299, 368), (293, 398),
-            (282, 370), (263, 302), (246, 232), (233, 150)]
-OPEN_BOT = [(295, 614), (306, 650), (318, 700), (330, 760), (250, 760), (262, 700), (280, 650)]
-opening = mask(polys=[OPEN_TOP, OPEN_BOT])
-bg = np.clip((GL2 - 222) / 14, 0, 1)
-bg = np.asarray(Image.fromarray((bg * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.7))).astype(np.float32) / 255
-cloth = np.clip((1 - bg) * (1 - opening), 0, 1)
-jacket = np.clip(1 - bg, 0, 1)  # cloth + lining
+# ---- masks: backdrop (warm cream), shirt (neutral white), tie (red), lining --
+bd = np.clip((R - B - 6) / 6, 0, 1) * np.clip((GL2 - 190) / 20, 0, 1)
+white = np.clip((GL2 - 145) / 35, 0, 1)
+tie = np.clip((R - (G + B) / 2 - 12) / 12, 0, 1)
+# grow the tie a pixel so its dark rim doesn't turn into a cloth halo
+tie = np.asarray(Image.fromarray((tie * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))).astype(np.float32) / 255
+LINING = [(539, 1086), (546, 1120), (561, 1200), (586, 1280), (612, 1350), (626, 1394),
+          (434, 1394), (462, 1350), (482, 1320), (501, 1270), (516, 1200), (531, 1120)]
+lining = mask(polys=[LINING])
+cloth = np.clip((1 - bd) * (1 - white) * (1 - tie) * (1 - lining), 0, 1)
+cloth = np.asarray(Image.fromarray((cloth * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32) / 255
+jacket = np.clip(1 - bd, 0, 1)  # cloth + shirt + tie + lining
 
 # ---- warp onto the main photo's layout (800x952) -------------------------
 W, H = 800, 952
-# x: shoulders (85 -> 135, 515 -> 665); y: collar 25 -> 40, shoulders 100 -> 130,
-# top button 477 -> 525, sleeve ends 770 -> 858, hem 795 -> 885.
 yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-gx = 85 + (xx - 135) * 430.0 / 530.0
-gy = np.interp(yy, [0, 40, 130, 525, 858, 885, 952], [0 - 40 * 25 / 40 + 25, 25, 100, 477, 770, 795, 795 + 67 * 0.92])
+# y: main shoulders 140 / top button 525 / sleeve ends 852 <-> ref 215 / 838 / 1365.
+gy = 215 + (yy - 140) * 1.616
+
+
+def widths(Lum, thr, rows):
+    out = []
+    for y in rows:
+        xs = np.where(Lum[int(y)] < thr)[0]
+        out.append(xs.max() - xs.min() if len(xs) else 0)
+    return np.array(out, np.float32)
+
+
+main = np.asarray(Image.open(os.path.join(ROOT, 'assets', 'jacket-photo-front.webp')).convert('L')).astype(np.float32)
+rows = np.arange(140, 841, 4, dtype=np.float32)
+wm = widths(main, 190, rows)
+wr = widths(GL, 200, np.clip(215 + (rows - 140) * 1.616, 0, GH - 1))
+scale = wr / np.maximum(wm, 1)
+scale = np.convolve(np.pad(scale, 6, mode='edge'), np.ones(13) / 13, mode='valid')
+sy = np.interp(yy[:, 0], rows, scale)[:, None]  # clamps above / below
+CM, CR = 398.5, 538.5
+gx = CR + (xx - CM) * sy
+print('x scale shoulders %.3f sleeves %.3f' % (scale[0], scale[-1]))
 
 
 def sample(arr):
@@ -101,18 +128,16 @@ Lu = Image.fromarray(np.clip(Lw, 0, 255).astype(np.uint8))
 Ls = np.asarray(Lu.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32)
 Lref = float(np.median(Ls[cl > 0.9]))
 r = (np.maximum(Ls, 1) / Lref) ** GAMMA
-# The photo's lapel edge is a thin near-black line; on the customer's cloth it
-# read as a hard drawn outline (Daniel 2026-11-19). Soften it: blur the
-# shading a touch and pull the darkest values back toward the cloth.
-r = np.asarray(Image.fromarray(np.clip(r * 100, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.1))).astype(np.float32) / 100
-r = np.where(r < 1, 1 - (1 - r) * 0.62, r)
+# Keep the lapel edges soft so they read as cloth, not a drawn outline.
+r = np.asarray(Image.fromarray(np.clip(r * 100, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.9))).astype(np.float32) / 100
+r = np.where(r < 1, 1 - (1 - r) * 0.7, r)
 A = np.clip(cl, 0, 1) * 255
 M1 = np.clip(r, 0, 1) * 255; M2 = np.clip(r - 1, 0, 1) * 255
 top = np.dstack([M1, M1, M1, A]); bot = np.dstack([M2, M2, M2, A])
 Image.fromarray(np.concatenate([top, bot], 0).astype(np.uint8), 'RGBA').save(
     os.path.join(ROOT, 'assets', 'jacket-photo-shade-front-arc-photo.webp'), quality=92, method=6)
 
-# ---- base photo: the page glow backdrop, the jacket (its lining shows) ----
+# ---- base photo: the page glow backdrop, then the jacket with shirt/tie/lining
 PAGE = np.array([236, 228, 221], np.float32)
 GLOW = np.array([245, 240, 233], np.float32)
 rr = np.sqrt(((xx - 400) / 430.0) ** 2 + ((yy - 430) / 520.0) ** 2)
