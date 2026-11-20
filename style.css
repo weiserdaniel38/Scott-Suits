@@ -3759,3 +3759,5 @@ html[data-brand="sw"] .suit-peek.side .suit-peek-label{color:var(--brass);}
 .suit-peek.side .suit-peek-icon svg{width:9px;height:9px;}
 html[data-brand="sw"] .suit-peek{box-shadow:none;background:rgba(var(--ink-rgb),0.7);}
 html[data-brand="sw"] .suit-peek.side{background:transparent;}
+.suit-peek-note{margin:6px 0 0;font-size:12px;line-height:1.4;color:var(--ivory-dim);font-style:italic;}
+.suit-peek-note[hidden]{display:none;}

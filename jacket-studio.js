@@ -51,16 +51,18 @@
     "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
     "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
     "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-arc.webp?v=3",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
+  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=1";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=1";
   const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
     "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
     "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-db-arc.webp?v=2",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
   };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
@@ -636,8 +638,11 @@
   // ---- FRONT VIEW --------------------------------------------------------------
   function drawFront(g, v, anchors) {
     const db = isDB(v);
-    const shadeUrl = db ? SHADE_DB_LAPEL[v.collar] || SHADE_DB : SHADE_LAPEL[v.collar] || SHADE.front;
-    const photo = img(db ? PHOTO_DB : PHOTO), shade = img(shadeUrl);
+    // Single breasted Arc: its own photo, built from the generator's approved
+    // Arc reference (scripts/make_jacket_photo_arc.py), so it looks like it.
+    const arc = !db && v.collar === "Arc Lapel";
+    const shadeUrl = arc ? SHADE_ARC : db ? SHADE_DB_LAPEL[v.collar] || SHADE_DB : SHADE_LAPEL[v.collar] || SHADE.front;
+    const photo = img(arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO), shade = img(shadeUrl);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
     if (!photo || !shade || !fp.ready) return false;
@@ -1310,7 +1315,8 @@
   big.setAttribute("aria-label", "Your jacket so far");
   big.innerHTML = '<div class="suit-peek-card">' +
     '<div class="suit-peek-head"><div><div class="suit-peek-eyebrow">Your jacket so far</div>' +
-    '<p class="suit-peek-sub">Updates as you choose. Anything not picked yet shows a classic look.</p></div>' +
+    '<p class="suit-peek-sub">Updates as you choose. Anything not picked yet shows a classic look.</p>' +
+    "</div>" +
     '<button type="button" class="suit-peek-close" aria-label="Close">&times;</button></div>' +
     '<div class="suit-peek-stage"></div></div>';
   big.querySelector(".suit-peek-stage").appendChild(shell);
