@@ -847,17 +847,21 @@
       // front and dropping toward the side seam (about 15 degrees), like an
       // upside-down V.
       const tilt = lp.slant ? -15 : 5;
-      const WRAP = 26;
+      // Daniel 2026-11-20 (his drawings): the pockets go almost all the way
+      // to the sleeve; the outer end stops just short of it and shows.
+      const GAP = 5;
       const span = (y, inner, s) => {
-        const outer = s < 0 ? lerpRows(sides, y, 1) - WRAP : lerpRows(sides, y, 2) + WRAP;
+        const outer = s < 0 ? lerpRows(sides, y, 1) + GAP : lerpRows(sides, y, 2) - GAP;
         return [(outer + inner) / 2, Math.abs(inner - outer)];
       };
       if (lp.main !== "none") {
-        const K = 0.845, TOP = 604;
-        const inL = AX(283, K), inR = AX(520, K);
+        // Classic placement (2026-11-20, tailoring references): the hip
+        // pockets sit level with the bottom button of a two button front,
+        // start near the front dart and run to the side.
+        const K = 0.845, TOP = 628;
+        const inL = AX(db ? 290 : 306, K), inR = AX(db ? 513 : 497, K);
         const A = span(TOP + 8, inL, -1), B = span(TOP + 8, inR, 1);
-        // The part of the pocket in view (the rest wraps under the sleeve).
-        const wv = A[1] - WRAP;
+        const wv = A[1];
         const isPatch = /patch/.test(lp.main);
         const plook = lp.main === "pointbtn" ? buttonLook(v, fabricHex) : null;
         [[A, -1, tilt, inL], [B, 1, -tilt, inR]].forEach((q) => {
@@ -872,8 +876,8 @@
           else if (isPatch) {
             // Patch pockets sit fully on the front, just clear of the side.
             const side = o < 0 ? lerpRows(sides, TOP + 60, 1) + 5 : lerpRows(sides, TOP + 60, 2) - 5;
-            const inn = inner - o * 10, pw = Math.abs(inn - side);
-            patchPocket(g, layer, (side + inn) / 2, TOP - 4, pw, pw * 1.6, deg * 0.6, o, lp.main === "highpatch");
+            const inn = inner + o * 6, pw = Math.abs(inn - side);
+            patchPocket(g, layer, (side + inn) / 2, TOP - 10, pw, pw * 1.5, deg * 0.6, o, lp.main === "highpatch");
           }
         });
         if (lp.ticket) {
