@@ -396,7 +396,8 @@
     else if (/^Patch/.test(m)) main = "patch";
     else if (/Slant Pocket Flap/.test(m)) main = "flap";
     else if (/W\/ Flap/.test(m)) main = "flap";
-    else if (/^Diamond Flap/.test(m)) main = "flap";
+    else if (/^Diamond Flap With Buttons/.test(m)) main = "pointbtn";
+    else if (/^Diamond Flap/.test(m)) main = "point";
     else if (/Flat Welt/.test(m)) main = "welt";
     else if (/^Single Besom/.test(m)) main = "sb";
     const slant = /Slant/.test(m);
@@ -518,7 +519,7 @@
   }
   // A slit pocket (besom): one or two lips and a dark mouth.
   function besom(g, layer, cx, cy, w, deg, two) {
-    const h = two ? 9 : 5.5;
+    const h = two ? 11 : 6;
     clothPiece(g, layer, boxPath(cx, cy - h / 2, w, h, deg, 0), { shadow: 0.35, blur: 2.5, drop: 1 });
     const a = rotPath([[-w / 2 + 1, two ? 0 : -h / 2 + 0.6], [w / 2 - 1, two ? 0 : -h / 2 + 0.6]], cx, cy, deg);
     g.save();
@@ -527,32 +528,51 @@
     g.beginPath(); g.moveTo(a[0][0], a[0][1]); g.lineTo(a[1][0], a[1][1]); g.stroke();
     g.restore();
   }
+  // Pocket shapes follow Daniel's option drawings (assets/jacket-lowerpocket-new-*
+  // and jacket-pockettype-new-*), compared side by side 2026-11-20.
+  // A path from points in the pocket's own space (x along the mouth, y down
+  // from the mouth), turned by deg around (cx, top).
+  function pocketPath(cmds, cx, top, deg) {
+    return cmds.map((c) => c[0] + rotPath(c.slice(1), cx, top, deg).map(PT).join(" ")).join(" ") + " Z";
+  }
   function flap(g, layer, cx, top, w, h, deg) {
-    // The jetting above the flap, then the flap hanging from it.
+    // The jetting above the flap, then the flap hanging from it: about 2.3
+    // times as wide as tall, bottom corners rounded.
     besom(g, layer, cx, top, w + 2, deg, false);
-    const r = 6;
+    const r = 8;
     clothPiece(g, layer, boxPath(cx, top + 2, w, h, deg, r), { grad: [top, top + h], stitch: boxPath(cx, top + 5, w - 7, h - 7, deg, r - 2) });
   }
-  function patch(g, layer, cx, top, w, h, deg, kind, outward) {
-    const r = kind === "roundpatch" ? 16 : 9;
-    const back = kind === "highpatch" ? 8 * outward : 0;
-    const d = boxPath(cx, top, w, h, deg, r, back);
-    clothPiece(g, layer, d, { shadow: 0.5, blur: 5, drop: 2, grad: [top, top + h], stitch: boxPath(cx, top + 3, w - 7, h - 6.5, deg, r - 3, back) });
-    // The turned-down hem across the top: a fold catching the light and a
-    // line of stitching under it.
-    const yA = back < 0 ? back : 0, yB = back > 0 ? -back : 0;
-    const fold = rotPath([[-w / 2 + 1, yA + 1], [w / 2 - 1, yB + 1]], cx, top, deg);
-    const hem = rotPath([[-w / 2 + 3.5, yA + 10], [w / 2 - 3.5, yB + 10]], cx, top, deg);
-    line(g, fold, "rgba(255,255,255,0.12)", 1.2);
-    line(g, hem, "rgba(255,255,255,0.09)", 0.7, [1.6, 1.7]);
-    line(g, hem.map((p) => [p[0], p[1] + 0.9]), edge(0.35), 0.7, [1.6, 1.7]);
+  // Pointed ("diamond") flap: straight sides a third of the width tall, then
+  // down to a point in the middle; optionally a button in the middle.
+  function pointFlap(g, layer, cx, top, w, wv, deg, mid, look) {
+    besom(g, layer, cx, top, w + 2, deg, false);
+    const hw = w / 2, sh = wv * 0.3, ph = wv * 0.5;
+    const shape = (i) => pocketPath([["M", [-hw + i, 2 + i]], ["L", [hw - i, 2 + i]], ["L", [hw - i, sh - i * 0.4]], ["L", [mid, ph - i * 1.3]], ["L", [-hw + i, sh - i * 0.4]]], cx, top, deg);
+    clothPiece(g, layer, shape(0), { grad: [top, top + ph], stitch: shape(3.5) });
+    if (look) {
+      const c = rotPath([[mid, wv * 0.25]], cx, top, deg)[0];
+      button(g, c[0], c[1], Math.max(5, wv * 0.075), look, {});
+    }
   }
-  function lowerPocket(g, layer, kind, cx, top, w, deg, outward) {
-    if (kind === "flap") flap(g, layer, cx, top, w, 58, deg);
-    else if (kind === "db" || kind === "sb") besom(g, layer, cx, top + 6, w, deg, kind === "db");
-    else if (kind === "welt") clothPiece(g, layer, boxPath(cx, top - 4, w, 22, deg, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [top - 4, top + 18], stitch: boxPath(cx, top - 1, w - 6, 16, deg, 0) });
-    // Patch pockets sit fully on the front, clear of the side seam.
-    else if (/patch/.test(kind)) patch(g, layer, outward < 0 ? 244 : 559, 588, outward < 0 ? 92 : 88, 104, deg / 2, kind, outward);
+  // Patch pocket: taller than wide, bottom corners rounded, stitched all
+  // round. high: the top edge sweeps up to the back (side seam) corner.
+  function patchPocket(g, layer, cx, top, w, h, deg, outward, high) {
+    const hw = w / 2, r = 15, o = outward;
+    const shape = (i) => {
+      const a = hw - i, b = h - i, k = Math.max(4, r - i);
+      const cmds = [["M", [-o * a, i]]];
+      if (high) cmds.push(["Q", [o * a * 0.35, i + 2], [o * a, i - w * 0.5]]);
+      else cmds.push(["L", [o * a, i]]);
+      cmds.push(["L", [o * a, b - k]], ["Q", [o * a, b], [o * (a - k), b]], ["L", [-o * (a - k), b]], ["Q", [-o * a, b], [-o * a, b - k]]);
+      return pocketPath(cmds, cx, top, deg);
+    };
+    clothPiece(g, layer, shape(0), { shadow: 0.5, blur: 5, drop: 2, grad: [top, top + h], stitch: shape(4.5) });
+    // The turned-down hem across a straight top.
+    if (!high) {
+      const hem = rotPath([[-hw + 4, 10], [hw - 4, 10]], cx, top, deg);
+      line(g, hem, "rgba(255,255,255,0.09)", 0.7, [1.6, 1.7]);
+      line(g, hem.map((q) => [q[0], q[1] + 0.9]), edge(0.35), 0.7, [1.6, 1.7]);
+    }
   }
   // A button seen face on (front) or edge on (sleeves: squashed).
   function button(g, x, y, r, look, opts) {
@@ -788,7 +808,7 @@
     const lapR = lapS[0];
     const edgeAt = (y) => { const r = lerpRows(lapR, y, 1); return r + lapF * (lerpRows(lapR, y, 2) - r); };
     const CW = AW(db ? 82 : 92, 0.9);
-    const L0 = edgeAt(300) - 16, R0 = L0 + CW, CX = (L0 + R0) / 2;
+    const L0 = edgeAt(310) - 20, R0 = L0 + CW, CX = (L0 + R0) / 2;
     // The pocket's inner end tucks under the lapel when the lapel reaches it
     // (Arc, wide lapels): clip away everything left of the lapel's edge.
     {
@@ -799,10 +819,16 @@
       g.save();
       g.clip(new Path2D(d), "evenodd");
     }
-    if (ck === "patch") patch(g, layer, CX, 268, CW, 92, -2, "roundpatch", 1);
-    else if (ck === "boat") clothPiece(g, layer, "M" + L0 + ",292 Q" + CX + ",280 " + R0 + ",284 L" + R0 + ",308 Q" + CX + ",304 " + L0 + ",316 Z", { shadow: 0.4, blur: 3, drop: 1.5, grad: [282, 316], stitch: "M" + (L0 + 4) + ",295 Q" + CX + ",284 " + (R0 - 4) + ",288 L" + (R0 - 4) + ",305 Q" + CX + ",301 " + (L0 + 4) + ",312 Z" });
-    else if (ck === "welt") clothPiece(g, layer, boxPath(CX, 287, CW, 26, -2.5, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [287, 313], stitch: boxPath(CX, 290, CW - 6, 20, -2.5, 0) });
-    else if (ck === "sb" || ck === "db") besom(g, layer, CX, 296, CW, -2.5, ck === "db");
+    // In the drawings the chest pocket climbs toward the shoulder (about 12
+    // degrees), is about 4.6 times as long as tall, and its low end goes
+    // under the lapel.
+    const CA = -12, CY = 300, hwc = CW / 2;
+    if (ck === "patch") patchPocket(g, layer, CX, CY - 22, CW, CW * 1.05, CA / 2, 1, false);
+    else if (ck === "boat") {
+      const boat = (i) => pocketPath([["M", [-hwc + i, -10 + i]], ["Q", [0, -4 + i], [hwc - i, -10 + i]], ["L", [hwc - i, 8 - i]], ["Q", [0, 22 - i], [-hwc + i, 8 - i]]], CX, CY, CA);
+      clothPiece(g, layer, boat(0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 14, CY + 16], stitch: boat(3) });
+    } else if (ck === "welt") clothPiece(g, layer, boxPath(CX, CY - 10, CW, 20, CA, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 14, CY + 14], stitch: boxPath(CX, CY - 7, CW - 6, 14, CA, 0) });
+    else if (ck === "sb" || ck === "db") besom(g, layer, CX, CY, CW, CA, ck === "db");
     g.restore();
 
     // Lower pockets (and the ticket pocket on the wearer's right).
@@ -816,25 +842,47 @@
     onCloth(g, (g) => {
       g.save();
       g.clip(new Path2D(bodyD));
-      // Slanted pockets run high at the back (side seam) and drop toward the
-      // front buttons, as in the catalog drawings (about 20 degrees).
-      const sl = lp.slant ? 15 : 0;
+      // From the drawings: level pockets dip a little toward the front
+      // buttons (about 5 degrees); slanted ones do the opposite, high at the
+      // front and dropping toward the side seam (about 15 degrees), like an
+      // upside-down V.
+      const tilt = lp.slant ? -15 : 5;
       const WRAP = 26;
       const span = (y, inner, s) => {
         const outer = s < 0 ? lerpRows(sides, y, 1) - WRAP : lerpRows(sides, y, 2) + WRAP;
         return [(outer + inner) / 2, Math.abs(inner - outer)];
       };
       if (lp.main !== "none") {
-        const inset = lp.slant ? 6 : 0;
-        const K = 0.845;
-        const A = span(612, AX(283 + inset, K), -1), B = span(614, AX(520 - inset, K), 1);
-        lowerPocket(g, layer, lp.main, A[0], 604, A[1], 3 + sl, -1);
-        lowerPocket(g, layer, lp.main, B[0], 606, B[1], -3 - sl, 1);
+        const K = 0.845, TOP = 604;
+        const inL = AX(283, K), inR = AX(520, K);
+        const A = span(TOP + 8, inL, -1), B = span(TOP + 8, inR, 1);
+        // The part of the pocket in view (the rest wraps under the sleeve).
+        const wv = A[1] - WRAP;
+        const isPatch = /patch/.test(lp.main);
+        const plook = lp.main === "pointbtn" ? buttonLook(v, fabricHex) : null;
+        [[A, -1, tilt, inL], [B, 1, -tilt, inR]].forEach((q) => {
+          const P = q[0], o = q[1], deg = q[2], inner = q[3];
+          if (lp.main === "flap") flap(g, layer, P[0], TOP, P[1], wv / 2.3, deg);
+          else if (lp.main === "point" || lp.main === "pointbtn") {
+            // The point sits in the middle of the part in view.
+            const mid = (inner + o * wv / 2) - P[0];
+            pointFlap(g, layer, P[0], TOP, P[1], wv, deg, mid, plook);
+          } else if (lp.main === "db" || lp.main === "sb") besom(g, layer, P[0], TOP + 6, P[1], deg, lp.main === "db");
+          else if (lp.main === "welt") clothPiece(g, layer, boxPath(P[0], TOP - 4, P[1], wv / 3.6, deg, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [TOP - 4, TOP + 22], stitch: boxPath(P[0], TOP - 1, P[1] - 6, wv / 3.6 - 6, deg, 0) });
+          else if (isPatch) {
+            // Patch pockets sit fully on the front, just clear of the side.
+            const side = o < 0 ? lerpRows(sides, TOP + 60, 1) + 5 : lerpRows(sides, TOP + 60, 2) - 5;
+            const inn = inner - o * 10, pw = Math.abs(inn - side);
+            patchPocket(g, layer, (side + inn) / 2, TOP - 4, pw, pw * 1.6, deg * 0.6, o, lp.main === "highpatch");
+          }
+        });
         if (lp.ticket) {
-          const ty = /patch/.test(lp.main) ? 548 : 560;
-          const T = span(ty, AX(275, K), -1);
-          if (lp.ticket === "flap") flap(g, layer, T[0], ty - 6, T[1], 40, 3 + sl);
-          else besom(g, layer, T[0], ty, T[1], 3 + sl, lp.ticket === "db");
+          // Ticket pocket: same width as the pocket below it, parallel to it.
+          const gap = lp.ticket === "flap" ? wv * 0.6 : isPatch ? wv * 0.48 : wv * 0.5;
+          const ty = TOP - gap;
+          const T = span(ty + 8, inL, -1);
+          if (lp.ticket === "flap") flap(g, layer, T[0], ty, T[1], wv / 2.3 * 0.85, tilt);
+          else besom(g, layer, T[0], ty + 6, T[1], tilt, lp.ticket === "db");
         }
       }
       g.restore();
