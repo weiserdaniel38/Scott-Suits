@@ -106,7 +106,13 @@ scale = wr / np.maximum(wm, 1)
 scale = np.convolve(np.pad(scale, 6, mode='edge'), np.ones(13) / 13, mode='valid')
 sy = np.interp(yy[:, 0], rows, scale)[:, None]  # clamps above / below
 CM, CR = 398.5, 538.5
-gx = CR + (xx - CM) * sy
+# Daniel 2026-11-20: "much fatter and flatter, copy exactly like the
+# reference": no sideways stretch, the photo keeps its own proportions (same
+# scale both ways). jacket-studio.js squeezes the drawn pockets and cuffs
+# toward the middle by ARC_K(y) = scale(y) / 1.616 to match.
+gx = CR + (xx - CM) * 1.616
+for yk in (290, 450, 600, 650, 760, 800):
+    print('ARC_K y=%d %.3f' % (yk, np.interp(yk, rows, scale) / 1.616))
 print('x scale shoulders %.3f sleeves %.3f' % (scale[0], scale[-1]))
 
 
@@ -126,14 +132,14 @@ cl = sample(cloth)
 jk = sample(jacket)
 
 # ---- shading (same encoding as make_jacket_photo.py) ---------------------
-GAMMA = 0.8
+GAMMA = 1.0
 Lu = Image.fromarray(np.clip(Lw, 0, 255).astype(np.uint8))
 Ls = np.asarray(Lu.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32)
 Lref = float(np.median(Ls[cl > 0.9]))
 r = (np.maximum(Ls, 1) / Lref) ** GAMMA
 # Keep the lapel edges soft so they read as cloth, not a drawn outline.
-r = np.asarray(Image.fromarray(np.clip(r * 100, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.9))).astype(np.float32) / 100
-r = np.where(r < 1, 1 - (1 - r) * 0.7, r)
+r = np.asarray(Image.fromarray(np.clip(r * 100, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.5))).astype(np.float32) / 100
+r = np.where(r < 1, 1 - (1 - r) * 0.92, r)
 A = np.clip(cl, 0, 1) * 255
 M1 = np.clip(r, 0, 1) * 255; M2 = np.clip(r - 1, 0, 1) * 255
 top = np.dstack([M1, M1, M1, A]); bot = np.dstack([M2, M2, M2, A])

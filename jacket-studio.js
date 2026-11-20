@@ -55,8 +55,8 @@
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
-  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=4";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=5";
+  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=5";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=6";
   const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
@@ -664,14 +664,26 @@
     // Chest pocket, kept clear of the lapel's edge (further right on the
     // double breasted photo, whose lapel is wider).
     const ck = chestKind(v.pockettype);
-    const L0 = db ? 522 : 512, R0 = 604, CW = R0 - L0, CX = (L0 + R0) / 2;
     // The Arc photo's lapel is wider: the pocket stays put and its end tucks
     // under the lapel (Daniel 2026-11-19: "peeking out from under").
     const arcFront = !db && v.collar === "Arc Lapel";
+    // The Arc photo keeps the reference's own proportions (narrower than the
+    // main photo), so the drawn pockets and cuffs move toward the middle by
+    // the same amount (ARC_K in scripts/make_jacket_photo_arc.py).
+    const AX = (x, k) => (arcFront ? 398.5 + (x - 398.5) * k : x);
+    const AW = (w, k) => (arcFront ? w * k : w);
+    const squeeze = (k, fn) => {
+      if (!arcFront) { fn(); return; }
+      g.save(); g.translate(398.5, 0); g.scale(k, 1); g.translate(-398.5, 0); fn(); g.restore();
+    };
+    const L0 = AX(db ? 522 : 512, 0.9), R0 = AX(604, 0.9), CW = R0 - L0, CX = (L0 + R0) / 2;
     if (arcFront) {
       g.save();
+      const m = g.getTransform();
+      g.translate(398.5, 0); g.scale(0.9, 1); g.translate(-398.5, 0);
       const clip = new Path2D("M0,0 H" + VBW + " V" + VBH + " H0 Z M546,120 L546,160 L541,200 L537,235 L531,265 L525,295 L518,325 L512,355 L505,385 L440,385 L440,120 Z");
       g.clip(clip, "evenodd");
+      g.setTransform(m);
     }
     if (ck === "patch") patch(g, layer, CX, 268, CW, 92, -2, "roundpatch", 1);
     else if (ck === "boat") clothPiece(g, layer, "M" + L0 + ",292 Q" + CX + ",280 " + R0 + ",284 L" + R0 + ",308 Q" + CX + ",304 " + L0 + ",316 Z", { shadow: 0.4, blur: 3, drop: 1.5, grad: [282, 316], stitch: "M" + (L0 + 4) + ",295 Q" + CX + ",284 " + (R0 - 4) + ",288 L" + (R0 - 4) + ",305 Q" + CX + ",301 " + (L0 + 4) + ",312 Z" });
@@ -687,12 +699,13 @@
       const sl = lp.slant ? 15 : 0;
       if (lp.main !== "none") {
         const inset = lp.slant ? 6 : 0;
-        lowerPocket(g, layer, lp.main, 235 + inset, 604, 96, 3 + sl, -1);
-        lowerPocket(g, layer, lp.main, 569 - inset, 606, 98, -3 - sl, 1);
+        const K = 0.845;
+        lowerPocket(g, layer, lp.main, AX(235 + inset, K), 604, AW(96, K), 3 + sl, -1);
+        lowerPocket(g, layer, lp.main, AX(569 - inset, K), 606, AW(98, K), -3 - sl, 1);
         if (lp.ticket) {
           const ty = /patch/.test(lp.main) ? 548 : 560;
-          if (lp.ticket === "flap") flap(g, layer, 236, ty - 6, 78, 40, 3 + sl);
-          else besom(g, layer, 236, ty, 76, 3 + sl, lp.ticket === "db");
+          if (lp.ticket === "flap") flap(g, layer, AX(236, K), ty - 6, AW(78, K), 40, 3 + sl);
+          else besom(g, layer, AX(236, K), ty, AW(76, K), 3 + sl, lp.ticket === "db");
         }
       }
     });
@@ -727,8 +740,8 @@
     anchors.topButton = [top.x, top.y];
 
     // Sleeve buttons: seen edge on at the back of each cuff.
-    drawCuffs(g, v, look, holes, false);
-    sleeveHeads(g, v, [[141, 130], [150, 180], [163, 213], [170, 243], [180, 290]]);
+    squeeze(0.822, () => drawCuffs(g, v, look, holes, false));
+    squeeze(0.92, () => sleeveHeads(g, v, [[141, 130], [150, 180], [163, 213], [170, 243], [180, 290]]));
     return true;
   }
   // Sleeve heads (pts: the viewer's left armhole seam from the shoulder down;
