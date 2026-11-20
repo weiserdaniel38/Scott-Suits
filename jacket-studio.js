@@ -812,11 +812,15 @@
     // chosen width), and the pocket keeps its full size.
     const lapR = lapS[0];
     const edgeAt = (y) => { const r = lerpRows(lapR, y, 1); return r + lapF * (lerpRows(lapR, y, 2) - r); };
-    // Daniel 2026-11-20: "chest pockets are too small ... chest pocket
-    // extends to sleeve": it runs from under the lapel out to the sleeve seam.
+    // Chest pocket length (Daniel 2026-11-20: first "too small", then to the
+    // sleeve was "too far, use online references"): tailoring references give
+    // a breast welt of 4 to 4.5 in (about 10.8 cm), two thirds of a 6 to 6.5 in
+    // hip pocket, about 1 in tall. Here that is 124 px; it always stops at
+    // least 12 px short of the sleeve seam.
     const L0 = edgeAt(310) - 20;
-    const R0 = lerpRows(CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 3;
-    const CW = (R0 - L0) / Math.cos(12 * Math.PI / 180), CX = (L0 + R0) / 2;
+    const C12 = Math.cos(12 * Math.PI / 180);
+    const R0 = Math.min(L0 + AW(124, 0.9) * C12, lerpRows(CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 12);
+    const CW = (R0 - L0) / C12, CX = (L0 + R0) / 2;
     // The pocket's inner end tucks under the lapel when the lapel reaches it
     // (Arc, wide lapels): clip away everything left of the lapel's edge.
     {
