@@ -1,6 +1,6 @@
 """Arc lapel front for the Your Jacket picture (jacket-studio.js).
 
-Daniel (2026-11-20) sent a new Arc reference (assets/jacket-lapelref-arc-v2.jpg:
+Daniel (2026-11-20) sent a new Arc reference (assets/jacket-arc-reference-photo.jpg:
 grey two button Arc jacket with white shirt, burgundy tie, shirt cuffs and the
 damask lining showing below the buttons). The single breasted Arc front is
 built from that photo itself (drawing the Arc edge as lines never looked
@@ -26,7 +26,7 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-src = Image.open(os.path.join(ROOT, 'assets', 'jacket-lapelref-arc-v2.jpg')).convert('RGB')
+src = Image.open(os.path.join(ROOT, 'assets', 'jacket-arc-reference-photo.jpg')).convert('RGB')
 g = np.asarray(src).astype(np.float32)
 GH, GW = g.shape[:2]
 GL = g.mean(2)
