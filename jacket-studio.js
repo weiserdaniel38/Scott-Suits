@@ -849,11 +849,12 @@
       // front and dropping toward the side seam (about 15 degrees), like an
       // upside-down V.
       const tilt = lp.slant ? -15 : 5;
-      // Daniel 2026-11-20 (his drawings): the pockets go almost all the way
-      // to the sleeve; the outer end stops just short of it and shows.
-      const GAP = 5;
+      // Daniel 2026-11-20: every lower pocket starts at the back and wraps
+      // around to the front: it runs on past the side of the body and is cut
+      // off where the body turns away under the sleeve (no outer end shows).
+      const WRAP = 26;
       const span = (y, inner, s) => {
-        const outer = s < 0 ? lerpRows(sides, y, 1) + GAP : lerpRows(sides, y, 2) - GAP;
+        const outer = s < 0 ? lerpRows(sides, y, 1) - WRAP : lerpRows(sides, y, 2) + WRAP;
         return [(outer + inner) / 2, Math.abs(inner - outer)];
       };
       if (lp.main !== "none") {
@@ -863,7 +864,7 @@
         const K = 0.845, TOP = 628;
         const inL = AX(db ? 290 : 306, K), inR = AX(db ? 513 : 497, K);
         const A = span(TOP + 8, inL, -1), B = span(TOP + 8, inR, 1);
-        const wv = A[1];
+        const wv = A[1] - WRAP;
         const isPatch = /patch/.test(lp.main);
         const plook = lp.main === "pointbtn" ? buttonLook(v, fabricHex) : null;
         [[A, -1, tilt, inL], [B, 1, -tilt, inR]].forEach((q) => {
@@ -876,10 +877,11 @@
           } else if (lp.main === "db" || lp.main === "sb") besom(g, layer, P[0], TOP + 6, P[1], deg, lp.main === "db");
           else if (lp.main === "welt") clothPiece(g, layer, boxPath(P[0], TOP - 4, P[1], wv / 3.6, deg, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [TOP - 4, TOP + 22], stitch: boxPath(P[0], TOP - 1, P[1] - 6, wv / 3.6 - 6, deg, 0) });
           else if (isPatch) {
-            // Patch pockets sit fully on the front, just clear of the side.
-            const side = o < 0 ? lerpRows(sides, TOP + 60, 1) + 5 : lerpRows(sides, TOP + 60, 2) - 5;
+            // Patch pockets wrap around the side too; the part in view sets the height.
+            const edgeX = o < 0 ? lerpRows(sides, TOP + 60, 1) : lerpRows(sides, TOP + 60, 2);
+            const side = edgeX + o * WRAP;
             const inn = inner + o * 6, pw = Math.abs(inn - side);
-            patchPocket(g, layer, (side + inn) / 2, TOP - 10, pw, pw * 1.5, deg * 0.6, o, lp.main === "highpatch");
+            patchPocket(g, layer, (side + inn) / 2, TOP - 10, pw, Math.abs(inn - edgeX) * 1.4, deg * 0.6, o, lp.main === "highpatch");
           }
         });
         if (lp.ticket) {
