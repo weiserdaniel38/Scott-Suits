@@ -74,6 +74,11 @@
     sb: [[520, 200, 603], [560, 196, 607], [600, 188, 613], [640, 181, 621], [680, 175, 629], [720, 170, 632], [760, 165, 638], [800, 161, 642]],
     arc: [[520, 217, 580], [560, 211, 586], [600, 204, 593], [640, 198, 598], [680, 193, 602], [720, 190, 607], [760, 187, 611], [800, 184, 615]],
   };
+  // Where the chest meets the sleeve on the viewer's right: [y, x].
+  const CHEST_SIDE = {
+    sb: [[220, 642], [300, 634], [380, 620]],
+    arc: [[220, 610], [300, 601], [380, 593]],
+  };
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
     "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
@@ -807,8 +812,11 @@
     // chosen width), and the pocket keeps its full size.
     const lapR = lapS[0];
     const edgeAt = (y) => { const r = lerpRows(lapR, y, 1); return r + lapF * (lerpRows(lapR, y, 2) - r); };
-    const CW = AW(db ? 82 : 92, 0.9);
-    const L0 = edgeAt(310) - 20, R0 = L0 + CW, CX = (L0 + R0) / 2;
+    // Daniel 2026-11-20: "chest pockets are too small ... chest pocket
+    // extends to sleeve": it runs from under the lapel out to the sleeve seam.
+    const L0 = edgeAt(310) - 20;
+    const R0 = lerpRows(CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 3;
+    const CW = (R0 - L0) / Math.cos(12 * Math.PI / 180), CX = (L0 + R0) / 2;
     // The pocket's inner end tucks under the lapel when the lapel reaches it
     // (Arc, wide lapels): clip away everything left of the lapel's edge.
     {
@@ -823,11 +831,11 @@
     // degrees), is about 4.6 times as long as tall, and its low end goes
     // under the lapel.
     const CA = -12, CY = 300, hwc = CW / 2;
-    if (ck === "patch") patchPocket(g, layer, CX, CY - 22, CW, CW * 1.05, CA / 2, 1, false);
+    if (ck === "patch") patchPocket(g, layer, CX, CY - 26, CW * 0.92, CW * 0.97, CA / 2, 1, false);
     else if (ck === "boat") {
-      const boat = (i) => pocketPath([["M", [-hwc + i, -10 + i]], ["Q", [0, -4 + i], [hwc - i, -10 + i]], ["L", [hwc - i, 8 - i]], ["Q", [0, 22 - i], [-hwc + i, 8 - i]]], CX, CY, CA);
-      clothPiece(g, layer, boat(0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 14, CY + 16], stitch: boat(3) });
-    } else if (ck === "welt") clothPiece(g, layer, boxPath(CX, CY - 10, CW, 20, CA, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 14, CY + 14], stitch: boxPath(CX, CY - 7, CW - 6, 14, CA, 0) });
+      const boat = (i) => pocketPath([["M", [-hwc + i, -13 + i]], ["Q", [0, -5 + i], [hwc - i, -13 + i]], ["L", [hwc - i, 10 - i]], ["Q", [0, 28 - i], [-hwc + i, 10 - i]]], CX, CY, CA);
+      clothPiece(g, layer, boat(0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 18, CY + 20], stitch: boat(3) });
+    } else if (ck === "welt") clothPiece(g, layer, boxPath(CX, CY - 13, CW, 26, CA, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 18, CY + 18], stitch: boxPath(CX, CY - 10, CW - 6, 20, CA, 0) });
     else if (ck === "sb" || ck === "db") besom(g, layer, CX, CY, CW, CA, ck === "db");
     g.restore();
 
@@ -847,11 +855,12 @@
       // front and dropping toward the side seam (about 15 degrees), like an
       // upside-down V.
       const tilt = lp.slant ? -15 : 5;
-      // Daniel 2026-11-20 (his drawings): the pockets go almost all the way
-      // to the sleeve; the outer end stops just short of it and shows.
-      const GAP = 5;
+      // Daniel 2026-11-20: every lower pocket starts at the back and wraps
+      // around to the front: it runs on past the side of the body and is cut
+      // off where the body turns away under the sleeve (no outer end shows).
+      const WRAP = 26;
       const span = (y, inner, s) => {
-        const outer = s < 0 ? lerpRows(sides, y, 1) + GAP : lerpRows(sides, y, 2) - GAP;
+        const outer = s < 0 ? lerpRows(sides, y, 1) - WRAP : lerpRows(sides, y, 2) + WRAP;
         return [(outer + inner) / 2, Math.abs(inner - outer)];
       };
       if (lp.main !== "none") {
@@ -861,7 +870,7 @@
         const K = 0.845, TOP = 628;
         const inL = AX(db ? 290 : 306, K), inR = AX(db ? 513 : 497, K);
         const A = span(TOP + 8, inL, -1), B = span(TOP + 8, inR, 1);
-        const wv = A[1];
+        const wv = A[1] - WRAP;
         const isPatch = /patch/.test(lp.main);
         const plook = lp.main === "pointbtn" ? buttonLook(v, fabricHex) : null;
         [[A, -1, tilt, inL], [B, 1, -tilt, inR]].forEach((q) => {
@@ -874,10 +883,11 @@
           } else if (lp.main === "db" || lp.main === "sb") besom(g, layer, P[0], TOP + 6, P[1], deg, lp.main === "db");
           else if (lp.main === "welt") clothPiece(g, layer, boxPath(P[0], TOP - 4, P[1], wv / 3.6, deg, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [TOP - 4, TOP + 22], stitch: boxPath(P[0], TOP - 1, P[1] - 6, wv / 3.6 - 6, deg, 0) });
           else if (isPatch) {
-            // Patch pockets sit fully on the front, just clear of the side.
-            const side = o < 0 ? lerpRows(sides, TOP + 60, 1) + 5 : lerpRows(sides, TOP + 60, 2) - 5;
+            // Patch pockets wrap around the side too; the part in view sets the height.
+            const edgeX = o < 0 ? lerpRows(sides, TOP + 60, 1) : lerpRows(sides, TOP + 60, 2);
+            const side = edgeX + o * WRAP;
             const inn = inner + o * 6, pw = Math.abs(inn - side);
-            patchPocket(g, layer, (side + inn) / 2, TOP - 10, pw, pw * 1.5, deg * 0.6, o, lp.main === "highpatch");
+            patchPocket(g, layer, (side + inn) / 2, TOP - 10, pw, Math.abs(inn - edgeX) * 1.4, deg * 0.6, o, lp.main === "highpatch");
           }
         });
         if (lp.ticket) {
