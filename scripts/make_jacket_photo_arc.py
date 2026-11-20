@@ -60,7 +60,9 @@ g2[holes] += rng.normal(0, 2.0, (holes.sum(), 1))
 GL2 = g2.mean(2)
 
 # ---- masks: backdrop, lining in the opening, cloth ----------------------
-OPEN_TOP = [(226, 46), (370, 46), (373, 120), (366, 200), (347, 258), (322, 318), (302, 368), (293, 398),
+# The right edge sits on the damask, not on the plain grey facing strip beside
+# it, so the right lapel's cloth covers that strip (Daniel 2026-11-19).
+OPEN_TOP = [(226, 52), (359, 52), (361, 120), (355, 200), (339, 258), (317, 318), (299, 368), (293, 398),
             (282, 370), (263, 302), (246, 232), (233, 150)]
 OPEN_BOT = [(295, 614), (306, 650), (318, 700), (330, 760), (250, 760), (262, 700), (280, 650)]
 opening = mask(polys=[OPEN_TOP, OPEN_BOT])
