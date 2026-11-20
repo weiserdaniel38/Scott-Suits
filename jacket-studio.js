@@ -74,6 +74,11 @@
     sb: [[520, 200, 603], [560, 196, 607], [600, 188, 613], [640, 181, 621], [680, 175, 629], [720, 170, 632], [760, 165, 638], [800, 161, 642]],
     arc: [[520, 217, 580], [560, 211, 586], [600, 204, 593], [640, 198, 598], [680, 193, 602], [720, 190, 607], [760, 187, 611], [800, 184, 615]],
   };
+  // Where the chest meets the sleeve on the viewer's right: [y, x].
+  const CHEST_SIDE = {
+    sb: [[220, 642], [300, 634], [380, 620]],
+    arc: [[220, 610], [300, 601], [380, 593]],
+  };
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
     "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
@@ -807,10 +812,11 @@
     // chosen width), and the pocket keeps its full size.
     const lapR = lapS[0];
     const edgeAt = (y) => { const r = lerpRows(lapR, y, 1); return r + lapF * (lerpRows(lapR, y, 2) - r); };
-    // Daniel 2026-11-20: "chest pockets are too small": about two thirds of
-    // the hip pocket's length, as on a classic jacket.
-    const CW = AW(db ? 106 : 118, 0.9);
-    const L0 = edgeAt(310) - 20, R0 = L0 + CW, CX = (L0 + R0) / 2;
+    // Daniel 2026-11-20: "chest pockets are too small ... chest pocket
+    // extends to sleeve": it runs from under the lapel out to the sleeve seam.
+    const L0 = edgeAt(310) - 20;
+    const R0 = lerpRows(CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 3;
+    const CW = (R0 - L0) / Math.cos(12 * Math.PI / 180), CX = (L0 + R0) / 2;
     // The pocket's inner end tucks under the lapel when the lapel reaches it
     // (Arc, wide lapels): clip away everything left of the lapel's edge.
     {
