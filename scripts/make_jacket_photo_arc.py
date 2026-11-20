@@ -76,6 +76,9 @@ tie = np.asarray(Image.fromarray((tie * 255).astype(np.uint8)).filter(ImageFilte
 LINING = [(539, 1086), (546, 1120), (561, 1200), (586, 1280), (612, 1350), (626, 1394),
           (434, 1394), (462, 1350), (482, 1320), (501, 1270), (516, 1200), (531, 1120)]
 lining = mask(polys=[LINING])
+# Shirt collar and tie knot: their grey shadows are shirt, not cloth.
+NECK = [(452, 30), (640, 30), (634, 250), (604, 330), (488, 330), (456, 250)]
+lining = np.maximum(lining, mask(polys=[NECK]))
 cloth = np.clip((1 - bd) * (1 - white) * (1 - tie) * (1 - lining), 0, 1)
 cloth = np.asarray(Image.fromarray((cloth * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32) / 255
 jacket = np.clip(1 - bd, 0, 1)  # cloth + shirt + tie + lining

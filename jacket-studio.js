@@ -55,8 +55,8 @@
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
-  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=3";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=4";
+  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=4";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=5";
   const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
