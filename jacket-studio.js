@@ -56,7 +56,7 @@
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
   const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=1";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=1";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=2";
   const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
   const SHADE_DB_LAPEL = {
@@ -664,7 +664,9 @@
     // Chest pocket, kept clear of the lapel's edge (further right on the
     // double breasted photo, whose lapel is wider).
     const ck = chestKind(v.pockettype);
-    const L0 = db ? 522 : 512, R0 = 604, CW = R0 - L0, CX = (L0 + R0) / 2;
+    // The Arc photo's lapel is wider: the pocket moves right, same size.
+    const arcFront = !db && v.collar === "Arc Lapel";
+    const L0 = arcFront ? 545 : db ? 522 : 512, R0 = arcFront ? 637 : 604, CW = R0 - L0, CX = (L0 + R0) / 2;
     if (ck === "patch") patch(g, layer, CX, 268, CW, 92, -2, "roundpatch", 1);
     else if (ck === "boat") clothPiece(g, layer, "M" + L0 + ",292 Q" + CX + ",280 " + R0 + ",284 L" + R0 + ",308 Q" + CX + ",304 " + L0 + ",316 Z", { shadow: 0.4, blur: 3, drop: 1.5, grad: [282, 316], stitch: "M" + (L0 + 4) + ",295 Q" + CX + ",284 " + (R0 - 4) + ",288 L" + (R0 - 4) + ",305 Q" + CX + ",301 " + (L0 + 4) + ",312 Z" });
     else if (ck === "welt") clothPiece(g, layer, boxPath(CX, 287, CW, 26, -2.5, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [287, 313], stitch: boxPath(CX, 290, CW - 6, 20, -2.5, 0) });
