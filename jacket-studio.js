@@ -807,7 +807,9 @@
     // chosen width), and the pocket keeps its full size.
     const lapR = lapS[0];
     const edgeAt = (y) => { const r = lerpRows(lapR, y, 1); return r + lapF * (lerpRows(lapR, y, 2) - r); };
-    const CW = AW(db ? 82 : 92, 0.9);
+    // Daniel 2026-11-20: "chest pockets are too small": about two thirds of
+    // the hip pocket's length, as on a classic jacket.
+    const CW = AW(db ? 106 : 118, 0.9);
     const L0 = edgeAt(310) - 20, R0 = L0 + CW, CX = (L0 + R0) / 2;
     // The pocket's inner end tucks under the lapel when the lapel reaches it
     // (Arc, wide lapels): clip away everything left of the lapel's edge.
@@ -823,11 +825,11 @@
     // degrees), is about 4.6 times as long as tall, and its low end goes
     // under the lapel.
     const CA = -12, CY = 300, hwc = CW / 2;
-    if (ck === "patch") patchPocket(g, layer, CX, CY - 22, CW, CW * 1.05, CA / 2, 1, false);
+    if (ck === "patch") patchPocket(g, layer, CX, CY - 26, CW * 0.92, CW * 0.97, CA / 2, 1, false);
     else if (ck === "boat") {
-      const boat = (i) => pocketPath([["M", [-hwc + i, -10 + i]], ["Q", [0, -4 + i], [hwc - i, -10 + i]], ["L", [hwc - i, 8 - i]], ["Q", [0, 22 - i], [-hwc + i, 8 - i]]], CX, CY, CA);
-      clothPiece(g, layer, boat(0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 14, CY + 16], stitch: boat(3) });
-    } else if (ck === "welt") clothPiece(g, layer, boxPath(CX, CY - 10, CW, 20, CA, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 14, CY + 14], stitch: boxPath(CX, CY - 7, CW - 6, 14, CA, 0) });
+      const boat = (i) => pocketPath([["M", [-hwc + i, -13 + i]], ["Q", [0, -5 + i], [hwc - i, -13 + i]], ["L", [hwc - i, 10 - i]], ["Q", [0, 28 - i], [-hwc + i, 10 - i]]], CX, CY, CA);
+      clothPiece(g, layer, boat(0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 18, CY + 20], stitch: boat(3) });
+    } else if (ck === "welt") clothPiece(g, layer, boxPath(CX, CY - 13, CW, 26, CA, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 18, CY + 18], stitch: boxPath(CX, CY - 10, CW - 6, 20, CA, 0) });
     else if (ck === "sb" || ck === "db") besom(g, layer, CX, CY, CW, CA, ck === "db");
     g.restore();
 
