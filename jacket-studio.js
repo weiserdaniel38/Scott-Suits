@@ -59,6 +59,8 @@
   const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=6";
   // The lining seen in the Arc photo's opening below the second button (in
   // picture space; scripts/make_jacket_photo_arc.py LINING, mapped).
+  // The same opening on the main photo (traced from its shading).
+  const SB_OPENING = "M400,697 L403,705 L412,740 L420,770 L430,800 L441,830 L450,860 L458,885 L463,907 L337,907 L347,880 L358,850 L372,820 L383,790 L390,760 L396,720 Z";
   const ARC_OPENING = "M398.8,679 L403.1,700 L412.4,749.5 L427.9,799 L444,842.4 L448.3,856 L343.7,856 L351.2,842.4 L363.5,823.8 L375.3,792.8 L384.6,749.5 L393.9,700 Z";
   const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
   // Lapel widths (Daniel 2026-11-20: "lapel widths reflected accurately, on
@@ -747,30 +749,35 @@
     // Arc: once a lining is picked it shows in the opening under the second
     // button, in place of the reference photo's grey damask (Daniel
     // 2026-11-20). Unlined jackets show the cloth's back there.
-    if (arc && (v._raw.lining || v.facing === "No Lining Construction")) {
+    const showLining = v._raw.lining || v.facing === "No Lining Construction";
+    const openingLining = (d, x0, y0, x1, y1) => {
       const lpaint = v.facing === "No Lining Construction" ? fp : liningPaint(v, fp);
-      if (lpaint.ready) {
-        const P = new Path2D(ARC_OPENING);
-        g.save();
-        g.clip(P);
-        g.fillStyle = paintStyle(g, lpaint);
-        g.fillRect(330, 670, 130, 200);
-        // Shadow deep in the opening and under the fronts' edges.
-        const sh = g.createLinearGradient(0, 679, 0, 856);
-        sh.addColorStop(0, "rgba(0,0,0,0.55)"); sh.addColorStop(0.35, "rgba(0,0,0,0.28)"); sh.addColorStop(1, "rgba(0,0,0,0.12)");
-        g.fillStyle = sh; g.fillRect(330, 670, 130, 200);
-        g.shadowColor = "rgba(0,0,0,0.55)"; g.shadowBlur = 10;
-        g.strokeStyle = "rgba(0,0,0,0.5)"; g.lineWidth = 6; g.stroke(P);
-        g.shadowBlur = 0;
-        if (lpaint.sheen) {
-          const gr = g.createLinearGradient(340, 0, 450, 0);
-          gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(0.45, "rgba(255,255,255,0.08)"); gr.addColorStop(1, "rgba(255,255,255,0)");
-          g.fillStyle = gr; g.fillRect(330, 670, 130, 200);
-        }
-        g.restore();
+      if (!lpaint.ready) return;
+      const P = new Path2D(d);
+      g.save();
+      g.clip(P);
+      g.fillStyle = paintStyle(g, lpaint);
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      // Shadow deep in the opening and under the fronts' edges.
+      const sh = g.createLinearGradient(0, y0, 0, y1);
+      sh.addColorStop(0, "rgba(0,0,0,0.55)"); sh.addColorStop(0.35, "rgba(0,0,0,0.28)"); sh.addColorStop(1, "rgba(0,0,0,0.12)");
+      g.fillStyle = sh; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      g.shadowColor = "rgba(0,0,0,0.55)"; g.shadowBlur = 10;
+      g.strokeStyle = "rgba(0,0,0,0.5)"; g.lineWidth = 6; g.stroke(P);
+      g.shadowBlur = 0;
+      if (lpaint.sheen) {
+        const gr = g.createLinearGradient(x0 + 10, 0, x1 - 10, 0);
+        gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(0.45, "rgba(255,255,255,0.08)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+        g.fillStyle = gr; g.fillRect(x0, y0, x1 - x0, y1 - y0);
       }
-    }
+      g.restore();
+    };
+    if (arc && showLining) openingLining(ARC_OPENING, 330, 670, 460, 870);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
+    // Every other single breasted front (Daniel 2026-11-20: "didn't catch my
+    // lining"): the photo's fronts open below the bottom button too, so the
+    // chosen lining shows there the same way, on top of the cloth shading.
+    if (!db && !arc && showLining) openingLining(SB_OPENING, 330, 690, 470, 912);
 
     // The lapel's outer edge where the mockup's labels were painted out
     // (diamond and shawl lapels have their own edge in their shading).
