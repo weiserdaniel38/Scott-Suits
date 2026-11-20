@@ -99,6 +99,11 @@ Lu = Image.fromarray(np.clip(Lw, 0, 255).astype(np.uint8))
 Ls = np.asarray(Lu.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.GaussianBlur(0.6))).astype(np.float32)
 Lref = float(np.median(Ls[cl > 0.9]))
 r = (np.maximum(Ls, 1) / Lref) ** GAMMA
+# The photo's lapel edge is a thin near-black line; on the customer's cloth it
+# read as a hard drawn outline (Daniel 2026-11-19). Soften it: blur the
+# shading a touch and pull the darkest values back toward the cloth.
+r = np.asarray(Image.fromarray(np.clip(r * 100, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.1))).astype(np.float32) / 100
+r = np.where(r < 1, 1 - (1 - r) * 0.62, r)
 A = np.clip(cl, 0, 1) * 255
 M1 = np.clip(r, 0, 1) * 255; M2 = np.clip(r - 1, 0, 1) * 255
 top = np.dstack([M1, M1, M1, A]); bot = np.dstack([M2, M2, M2, A])
