@@ -1914,10 +1914,22 @@
   };
   window.addEventListener("pointerup", endPointer);
   window.addEventListener("pointercancel", endPointer);
+  // In the big picture the mouse wheel zooms on its own (Daniel 2026-11-22:
+  // "zooming on preview w the scroller on mouse should work"), toward the
+  // spot under the mouse; elsewhere only ctrl+wheel (a trackpad pinch).
   canvasBox.addEventListener("wheel", (e) => {
-    if (!e.ctrlKey && !e.metaKey) return;
+    if (!e.ctrlKey && !e.metaKey && !(typeof bigOpen !== "undefined" && bigOpen)) return;
     e.preventDefault();
-    zoom = clampZoom({ s: zoom.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12), cx: zoom.cx, cy: zoom.cy });
+    if (!e.deltaY) return;
+    measure();
+    const r = canvasBox.getBoundingClientRect();
+    const mx = e.clientX - r.left - fit.w / 2, my = e.clientY - r.top - fit.h / 2;
+    const k0 = fit.k * zoom.s;
+    const px = zoom.cx + mx / k0, py = zoom.cy + my / k0;
+    const step = Math.pow(1.0018, -Math.max(-120, Math.min(120, e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY)));
+    const s1 = Math.max(1, Math.min(4, zoom.s * step));
+    const k1 = fit.k * s1;
+    zoom = clampZoom({ s: s1, cx: px - mx / k1, cy: py - my / k1 });
     applyZoom();
   }, { passive: false });
 
@@ -2135,7 +2147,16 @@
   }
   peek.onclick = openBig;
   big.querySelector(".suit-peek-close").onclick = () => closeBig();
-  big.addEventListener("click", (e) => { if (e.target === big) closeBig(); });
+  // Close on a click on the dark backdrop only when the press started there
+  // too: dragging the zoomed picture and letting go off it must not close
+  // it (Daniel 2026-11-22).
+  let downOnBackdrop = false;
+  big.addEventListener("pointerdown", (e) => { downOnBackdrop = e.target === big; });
+  big.addEventListener("click", (e) => {
+    const ok = downOnBackdrop && e.target === big;
+    downOnBackdrop = false;
+    if (ok) closeBig();
+  });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && bigOpen) closeBig(); });
   window.addEventListener("popstate", () => { if (bigOpen) closeBig(true); });
   window.addEventListener("scroll", positionPeek, { passive: true });
