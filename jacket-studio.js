@@ -1055,6 +1055,416 @@
     g.fillRect(100, HEM - 260, 600, 520);
     g.restore();
   }
+  // ---- FOLDED PANTS UNDER THE JACKET (Daniel 2026-11-22) ----------------------
+  // A full suit shows its pants folded flat under the jacket, in the pants
+  // fabric. Until the pants are designed they show a classic look (belt
+  // loops, a slit back pocket with a button, plain hem); the pants answers
+  // replace it as they are picked. Drawn in the picture's own pixels, in a
+  // band PANTS_H tall below the jacket photo (seen from the back: waistband
+  // on the right, the leg folded back under on the left).
+  const PANTS_H = 350;
+  const PANTS_DEFAULTS = { beltLoops: "Belt Loops", backPocket: "Double Besom Pocket", bottomStyle: "Turn Up Bottom" };
+  function pantsInOrder() {
+    try {
+      return typeof hasPantsStep === "function" && typeof hasJacketStep === "function" && hasPantsStep() && hasJacketStep();
+    } catch (e) { return false; }
+  }
+  // Which pieces the picture shows, and its height.
+  function pictureLayout() {
+    let jacket = true, pants = false, vest = false;
+    try {
+      jacket = hasJacketStep();
+      pants = hasPantsStep();
+      vest = isVestOnlyType(currentSuitType);
+      // A three-piece: a classic buttoned vest beside the pants that only
+      // follows the fabric (Daniel 2026-11-22).
+      if (currentSuitType === "threePiece") vest = "fixed";
+    } catch (e) { /* main.js not ready: the jacket alone */ }
+    const h = jacket ? VBH + (pants || vest ? PANTS_H : 0) : vest ? 800 : Math.round(PANTS_H * 1.3) + 60;
+    return { jacket: jacket, pants: pants, vest: vest, h: h };
+  }
+  function pantsAnswers(v) {
+    const P = typeof pantsDesigner !== "undefined" ? pantsDesigner : null;
+    const raw = P && P.rawSelections ? P.rawSelections() : {};
+    const out = {};
+    Object.keys(PANTS_DEFAULTS).forEach((k) => {
+      out[k] = raw[k] && (!P.isShown || P.isShown(k) || (P.isAutoSet && P.isAutoSet(k))) ? raw[k] : PANTS_DEFAULTS[k];
+    });
+    // "Same as Jacket" (or not picked yet) = the jacket's fabric.
+    const f = raw.fabric;
+    out.fabric = f && !/^__same_as__/.test(f) && opt("fabric", f) ? f : v.fabric;
+    return out;
+  }
+  function drawPants(g, v, oy) {
+    const pa = pantsAnswers(v);
+    const fab = opt("fabric", pa.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
+    const fp = fabricPaint(fab);
+    if (!fp.ready) return false;
+    const hex = fp.hex;
+    const st = fp.strength;
+    const T = (pts) => pts.map((p) => [p[0], p[1] + oy]);
+    // Outline points: A top fold corner, B waist top, C waist bottom,
+    // H2 hem's inner end, L leg fold bottom, H1 hem's outer end.
+    const A = [178, 20], B = [664, 16], C = [668, 252], H2 = [470, 226], L = [134, 184], H1 = [416, 292];
+    const main = new Path2D();
+    main.moveTo(A[0], A[1] + oy);
+    main.quadraticCurveTo(420, 12 + oy, B[0], B[1] + oy);
+    main.lineTo(C[0], C[1] + oy);
+    main.quadraticCurveTo(570, 236 + oy, H2[0], H2[1] + oy);
+    main.quadraticCurveTo(300, 120 + oy, A[0], A[1] + oy);
+    main.closePath();
+    const leg = new Path2D();
+    leg.moveTo(A[0], A[1] + oy);
+    leg.quadraticCurveTo(300, 120 + oy, H2[0], H2[1] + oy);
+    leg.lineTo(H1[0], H1[1] + oy);
+    leg.lineTo(L[0], L[1] + oy);
+    leg.quadraticCurveTo(146, 96 + oy, A[0], A[1] + oy);
+    leg.closePath();
+    const fill = (path, shadow) => {
+      g.save();
+      if (shadow) {
+        g.shadowColor = "rgba(0,0,0," + shadow[0] + ")";
+        g.shadowBlur = shadow[1] * RES;
+        g.shadowOffsetX = shadow[2] * RES;
+        g.shadowOffsetY = shadow[3] * RES;
+        g.fillStyle = hex;
+        g.fill(path);
+        g.shadowColor = "transparent";
+      }
+      g.clip(path);
+      const m = g.getTransform();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = paintStyle(g, fp);
+      g.fillRect(0, 0, g.canvas.width, g.canvas.height);
+      g.setTransform(m);
+      return true;
+    };
+    const shadeGrad = (x0, y0, x1, y1, stops) => {
+      const gr = g.createLinearGradient(x0, y0 + oy, x1, y1 + oy);
+      stops.forEach((s) => gr.addColorStop(s[0], s[1]));
+      g.fillStyle = gr;
+      g.fillRect(0, oy, VBW, PANTS_H);
+    };
+    const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
+    const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
+    // Upper pants (seat and thigh), lying flat on the floor.
+    fill(main, [0.28, 14, 0, 6]);
+    shadeGrad(200, 20, 560, 250, [[0, lt(0.07)], [0.55, "rgba(0,0,0,0)"], [1, dk(0.16)]]);
+    g.restore();
+    // Waistband along the right edge.
+    const W = 24;
+    const band = new Path2D();
+    band.moveTo(B[0] - W, B[1] + 1 + oy); band.lineTo(B[0], B[1] + oy); band.lineTo(C[0], C[1] + oy); band.lineTo(C[0] - W, C[1] - 1 + oy); band.closePath();
+    g.save(); g.clip(main);
+    g.fillStyle = dk(0.1); g.fill(band);
+    line(g, T([[B[0] - W, B[1] + 1], [C[0] - W, C[1] - 1]]), dk(0.55), 1.3);
+    line(g, T([[B[0] - W + 1.6, B[1] + 1], [C[0] - W + 1.6, C[1] - 1]]), lt(0.12), 1);
+    line(g, T([[B[0] - 3, B[1] + 2], [C[0] - 3, C[1] - 2]]), lt(0.1), 1.2);
+    g.restore();
+    // Belt loops across the waistband.
+    const loopAt = (y) => {
+      const x0 = B[0] - W - 3, x1 = B[0] + 1, h = 9;
+      const yy = y + oy;
+      g.save();
+      g.shadowColor = "rgba(0,0,0,0.4)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1.5 * RES;
+      g.fillStyle = mix(hex, "#000000", 0.04); g.fillRect(x0, yy - h / 2, x1 - x0, h);
+      g.restore();
+      line(g, [[x0 + 2, yy - h / 2 + 1.5], [x1 - 2, yy - h / 2 + 1.5]], lt(0.14), 1);
+      line(g, [[x0 + 2, yy + h / 2 - 1], [x1 - 2, yy + h / 2 - 1]], dk(0.35), 1);
+    };
+    if (pa.beltLoops === "Belt Loops") { loopAt(54); loopAt(214); }
+    else if (pa.beltLoops === "X Loops") {
+      [54, 214].forEach((y) => {
+        const x0 = B[0] - W - 2, x1 = B[0];
+        line(g, [[x0, y - 7 + oy], [x1, y + 7 + oy]], dk(0.5), 6);
+        line(g, [[x0, y + 7 + oy], [x1, y - 7 + oy]], dk(0.5), 6);
+        line(g, [[x0, y - 7 + oy], [x1, y + 7 + oy]], mix(hex, "#000000", 0.05), 4.5);
+        line(g, [[x0, y + 7 + oy], [x1, y - 7 + oy]], mix(hex, "#000000", 0.05), 4.5);
+      });
+    }
+    // Back pocket, parallel to the waistband.
+    const bp = String(pa.backPocket || "");
+    const btnHex = lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6);
+    const button = (x, y) => {
+      g.save();
+      g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = 2.5 * RES; g.shadowOffsetY = 1 * RES;
+      g.beginPath(); g.arc(x, y + oy, 6.5, 0, Math.PI * 2); g.fillStyle = btnHex; g.fill();
+      g.restore();
+      g.beginPath(); g.arc(x, y + oy, 6.5, 0, Math.PI * 2); g.strokeStyle = "rgba(255,255,255,0.18)"; g.lineWidth = 1; g.stroke();
+      g.fillStyle = "rgba(0,0,0,0.55)";
+      [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]].forEach((d) => { g.beginPath(); g.arc(x + d[0], y + oy + d[1], 0.9, 0, Math.PI * 2); g.fill(); });
+    };
+    const PX = 604, PY0 = 104, PY1 = 214;
+    if (bp && bp !== "No Pocket") {
+      if (/Flap/.test(bp)) {
+        // Flap over the slit, pointing toward the leg.
+        const tip = /Rhombus/.test(bp);
+        const fx = PX + 2, fw = 30;
+        const flap = new Path2D();
+        flap.moveTo(fx, PY0 + oy); flap.lineTo(fx, PY1 + oy);
+        if (tip) { flap.lineTo(fx - fw + 8, PY1 - 2 + oy); flap.lineTo(fx - fw - 10, (PY0 + PY1) / 2 + oy); flap.lineTo(fx - fw + 8, PY0 + 2 + oy); }
+        else { flap.lineTo(fx - fw + 6, PY1 - 1 + oy); flap.bezierCurveTo(fx - fw - 22, PY1 - 30 + oy, fx - fw - 22, PY0 + 30 + oy, fx - fw + 6, PY0 + 1 + oy); }
+        flap.closePath();
+        g.save();
+        g.shadowColor = "rgba(0,0,0,0.42)"; g.shadowBlur = 4 * RES; g.shadowOffsetX = -1.5 * RES; g.shadowOffsetY = 1.5 * RES;
+        g.fillStyle = hex; g.fill(flap);
+        g.restore();
+        g.save(); g.clip(flap); const m = g.getTransform(); g.setTransform(1, 0, 0, 1, 0, 0);
+        g.fillStyle = paintStyle(g, fp); g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.setTransform(m);
+        g.fillStyle = lt(0.05); g.fill(flap);
+        g.restore();
+        g.save(); g.strokeStyle = dk(0.45); g.lineWidth = 1; g.setLineDash([2.5, 2.5]);
+        g.translate(fx - fw / 2, (PY0 + PY1) / 2 + oy); g.scale(0.86, 0.9); g.translate(-(fx - fw / 2), -((PY0 + PY1) / 2 + oy));
+        g.stroke(flap); g.restore();
+        line(g, T([[PX + 2, PY0], [PX + 2, PY1]]), dk(0.6), 1.4);
+        button(fx - fw - (tip ? 2 : 4), (PY0 + PY1) / 2);
+      } else {
+        // Slit (double besom) pocket: two lips with a dark opening.
+        g.save();
+        g.beginPath(); g.moveTo(PX - 4, PY0 + oy); g.lineTo(PX + 4, PY0 + oy); g.lineTo(PX + 4.6, PY1 + oy); g.lineTo(PX - 3.4, PY1 + oy); g.closePath();
+        g.fillStyle = dk(0.16); g.fill(); g.restore();
+        line(g, T([[PX, PY0], [PX + 0.6, PY1]]), "rgba(0,0,0,0.75)", 1.5);
+        line(g, T([[PX - 4, PY0], [PX - 3.4, PY1]]), dk(0.35), 0.9);
+        line(g, T([[PX + 4, PY0], [PX + 4.6, PY1]]), dk(0.35), 0.9);
+        line(g, T([[PX - 2.2, PY0 + 1], [PX - 1.6, PY1 - 1]]), lt(0.12), 0.8);
+        line(g, T([[PX - 6, PY0 - 1], [PX + 6, PY0 - 1]]), dk(0.4), 1);
+        line(g, T([[PX - 5.4, PY1 + 1], [PX + 6.6, PY1 + 1]]), dk(0.4), 1);
+        const withButton = !/No Button/.test(bp);
+        if (withButton) {
+          button(PX - 18, (PY0 + PY1) / 2);
+          // The button loop from the pocket.
+          line(g, T([[PX - 1, (PY0 + PY1) / 2], [PX - 12, (PY0 + PY1) / 2]]), dk(0.5), 1.2);
+        }
+      }
+    }
+    // The leg, folded back under the seat.
+    fill(leg, [0.42, 10, 3, 4]);
+    shadeGrad(170, 40, 330, 280, [[0, lt(0.1)], [0.35, "rgba(0,0,0,0)"], [1, dk(0.22)]]);
+    g.restore();
+    // Fold edge (left) catches the light; the leg's top edge casts a shadow.
+    g.save(); g.clip(leg);
+    g.strokeStyle = lt(0.2); g.lineWidth = 3;
+    g.beginPath(); g.moveTo(L[0] + 2, L[1] - 2 + oy); g.quadraticCurveTo(148, 98 + oy, A[0] + 2, A[1] + 3 + oy); g.stroke();
+    g.restore();
+    g.save(); g.strokeStyle = dk(0.38); g.lineWidth = 1.3;
+    g.beginPath(); g.moveTo(A[0], A[1] + oy); g.quadraticCurveTo(300, 120 + oy, H2[0], H2[1] + oy); g.stroke(); g.restore();
+    // Pressed crease down the leg.
+    line(g, T([[232, 104], [404, 220]]), lt(0.08), 1.4);
+    line(g, T([[232, 106], [404, 222]]), dk(0.12), 1);
+    // Hem, or a turned-up cuff.
+    const cuff = /Cuff\s*([\d.]+)/.exec(String(pa.bottomStyle || ""));
+    const ux = H1[0] - L[0], uy = H1[1] - L[1];
+    const len = Math.hypot(ux, uy);
+    const nx = uy / len, ny = -ux / len; // into the leg (up-left of the hem)
+    const off = (d) => [[L[0] + 4 + nx * d, L[1] + 1 + ny * d], [H1[0] - 2 + nx * d, H1[1] - 2 + ny * d]];
+    if (cuff) {
+      const d = 4 * parseFloat(cuff[1]);
+      g.save(); g.clip(leg);
+      const pts = off(d);
+      g.beginPath(); g.moveTo(pts[0][0], pts[0][1] + oy); g.lineTo(pts[1][0], pts[1][1] + oy); g.lineTo(H1[0], H1[1] + oy); g.lineTo(L[0], L[1] + oy); g.closePath();
+      g.fillStyle = lt(0.05); g.fill();
+      g.restore();
+      line(g, T(off(d)), dk(0.6), 1.6);
+      line(g, T(off(d + 2)), dk(0.18), 2.5);
+      line(g, T(off(d - 1.6)), lt(0.16), 1);
+    } else {
+      line(g, T(off(5)), dk(0.12), 1);
+    }
+    line(g, T([[L[0] + 1, L[1]], [H1[0], H1[1]]]), dk(0.3), 1.2);
+    return true;
+  }
+
+  // ---- VEST ON ITS OWN (Daniel 2026-11-22: a picture for Vest Only too) -------
+  // A vest laid flat, front view, in its own local space: x -130..130,
+  // y 0..310, drawn at (cx, oy) scaled by s. Suits never show the vest
+  // (Daniel 2026-11-22: "when designing a suit do not have the vest there").
+  const VEST_DEFAULTS = { frontbutton: "5 Buttons", bottom: "Pointed", collar: "V-Neck", chestpocket: "Left Welt", lowerpocket: "Welt", pickStitch: "No Stitching" };
+  function vestAnswers(v, fixed) {
+    const VD = typeof vestDesigner !== "undefined" ? vestDesigner : null;
+    const raw = VD && VD.rawSelections ? VD.rawSelections() : {};
+    const out = {};
+    Object.keys(VEST_DEFAULTS).forEach((k) => {
+      out[k] = !fixed && raw[k] && (!VD.isShown || VD.isShown(k) || (VD.isAutoSet && VD.isAutoSet(k))) ? raw[k] : VEST_DEFAULTS[k];
+    });
+    const f = raw.fabric;
+    out.fabric = f && !/^__same_as__/.test(f) && opt("fabric", f) ? f : v.fabric;
+    return out;
+  }
+  function drawVest(g, v, cx, oy, s, fixed) {
+    const va = vestAnswers(v, fixed);
+    const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
+    const fp = fabricPaint(fab);
+    if (!fp.ready) return false;
+    const hex = fp.hex, st = fp.strength;
+    const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
+    const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
+    const fb = String(va.frontbutton || "");
+    const db = /^Double/.test(fb);
+    const nBtn = parseInt((/(\d)/.exec(fb) || [0, 5])[1], 10);
+    const rows = db ? nBtn / 2 : nBtn;
+    const collar = String(va.collar || "V-Neck");
+    // Depth of the V: fewer buttons, deeper opening.
+    const vDepth = db ? (fb.indexOf("Low") !== -1 ? 170 : 130) : ({ 3: 150, 4: 132, 5: 114, 6: 98 }[nBtn] || 114);
+    const edgeX = db ? 34 : 0; // where the top front's edge runs (viewer's right of centre)
+    const bottom = String(va.bottom || "Pointed");
+    g.save();
+    g.translate(cx, oy);
+    g.scale(s, s);
+    // Outline: right half (viewer's right) mirrored.
+    const half = (sx) => {
+      const p = new Path2D();
+      const X = (x) => x * sx;
+      p.moveTo(X(36), 0);
+      p.lineTo(X(70), 8);
+      p.bezierCurveTo(X(76), 60, X(96), 104, X(122), 116);
+      p.lineTo(X(124), 236);
+      if (bottom === "Straight") { p.lineTo(X(124), 286); p.lineTo(X(0), 286); }
+      else if (bottom === "Rounded") { p.lineTo(X(124), 262); p.bezierCurveTo(X(80), 286, X(40), 292, X(12), 290); p.quadraticCurveTo(X(2), 290, X(0), 282); }
+      else if (bottom === "Small Point") { p.lineTo(X(124), 262); p.lineTo(X(10), 296); p.lineTo(X(0), 286); }
+      else { p.lineTo(X(124), 246); p.lineTo(X(8), 306); p.lineTo(X(0), 292); }
+      p.lineTo(X(0), vDepth);
+      p.closePath();
+      return p;
+    };
+    const L = half(-1), R = half(1);
+    const body = new Path2D();
+    body.addPath(L); body.addPath(R);
+    // Drop shadow and cloth.
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 14 * RES; g.shadowOffsetY = 6 * RES;
+    g.fillStyle = hex; g.fill(L); g.fill(R);
+    g.restore();
+    // The back lining seen in the V.
+    const vee = new Path2D();
+    if (collar === "U-Neck") { vee.moveTo(-36, 0); vee.bezierCurveTo(-36, vDepth * 0.9, 36, vDepth * 0.9, 36, 0); }
+    else { vee.moveTo(-36, 0); vee.lineTo(0, vDepth); vee.lineTo(36, 0); }
+    vee.closePath();
+    g.fillStyle = lum(hex) < 70 ? mix(hex, "#ffffff", 0.08) : mix(hex, "#000000", 0.25); g.fill(vee);
+    g.fillStyle = "rgba(0,0,0,0.18)"; g.fill(vee);
+    [L, R].forEach((P) => {
+      g.save(); g.clip(P);
+      const m = g.getTransform(); g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = paintStyle(g, fp); g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.setTransform(m);
+      const gr = g.createLinearGradient(-124, 0, 124, 300);
+      gr.addColorStop(0, lt(0.08)); gr.addColorStop(0.5, "rgba(0,0,0,0)"); gr.addColorStop(1, dk(0.18));
+      g.fillStyle = gr; g.fillRect(-140, -10, 280, 330);
+      // Armhole edge and side shading.
+      const sg = g.createLinearGradient(-124, 0, 124, 0);
+      sg.addColorStop(0, dk(0.18)); sg.addColorStop(0.18, "rgba(0,0,0,0)"); sg.addColorStop(0.82, "rgba(0,0,0,0)"); sg.addColorStop(1, dk(0.18));
+      g.fillStyle = sg; g.fillRect(-140, -10, 280, 330);
+      g.restore();
+    });
+    // U-Neck: the V opening is rounded off.
+    if (collar === "U-Neck") {
+      g.save(); g.clip(body); g.fillStyle = lum(hex) < 70 ? mix(hex, "#ffffff", 0.06) : mix(hex, "#000000", 0.3); g.fill(vee); g.restore();
+    }
+    // Front edge where the two fronts meet (the top front on the viewer's left
+    // for single breasted; double breasted laps across).
+    const frontBottom = bottom === "Straight" ? 286 : bottom === "Rounded" ? 284 : bottom === "Small Point" ? 290 : 298;
+    if (db) {
+      g.save(); g.strokeStyle = dk(0.55); g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(edgeX * 0.25, vDepth - 6); g.lineTo(edgeX, vDepth + 18); g.lineTo(edgeX, frontBottom - 12); g.stroke(); g.restore();
+    } else {
+      g.save(); g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetX = 1 * RES;
+      g.strokeStyle = dk(0.6); g.lineWidth = 1.3;
+      g.beginPath(); g.moveTo(0, vDepth); g.lineTo(0, frontBottom - 6); g.stroke(); g.restore();
+    }
+    // Lapels along the V.
+    if (/Lapel/.test(collar)) {
+      const w = 15;
+      const lapel = (sx) => {
+        const p = new Path2D();
+        p.moveTo(36 * sx, 0); p.lineTo((36 + w) * sx, 2);
+        if (/Shawl/.test(collar)) p.quadraticCurveTo((30 + w) * sx, vDepth * 0.55, 0, vDepth);
+        else p.lineTo(4 * sx, vDepth - 6);
+        p.lineTo(0, vDepth);
+        p.closePath();
+        return p;
+      };
+      [-1, 1].forEach((sx) => {
+        const P = lapel(sx);
+        g.save(); g.shadowColor = "rgba(0,0,0,0.4)"; g.shadowBlur = 4 * RES; g.shadowOffsetX = sx * 1.5 * RES;
+        g.fillStyle = hex; g.fill(P); g.restore();
+        g.save(); g.clip(P); const m = g.getTransform(); g.setTransform(1, 0, 0, 1, 0, 0);
+        g.fillStyle = paintStyle(g, fp); g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.setTransform(m);
+        g.fillStyle = lt(0.06); g.fill(P); g.restore();
+        g.save(); g.strokeStyle = dk(0.5); g.lineWidth = 1; g.stroke(P); g.restore();
+        // Notch or peak near the top.
+        if (!/Shawl/.test(collar)) {
+          const y = 34, x = 36 + w - 2 - y * (w + 30) / vDepth;
+          g.save(); g.strokeStyle = dk(0.7); g.lineWidth = 1.4; g.beginPath();
+          if (/Peak/.test(collar)) { g.moveTo(sx * (x + 2), y); g.lineTo(sx * (x + 10), y - 12); }
+          else { g.moveTo(sx * (x + 1), y); g.lineTo(sx * (x - 9), y + 3); }
+          g.stroke(); g.restore();
+        }
+      });
+    }
+    // Darts.
+    [-1, 1].forEach((sx) => line(g, [[sx * 64, 150], [sx * 66, 200], [sx * 64, 246]], dk(0.28), 1));
+    // Pockets: lower pockets on both sides, chest pocket on the wearer's left
+    // (viewer's right) or both.
+    const welt = (x0, y0, len, slant, kind) => {
+      const a = slant ? -0.17 : 0;
+      g.save(); g.translate(x0, y0); g.rotate(a);
+      if (kind === "patch") {
+        g.save(); g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1 * RES;
+        g.strokeStyle = dk(0.45); g.lineWidth = 1.1; g.strokeRect(0, 0, len, len * 0.62); g.restore();
+        g.save(); g.setLineDash([2, 2]); g.strokeStyle = dk(0.4); g.lineWidth = 0.8; g.strokeRect(2.5, 2.5, len - 5, len * 0.62 - 5); g.restore();
+      } else if (kind === "flap") {
+        g.fillStyle = dk(0.12); g.fillRect(0, 0, len, 13);
+        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, 0, len, 13);
+        g.fillStyle = lt(0.08); g.fillRect(0, 0, len, 2);
+      } else if (kind === "besom") {
+        g.fillStyle = "rgba(0,0,0,0.65)"; g.fillRect(0, -0.8, len, 1.6);
+        g.strokeStyle = dk(0.35); g.lineWidth = 0.8; g.strokeRect(0, -3.5, len, 7);
+      } else {
+        const h = kind === "narrow" ? 6 : 10;
+        g.fillStyle = lt(0.04); g.fillRect(0, -h, len, h);
+        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, -h, len, h);
+        g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, -h - 0.6, len, 1.2);
+      }
+      g.restore();
+    };
+    const kindOf = (name) => /Patch/.test(name) ? "patch" : /Flap/.test(name) ? "flap" : /Besom/.test(name) ? "besom" : /Narrow/.test(name) ? "narrow" : "welt";
+    const lp = String(va.lowerpocket || "");
+    if (lp && !/^No /.test(lp)) {
+      const sl = /Slant/.test(lp), k = kindOf(lp);
+      welt(-96, 212, 58, sl, k);
+      welt(38 + (db ? 6 : 0), 212 + (sl ? 10 : 0), 58, sl, k);
+      if (sl) { /* the right one leans the same way */ }
+    }
+    const cp = String(va.chestpocket || "");
+    if (cp && !/^No /.test(cp)) {
+      const k = kindOf(cp);
+      const y = Math.max(vDepth * 0.55, 70) + 34;
+      welt(54, y, 40, false, k);
+      if (/^Both/.test(cp)) welt(-94, y, 40, false, k);
+    }
+    // Buttons and buttonholes.
+    const btnHex = lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6);
+    const button = (x, y) => {
+      g.save(); g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = 2.5 * RES; g.shadowOffsetY = 1 * RES;
+      g.beginPath(); g.arc(x, y, 5.2, 0, Math.PI * 2); g.fillStyle = btnHex; g.fill(); g.restore();
+      g.beginPath(); g.arc(x, y, 5.2, 0, Math.PI * 2); g.strokeStyle = "rgba(255,255,255,0.16)"; g.lineWidth = 0.9; g.stroke();
+      g.fillStyle = "rgba(0,0,0,0.55)";
+      [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]].forEach((d) => { g.beginPath(); g.arc(x + d[0], y + d[1], 0.75, 0, Math.PI * 2); g.fill(); });
+    };
+    const y0 = vDepth + 16, y1 = frontBottom - 30;
+    for (let i = 0; i < rows; i++) {
+      const y = rows === 1 ? y0 : y0 + (y1 - y0) * i / (rows - 1);
+      if (db) { button(-edgeX + 6, y); button(edgeX - 10, y); }
+      else button(-6, y);
+    }
+    // Pick stitching along the edges.
+    if (/^Pick/.test(String(va.pickStitch || ""))) {
+      g.save(); g.setLineDash([1.6, 3]); g.strokeStyle = lt(0.35); g.lineWidth = 0.9;
+      g.translate(0, 0); g.scale(0.97, 0.98); g.translate(0, 3);
+      g.stroke(L); g.stroke(R); g.restore();
+    }
+    g.restore();
+    return true;
+  }
+
   function drawBack(g, v, anchors) {
     const shade = img(SHADE.back);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
@@ -1257,6 +1667,16 @@
   const pg = photoCanvas.getContext("2d");
 
   let view = "front";
+  // Picture height: the jacket photo, plus the folded pants for a full suit.
+  let picH = VBH;
+  function setPicH(h) {
+    picH = h;
+    photoCanvas.height = Math.round(h * RES);
+    canvasBox.style.aspectRatio = VBW + " / " + h;
+    zoom = { s: 1, cx: VBW / 2, cy: h / 2 };
+    applyZoom();
+    if (typeof sizePeek === "function") sizePeek();
+  }
   let zoom = { s: 1, cx: VBW / 2, cy: VBH / 2 };
   let openArea = null;
   let openKey = null;
@@ -1278,18 +1698,54 @@
     const a = {};
     let ok = false;
     pg.setTransform(1, 0, 0, 1, 0, 0);
-    const next = mk(CW, CH);
+    // What the order holds: a suit = the jacket with its pants folded under
+    // it; pants or a vest on their own = just that piece.
+    const lay = pictureLayout();
+    const h = lay.h;
+    const next = mk(CW, Math.round(h * RES));
     const g = next.getContext("2d");
     g.scale(RES, RES);
     try {
-      ok = view === "back" ? drawBack(g, v, a) : view === "inside" ? drawInside(g, v, a) : drawFront(g, v, a);
+      ok = lay.jacket ? (view === "back" ? drawBack(g, v, a) : view === "inside" ? drawInside(g, v, a) : drawFront(g, v, a)) : true;
+      // The pants / vest sit on the same backdrop as the jacket photo.
+      if (ok && (lay.pants || lay.vest)) {
+        const y0 = lay.jacket ? VBH : 0;
+        let bg = "#ECE6DF";
+        if (lay.jacket) {
+          try {
+            const d = g.getImageData(4 * RES, (VBH - 3) * RES, 1, 1).data;
+            if (d[3] > 200) bg = "rgb(" + d[0] + "," + d[1] + "," + d[2] + ")";
+          } catch (e) { /* keep the default */ }
+        }
+        g.fillStyle = bg;
+        g.fillRect(0, y0, VBW, h - y0);
+      }
+      if (ok && lay.pants) {
+        if (lay.jacket && lay.vest) {
+          // Three-piece: vest on the left, pants a little smaller on the right.
+          ok = drawVest(g, v, 160, VBH + 24, 0.92, true);
+          if (ok) {
+            g.save(); g.translate(290, VBH + 40); g.scale(0.85, 0.85); g.translate(-134, 0);
+            ok = drawPants(g, v, 0);
+            g.restore();
+          }
+        } else if (lay.jacket) ok = drawPants(g, v, VBH + 10);
+        else {
+          // Pants on their own: bigger, centred.
+          g.save(); g.translate(400, 30); g.scale(1.3, 1.3); g.translate(-400, 0);
+          ok = drawPants(g, v, 0);
+          g.restore();
+        }
+      }
+      if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 40, 2.3);
     } catch (e) {
       ok = false;
       if (window.console) console.error(e);
     }
     if (ok) {
       // Swap in one go so a redraw never flickers.
-      pg.clearRect(0, 0, CW, CH);
+      if (h !== picH) setPicH(h);
+      pg.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
       pg.drawImage(next, 0, 0);
       anchors = a;
       canvasBox.classList.remove("loading");
@@ -1308,14 +1764,14 @@
     const r = canvasBox.getBoundingClientRect();
     // On wider screens keep room at the sides for the zoom buttons.
     const side = r.width > 600 ? 70 : 0;
-    fit = { w: r.width, h: r.height, k: Math.min((r.width - 2 * side) / VBW, r.height / VBH) || 1 };
+    fit = { w: r.width, h: r.height, k: Math.min((r.width - 2 * side) / VBW, r.height / picH) || 1 };
   }
   function clampZoom(z) {
     const s = Math.max(1, Math.min(4, z.s));
     const k = fit.k * s;
     const halfW = fit.w / (2 * k), halfH = fit.h / (2 * k);
     const cx = VBW <= halfW * 2 ? VBW / 2 : Math.max(halfW, Math.min(VBW - halfW, z.cx));
-    const cy = VBH <= halfH * 2 ? VBH / 2 : Math.max(halfH, Math.min(VBH - halfH, z.cy));
+    const cy = picH <= halfH * 2 ? picH / 2 : Math.max(halfH, Math.min(picH - halfH, z.cy));
     return { s: s, cx: cx, cy: cy };
   }
   function toScreen(x, y) {
@@ -1327,7 +1783,7 @@
     zoom = clampZoom(zoom);
     const k = fit.k * zoom.s;
     art.style.width = VBW * fit.k + "px";
-    art.style.height = VBH * fit.k + "px";
+    art.style.height = picH * fit.k + "px";
     const tx = fit.w / 2 - zoom.cx * k, ty = fit.h / 2 - zoom.cy * k;
     art.style.transform = "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px) scale(" + zoom.s.toFixed(4) + ")";
     positionMarkers();
@@ -1350,7 +1806,7 @@
     requestAnimationFrame(step);
   }
   function zoomTo(cx, cy, s) { animateZoom({ s: s, cx: cx, cy: cy }); }
-  function resetZoom() { animateZoom({ s: 1, cx: VBW / 2, cy: VBH / 2 }); }
+  function resetZoom() { animateZoom({ s: 1, cx: VBW / 2, cy: picH / 2 }); }
 
   function anchorFor(area) {
     const a = area.at && area.at[view];
@@ -1393,7 +1849,7 @@
       b.classList.toggle("active", b.dataset.view === view);
       b.setAttribute("aria-selected", b.dataset.view === view ? "true" : "false");
     });
-    if (!keepZoom) { zoom = { s: 1, cx: VBW / 2, cy: VBH / 2 }; applyZoom(); }
+    if (!keepZoom) { zoom = { s: 1, cx: VBW / 2, cy: picH / 2 }; applyZoom(); }
     draw();
   }
   shell.querySelectorAll(".studio-views button").forEach((b) => { b.onclick = () => setView(b.dataset.view); });
@@ -1568,8 +2024,24 @@
   // The jacket fills most of the photo; crop a little of the empty edges.
   const PEEK_CROP = { x: 40, y: 20, w: 720, h: 912 };
   peekCanvas.width = 240;
-  peekCanvas.height = Math.round(240 * PEEK_CROP.h / PEEK_CROP.w);
   const peekG = peekCanvas.getContext("2d");
+  const peekLabel = peek.querySelector(".suit-peek-label");
+  // Taller for a full suit (the pants under the jacket).
+  function sizePeek() {
+    const lay = pictureLayout();
+    const suit = lay.jacket && (lay.pants || lay.vest);
+    const word = suit ? "suit" : lay.jacket ? "jacket" : lay.vest ? "vest" : "pants";
+    shell.querySelector(".studio-views").style.display = lay.jacket ? "" : "none";
+    PEEK_CROP.h = picH - 40;
+    peekCanvas.height = Math.round(240 * PEEK_CROP.h / PEEK_CROP.w);
+    peekPic.style.aspectRatio = PEEK_CROP.w + " / " + PEEK_CROP.h;
+    peekLabel.textContent = "Your " + word;
+    peek.setAttribute("aria-label", "See your " + word + " so far");
+    big.setAttribute("aria-label", "Your " + word + " so far");
+    big.querySelector(".suit-peek-eyebrow").textContent = "Your " + word + " so far";
+    copyToPeek();
+    positionPeek();
+  }
   document.body.appendChild(peek);
 
   const big = document.createElement("div");
@@ -1599,7 +2071,7 @@
   // above the Back / Next bar.
   function positionPeek() {
     if (peek.hidden) return;
-    const grid = document.getElementById("designerGrid");
+    const grid = document.getElementById(peekPage === "pants" ? "pantsGrid" : peekPage === "vest" ? "vestGrid" : "designerGrid");
     const r = grid ? grid.getBoundingClientRect() : null;
     const room = r ? window.innerWidth - r.right : 0;
     const side = !!r && r.width > 0 && room >= 200;
@@ -1617,7 +2089,7 @@
       peek.style.left = "auto";
       peek.style.right = "";
       peek.style.top = "auto";
-      const bar = document.querySelector("#designer .wiz-bar");
+      const bar = document.querySelector((peekPage === "pants" ? "#pantsSection" : peekPage === "vest" ? "#vestSection" : "#designer") + " .wiz-bar");
       const br = bar ? bar.getBoundingClientRect() : null;
       const barTop = br && br.height && br.top < window.innerHeight ? br.top : window.innerHeight;
       peek.style.bottom = Math.round(window.innerHeight - barTop + 12) + "px";
@@ -1645,7 +2117,7 @@
     big.hidden = true;
     document.documentElement.classList.remove("suit-peek-open");
     document.body.classList.remove("suit-peek-open");
-    zoom = { s: 1, cx: VBW / 2, cy: VBH / 2 };
+    zoom = { s: 1, cx: VBW / 2, cy: picH / 2 };
     if (view !== "front") setView("front");
     else applyZoom();
   }
@@ -1657,12 +2129,23 @@
   window.addEventListener("scroll", positionPeek, { passive: true });
   window.addEventListener("resize", positionPeek);
 
-  // Shows the small picture while the customer is on the Jacket page.
+  // Shows the small picture while the customer is on the Jacket page (and the
+  // Pants page of a full suit).
+  let peekPage = "jacket";
   function place() {
     const jacketSec = document.getElementById("designer");
     const designing = document.body.classList.contains("designing");
     const onJacketPage = designing && jacketSec && jacketSec.classList.contains("active");
-    const next = onJacketPage ? "peek" : null;
+    // A full suit: also beside the pants questions, so the pants picks show.
+    // Also beside the pants and vest questions (Daniel 2026-11-22), for
+    // suits and for pants or a vest on their own.
+    const pantsSec = document.getElementById("pantsSection");
+    const vestSec = document.getElementById("vestSection");
+    const onPantsPage = !!(designing && pantsSec && pantsSec.classList.contains("active"));
+    const onVestPage = !!(designing && vestSec && vestSec.classList.contains("active"));
+    const next = onJacketPage || onPantsPage || onVestPage ? "peek" : null;
+    const page = onPantsPage ? "pants" : onVestPage ? "vest" : "jacket";
+    if (page !== peekPage) { peekPage = page; if (context) scheduleDraw(); }
     // (Only touch the class when it is there: a classList change fires the
     // observer below, which calls place() again.)
     if (jacketSec && jacketSec.classList.contains("studio-on")) jacketSec.classList.remove("studio-on");
@@ -1678,6 +2161,8 @@
   // Picking a fabric closes the fabric panel so the customer sees it on the
   // jacket straight away.
   let lastFabric = D.rawSelections().fabric;
+  if (typeof pantsDesigner !== "undefined" && pantsDesigner.onChange) pantsDesigner.onChange(() => { if (context) scheduleDraw(); });
+  if (typeof vestDesigner !== "undefined" && vestDesigner.onChange) vestDesigner.onChange(() => { if (context) scheduleDraw(); });
   D.onChange(() => {
     if (context) scheduleDraw();
     const f = D.rawSelections().fabric;
@@ -1691,6 +2176,10 @@
     mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     const jacketSec = document.getElementById("designer");
     if (jacketSec) mo.observe(jacketSec, { attributes: true, attributeFilter: ["class"] });
+    ["pantsSection", "vestSection"].forEach((id) => {
+      const sec = document.getElementById(id);
+      if (sec) mo.observe(sec, { attributes: true, attributeFilter: ["class"] });
+    });
   }
   if (window.ResizeObserver) new ResizeObserver(() => { if (context) applyZoom(); }).observe(canvasBox);
   else window.addEventListener("resize", applyZoom);
