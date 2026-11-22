@@ -18,6 +18,11 @@ map with the cloth outline as alpha, bottom half: highlights):
   the page then draws that pick, or shows the photo's own inside the boxes
   printed below.
 
+The vest's back (Daniel 2026-11-22, assets/vest-back-reference-photo.png: a
+plain satin back with a centre seam and two darts, no strap) gets one map in
+the vest's own piece space, scaled to the front's height; the page fills it
+with the lining and draws the adjuster strap and buckle the customer picks.
+
 Run: python3 scripts/make_folded_pieces.py [check-folder]
 """
 from PIL import Image, ImageDraw, ImageFilter
@@ -190,3 +195,24 @@ print('VEST lining', 'M' + ' L'.join('%g,%g' % P(x, y) for x, y in LINING) + ' Z
 print('VEST chest', rect_local(P, CHEST), 'lower', [rect_local(P, r) for r in LOWER])
 print('VEST centre x', P(516, 0)[0], 'top y', P(0, 158)[1], 'point y', P(0, 1378)[1])
 print('VEST welts: chest', rect_local(P, (680, 538, 824, 574)), 'lower', rect_local(P, (183, 958, 389, 988)), rect_local(P, (649, 958, 852, 988)))
+
+# ---- Vest back ---------------------------------------------------------------
+src = Image.open(os.path.join(ROOT, 'assets', 'vest-back-reference-photo.png')).convert('RGB')
+L = np.asarray(src).astype(np.float32).mean(2)
+alpha = cloth_alpha(L)
+rows = np.where((alpha > 0.5).sum(1) > 50)[0]
+TOP, BOT = int(rows[0]), int(rows[-1])
+xs = np.where(alpha[TOP + 30] > 0.5)[0]
+CXB = (xs[0] + xs[-1]) / 2
+# Same piece space as the front (230 x 320, centre x 114, top y 9.5), the
+# back as tall as the front from its top to its point (301.25 units).
+S = 301.25 / (BOT - TOP)
+BOX = (int(round(CXB - 114 / S)), int(round(TOP - 9.5 / S)), int(round(CXB + 116 / S)), int(round(TOP + 310.5 / S)))
+ref = float(np.median(L[alpha > 0.99]))
+# Satin: no weave to remove, so the photo's own soft light is kept as it is.
+save('suit-vest-back-shade.webp', shade_map(L, alpha, ref, detail=1.3, grain=2.4, calm_light=True), alpha, BOX, OUT)
+P = local(BOX, S)
+side = lambda y: (round(P(int(np.argmax(alpha[y] > 0.5)), y)[0], 1), round(P(int(L.shape[1] - 1 - np.argmax(alpha[y][::-1] > 0.5)), y)[0], 1))
+print('VEST BACK box', BOX, 'scale %.4f' % S, 'Lref %.1f' % ref, 'centre x', P(CXB, 0)[0], 'top y', P(0, TOP)[1], 'bottom y', P(0, BOT)[1])
+print('VEST BACK sides [y, left x, right x]', [[round(P(0, y)[1], 1)] + list(side(y)) for y in range(TOP + 200, BOT - 40, 100)])
+
