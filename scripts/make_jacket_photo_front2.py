@@ -119,6 +119,18 @@ SB_CLEAN = dict(
     opening_seed=(558, 1200), keep_edges=True,
 )
 
+# Double breasted: the viewer's right front lies on top. Its lapel's fold runs
+# on below the V to the fastening point, then the front edge drops straight
+# to the hem. Per lapel: its tip and about where its outer edge ends (aim).
+DB_CLEAN = dict(
+    S=0.681, CX=566.5, OY=26.0, db=True,
+    gaps=[(200, 560, 330, 1215), (810, 560, 940, 1215)],
+    neck=[(455, 60), (465, 45), (480, 30), (520, 23), (600, 23), (645, 28), (662, 38), (676, 58), (705, 480), (430, 480)],
+    floor_y=1160, hem_y=1285, tie_top=120,
+    v_cols=(420, 720), v_rows=(60, 480), v_auto=True,
+    cuffs=[(40, 222), (915, 1097)], cuff_rows=(1214, 1262), keep_edges=True,
+)
+
 
 def clean(base, lapel, **kw):
     kind = 'sb' if base is SB_CLEAN else 'db'
@@ -150,6 +162,32 @@ PHOTOS.update({
     'sb-arc-clean': clean(SB_CLEAN, 'arc', lapels=[
         dict(name='R', side='R', dp=True, end=True, half=14, edge=[(757, 125), (757, 227), (757, 340), (752, 407), (741, 473), (712, 540), (702, 590), (693, 633), (682, 673), (667, 707), (647, 730), (620, 748), (593, 760), (567, 770), (547, 780)]),
         dict(name='L', side='L', dp=True, end=True, half=14, edge=[(361, 125), (361, 227), (361, 340), (367, 407), (377, 473), (403, 540), (413, 600), (427, 650), (443, 690), (460, 717), (480, 737), (500, 748), (520, 757), (537, 761)])]),
+})
+
+PHOTOS.update({
+    'db-notch-clean': clean(DB_CLEAN, 'notch', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(782, 237)], aim=(452, 765)),
+        dict(name='L', side='L', dp=True, edge=[(357, 235)], aim=(540, 543))]),
+    'db-semi-notch-clean': clean(DB_CLEAN, 'semi-notch', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(784, 214)], aim=(452, 765)),
+        dict(name='L', side='L', dp=True, edge=[(354, 212)], aim=(540, 543))]),
+    'db-peak-clean': clean(DB_CLEAN, 'peak', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(816, 181)], aim=(452, 765)),
+        dict(name='L', side='L', dp=True, fixed=True, edge=[(321, 179), (350, 270), (400, 355), (440, 450)], aim=(525, 587))]),
+    'db-semi-peak-clean': clean(DB_CLEAN, 'semi-peak', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(810, 185)], aim=(452, 765)),
+        dict(name='L', side='L', dp=True, edge=[(324, 185)], aim=(540, 543))]),
+    'db-diamond-clean': clean(DB_CLEAN, 'diamond', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(800, 220)], aim=(452, 765)),
+        dict(name='L', side='L', dp=True, fixed=True, edge=[(328, 220), (422, 420)], aim=(517, 620))]),
+    # Shawl and Arc: the collar's edge starts at the shoulder and curves all
+    # the way; a second point gives its heading.
+    'db-shawl-clean': clean(DB_CLEAN, 'shawl', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(742, 122), (755, 190)], aim=(452, 800)),
+        dict(name='L', side='L', dp=True, follow=True, edge=[(377, 125), (366, 190)], aim=(540, 560))]),
+    'db-arc-clean': clean(DB_CLEAN, 'arc', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(732, 115), (738, 190)], aim=(452, 760)),
+        dict(name='L', side='L', dp=True, follow=True, edge=[(398, 115), (390, 190)], aim=(540, 560))]),
 })
 
 
@@ -356,6 +394,11 @@ def build(name, c):
     tie_core = (Ls < 92) & (VEE > 0.5) & (yy > TOP)
     shirt_fix = None
     if c.get('v_auto'):
+        # (How dark this photo's tie is, from its middle: the shadows beside
+        # the knot are only a little lighter, and must not count as tie.)
+        dark = min(92.0, float(np.percentile(Ls[TOP + 40:TOP + 280, int(tcx) - 20:int(tcx) + 21], 99)) + 6)
+        print('  tie darker than %.0f' % dark)
+        tie_core = (Ls < dark) & (VEE > 0.5) & (yy > TOP)
         mx = lambda m, n: np.asarray(u8(m.astype(np.float32)).filter(ImageFilter.MaxFilter(n))) > 127
         mn = lambda m, n: np.asarray(u8(m.astype(np.float32)).filter(ImageFilter.MinFilter(n))) > 127
         # Only the tie itself: the dark shadow under each collar point hangs
@@ -368,23 +411,37 @@ def build(name, c):
         f = u8((np.asarray(f) == 128).astype(np.float32))
         ImageDraw.floodfill(f, (0, 0), 128)                     # the outside; what is left is the tie, sheen included
         tie_full = np.asarray(f) != 128
+        # A shadow that still hangs on makes the tie suddenly wider for a few
+        # rows: each side is held to its own run of rows.
+        rws = np.where(tie_full.any(1))[0]
+        lo = np.array([np.nonzero(tie_full[q])[0][0] for q in rws]); hi = np.array([np.nonzero(tie_full[q])[0][-1] for q in rws])
+        for i, q in enumerate(rws):
+            w0, w1 = max(0, i - 25), min(len(rws), i + 26)
+            l = int(np.median(lo[w0:w1])) - 3; h = int(np.median(hi[w0:w1])) + 3
+            tie_full[q, :max(l, 0)] = False; tie_full[q, h + 1:] = False
         tie_in = mn(tie_full, 3)
         # An edge pixel is part tie, part shirt. How much of each comes from
         # the tie's shade just inside and the shirt's shade just past the
         # photo's bright fringe; left as they are, the mixed pixels and the
         # fringe show as an outline around a recoloured tie.
-        wt = blur(tie_in.astype(np.float32), 2.0)
-        tie_L = blur(L * tie_in, 2.0) / np.maximum(wt, 1e-3)
-        far = ~mx(tie_full, 9) & (VEE > 0.5)
+        # (A bright pixel at the tie's rim, such as the lapel's lit roll where
+        # it crosses the tie, takes the tie's shade from just inside too.)
+        own = tie_in & ((Ls < dark) | mn(tie_full, 9))
+        wt = blur(own.astype(np.float32), 2.0)
+        tie_L = blur(L * own, 2.0) / np.maximum(wt, 1e-3)
+        # (The shirt's shade: from 3 px past the tie, the darker of each few
+        # pixels, so the fringe itself does not count; cloth is left out.)
+        far = ~mx(tie_full, 7) & (VEE > 0.5)
         wf = blur(far.astype(np.float32), 3.0)
-        shirt = np.dstack([blur(A[..., ch] * far, 3.0) / np.maximum(wf, 1e-3) for ch in range(3)])
+        dim = [np.asarray(Image.fromarray(np.where(far, A[..., ch], 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3))).astype(np.float32) for ch in range(3)]
+        shirt = np.dstack([blur(dim[ch] * far, 3.0) / np.maximum(wf, 1e-3) for ch in range(3)])
         have = (wf > 0.02) & (wt > 0.02)
-        band = mx(tie_full, 5) & ~tie_in
+        band = mx(tie_full, 3) & ~tie_in
         t_mix = np.clip((shirt.mean(2) - L) / np.maximum(shirt.mean(2) - tie_L, 20), 0, 1)
         t_old = np.clip((190 - L) / 100, 0, 1) * mx(tie_full, 3)
         tie_t = np.where(tie_in, 1.0, np.where(band, np.where(have, t_mix, t_old), 0.0)) * (VEE > 0.02) * (yy > TOP)
         tie_mean = float(L[tie_in].mean())
-        tie_col = TIE_RGB[None, None, :] * (np.clip(np.where(tie_in, L, tie_L), 8, 96) / tie_mean)[..., None]
+        tie_col = TIE_RGB[None, None, :] * (np.clip(np.where(own, L, tie_L), 8, 96) / tie_mean)[..., None]
         w = np.clip(blur(mx(tie_full, 7).astype(np.float32), 1.0) * 1.6, 0, 1) * have * (VEE > 0.5)
         shirt_fix = (shirt, w[..., None])
     else:
@@ -434,8 +491,19 @@ def build(name, c):
         for q in range(int(APEX[1]), min(H - 40, int(APEX[1]) + c.get('front_rows', 300))):
             cand = np.arange(int(round(x)) - 2, int(round(x)) + 3)
             x = float(cand[np.argmin(ridge[q, cand])]); front[q] = x
-        fy = sorted(front); fx = np.polyval(np.polyfit(fy, [front[q] for q in fy], 4), fy)
-        front = dict(zip(fy, [float(v) for v in fx]))
+        if c.get('db'):
+            # (Double breasted: the fold, then the front edge on down to the hem.)
+            for q in range(max(front) + 1, c['hem_y'] + 20):
+                cand = np.arange(int(round(x)) - 2, int(round(x)) + 3)
+                x = float(cand[np.argmin(ridge[q, cand])]); front[q] = x
+            qs = sorted(front); xs = np.array([front[q] for q in qs], np.float32)
+            xs = np.convolve(np.pad(xs, 9, mode='edge'), np.ones(19) / 19, 'valid')
+            front = dict(zip(qs, [float(v) for v in xs]))
+            kink = next((q for q in qs if q > APEX[1] + 60 and q + 12 in front and (front[q + 12] - front[q - 12]) / 24 > -0.12), qs[-1])
+            print('  fold turns into the front edge at', (round(front[kink], 1), kink))
+        else:
+            fy = sorted(front); fx = np.polyval(np.polyfit(fy, [front[q] for q in fy], 4), fy)
+            front = dict(zip(fy, [float(v) for v in fx]))
 
     def smooth(curve, n=7):
         qs = sorted(curve); xs = np.array([curve[q] for q in qs], np.float32)
@@ -449,14 +517,43 @@ def build(name, c):
         right lapel) or goes under the other front (viewer's left)."""
         e = list(lp['edge']); side = lp['side']; half = lp.get('half', 16)
         if not lp.get('end'):
-            tip = e[0]; ystop = int(APEX[1]) - 120
-            tgt = (APEX[0] + (10 if side == 'R' else -10), APEX[1] + 40)
+            tip = e[0]; aim = lp.get('aim')
+            ystop = int(tip[1]) + lp.get('lead', 80) if aim else int(APEX[1]) - 120
+            tgt = aim or (APEX[0] + (10 if side == 'R' else -10), APEX[1] + 40)
             ey = np.arange(tip[1], ystop + 1)
             gx = np.interp(ey, [p[1] for p in e + [tgt]], [p[0] for p in e + [tgt]])
             first = dp_line(ridge, ey, gx, half, end=half)
-            qs = sorted(first)[-100:]; a, b = np.polyfit(qs, [first[q] for q in qs], 1)
+            qs = sorted(first)[-(60 if aim else 100):]; a, b = np.polyfit(qs, [first[q] for q in qs], 1)
             end = None
-            if side == 'R':
+            if aim and (side == 'R' or lp.get('follow')):
+                # Double breasted: the edge curves on its long way down, so
+                # past its first stretch the dark line is followed row by
+                # row, keeping its heading, to where it meets the fold (for
+                # the top lapel: where the fold turns into the front edge).
+                q = ystop; x = float(first[q]); v = float(a)
+                while end is None:
+                    q += 1; pred = x + v
+                    cand = np.arange(int(round(pred)) - 3, int(round(pred)) + 4)
+                    xn = float(cand[np.argmin(ridge[q, cand] + 0.3 * (cand - pred) ** 2)])
+                    v = 0.94 * v + 0.06 * (xn - x); x = xn; first[q] = x
+                    if q > APEX[1] and q in front and (x <= front[q] + 3 or q >= kink if side == 'R' else x >= front[q] - 3): end = (front[q], q)
+                    elif q > aim[1] + 90 or q + 1 not in front and q > APEX[1]: end = (x, q)
+            elif aim:
+                # The under lapel's edge runs straight to where it goes under
+                # the top front: found, then traced again toward that point.
+                # (Its heading comes from the first stretch below the tip.)
+                # (fixed=True: where the heading is not clear, the aim given is used.)
+                for it in range(2):
+                    if it or not lp.get('fixed'):
+                        for q in sorted(front):
+                            if a * q + b >= front[q] - 1: aim = (front[q], q); break
+                    ey = np.arange(tip[1], int(aim[1]) - 8)
+                    gx = np.interp(ey, [p[1] for p in e + [aim]], [p[0] for p in e + [aim]])
+                    hw = 14 if it == 0 else 8
+                    first = dp_line(ridge, ey, gx, hw, end=hw)
+                    qs = sorted(first)[len(first) // 2:]; a, b = np.polyfit(qs, [first[q] for q in qs], 1)
+                end = aim
+            elif side == 'R':
                 for q in sorted(front):
                     if a * q + b <= front[q] + 1: end = (front[q], q); break
                 if end is None: end = (a * (APEX[1] + 90) + b, APEX[1] + 90)
@@ -500,7 +597,7 @@ def build(name, c):
 
     if CHECK and c.get('v_auto'):
         # The traced lines over the photo, to check by eye.
-        bx = c.get('trace_box', (240, 60, 900, 780)); Z = 1.5
+        bx = c.get('trace_box', (240, 60, 900, 860) if c.get('db') else (240, 60, 900, 780)); Z = 1.5
         im = src.crop(bx).resize((int((bx[2] - bx[0]) * Z), int((bx[3] - bx[1]) * Z)), Image.LANCZOS)
         d = ImageDraw.Draw(im)
         P = lambda x, y: ((x - bx[0]) * Z, (y - bx[1]) * Z)
