@@ -311,6 +311,44 @@
     return c;
   }
 
+  // The tie (Daniel 2026-11-22: "Have the tie automatically match the suit
+  // fabric color"). Every front photo has the mockup's burgundy tie; its
+  // pixels are found by their redness (nothing else in the photos is red)
+  // and repainted in the fabric's color, keeping the tie's own light and
+  // shadow. One recolored photo per photo + color, cached.
+  const tieCache = [];
+  function tiePhoto(photo, url, hex) {
+    const key = url + "|" + hex;
+    const hit = tieCache.find((e) => e.key === key);
+    if (hit) return hit.canvas;
+    const c = mk(VBW, VBH), cg = c.getContext("2d");
+    cg.drawImage(photo, 0, 0, VBW, VBH);
+    try {
+      // The tie sits in this box on every photo.
+      const X0 = 330, Y0 = 60, W = 150, H = 400;
+      const d = cg.getImageData(X0, Y0, W, H), px = d.data;
+      const wOf = (i) => Math.max(0, Math.min(1, (px[i] - Math.max(px[i + 1], px[i + 2]) - 8) / 14));
+      // The tie's average brightness, so its mid tone becomes the fabric color.
+      let sum = 0, n = 0;
+      for (let i = 0; i < px.length; i += 4) {
+        if (wOf(i) >= 1) { sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; n++; }
+      }
+      if (n) {
+        const mean = sum / n, t = hexRgb(hex);
+        for (let i = 0; i < px.length; i += 4) {
+          const w = wOf(i);
+          if (!w) continue;
+          const k = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) / mean;
+          for (let ch = 0; ch < 3; ch++) px[i + ch] = Math.round(px[i + ch] * (1 - w) + Math.min(255, t[ch] * k) * w);
+        }
+        cg.putImageData(d, X0, Y0);
+      }
+    } catch (e) { /* canvas unreadable: keep the photo's tie */ }
+    tieCache.unshift({ key: key, canvas: c });
+    if (tieCache.length > 4) tieCache.pop();
+    return c;
+  }
+
   // Thread / button colors. "Match Fabric Color" follows the cloth.
   function threadHex(key, v, fabricHex) {
     const o = opt(key, v[key] || v._raw[key]);
@@ -744,7 +782,8 @@
     edgeA = edgeFor(fp.hex);
     let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     const fabricHex = fp.hex;
-    g.drawImage(photo, 0, 0, VBW, VBH);
+    const photoUrl = arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO;
+    g.drawImage(tiePhoto(photo, photoUrl, fabricHex), 0, 0, VBW, VBH);
     floorShadow(g);
     // Arc: once a lining is picked it shows in the opening under the second
     // button, in place of the reference photo's grey damask (Daniel
