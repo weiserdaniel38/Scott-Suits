@@ -1373,7 +1373,121 @@
     out.fabric = f && !/^__same_as__/.test(f) && opt("fabric", f) ? f : v.fabric;
     return out;
   }
+  // The vest's pockets, drawn in the drawn vest's space (centre x 0, top y 0):
+  // lower pockets on both sides, chest pocket on the wearer's left (viewer's
+  // right) or both.
+  function vestPockets(g, va, st, db, vDepth, chest, lower) {
+    const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
+    const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
+    const welt = (x0, y0, len, slant, kind) => {
+      const a = slant ? -0.17 : 0;
+      g.save(); g.translate(x0, y0); g.rotate(a);
+      if (kind === "patch") {
+        g.save(); g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1 * RES;
+        g.strokeStyle = dk(0.45); g.lineWidth = 1.1; g.strokeRect(0, 0, len, len * 0.62); g.restore();
+        g.save(); g.setLineDash([2, 2]); g.strokeStyle = dk(0.4); g.lineWidth = 0.8; g.strokeRect(2.5, 2.5, len - 5, len * 0.62 - 5); g.restore();
+      } else if (kind === "flap") {
+        g.fillStyle = dk(0.12); g.fillRect(0, 0, len, 13);
+        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, 0, len, 13);
+        g.fillStyle = lt(0.08); g.fillRect(0, 0, len, 2);
+      } else if (kind === "besom") {
+        g.fillStyle = "rgba(0,0,0,0.65)"; g.fillRect(0, -0.8, len, 1.6);
+        g.strokeStyle = dk(0.35); g.lineWidth = 0.8; g.strokeRect(0, -3.5, len, 7);
+      } else {
+        const h = kind === "narrow" ? 6 : 10;
+        g.fillStyle = lt(0.04); g.fillRect(0, -h, len, h);
+        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, -h, len, h);
+        g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, -h - 0.6, len, 1.2);
+      }
+      g.restore();
+    };
+    const kindOf = (name) => /Patch/.test(name) ? "patch" : /Flap/.test(name) ? "flap" : /Besom/.test(name) ? "besom" : /Narrow/.test(name) ? "narrow" : "welt";
+    const lp = String(va.lowerpocket || "");
+    if (lower && lp && !/^No /.test(lp)) {
+      const sl = /Slant/.test(lp), k = kindOf(lp);
+      welt(-96, 212, 58, sl, k);
+      welt(38 + (db ? 6 : 0), 212 + (sl ? 10 : 0), 58, sl, k);
+      if (sl) { /* the right one leans the same way */ }
+    }
+    const cp = String(va.chestpocket || "");
+    if (chest && cp && !/^No /.test(cp)) {
+      const k = kindOf(cp);
+      const y = Math.max(vDepth * 0.55, 70) + 34;
+      welt(54, y, 40, false, k);
+      if (/^Both/.test(cp)) welt(-94, y, 40, false, k);
+    }
+  }
+  // The vest is built from Daniel's reference photo (2026-11-22: five
+  // buttons, V-neck, pointed bottom, a chest welt and two lower welts, the
+  // back lining in the neck), like the folded pants: the photo's light and
+  // shadow filled with the chosen fabric (scripts/make_folded_pieces.py).
+  // Piece space VEST_W x VEST_PH; the vest's centre is x 114, its top y 9.5.
+  const VEST_W = 230, VEST_PH = 320;
+  const VEST_SHADE = "./assets/suit-vest-shade.webp?v=1";
+  // The same with the three pockets painted out, for other pocket picks.
+  const VEST_SHADE_PLAIN = "./assets/suit-vest-shade-plain.webp?v=1";
+  const VEST_LINING = "M77.8,7.5 L148.8,7.5 L148.8,9.2 L112.8,118 L77.8,9.8 Z";
+  const VEST_CHEST_BOX = [152, 101.5, 42, 15], VEST_LOWER_BOXES = [[27.8, 206.5, 57.4, 13.5], [144.2, 206.5, 56.8, 13.5]];
+  // A three-piece's vest is always the photo's (only the fabric changes);
+  // Vest Only follows the picks: the photo while the shape matches it, the
+  // drawn vest for any other front, neck or bottom.
   function drawVest(g, v, cx, oy, s, fixed) {
+    const va = vestAnswers(v, fixed);
+    const fb = String(va.frontbutton || "");
+    const asPhoto = fixed || (!/^Double/.test(fb) && /5/.test(fb) && String(va.bottom) === "Pointed" && String(va.collar) === "V-Neck");
+    if (!asPhoto) return drawVestDrawn(g, v, cx, oy, s, fixed);
+    const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
+    const fp = fabricPaint(fab);
+    const classic = img(VEST_SHADE), plain = img(VEST_SHADE_PLAIN);
+    if (!fp.ready || !classic || !plain) return false;
+    const hex = fp.hex, st = fp.strength;
+    const k = s * RES;
+    const W = Math.round(VEST_W * k), H = Math.round(VEST_PH * k);
+    const pc = mk(W, H);
+    const c = pc.getContext("2d");
+    const chestPhoto = String(va.chestpocket) === "Left Welt", lowerPhoto = String(va.lowerpocket) === "Welt";
+    if (chestPhoto && lowerPhoto) c.drawImage(litPiece(classic, fp, W, H), 0, 0);
+    else {
+      c.drawImage(litPiece(plain, fp, W, H), 0, 0);
+      const full = litPiece(classic, fp, W, H);
+      const keep = (b) => {
+        const x0 = Math.round(b[0] * k), y0 = Math.round(b[1] * k), w = Math.round(b[2] * k), h = Math.round(b[3] * k);
+        c.clearRect(x0, y0, w, h);
+        c.drawImage(full, x0, y0, w, h, x0, y0, w, h);
+      };
+      if (chestPhoto) keep(VEST_CHEST_BOX);
+      if (lowerPhoto) VEST_LOWER_BOXES.forEach(keep);
+    }
+    // The back lining seen in the neck: a satin a shade off the cloth.
+    const linHex = mix(lum(hex) < 70 ? mix(hex, "#ffffff", 0.08) : mix(hex, "#000000", 0.25), "#000000", 0.18);
+    const lin = litPiece(classic, { key: "vl:" + linHex, hex: linHex, strength: { a: 0.75, b: 0.4 }, size: 0 }, W, H);
+    c.save();
+    c.scale(k, k); c.clip(new Path2D(VEST_LINING)); c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = "source-atop";
+    c.drawImage(lin, 0, 0);
+    c.restore();
+    // Other pocket picks, drawn on the cloth where the photo's were.
+    c.scale(k, k);
+    c.globalCompositeOperation = "source-atop";
+    if (!chestPhoto || !lowerPhoto) {
+      c.save();
+      c.translate(114, 9.5); c.scale(0.85, 1);
+      vestPockets(c, va, st, false, 114, !chestPhoto, !lowerPhoto);
+      c.restore();
+    }
+    // Pick stitching along the neck and the front edge.
+    if (/^Pick/.test(String(va.pickStitch || ""))) {
+      const lt = "rgba(255,255,255," + (0.35 * st.b).toFixed(3) + ")";
+      line(c, [[74.9, 10.7], [110, 119], [110, 286]], lt, 0.9, [1.6, 3]);
+      line(c, [[155.2, 11.4], [119.6, 119]], lt, 0.9, [1.6, 3]);
+    }
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 12 * s * RES; g.shadowOffsetY = 5 * s * RES;
+    g.drawImage(pc, cx - 114 * s, oy - 9.5 * s, VEST_W * s, VEST_PH * s);
+    g.restore();
+    return true;
+  }
+  function drawVestDrawn(g, v, cx, oy, s, fixed) {
     const va = vestAnswers(v, fixed);
     const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
@@ -1484,45 +1598,7 @@
     }
     // Darts.
     [-1, 1].forEach((sx) => line(g, [[sx * 64, 150], [sx * 66, 200], [sx * 64, 246]], dk(0.28), 1));
-    // Pockets: lower pockets on both sides, chest pocket on the wearer's left
-    // (viewer's right) or both.
-    const welt = (x0, y0, len, slant, kind) => {
-      const a = slant ? -0.17 : 0;
-      g.save(); g.translate(x0, y0); g.rotate(a);
-      if (kind === "patch") {
-        g.save(); g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1 * RES;
-        g.strokeStyle = dk(0.45); g.lineWidth = 1.1; g.strokeRect(0, 0, len, len * 0.62); g.restore();
-        g.save(); g.setLineDash([2, 2]); g.strokeStyle = dk(0.4); g.lineWidth = 0.8; g.strokeRect(2.5, 2.5, len - 5, len * 0.62 - 5); g.restore();
-      } else if (kind === "flap") {
-        g.fillStyle = dk(0.12); g.fillRect(0, 0, len, 13);
-        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, 0, len, 13);
-        g.fillStyle = lt(0.08); g.fillRect(0, 0, len, 2);
-      } else if (kind === "besom") {
-        g.fillStyle = "rgba(0,0,0,0.65)"; g.fillRect(0, -0.8, len, 1.6);
-        g.strokeStyle = dk(0.35); g.lineWidth = 0.8; g.strokeRect(0, -3.5, len, 7);
-      } else {
-        const h = kind === "narrow" ? 6 : 10;
-        g.fillStyle = lt(0.04); g.fillRect(0, -h, len, h);
-        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, -h, len, h);
-        g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, -h - 0.6, len, 1.2);
-      }
-      g.restore();
-    };
-    const kindOf = (name) => /Patch/.test(name) ? "patch" : /Flap/.test(name) ? "flap" : /Besom/.test(name) ? "besom" : /Narrow/.test(name) ? "narrow" : "welt";
-    const lp = String(va.lowerpocket || "");
-    if (lp && !/^No /.test(lp)) {
-      const sl = /Slant/.test(lp), k = kindOf(lp);
-      welt(-96, 212, 58, sl, k);
-      welt(38 + (db ? 6 : 0), 212 + (sl ? 10 : 0), 58, sl, k);
-      if (sl) { /* the right one leans the same way */ }
-    }
-    const cp = String(va.chestpocket || "");
-    if (cp && !/^No /.test(cp)) {
-      const k = kindOf(cp);
-      const y = Math.max(vDepth * 0.55, 70) + 34;
-      welt(54, y, 40, false, k);
-      if (/^Both/.test(cp)) welt(-94, y, 40, false, k);
-    }
+    vestPockets(g, va, st, db, vDepth, true, true);
     // Buttons and buttonholes.
     const btnHex = lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6);
     const button = (x, y) => {

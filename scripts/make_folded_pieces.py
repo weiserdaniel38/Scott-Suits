@@ -85,7 +85,7 @@ def cloth_alpha(L, thresh=104):
     return np.clip(np.where(bg > 0.5, 0, np.where(near > 0.5, edge, 1)), 0, 1)
 
 
-def shade_map(L, alpha, ref, detail=1.7):
+def shade_map(L, alpha, ref, detail=1.7, grain=1.5, fine=0.6, calm_light=False):
     """Brightness against the cloth's own level; edge pixels take the cloth's
     brightness beside them, not the mix with the backdrop."""
     Lmin = np.asarray(Image.fromarray(np.clip(L, 0, 255).astype(np.uint8)).filter(ImageFilter.MinFilter(5))).astype(np.float32)
@@ -94,15 +94,20 @@ def shade_map(L, alpha, ref, detail=1.7):
     # folds, seams and edges stay: fine detail is kept only where it is
     # stronger than the grain.
     base = blur(Le, 6.0)
-    d = blur(Le, 0.6) - base
+    d = blur(Le, fine) - base
     inside = alpha > 0.99
-    t = 1.5 * float(np.median(np.abs(d[inside]))) / 0.6745
+    t = grain * float(np.median(np.abs(d[inside]))) / 0.6745
     # A seam or an edge is strong along its whole run; grain is not.
     run = blur(np.abs(d), 1.6)
     keep = np.clip((run - t * 0.55) / (t * 0.55), 0, 1)
     # The photo is dark cloth with tone-on-tone details: they are deepened so
     # they still read on any fabric.
-    Ls = base + d * keep * detail
+    if calm_light:
+        # Only the dark details are deepened; light ones (stray pale fibres,
+        # the glow beside a seam) are left as they are, less the grain.
+        Ls = base + np.minimum(d, 0) * keep * detail + np.maximum(np.maximum(d, 0) - 0.8 * t, 0)
+    else:
+        Ls = base + d * keep * detail
     r = np.maximum(Ls, 1) / ref
     return np.where(r < 1, 1 - (1 - r) * 0.95, r)
 
@@ -163,7 +168,7 @@ print('PANTS hem', P(1097, 668), P(927, 883), 'leg edges run', (0.838, 0.547), (
 src = Image.open(os.path.join(ROOT, 'assets', 'vest-reference-photo.png')).convert('RGB')
 L = np.asarray(src).astype(np.float32).mean(2)
 BOX = (60, 120, 980, 1400); S = 0.25          # 230 x 320 picture units
-OUT = (920, 1280)                             # the photo's own size (4x)
+OUT = (690, 960)                              # 3x (scaled down, as the pants are, which evens out the grain)
 alpha = cloth_alpha(L)
 LINING = [(371, 150), (655, 150), (655, 157), (511, 592), (371, 159)]
 m = Image.new('L', (L.shape[1] * 2, L.shape[0] * 2), 0)
@@ -174,10 +179,11 @@ ref_l = float(np.median(L[(alpha > 0.99) & (lin > 0.99)]))
 ref = ref_c * (1 - lin) + ref_l * lin
 CHEST = (672, 530, 832, 582)
 LOWER = [(175, 950, 397, 996), (641, 950, 860, 996)]
-save('suit-vest-shade.webp', shade_map(L, alpha, ref), alpha, BOX, OUT)
+VEST_MAP = dict(grain=2.0, calm_light=True)
+save('suit-vest-shade.webp', shade_map(L, alpha, ref, **VEST_MAP), alpha, BOX, OUT)
 Lp = L.copy()
 for r in [CHEST] + LOWER: Lp = inpaint_rect(Lp, r)
-save('suit-vest-shade-plain.webp', shade_map(Lp, alpha, ref), alpha, BOX, OUT)
+save('suit-vest-shade-plain.webp', shade_map(Lp, alpha, ref, **VEST_MAP), alpha, BOX, OUT)
 P = local(BOX, S)
 print('VEST size', [230, 320], 'Lref cloth %.1f lining %.1f' % (ref_c, ref_l))
 print('VEST lining', 'M' + ' L'.join('%g,%g' % P(x, y) for x, y in LINING) + ' Z')
