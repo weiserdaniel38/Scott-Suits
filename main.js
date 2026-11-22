@@ -8268,6 +8268,36 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // Builds one selectable swatch card (used by both the flat grid below and
   // the color-family shade grid) -- picking it stores opt.name on this
   // category and advances to the next tab, same behavior either way.
+  // Hover preview (Daniel 2026-11-22: "when hovering over options on
+  // desktop have the preview change"). On a mouse/trackpad only, resting on
+  // an option card shows it in the Your Jacket picture (jacket-studio.js
+  // reads hoverSelection()); leaving the card puts the real pick back. Never
+  // stored, never touches the order. Touch screens are left alone.
+  let hover = null;
+  let hoverClearTimer = 0;
+  const hoverListeners = [];
+  const canHover = () => !!(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+  function emitHover() { hoverListeners.forEach((fn) => { try { fn(hover); } catch (e) { /* ignore */ } }); }
+  function setHover(key, value) {
+    clearTimeout(hoverClearTimer);
+    if (hover && hover.key === key && hover.value === value) return;
+    hover = { key: key, value: value };
+    emitHover();
+  }
+  // A short wait before going back, so sliding from one card to the next
+  // doesn't flash the real pick in between.
+  function clearHover(now) {
+    clearTimeout(hoverClearTimer);
+    if (!hover) return;
+    if (now) { hover = null; emitHover(); return; }
+    hoverClearTimer = setTimeout(() => { hover = null; emitHover(); }, 120);
+  }
+  function hoverPreview(card, key, value) {
+    if (!canHover()) return;
+    card.addEventListener("mouseenter", () => { if (canHover()) setHover(key, value); });
+    card.addEventListener("mouseleave", () => clearHover());
+  }
+
   function renderSwatchCard(cat, opt, container) {
     // Customer-facing label: the friendly renamed color when this category
     // has one (colorFamilies thread categories), otherwise just opt.name as
@@ -8376,6 +8406,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     // thumbnail. Every other category keeps the original instant-select-
     // on-click behavior unchanged.
     const tabAtRender = activeTab;
+    if (!opt.uploadPhoto) hoverPreview(card, tabAtRender, opt.name);
     if (opt.uploadPhoto) {
       card.onclick = () => {
         // Photo already added and this card isn't the current pick: just pick it.
@@ -8426,6 +8457,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
         ? '<img class="opt-swatch" src="' + sourceOpt.img + '" alt="' + label + '">'
         : '<div class="opt-swatch same-as-placeholder"></div>') +
       '<div class="opt-name">' + label + "</div>";
+    hoverPreview(card, activeTab, sentinel);
     card.onclick = () => {
       order[activeTab] = sentinel;
       if (!embedQuiet) markDesignStarted();
@@ -8978,6 +9010,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   }
 
   function renderOptions() {
+    clearHover(true);
     const cat = catalog[activeTab];
     const gridId = ids.tabs + "OptGrid";
     // Default to the tab strip being expanded -- only the leaf-level shade
@@ -9149,8 +9182,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
           const bgSrc = fab && fab.img && !fab.matchesFabric && !fab.uploadPhoto ? fab.img : null;
           tintThreadImg(card.querySelector("img"), opt.img, threadHexFor(icat.tintWithColorOf), bgSrc);
         }
+        hoverPreview(card, k, opt.name);
         card.onclick = () => {
           cancelAutoAdvance();
+          clearHover(true);
           const off = order[k] === opt.name;
           order[k] = off ? icat.defaultOption : opt.name;
           const parentWasEmpty = !!(req && !order[req.key]);
@@ -9398,6 +9433,10 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     rawSelections: () => Object.assign({}, order),
     getTextsRaw: () => Object.assign({}, customTexts),
     onChange: (fn) => { changeListeners.push(fn); },
+    // The option the mouse is resting on ({ key, value }) or null; see
+    // hoverPreview above.
+    hoverSelection: () => (hover ? { key: hover.key, value: hover.value } : null),
+    onHover: (fn) => { hoverListeners.push(fn); },
     openReview: () => openReview(),
     setReviewRowHandler: (fn) => { reviewRowHandler = fn || null; },
     // Moves this designer's own options element into hostEl (the jacket's

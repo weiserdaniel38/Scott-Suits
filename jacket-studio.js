@@ -170,8 +170,20 @@
 
   // Current answers, raw (exactly what the order stores), plus the classic
   // look for anything unanswered.
+  function hoverOf(designer) {
+    return designer && designer.hoverSelection ? designer.hoverSelection() : null;
+  }
+  // A designer's raw answers with the hovered option laid over them.
+  function withHover(designer, raw) {
+    const hv = hoverOf(designer);
+    if (!hv) return raw;
+    const out = Object.assign({}, raw);
+    out[hv.key] = hv.value;
+    return out;
+  }
   function current() {
-    const raw = D.rawSelections();
+    // Desktop hover preview: the option under the mouse is shown, not picked.
+    const raw = withHover(D, D.rawSelections());
     const v = {};
     Object.keys(PREVIEW_DEFAULTS).forEach((k) => { v[k] = PREVIEW_DEFAULTS[k]; });
     Object.keys(raw).forEach((k) => { if (raw[k] && (D.isShown(k) || (D.isAutoSet && D.isAutoSet(k)))) v[k] = raw[k]; });
@@ -1085,7 +1097,7 @@
   }
   function pantsAnswers(v) {
     const P = typeof pantsDesigner !== "undefined" ? pantsDesigner : null;
-    const raw = P && P.rawSelections ? P.rawSelections() : {};
+    const raw = P && P.rawSelections ? withHover(P, P.rawSelections()) : {};
     const out = {};
     Object.keys(PANTS_DEFAULTS).forEach((k) => {
       out[k] = raw[k] && (!P.isShown || P.isShown(k) || (P.isAutoSet && P.isAutoSet(k))) ? raw[k] : PANTS_DEFAULTS[k];
@@ -1281,7 +1293,7 @@
   const VEST_DEFAULTS = { frontbutton: "5 Buttons", bottom: "Pointed", collar: "V-Neck", chestpocket: "Left Welt", lowerpocket: "Welt", pickStitch: "No Stitching" };
   function vestAnswers(v, fixed) {
     const VD = typeof vestDesigner !== "undefined" ? vestDesigner : null;
-    const raw = VD && VD.rawSelections ? VD.rawSelections() : {};
+    const raw = VD && VD.rawSelections ? withHover(VD, VD.rawSelections()) : {};
     const out = {};
     Object.keys(VEST_DEFAULTS).forEach((k) => {
       out[k] = !fixed && raw[k] && (!VD.isShown || VD.isShown(k) || (VD.isAutoSet && VD.isAutoSet(k))) ? raw[k] : VEST_DEFAULTS[k];
@@ -2177,6 +2189,11 @@
   let lastFabric = D.rawSelections().fabric;
   if (typeof pantsDesigner !== "undefined" && pantsDesigner.onChange) pantsDesigner.onChange(() => { if (context) scheduleDraw(); });
   if (typeof vestDesigner !== "undefined" && vestDesigner.onChange) vestDesigner.onChange(() => { if (context) scheduleDraw(); });
+  // Desktop hover preview (Daniel 2026-11-22): resting the mouse on an option
+  // shows it in the picture; leaving puts the real pick back.
+  [D, typeof pantsDesigner !== "undefined" ? pantsDesigner : null, typeof vestDesigner !== "undefined" ? vestDesigner : null].forEach((d) => {
+    if (d && d.onHover) d.onHover(() => { if (context) scheduleDraw(); });
+  });
   D.onChange(() => {
     if (context) scheduleDraw();
     const f = D.rawSelections().fabric;
