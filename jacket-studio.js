@@ -68,7 +68,7 @@
   // [y, roll line x, lapel edge x] for the viewer's right lapel (measured
   // from the shading; the left one is mirrored, DB has both). The band from
   // the roll line to the edge is stretched or squeezed to the chosen width.
-  const LAPEL_PROFILES = {"notch":[[136,468,468],[150,468,561],[162,466,558],[174,464,554],[186,462,550],[198,460,545],[210,458,541],[222,456,536],[234,452,531],[246,451,525],[258,449,518],[270,447,513],[282,444,511],[294,442,503],[306,439,498],[318,437,493],[330,434,491],[342,432,485],[354,429,480],[366,426,474],[378,424,468],[390,421,462],[402,418,456],[414,414,450],[426,411,443],[438,408,436],[450,404,428],[462,402,421],[474,402,413],[486,402,406],[500,402,402]],"peak":[[106,472,472],[120,472,570],[132,469,565],[144,468,561],[156,467,557],[168,465,556],[180,463,552],[192,461,548],[204,459,543],[216,457,538],[228,454,534],[240,452,528],[252,450,523],[264,448,516],[276,446,510],[288,443,505],[300,441,503],[312,438,495],[324,435,494],[336,433,488],[348,430,482],[360,428,477],[372,425,471],[384,422,465],[396,419,459],[408,416,453],[420,412,446],[432,409,439],[444,406,432],[456,402,425],[468,402,417],[480,402,409],[494,402,402]],"shawl":[[66,477,477],[80,477,522],[92,476,531],[104,474,537],[116,472,540],[128,470,542],[140,469,544],[152,467,544],[164,465,544],[176,464,543],[188,462,541],[200,460,539],[212,458,536],[224,456,533],[236,452,530],[248,451,526],[260,449,523],[272,446,518],[284,444,513],[296,441,509],[308,439,503],[320,436,498],[332,434,492],[344,432,486],[356,429,480],[368,426,474],[380,423,467],[392,420,461],[404,417,454],[416,414,447],[428,411,441],[440,407,434],[452,402,427],[464,402,419],[476,402,414],[488,402,402]],"diamond":[[66,477,477],[80,477,517],[92,476,520],[104,474,523],[116,472,527],[128,470,530],[140,469,534],[152,467,537],[164,465,540],[176,464,544],[188,462,547],[200,460,551],[212,458,548],[224,456,542],[236,452,535],[248,451,529],[260,449,522],[272,446,516],[284,444,509],[296,441,503],[308,439,496],[320,436,490],[332,434,483],[344,432,477],[356,429,470],[368,426,464],[380,423,457],[392,420,451],[404,417,444],[416,414,438],[428,411,431],[440,407,425],[452,402,418],[464,402,412],[476,402,405],[488,402,402]],"arc":[[86,468,468],[100,468,524],[112,467,527],[124,465,528],[136,463,530],[148,461,533],[160,459,536],[172,457,534],[184,455,533],[196,453,531],[208,450,530],[220,433,529],[232,433,526],[244,433,524],[256,433,522],[268,434,520],[280,434,518],[292,433,515],[304,432,512],[316,430,510],[328,428,507],[340,425,505],[352,423,502],[364,420,499],[376,418,497],[388,415,494],[400,413,490],[412,409,487],[440,404,470],[470,401,450],[490,400,425],[500,400,402]],"dbR":[[50,480,480],[80,476,520],[160,462,570],[250,443,540],[350,400,480],[430,368,410],[515,335,335]],"dbL":[[50,325,325],[80,328,280],[155,340,222],[270,362,260],[350,400,310],[380,400,345],[400,400,400]]};
+  const LAPEL_PROFILES = {"notch2":[[161,467,467],[170,466,557],[182,464,552],[194,461,546],[206,460,541],[218,457,535],[230,455,530],[242,453,524],[254,451,519],[266,449,513],[278,446,507],[290,444,502],[302,442,496],[314,439,490],[326,436,485],[338,434,479],[350,431,474],[362,429,468],[374,426,462],[386,423,456],[398,421,451],[410,418,445],[422,415,439],[434,413,433],[446,410,427],[458,407,422],[460,406,421],[489,407,407]],"notch":[[136,468,468],[150,468,561],[162,466,558],[174,464,554],[186,462,550],[198,460,545],[210,458,541],[222,456,536],[234,452,531],[246,451,525],[258,449,518],[270,447,513],[282,444,511],[294,442,503],[306,439,498],[318,437,493],[330,434,491],[342,432,485],[354,429,480],[366,426,474],[378,424,468],[390,421,462],[402,418,456],[414,414,450],[426,411,443],[438,408,436],[450,404,428],[462,402,421],[474,402,413],[486,402,406],[500,402,402]],"peak":[[106,472,472],[120,472,570],[132,469,565],[144,468,561],[156,467,557],[168,465,556],[180,463,552],[192,461,548],[204,459,543],[216,457,538],[228,454,534],[240,452,528],[252,450,523],[264,448,516],[276,446,510],[288,443,505],[300,441,503],[312,438,495],[324,435,494],[336,433,488],[348,430,482],[360,428,477],[372,425,471],[384,422,465],[396,419,459],[408,416,453],[420,412,446],[432,409,439],[444,406,432],[456,402,425],[468,402,417],[480,402,409],[494,402,402]],"shawl":[[66,477,477],[80,477,522],[92,476,531],[104,474,537],[116,472,540],[128,470,542],[140,469,544],[152,467,544],[164,465,544],[176,464,543],[188,462,541],[200,460,539],[212,458,536],[224,456,533],[236,452,530],[248,451,526],[260,449,523],[272,446,518],[284,444,513],[296,441,509],[308,439,503],[320,436,498],[332,434,492],[344,432,486],[356,429,480],[368,426,474],[380,423,467],[392,420,461],[404,417,454],[416,414,447],[428,411,441],[440,407,434],[452,402,427],[464,402,419],[476,402,414],[488,402,402]],"diamond":[[66,477,477],[80,477,517],[92,476,520],[104,474,523],[116,472,527],[128,470,530],[140,469,534],[152,467,537],[164,465,540],[176,464,544],[188,462,547],[200,460,551],[212,458,548],[224,456,542],[236,452,535],[248,451,529],[260,449,522],[272,446,516],[284,444,509],[296,441,503],[308,439,496],[320,436,490],[332,434,483],[344,432,477],[356,429,470],[368,426,464],[380,423,457],[392,420,451],[404,417,444],[416,414,438],[428,411,431],[440,407,425],[452,402,418],[464,402,412],[476,402,405],[488,402,402]],"arc":[[86,468,468],[100,468,524],[112,467,527],[124,465,528],[136,463,530],[148,461,533],[160,459,536],[172,457,534],[184,455,533],[196,453,531],[208,450,530],[220,433,529],[232,433,526],[244,433,524],[256,433,522],[268,434,520],[280,434,518],[292,433,515],[304,432,512],[316,430,510],[328,428,507],[340,425,505],[352,423,502],[364,420,499],[376,418,497],[388,415,494],[400,413,490],[412,409,487],[440,404,470],[470,401,450],[490,400,425],[500,400,402]],"dbR":[[50,480,480],[80,476,520],[160,462,570],[250,443,540],[350,400,480],[430,368,410],[515,335,335]],"dbL":[[50,325,325],[80,328,280],[155,340,222],[270,362,260],[350,400,310],[380,400,345],[400,400,400]]};
   const LAPEL_STD = { "Semi-Notch Lapel": 8.3, "Semi-Peak Lapel": 8.3, "Peak Lapel": 8.9, "Shawl": 8.9, "Arc Lapel": 8.9, "Diamond Lapel": 8 };
   // Where the body meets the sleeve (the gap between them), per picture row,
   // for the lower pockets to run back under the sleeve: [y, left x, right x].
@@ -89,6 +89,28 @@
     sb: [[220, 642], [300, 634], [380, 620]],
     arc: [[220, 610], [300, 601], [380, 593]],
   };
+  // Single breasted notch front from Daniel's own reference photo
+  // (2026-11-22, scripts/make_jacket_photo_front2.py prints these numbers).
+  // The body and the hanging sleeves have a clear gap between them here, so
+  // the lower pockets run to the body's own edge and turn away there.
+  const FRONT2 = {
+    photo: "./assets/jacket-photo-front2.webp?v=1",
+    shade: "./assets/jacket-photo-shade-front2.webp?v=1",
+    mirror: 807,
+    opening: "M403.6,706 L405.3,708 L408,722 L409.3,736 L411.3,750 L414,764 L416,778 L419.3,792 L422,806 L425.3,820 L428.7,834 L432.7,848 L437.3,862 L442,876 L448,890 L455.3,904 L464,918 L464,923.3 L341.3,923.3 L341.3,918 L350,904 L357.3,890 L364,876 L368.7,862 L373.3,848 L377.3,834 L381.3,820 L385.3,806 L388.7,792 L392,778 L394.7,764 L396.7,750 L398.7,736 L400,722 L402,708 Z",
+    openingBox: [335, 700, 470, 928],
+    sides: [[520, 202.7, 602], [560, 202.7, 604], [600, 196, 611.3], [640, 188.7, 618.7], [680, 180, 626], [720, 172, 632.7], [760, 166.7, 637.3], [800, 163.3, 640.7]],
+    chest: [[220, 641], [300, 627], [380, 621]],
+    lapelHole: [[510, 171], [533, 179]],
+    pockets: { top: 622, inL: 298, inR: 508 },
+    // The cuffs sit further in and lower than on the older photo.
+    cuffs: [0.951, 21.07, 18],
+    seam: [[146, 150], [155, 185], [163, 215], [169, 245], [176, 290]], seamMirror: 805,
+    tieBox: [330, 60, 150, 420],
+  };
+  // Notch and Semi-Notch use it; the other lapels keep their own fronts
+  // until Daniel's photo of each is built in.
+  const front2For = (v) => !isDB(v) && v.collar !== "Arc Lapel" && !SHADE_LAPEL[v.collar];
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=13";
   const SHADE_DB_LAPEL = {
     "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=13",
@@ -794,12 +816,13 @@
     const h = lapelHolesFor(v);
     const shawl = v.collar === "Shawl" || v.collar === "Arc Lapel" || v.collar === "Diamond Lapel";
     // On the double breasted photo the holes sit where its own one was.
-    const base = isDB(v) ? (shawl ? [[512, 196], [533, 189]] : [[525, 188], [547, 181]]) : shawl ? [[506, 176], [526, 183]] : [[515, 156], [536, 164]];
+    const f2 = front2For(v);
+    const base = f2 ? FRONT2.lapelHole : isDB(v) ? (shawl ? [[512, 196], [533, 189]] : [[525, 188], [547, 181]]) : shawl ? [[506, 176], [526, 183]] : [[515, 156], [536, 164]];
     const st = isDB(v) ? [-6, 10] : [-4.2, 10.5];
     const at = (i) => [[base[0][0] + st[0] * i, base[0][1] + st[1] * i], [base[1][0] + st[0] * i, base[1][1] + st[1] * i]];
     const out = [];
     for (let i = 0; i < h.left; i++) out.push(at(i));
-    for (let i = 0; i < h.right; i++) out.push(mirrorPts(at(i)));
+    for (let i = 0; i < h.right; i++) out.push(f2 ? at(i).map((q) => [FRONT2.mirror - q[0], q[1]]) : mirrorPts(at(i)));
     return out;
   }
 
@@ -816,7 +839,8 @@
     if (db) return [LAPEL_PROFILES.dbR, LAPEL_PROFILES.dbL];
     const c = v.collar;
     const k = arc ? "arc" : /Peak/.test(c) ? "peak" : c === "Diamond Lapel" ? "diamond" : c === "Shawl" ? "shawl" : "notch";
-    const R = LAPEL_PROFILES[k], m = arc ? 797 : MIRROR_X;
+    const f2 = front2For(v);
+    const R = LAPEL_PROFILES[f2 ? "notch2" : k], m = arc ? 797 : f2 ? FRONT2.mirror : MIRROR_X;
     return [R, R.map((r) => [r[0], m - r[1], m - r[2]])];
   }
   function lapelFactor(v) {
@@ -861,8 +885,10 @@
     // Single breasted Arc: its own photo, built from the generator's approved
     // Arc reference (scripts/make_jacket_photo_arc.py), so it looks like it.
     const arc = !db && v.collar === "Arc Lapel";
-    const shadeUrl = arc ? SHADE_ARC : db ? SHADE_DB_LAPEL[v.collar] || SHADE_DB : SHADE_LAPEL[v.collar] || SHADE.front;
-    const photo = img(arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO), shade = img(shadeUrl);
+    const f2 = front2For(v) ? FRONT2 : null;
+    const shadeUrl = f2 ? f2.shade : arc ? SHADE_ARC : db ? SHADE_DB_LAPEL[v.collar] || SHADE_DB : SHADE_LAPEL[v.collar] || SHADE.front;
+    const photoUrl = f2 ? f2.photo : arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO;
+    const photo = img(photoUrl), shade = img(shadeUrl);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
     if (!photo || !shade || !fp.ready) return false;
@@ -870,9 +896,9 @@
     edgeA = edgeFor(fp.hex);
     let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     const fabricHex = fp.hex;
-    const photoUrl = arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO;
-    g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex)), 0, 0, VBW, VBH);
-    floorShadow(g);
+    g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex), f2 && f2.tieBox), 0, 0, VBW, VBH);
+    // (The new photo keeps its own soft shadow on the floor.)
+    if (!f2) floorShadow(g);
     // Arc: once a lining is picked it shows in the opening under the second
     // button, in place of the reference photo's grey damask (Daniel
     // 2026-11-20). Unlined jackets show the cloth's back there.
@@ -904,7 +930,8 @@
     // Every other single breasted front (Daniel 2026-11-20: "didn't catch my
     // lining"): the photo's fronts open below the bottom button too, so the
     // chosen lining shows there the same way, on top of the cloth shading.
-    if (!db && !arc && showLining) openingLining(SB_OPENING, 330, 690, 470, 912);
+    if (f2 && showLining) openingLining(f2.opening, f2.openingBox[0], f2.openingBox[1], f2.openingBox[2], f2.openingBox[3]);
+    else if (!db && !arc && showLining) openingLining(SB_OPENING, 330, 690, 470, 912);
 
     // The lapel's outer edge beside the chest pocket is in the shading itself
     // (scripts/patch_front_shading.py); no line is drawn over it.
@@ -949,7 +976,7 @@
     // least 12 px short of the sleeve seam.
     const L0 = edgeAt(310) - 20;
     const C12 = Math.cos(12 * Math.PI / 180);
-    const R0 = Math.min(L0 + AW(124, 0.9) * C12, lerpRows(CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 12);
+    const R0 = Math.min(L0 + AW(124, 0.9) * C12, lerpRows(f2 ? f2.chest : CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 12);
     const CW = (R0 - L0) / C12, CX = (L0 + R0) / 2;
     // The pocket's inner end tucks under the lapel when the lapel reaches it
     // (Arc, wide lapels): clip away everything left of the lapel's edge.
@@ -978,10 +1005,12 @@
     // Daniel 2026-11-20: the pockets start at the back and wrap toward the
     // front. Each one runs from the front out past the side of the body and
     // is cut off where the body turns away under the sleeve.
-    const sides = BODY_SIDES[arcFront ? "arc" : "sb"];
+    const sides = f2 ? f2.sides : BODY_SIDES[arcFront ? "arc" : "sb"];
     // Daniel 2026-11-22: "this got cut". The pocket no longer stops at the
     // body's side: it carries on under the sleeve.
-    const sleeves = SLEEVE_SIDES[arcFront ? "arc" : db ? "db" : "sb"];
+    // (On the new photo there is open air between the body and the sleeve:
+    // the pocket stops at the body's own edge.)
+    const sleeves = f2 ? f2.sides : SLEEVE_SIDES[arcFront ? "arc" : db ? "db" : "sb"];
     let bodyD = "M" + sleeves.map((r) => r[1] + "," + r[0]).join(" L");
     bodyD += " L" + sleeves.slice().reverse().map((r) => r[2] + "," + r[0]).join(" L") + " Z";
     onCloth(g, (g) => {
@@ -1004,8 +1033,8 @@
         // Classic placement (2026-11-20, tailoring references): the hip
         // pockets sit level with the bottom button of a two button front,
         // start near the front dart and run to the side.
-        const K = 0.845, TOP = 628;
-        const inL = AX(db ? 290 : 306, K), inR = AX(db ? 513 : 497, K);
+        const K = 0.845, TOP = f2 ? f2.pockets.top : 628;
+        const inL = f2 ? f2.pockets.inL : AX(db ? 290 : 306, K), inR = f2 ? f2.pockets.inR : AX(db ? 513 : 497, K);
         const A = span(TOP + 8, inL, -1), B = span(TOP + 8, inR, 1);
         const wv = A[1] - WRAP;
         const isPatch = /patch/.test(lp.main);
@@ -1069,7 +1098,7 @@
     const handHole = !!v.lapelButtonholeStyle && v.lapelButtonholeStyle !== "Machine Sewn";
     spots.forEach((s) => hole(g, s[1], s[0], lapelHoleHex, handHole ? 3.4 : 2.4));
     anchors.lapelHole = spots.length ? [spots[0][0][0] + 4, spots[0][0][1] - 22] : [520, 134];
-    if (v.monogram === "Monogram Placement On Left Button") monogramText(g, 520, 214, v, 10, -1.17);
+    if (v.monogram === "Monogram Placement On Left Button") monogramText(g, f2 ? 517 : 520, f2 ? 229 : 214, v, 10, -1.17);
 
     // Front buttons and their buttonholes.
     const lay = frontLayout(v.frontbutton);
@@ -1090,6 +1119,11 @@
     anchors.topButton = [top.x, top.y];
 
     // Sleeve buttons: seen edge on at the back of each cuff.
+    if (f2) {
+      g.save(); g.transform(f2.cuffs[0], 0, 0, 1, f2.cuffs[1], f2.cuffs[2]); drawCuffs(g, v, look, holes, false); g.restore();
+      sleeveHeads(g, v, f2.seam, f2.seamMirror);
+      return true;
+    }
     squeeze(0.822, () => drawCuffs(g, v, look, holes, false));
     squeeze(0.92, () => sleeveHeads(g, v, [[141, 130], [150, 180], [163, 213], [170, 243], [180, 290]]));
     return true;
@@ -1097,11 +1131,11 @@
   // Sleeve heads (pts: the viewer's left armhole seam from the shoulder down;
   // mirrored for the right). Naples: small gathers at the top of the sleeve;
   // close seam: a line of topstitching beside the seam.
-  function sleeveHeads(g, v, pts) {
+  function sleeveHeads(g, v, pts, mirror) {
     const sc = v.sleevecrown;
     if (sc !== "Naples Sleeve" && sc !== "Close Seam Sleeve") return;
     [1, -1].forEach((s) => {
-      const P = pts.map((p) => [s > 0 ? p[0] : MIRROR_X - p[0], p[1]]);
+      const P = pts.map((p) => [s > 0 ? p[0] : (mirror || MIRROR_X) - p[0], p[1]]);
       if (sc === "Close Seam Sleeve") {
         line(g, P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1]]), "rgba(255,255,255,0.32)", 0.9, [2.2, 2]);
         line(g, P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1] + 0.8]), "rgba(0,0,0,0.3)", 0.7, [2.2, 2]);
