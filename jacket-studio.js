@@ -565,7 +565,13 @@
       // above the opening.)
       const two = Math.min(124, 664 - sb.y1), three = Math.min(82, (Math.min(690, sb.openTop - 16) - sb.y1) / 2);
       const ys = /^Single Breasted One/.test(n) ? [0] : /^Single Breasted Three/.test(n) ? [0, three, three * 2] : [0, two];
-      return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i ? -(FRONT_BUTTON_R - 8) : FRONT_BUTTON_R + 1), y: sb.y1 + d, fast: !i })) };
+      // Which buttons are done up (Daniel 2026-11-22: "make each one make
+      // sense whether to be exposed or not"): one or two buttons, the top
+      // one; three buttons, the top two. The last button is left undone, as
+      // it is worn. A fastened button sits fully on the top front; an undone
+      // one is on the under front, part hidden by the top front's edge.
+      const nFast = ys.length === 3 ? 2 : 1;
+      return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i >= nFast ? -(FRONT_BUTTON_R - 8) : FRONT_BUTTON_R + 1), y: sb.y1 + d, fast: i < nFast })) };
     }
     // One button at the waist (where the lapels end); three buttons with the
     // lapels rolling to the top one.
@@ -590,10 +596,16 @@
     const d = DB[n] || DB["Double Breasted 6X2"];
     const buttons = [];
     let fastY = 0;
+    // Double breasted is worn done up: every button shows. From the
+    // fastening row down the left buttons come through the top front, so
+    // they sit fully on it, clear of its edge (the rows were measured 11.3
+    // from the edge, for a smaller button); the right ones move in to match.
+    const inset = rows ? Math.max(0, FRONT_BUTTON_R + 1.5 - 11.3) : 0;
+    d.rows.forEach((r) => { if (r[3]) fastY = r[0]; });
     d.rows.forEach((r) => {
-      if (r[3]) fastY = r[0];
-      buttons.push({ x: r[1], y: r[0], fast: !!r[3], db: true, left: true });
-      if (!d.leftOnly) buttons.push({ x: r[2], y: r[0], fast: false, db: true });
+      const dx = r[0] >= fastY ? inset : 0;
+      buttons.push({ x: r[1] + dx, y: r[0], fast: !!r[3], db: true, left: true });
+      if (!d.leftOnly) buttons.push({ x: r[2] - dx, y: r[0], fast: false, db: true });
     });
     // Buttonholes show beside the left buttons from the fastening row down.
     buttons.forEach((b) => { b.holed = b.left && b.y >= fastY; });
@@ -1196,7 +1208,12 @@
     lay.buttons.forEach((b) => {
       if (lay.db) { if (b.holed) hole(g, [b.x + BR + 2.5, b.y + 1], [b.x + BR + 19.5, b.y + 1], holeHexNext(), 2.4); }
       else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + BR + 2.5, b.y], holeHexNext(), 2.4);
-      else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHexNext(), 2.4);
+      else if (f2 && f2.edge) {
+        // An undone button's buttonhole: on the top front, in line with the
+        // fastened ones.
+        const e0 = lerpRows(f2.edge, b.y, 1);
+        hole(g, [e0 + BR - 1, b.y], [e0 + 2 * BR + 3.5, b.y], holeHexNext(), 2.4);
+      } else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHexNext(), 2.4);
       if (!lay.db && !b.fast && f2 && f2.edge) {
         // An undone button sits on the under front and tucks under the top
         // front's edge (Daniel 2026-11-22: "slightly covered by the jacket,
