@@ -1465,6 +1465,15 @@
     return true;
   }
 
+  // The back photo's outline has a few leftovers from the mockup (Daniel
+  // 2026-11-22: "these make no sense"): wisps under both sleeve ends, a
+  // square step in the middle of the hem and a flat, boxy neck. Everything
+  // the back and inside views draw is kept inside this outline instead.
+  const BACK_TRIM = "M0,851 L140,851 L141,893 Q175,912 210,918 Q400,930 590,918 Q625,912 659,896 L659,856 L800,856 L800,1000 L0,1000 Z";
+  const NECK_TRIM = "M300,-10 H500 V40 L480,48 Q400,30 320,48 L300,40 Z";
+  function keepClip(g, neck) {
+    g.clip(new Path2D("M-10,-10 H810 V1010 H-10 Z " + BACK_TRIM + (neck ? " " + NECK_TRIM : "")), "evenodd");
+  }
   function drawBack(g, v, anchors) {
     const shade = img(SHADE.back);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
@@ -1474,11 +1483,10 @@
     edgeA = edgeFor(fp.hex);
     const layer = cachedLayer("back|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     floorShadow(g);
-    // The shirt collar above the jacket collar.
+    // (No shirt collar from behind: on the plain card it only showed as a
+    // floating outline.)
     g.save();
-    g.beginPath(); g.moveTo(334, 48); g.quadraticCurveTo(400, 26, 466, 48); g.lineTo(463, 38); g.quadraticCurveTo(400, 16, 337, 38); g.closePath();
-    g.fillStyle = "#f4f1ec"; g.fill(); g.strokeStyle = "rgba(0,0,0,0.12)"; g.stroke();
-    g.restore();
+    keepClip(g, true);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
     // Seams: center back and side panels.
     line(g, [[400, 62], [402, 300], [398, 620], [400, HEM]], "rgba(0,0,0,0.42)", 1.3);
@@ -1508,10 +1516,12 @@
     if (vent === "Center Vent") ventAt(400, 0);
     else if (vent === "Side Vent") { ventAt(194, 3); ventAt(606, -3); }
     // Collar.
-    clothPiece(g, layer, "M316,58 Q400,26 484,58 L490,86 Q400,62 310,86 Z", { shadow: 0.45, blur: 4, drop: 2, stitch: "M320,62 Q400,32 480,62" });
-    if (v.monogram === "Monogram On Middle Under Collar") monogramText(g, 400, 66, v, 9, 0);
+    // The collar follows the rounded neck and runs into the shoulder seams.
+    clothPiece(g, layer, "M320,48 Q400,30 480,48 L500,66 Q400,74 300,66 Z", { shadow: 0.4, blur: 4, drop: 2, stitch: "M323,52 Q400,35 477,52" });
+    if (v.monogram === "Monogram On Middle Under Collar") monogramText(g, 400, 58, v, 9, 0);
     const look = buttonLook(v, fp.hex);
     drawCuffs(g, v, look, buttonholeHexes(v, fp.hex), true);
+    g.restore();
     anchors.vent = [400, 820];
     return true;
   }
@@ -1545,6 +1555,8 @@
     regions.push({ path: facingPath(facing, -1), paint: fp }, { path: facingPath(facing, 1), paint: fp });
     const layer = cachedLayer("inside|" + fp.key + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
     floorShadow(g);
+    g.save();
+    keepClip(g, false);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
     const pipe = lined ? mix(lp.hex, "#ffffff", 0.18) : mix(fp.hex, "#ffffff", 0.25);
     // Satin sheen on the lining.
@@ -1605,6 +1617,7 @@
       g.save(); g.fillStyle = "#f1ece2"; g.fillRect(498, 334, 64, 20); g.restore();
       monogramText(g, 530, 344, v, 12, 0);
     } else if (mg === "Monogram On Middle Under Collar") monogramText(g, 400, 66, v, 9, 0);
+    g.restore();
     anchors.monogram = mg === "On Right Inside Pocket" ? [270, 372] : [530, 372];
     return true;
   }
@@ -1710,15 +1723,16 @@
       // The pants / vest sit on the same backdrop as the jacket photo.
       if (ok && (lay.pants || lay.vest)) {
         const y0 = lay.jacket ? VBH : 0;
-        let bg = "#ECE6DF";
+        // (The back and inside views have no photo behind them: no fill, so
+        // the pants sit on the same plain card as the jacket.)
+        let bg = lay.jacket ? null : "#ECE6DF";
         if (lay.jacket) {
           try {
             const d = g.getImageData(4 * RES, (VBH - 3) * RES, 1, 1).data;
             if (d[3] > 200) bg = "rgb(" + d[0] + "," + d[1] + "," + d[2] + ")";
-          } catch (e) { /* keep the default */ }
+          } catch (e) { /* no fill */ }
         }
-        g.fillStyle = bg;
-        g.fillRect(0, y0, VBW, h - y0);
+        if (bg) { g.fillStyle = bg; g.fillRect(0, y0, VBW, h - y0); }
       }
       if (ok && lay.pants) {
         if (lay.jacket && lay.vest) {
