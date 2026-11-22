@@ -42,27 +42,27 @@
   const VBH = 952;
   const MODE_KEY = "scottSuitsDesignMode";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const PHOTO = "./assets/jacket-photo-front.webp?v=7";
-  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=6", back: "./assets/jacket-photo-shade-back.webp?v=5" };
+  const PHOTO = "./assets/jacket-photo-front.webp?v=17";
+  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=16", back: "./assets/jacket-photo-shade-back.webp?v=15" };
   // The photo has notch lapels; the other styles have their own front shading
   // with the lapels redrawn (scripts/make_jacket_photo.py).
   const SHADE_LAPEL = {
-    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
-    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=3",
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=3",
-    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=3",
+    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=13",
+    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=13",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=13",
+    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=13",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=13",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
-  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=5";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=6";
+  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=15";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=16";
   // The lining seen in the Arc photo's opening below the second button (in
   // picture space; scripts/make_jacket_photo_arc.py LINING, mapped).
   // The same opening on the main photo (traced from its shading).
   const SB_OPENING = "M400,697 L403,705 L412,740 L420,770 L430,800 L441,830 L450,860 L458,885 L463,907 L337,907 L347,880 L358,850 L372,820 L383,790 L390,760 L396,720 Z";
   const ARC_OPENING = "M398.8,679 L403.1,700 L412.4,749.5 L427.9,799 L444,842.4 L448.3,856 L343.7,856 L351.2,842.4 L363.5,823.8 L375.3,792.8 L384.6,749.5 L393.9,700 Z";
-  const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=1";
+  const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=11";
   // Lapel widths (Daniel 2026-11-20: "lapel widths reflected accurately, on
   // all lapels"). Each photo shows the Standard width. Per picture row:
   // [y, roll line x, lapel edge x] for the viewer's right lapel (measured
@@ -81,11 +81,11 @@
     sb: [[220, 642], [300, 634], [380, 620]],
     arc: [[220, 610], [300, 601], [380, 593]],
   };
-  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=1";
+  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=11";
   const SHADE_DB_LAPEL = {
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=1",
-    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=1",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=11",
+    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=11",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=11",
   };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
@@ -255,9 +255,15 @@
   // ---- Canvas drawing --------------------------------------------------------
   function mk(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
   // Resolution: a bit above the photo so stitching stays crisp when zoomed.
-  const RES = Math.min(2, Math.max(1.25, window.devicePixelRatio || 1));
-  const CW = Math.round(VBW * RES), CH = Math.round(VBH * RES);
-  const tileCache = {};
+  // It follows the screen and the zoom (setRes below), so the picture is
+  // never stretched: Daniel 2026-11-22, "no blurs on any preview".
+  const BASE_RES = Math.min(2, Math.max(1.25, window.devicePixelRatio || 1));
+  let RES = BASE_RES;
+  let CW = Math.round(VBW * RES), CH = Math.round(VBH * RES);
+  let tileCache = {};
+  // The shading maps and photos are stored larger than the picture's units
+  // (scripts/crisp_jacket_shading.py); k = their pixels per unit.
+  const unitK = (im) => (im.naturalWidth || im.width) / VBW;
   function paintStyle(g, p) {
     if (!p.img || !p.size) return p.hex;
     const k = p.key + "@" + p.size;
@@ -295,17 +301,18 @@
       hg.fillStyle = paintStyle(hg, rg.paint);
       hg.fillRect(0, 0, CW, CH);
       hg.globalCompositeOperation = "multiply";
-      hg.drawImage(shade, 0, VBH, VBW, VBH, 0, 0, CW, CH);
+      const sk = unitK(shade);
+      hg.drawImage(shade, 0, VBH * sk, VBW * sk, VBH * sk, 0, 0, CW, CH);
       const s = rg.paint.strength;
       tg.globalCompositeOperation = "multiply";
       tg.globalAlpha = s.a;
-      tg.drawImage(shade, 0, 0, VBW, VBH, 0, 0, CW, CH);
+      tg.drawImage(shade, 0, 0, VBW * sk, VBH * sk, 0, 0, CW, CH);
       tg.globalCompositeOperation = "lighter";
       tg.globalAlpha = s.b * (rg.highlight == null ? 1 : rg.highlight);
       tg.drawImage(scratch, 0, 0);
       tg.globalAlpha = 1;
       tg.globalCompositeOperation = "destination-in";
-      tg.drawImage(shade, 0, 0, VBW, VBH, 0, 0, CW, CH);
+      tg.drawImage(shade, 0, 0, VBW * sk, VBH * sk, 0, 0, CW, CH);
       tg.restore();
       og.drawImage(t, 0, 0);
     });
@@ -326,18 +333,41 @@
   // The tie (Daniel 2026-11-22: "Have the tie automatically match the suit
   // fabric color"). Every front photo has the mockup's burgundy tie; its
   // pixels are found by their redness (nothing else in the photos is red)
-  // and repainted in the fabric's color, keeping the tie's own light and
+  // and repainted in tieHex(fabric), keeping the tie's own light and
   // shadow. One recolored photo per photo + color, cached.
+  // Later the same day: "can contrast but should still match the palette".
+  // So the tie is a tonal partner of the cloth, not the same shade: the
+  // fabric's hue turned a little (analogous), richer, and lighter on dark
+  // cloth / deeper on light cloth so it stands out from the jacket.
+  function tieHex(hex) {
+    const [r, g, b] = hexRgb(hex).map((v) => v / 255);
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, s = 0;
+    if (d) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    const H = (h + 14 + 360) % 360;
+    const S = Math.min(0.45, s < 0.08 ? s + 0.08 : s * 1.05 + 0.04);
+    const L = l < 0.32 ? Math.min(0.36, l + 0.07 + (0.32 - l) * 0.15) : Math.max(0.12, l - 0.18);
+    const C = (1 - Math.abs(2 * L - 1)) * S, X = C * (1 - Math.abs(((H / 60) % 2) - 1)), m = L - C / 2;
+    const seg = [[C, X, 0], [X, C, 0], [0, C, X], [0, X, C], [X, 0, C], [C, 0, X]][Math.floor(H / 60) % 6];
+    return "#" + seg.map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0")).join("");
+  }
   const tieCache = [];
   function tiePhoto(photo, url, hex, box) {
     const key = url + "|" + hex;
     const hit = tieCache.find((e) => e.key === key);
     if (hit) return hit.canvas;
-    const c = mk(VBW, VBH), cg = c.getContext("2d");
-    cg.drawImage(photo, 0, 0, VBW, VBH);
+    // At the photo's own size, so the shirt and tie stay as sharp as the photo.
+    const pk = unitK(photo);
+    const c = mk(Math.round(VBW * pk), Math.round(VBH * pk)), cg = c.getContext("2d");
+    cg.drawImage(photo, 0, 0, c.width, c.height);
     try {
       // The tie sits in this box on every photo.
-      const X0 = box ? box[0] : 330, Y0 = box ? box[1] : 60, W = box ? box[2] : 150, H = box ? box[3] : 400;
+      const bx = box || [330, 60, 150, 400];
+      const X0 = Math.round(bx[0] * pk), Y0 = Math.round(bx[1] * pk), W = Math.round(bx[2] * pk), H = Math.round(bx[3] * pk);
       const d = cg.getImageData(X0, Y0, W, H), px = d.data;
       const wOf = (i) => Math.max(0, Math.min(1, (px[i] - Math.max(px[i + 1], px[i + 2]) - 8) / 14));
       // The tie's average brightness, so its mid tone becomes the fabric color.
@@ -510,7 +540,8 @@
         tg.fill(p);
         tg.setTransform(1, 0, 0, 1, 0, 0);
         tg.globalCompositeOperation = "destination-in";
-        tg.drawImage(curShade, x0, y0, bw, bh, 0, 0, t.width, t.height);
+        const sk = unitK(curShade);
+        tg.drawImage(curShade, x0 * sk, y0 * sk, bw * sk, bh * sk, 0, 0, t.width, t.height);
         g.save();
         g.setTransform(1, 0, 0, 1, 0, 0);
         g.drawImage(t, x0 * RES, y0 * RES);
@@ -557,7 +588,8 @@
     fn(tg);
     tg.setTransform(1, 0, 0, 1, 0, 0);
     tg.globalCompositeOperation = "destination-in";
-    tg.drawImage(curShade, 0, 0, VBW, VBH, 0, 0, t.width, t.height);
+    const sk = unitK(curShade);
+    tg.drawImage(curShade, 0, 0, VBW * sk, VBH * sk, 0, 0, t.width, t.height);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(t, 0, 0); g.restore();
   }
   function rotPath(pts, cx, cy, deg) {
@@ -795,7 +827,7 @@
     let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     const fabricHex = fp.hex;
     const photoUrl = arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO;
-    g.drawImage(tiePhoto(photo, photoUrl, fabricHex), 0, 0, VBW, VBH);
+    g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex)), 0, 0, VBW, VBH);
     floorShadow(g);
     // Arc: once a lining is picked it shows in the opening under the second
     // button, in place of the reference photo's grey damask (Daniel
@@ -1578,7 +1610,7 @@
     const regions = [{ path: null, paint: fp }];
     if (lined) regions.push({ path: linPath, paint: lp, highlight: 0.9 });
     const layer = cachedLayer("inside|" + fp.key + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
-    g.drawImage(tiePhoto(photo, PHOTO_INSIDE, fp.hex, [350, 80, 96, 585]), 0, 0, VBW, VBH);
+    g.drawImage(tiePhoto(photo, PHOTO_INSIDE, tieHex(fp.hex), [350, 80, 96, 585]), 0, 0, VBW, VBH);
     floorShadow(g);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
     if (half && lined) {
@@ -1753,6 +1785,7 @@
     if (ok) {
       // Swap in one go so a redraw never flickers.
       if (h !== picH) setPicH(h);
+      if (photoCanvas.width !== next.width || photoCanvas.height !== next.height) { photoCanvas.width = next.width; photoCanvas.height = next.height; }
       pg.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
       pg.drawImage(next, 0, 0);
       anchors = a;
@@ -1768,6 +1801,31 @@
   // The picture is fitted into the frame, then scaled by zoom.s around the
   // point (zoom.cx, zoom.cy), which sits in the middle of the frame.
   let fit = { k: 1, w: 0, h: 0 };
+  // Zoom stops where the photo's own detail runs out.
+  const MAX_ZOOM = 3;
+  // The picture is redrawn at the size it is shown (screen pixels per
+  // picture unit), in steps, a moment after the zoom or the frame settles.
+  // Phones stay at 2 (canvas memory); bigger screens go to 3.
+  let resTimer = 0;
+  function wantedRes() {
+    const dpr = window.devicePixelRatio || 1;
+    const shown = art.getBoundingClientRect().width * dpr / VBW;
+    const cap = window.matchMedia && window.matchMedia("(min-width: 901px)").matches ? 3 : 2;
+    const need = Math.min(cap, shown * 0.95);
+    return [BASE_RES, 2, 3].find((r) => r >= need && r >= BASE_RES) || cap;
+  }
+  function checkRes() {
+    resTimer = 0;
+    if (!context || !art.getBoundingClientRect().width) return;
+    const r = wantedRes();
+    if (r === RES) return;
+    RES = r;
+    CW = Math.round(VBW * RES); CH = Math.round(VBH * RES);
+    tileCache = {};
+    layerCache.length = 0;
+    scratch = null;
+    draw();
+  }
   function measure() {
     const r = canvasBox.getBoundingClientRect();
     // On wider screens keep room at the sides for the zoom buttons.
@@ -1775,7 +1833,7 @@
     fit = { w: r.width, h: r.height, k: Math.min((r.width - 2 * side) / VBW, r.height / picH) || 1 };
   }
   function clampZoom(z) {
-    const s = Math.max(1, Math.min(4, z.s));
+    const s = Math.max(1, Math.min(MAX_ZOOM, z.s));
     const k = fit.k * s;
     const halfW = fit.w / (2 * k), halfH = fit.h / (2 * k);
     const cx = VBW <= halfW * 2 ? VBW / 2 : Math.max(halfW, Math.min(VBW - halfW, z.cx));
@@ -1796,6 +1854,8 @@
     art.style.transform = "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px) scale(" + zoom.s.toFixed(4) + ")";
     positionMarkers();
     canvasBox.classList.toggle("zoomed", zoom.s > 1.01);
+    if (resTimer) clearTimeout(resTimer);
+    resTimer = setTimeout(checkRes, 180);
   }
   function animateZoom(target) {
     measure();
@@ -1870,7 +1930,7 @@
         if (view !== "front") setView("front");
         return resetZoom();
       }
-      zoomTo(zoom.cx, zoom.cy, Math.max(1, Math.min(4, zoom.s * (z === "in" ? 1.5 : 1 / 1.5))));
+      zoomTo(zoom.cx, zoom.cy, Math.max(1, Math.min(MAX_ZOOM, zoom.s * (z === "in" ? 1.5 : 1 / 1.5))));
     };
   });
   // Drag to look around while zoomed in; pinch or ctrl+wheel to zoom.
@@ -1923,7 +1983,7 @@
     const k0 = fit.k * zoom.s;
     const px = zoom.cx + mx / k0, py = zoom.cy + my / k0;
     const step = Math.pow(1.0018, -Math.max(-120, Math.min(120, e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY)));
-    const s1 = Math.max(1, Math.min(4, zoom.s * step));
+    const s1 = Math.max(1, Math.min(MAX_ZOOM, zoom.s * step));
     const k1 = fit.k * s1;
     zoom = clampZoom({ s: s1, cx: px - mx / k1, cy: py - my / k1 });
     applyZoom();
@@ -2053,7 +2113,11 @@
     const word = suit ? "suit" : lay.jacket ? "jacket" : lay.vest ? "vest" : "pants";
     shell.querySelector(".studio-views").style.display = lay.jacket ? "" : "none";
     PEEK_CROP.h = picH - 40;
-    peekCanvas.height = Math.round(240 * PEEK_CROP.h / PEEK_CROP.w);
+    // As many pixels as the card shows on this screen (never stretched).
+    const pw = Math.max(240, Math.min(720, Math.round(120 * (window.devicePixelRatio || 1))));
+    peekCanvas.width = pw;
+    peekCanvas.height = Math.round(pw * PEEK_CROP.h / PEEK_CROP.w);
+    peekG.imageSmoothingQuality = "high";
     peekPic.style.aspectRatio = PEEK_CROP.w + " / " + PEEK_CROP.h;
     peekLabel.textContent = "Your " + word;
     peek.setAttribute("aria-label", "See your " + word + " so far");
