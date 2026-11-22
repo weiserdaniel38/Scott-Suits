@@ -1203,182 +1203,157 @@
     out.fabric = f && !/^__same_as__/.test(f) && opt("fabric", f) ? f : v.fabric;
     return out;
   }
-  function drawPants(g, v, oy) {
+  // The folded pants are built from Daniel's reference photo (2026-11-22,
+  // "Match this": charcoal pants folded flat, waistband on the right with
+  // two belt loops, a slit back pocket with a button, the leg folded back
+  // under on the left). Like the jacket's views, the photo's light and
+  // shadow are a shading map filled with the chosen fabric
+  // (scripts/make_folded_pieces.py). Piece space: PANTS_W x PANTS_PH.
+  const PANTS_W = 634, PANTS_PH = 326;
+  const PANTS_SHADE = "./assets/suit-pants-folded-shade.webp?v=1";
+  // The same with the loops, pocket and button painted out, for other picks.
+  const PANTS_SHADE_PLAIN = "./assets/suit-pants-folded-shade-plain.webp?v=1";
+  // Where the photo's own details sit (piece units: x, y, w, h).
+  const PANTS_LOOP_BOXES = [[564, 45.6, 58, 22], [564, 209.8, 58, 21.2]];
+  const PANTS_SLIT_BOX = [529.5, 99.6, 19.2, 129.2], PANTS_BUTTON_BOX = [503.9, 146, 25.6, 29];
+  // Cloth lit by a piece's shading map, at any size (in canvas pixels).
+  const pieceCache = [];
+  function litPiece(shade, paint, w, h) {
+    const key = shade.src + "|" + paint.key + "|" + w + "x" + h;
+    const hit = pieceCache.find((e) => e.key === key);
+    if (hit) return hit.canvas;
+    const sw = shade.naturalWidth, sh = shade.naturalHeight / 2;
+    const t = mk(w, h), tg = t.getContext("2d");
+    tg.fillStyle = paintStyle(tg, paint); tg.fillRect(0, 0, w, h);
+    const hc = mk(w, h), hg = hc.getContext("2d");
+    hg.fillStyle = paintStyle(hg, paint); hg.fillRect(0, 0, w, h);
+    hg.globalCompositeOperation = "multiply";
+    hg.drawImage(shade, 0, sh, sw, sh, 0, 0, w, h);
+    const s = paint.strength;
+    tg.globalCompositeOperation = "multiply"; tg.globalAlpha = s.a;
+    tg.drawImage(shade, 0, 0, sw, sh, 0, 0, w, h);
+    tg.globalCompositeOperation = "lighter"; tg.globalAlpha = s.b;
+    tg.drawImage(hc, 0, 0);
+    tg.globalAlpha = 1; tg.globalCompositeOperation = "destination-in";
+    tg.drawImage(shade, 0, 0, sw, sh, 0, 0, w, h);
+    pieceCache.unshift({ key: key, canvas: t });
+    if (pieceCache.length > 6) pieceCache.pop();
+    return t;
+  }
+  // Drawn at (x, y) in the picture, s picture units per piece unit.
+  function drawPants(g, v, x, y, s) {
     const pa = pantsAnswers(v);
     const fab = opt("fabric", pa.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
-    if (!fp.ready) return false;
+    const classic = img(PANTS_SHADE), plain = img(PANTS_SHADE_PLAIN);
+    if (!fp.ready || !classic || !plain) return false;
     const hex = fp.hex;
     const st = fp.strength;
-    const T = (pts) => pts.map((p) => [p[0], p[1] + oy]);
-    // Outline points: A top fold corner, B waist top, C waist bottom,
-    // H2 hem's inner end, L leg fold bottom, H1 hem's outer end.
-    const A = [178, 20], B = [664, 16], C = [668, 252], H2 = [470, 226], L = [134, 184], H1 = [416, 292];
-    const main = new Path2D();
-    main.moveTo(A[0], A[1] + oy);
-    main.quadraticCurveTo(420, 12 + oy, B[0], B[1] + oy);
-    main.lineTo(C[0], C[1] + oy);
-    main.quadraticCurveTo(570, 236 + oy, H2[0], H2[1] + oy);
-    main.quadraticCurveTo(300, 120 + oy, A[0], A[1] + oy);
-    main.closePath();
-    const leg = new Path2D();
-    leg.moveTo(A[0], A[1] + oy);
-    leg.quadraticCurveTo(300, 120 + oy, H2[0], H2[1] + oy);
-    leg.lineTo(H1[0], H1[1] + oy);
-    leg.lineTo(L[0], L[1] + oy);
-    leg.quadraticCurveTo(146, 96 + oy, A[0], A[1] + oy);
-    leg.closePath();
-    const fill = (path, shadow) => {
-      g.save();
-      if (shadow) {
-        g.shadowColor = "rgba(0,0,0," + shadow[0] + ")";
-        g.shadowBlur = shadow[1] * RES;
-        g.shadowOffsetX = shadow[2] * RES;
-        g.shadowOffsetY = shadow[3] * RES;
-        g.fillStyle = hex;
-        g.fill(path);
-        g.shadowColor = "transparent";
-      }
-      g.clip(path);
-      const m = g.getTransform();
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.fillStyle = paintStyle(g, fp);
-      g.fillRect(0, 0, g.canvas.width, g.canvas.height);
-      g.setTransform(m);
-      return true;
-    };
-    const shadeGrad = (x0, y0, x1, y1, stops) => {
-      const gr = g.createLinearGradient(x0, y0 + oy, x1, y1 + oy);
-      stops.forEach((s) => gr.addColorStop(s[0], s[1]));
-      g.fillStyle = gr;
-      g.fillRect(0, oy, VBW, PANTS_H);
-    };
+    const k = s * RES;
+    const W = Math.round(PANTS_W * k), H = Math.round(PANTS_PH * k);
+    const pc = mk(W, H);
+    const c = pc.getContext("2d");
+    const bp = String(pa.backPocket || "");
+    const slit = bp && bp !== "No Pocket" && !/Flap/.test(bp);
+    const slitButton = slit && !/No Button/.test(bp);
+    const loops = pa.beltLoops === "Belt Loops";
+    // The photo as it is, or the plain one with the photo's own details put
+    // back wherever the pick matches them.
+    if (loops && slitButton) c.drawImage(litPiece(classic, fp, W, H), 0, 0);
+    else {
+      c.drawImage(litPiece(plain, fp, W, H), 0, 0);
+      const full = litPiece(classic, fp, W, H);
+      const keep = (b) => {
+        const x0 = Math.round(b[0] * k), y0 = Math.round(b[1] * k), w = Math.round(b[2] * k), h = Math.round(b[3] * k);
+        c.clearRect(x0, y0, w, h);
+        c.drawImage(full, x0, y0, w, h, x0, y0, w, h);
+      };
+      if (loops) PANTS_LOOP_BOXES.forEach(keep);
+      if (slit) keep(PANTS_SLIT_BOX);
+      if (slitButton) keep(PANTS_BUTTON_BOX);
+    }
+    // The picks the photo does not have, drawn on the cloth.
+    c.scale(k, k);
+    c.globalCompositeOperation = "source-atop";
     const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
     const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
-    // Upper pants (seat and thigh), lying flat on the floor.
-    fill(main, [0.28, 14, 0, 6]);
-    shadeGrad(200, 20, 560, 250, [[0, lt(0.07)], [0.55, "rgba(0,0,0,0)"], [1, dk(0.16)]]);
-    g.restore();
-    // Waistband along the right edge.
-    const W = 24;
-    const band = new Path2D();
-    band.moveTo(B[0] - W, B[1] + 1 + oy); band.lineTo(B[0], B[1] + oy); band.lineTo(C[0], C[1] + oy); band.lineTo(C[0] - W, C[1] - 1 + oy); band.closePath();
-    g.save(); g.clip(main);
-    g.fillStyle = dk(0.1); g.fill(band);
-    line(g, T([[B[0] - W, B[1] + 1], [C[0] - W, C[1] - 1]]), dk(0.55), 1.3);
-    line(g, T([[B[0] - W + 1.6, B[1] + 1], [C[0] - W + 1.6, C[1] - 1]]), lt(0.12), 1);
-    line(g, T([[B[0] - 3, B[1] + 2], [C[0] - 3, C[1] - 2]]), lt(0.1), 1.2);
-    g.restore();
-    // Belt loops across the waistband.
-    const loopAt = (y) => {
-      const x0 = B[0] - W - 3, x1 = B[0] + 1, h = 9;
-      const yy = y + oy;
-      g.save();
-      g.shadowColor = "rgba(0,0,0,0.4)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1.5 * RES;
-      g.fillStyle = mix(hex, "#000000", 0.04); g.fillRect(x0, yy - h / 2, x1 - x0, h);
-      g.restore();
-      line(g, [[x0 + 2, yy - h / 2 + 1.5], [x1 - 2, yy - h / 2 + 1.5]], lt(0.14), 1);
-      line(g, [[x0 + 2, yy + h / 2 - 1], [x1 - 2, yy + h / 2 - 1]], dk(0.35), 1);
+    const cloth = (path) => {
+      c.save(); c.clip(path);
+      const m = c.getTransform(); c.setTransform(1, 0, 0, 1, 0, 0);
+      c.fillStyle = paintStyle(c, fp); c.fillRect(0, 0, W, H);
+      c.setTransform(m); c.restore();
     };
-    if (pa.beltLoops === "Belt Loops") { loopAt(54); loopAt(214); }
-    else if (pa.beltLoops === "X Loops") {
-      [54, 214].forEach((y) => {
-        const x0 = B[0] - W - 2, x1 = B[0];
-        line(g, [[x0, y - 7 + oy], [x1, y + 7 + oy]], dk(0.5), 6);
-        line(g, [[x0, y + 7 + oy], [x1, y - 7 + oy]], dk(0.5), 6);
-        line(g, [[x0, y - 7 + oy], [x1, y + 7 + oy]], mix(hex, "#000000", 0.05), 4.5);
-        line(g, [[x0, y + 7 + oy], [x1, y - 7 + oy]], mix(hex, "#000000", 0.05), 4.5);
+    if (pa.beltLoops === "X Loops") {
+      // Two straps crossing over the waistband at each loop.
+      [56.6, 220.4].forEach((yy) => {
+        const x0 = 575.5, x1 = 607, d = 8.5;
+        [[-d, d], [d, -d]].forEach((q) => {
+          const strap = new Path2D();
+          const nx = 2 * d, len = Math.hypot(x1 - x0, nx), ox = (q[1] - q[0]) / len * 3.5, oy = (x1 - x0) / len * 3.5;
+          strap.moveTo(x0 + ox, yy + q[0] - oy); strap.lineTo(x1 + ox, yy + q[1] - oy);
+          strap.lineTo(x1 - ox, yy + q[1] + oy); strap.lineTo(x0 - ox, yy + q[0] + oy); strap.closePath();
+          c.save();
+          c.shadowColor = "rgba(0,0,0,0.5)"; c.shadowBlur = 3 * k; c.shadowOffsetY = 1.4 * k;
+          c.fillStyle = hex; c.fill(strap);
+          c.restore();
+          cloth(strap);
+          c.fillStyle = dk(0.08); c.fill(strap);
+          c.strokeStyle = dk(0.45); c.lineWidth = 0.8; c.stroke(strap);
+        });
       });
     }
-    // Back pocket, parallel to the waistband.
-    const bp = String(pa.backPocket || "");
-    const btnHex = lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6);
-    const button = (x, y) => {
-      g.save();
-      g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = 2.5 * RES; g.shadowOffsetY = 1 * RES;
-      g.beginPath(); g.arc(x, y + oy, 6.5, 0, Math.PI * 2); g.fillStyle = btnHex; g.fill();
-      g.restore();
-      g.beginPath(); g.arc(x, y + oy, 6.5, 0, Math.PI * 2); g.strokeStyle = "rgba(255,255,255,0.18)"; g.lineWidth = 1; g.stroke();
-      g.fillStyle = "rgba(0,0,0,0.55)";
-      [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]].forEach((d) => { g.beginPath(); g.arc(x + d[0], y + oy + d[1], 0.9, 0, Math.PI * 2); g.fill(); });
-    };
-    const PX = 604, PY0 = 104, PY1 = 214;
-    if (bp && bp !== "No Pocket") {
-      if (/Flap/.test(bp)) {
-        // Flap over the slit, pointing toward the leg.
-        const tip = /Rhombus/.test(bp);
-        const fx = PX + 2, fw = 30;
-        const flap = new Path2D();
-        flap.moveTo(fx, PY0 + oy); flap.lineTo(fx, PY1 + oy);
-        if (tip) { flap.lineTo(fx - fw + 8, PY1 - 2 + oy); flap.lineTo(fx - fw - 10, (PY0 + PY1) / 2 + oy); flap.lineTo(fx - fw + 8, PY0 + 2 + oy); }
-        else { flap.lineTo(fx - fw + 6, PY1 - 1 + oy); flap.bezierCurveTo(fx - fw - 22, PY1 - 30 + oy, fx - fw - 22, PY0 + 30 + oy, fx - fw + 6, PY0 + 1 + oy); }
-        flap.closePath();
-        g.save();
-        g.shadowColor = "rgba(0,0,0,0.42)"; g.shadowBlur = 4 * RES; g.shadowOffsetX = -1.5 * RES; g.shadowOffsetY = 1.5 * RES;
-        g.fillStyle = hex; g.fill(flap);
-        g.restore();
-        g.save(); g.clip(flap); const m = g.getTransform(); g.setTransform(1, 0, 0, 1, 0, 0);
-        g.fillStyle = paintStyle(g, fp); g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.setTransform(m);
-        g.fillStyle = lt(0.05); g.fill(flap);
-        g.restore();
-        g.save(); g.strokeStyle = dk(0.45); g.lineWidth = 1; g.setLineDash([2.5, 2.5]);
-        g.translate(fx - fw / 2, (PY0 + PY1) / 2 + oy); g.scale(0.86, 0.9); g.translate(-(fx - fw / 2), -((PY0 + PY1) / 2 + oy));
-        g.stroke(flap); g.restore();
-        line(g, T([[PX + 2, PY0], [PX + 2, PY1]]), dk(0.6), 1.4);
-        button(fx - fw - (tip ? 2 : 4), (PY0 + PY1) / 2);
-      } else {
-        // Slit (double besom) pocket: two lips with a dark opening.
-        g.save();
-        g.beginPath(); g.moveTo(PX - 4, PY0 + oy); g.lineTo(PX + 4, PY0 + oy); g.lineTo(PX + 4.6, PY1 + oy); g.lineTo(PX - 3.4, PY1 + oy); g.closePath();
-        g.fillStyle = dk(0.16); g.fill(); g.restore();
-        line(g, T([[PX, PY0], [PX + 0.6, PY1]]), "rgba(0,0,0,0.75)", 1.5);
-        line(g, T([[PX - 4, PY0], [PX - 3.4, PY1]]), dk(0.35), 0.9);
-        line(g, T([[PX + 4, PY0], [PX + 4.6, PY1]]), dk(0.35), 0.9);
-        line(g, T([[PX - 2.2, PY0 + 1], [PX - 1.6, PY1 - 1]]), lt(0.12), 0.8);
-        line(g, T([[PX - 6, PY0 - 1], [PX + 6, PY0 - 1]]), dk(0.4), 1);
-        line(g, T([[PX - 5.4, PY1 + 1], [PX + 6.6, PY1 + 1]]), dk(0.4), 1);
-        const withButton = !/No Button/.test(bp);
-        if (withButton) {
-          button(PX - 18, (PY0 + PY1) / 2);
-          // The button loop from the pocket.
-          line(g, T([[PX - 1, (PY0 + PY1) / 2], [PX - 12, (PY0 + PY1) / 2]]), dk(0.5), 1.2);
-        }
-      }
+    if (/Flap/.test(bp)) {
+      // A flap over the slit, pointing toward the leg, buttoned at its tip.
+      const tip = /Rhombus/.test(bp);
+      const PY0 = 103, PY1 = 225, fx = 539, fw = 34, my = (PY0 + PY1) / 2;
+      const flap = new Path2D();
+      flap.moveTo(fx, PY0); flap.lineTo(fx, PY1);
+      if (tip) { flap.lineTo(fx - fw + 8, PY1 - 2); flap.lineTo(fx - fw - 11, my); flap.lineTo(fx - fw + 8, PY0 + 2); }
+      else { flap.lineTo(fx - fw + 6, PY1 - 1); flap.bezierCurveTo(fx - fw - 24, PY1 - 33, fx - fw - 24, PY0 + 33, fx - fw + 6, PY0 + 1); }
+      flap.closePath();
+      c.save();
+      c.shadowColor = "rgba(0,0,0,0.45)"; c.shadowBlur = 4 * k; c.shadowOffsetX = -1.5 * k; c.shadowOffsetY = 1.5 * k;
+      c.fillStyle = hex; c.fill(flap);
+      c.restore();
+      cloth(flap);
+      c.fillStyle = dk(0.12); c.fill(flap);
+      c.save(); c.strokeStyle = dk(0.45); c.lineWidth = 0.9; c.setLineDash([2.5, 2.5]);
+      c.translate(fx - fw / 2, my); c.scale(0.86, 0.9); c.translate(-(fx - fw / 2), -my);
+      c.stroke(flap); c.restore();
+      line(c, [[fx, PY0], [fx, PY1]], dk(0.65), 1.4);
+      // The button, a shade off the cloth.
+      const bx = fx - fw - (tip ? 2 : 5), btnHex = lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6);
+      c.save();
+      c.shadowColor = "rgba(0,0,0,0.45)"; c.shadowBlur = 2.5 * k; c.shadowOffsetY = 1 * k;
+      c.beginPath(); c.arc(bx, my, 5.6, 0, Math.PI * 2); c.fillStyle = btnHex; c.fill();
+      c.restore();
+      c.beginPath(); c.arc(bx, my, 5.6, 0, Math.PI * 2); c.strokeStyle = "rgba(255,255,255,0.18)"; c.lineWidth = 0.9; c.stroke();
+      c.fillStyle = "rgba(0,0,0,0.55)";
+      [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].forEach((d) => { c.beginPath(); c.arc(bx + d[0], my + d[1], 0.8, 0, Math.PI * 2); c.fill(); });
     }
-    // The leg, folded back under the seat.
-    fill(leg, [0.42, 10, 3, 4]);
-    shadeGrad(170, 40, 330, 280, [[0, lt(0.1)], [0.35, "rgba(0,0,0,0)"], [1, dk(0.22)]]);
-    g.restore();
-    // Fold edge (left) catches the light; the leg's top edge casts a shadow.
-    g.save(); g.clip(leg);
-    g.strokeStyle = lt(0.2); g.lineWidth = 3;
-    g.beginPath(); g.moveTo(L[0] + 2, L[1] - 2 + oy); g.quadraticCurveTo(148, 98 + oy, A[0] + 2, A[1] + 3 + oy); g.stroke();
-    g.restore();
-    g.save(); g.strokeStyle = dk(0.38); g.lineWidth = 1.3;
-    g.beginPath(); g.moveTo(A[0], A[1] + oy); g.quadraticCurveTo(300, 120 + oy, H2[0], H2[1] + oy); g.stroke(); g.restore();
-    // Pressed crease down the leg.
-    line(g, T([[232, 104], [404, 220]]), lt(0.08), 1.4);
-    line(g, T([[232, 106], [404, 222]]), dk(0.12), 1);
-    // Hem, or a turned-up cuff.
+    // A turned-up cuff: its fold line runs across the leg, parallel to the
+    // hem, as far up the leg as the cuff is deep (5.5 units to the cm).
     const cuff = /Cuff\s*([\d.]+)/.exec(String(pa.bottomStyle || ""));
-    const ux = H1[0] - L[0], uy = H1[1] - L[1];
-    const len = Math.hypot(ux, uy);
-    const nx = uy / len, ny = -ux / len; // into the leg (up-left of the hem)
-    const off = (d) => [[L[0] + 4 + nx * d, L[1] + 1 + ny * d], [H1[0] - 2 + nx * d, H1[1] - 2 + ny * d]];
     if (cuff) {
-      const d = 4 * parseFloat(cuff[1]);
-      g.save(); g.clip(leg);
-      const pts = off(d);
-      g.beginPath(); g.moveTo(pts[0][0], pts[0][1] + oy); g.lineTo(pts[1][0], pts[1][1] + oy); g.lineTo(H1[0], H1[1] + oy); g.lineTo(L[0], L[1] + oy); g.closePath();
-      g.fillStyle = lt(0.05); g.fill();
-      g.restore();
-      line(g, T(off(d)), dk(0.6), 1.6);
-      line(g, T(off(d + 2)), dk(0.18), 2.5);
-      line(g, T(off(d - 1.6)), lt(0.16), 1);
-    } else {
-      line(g, T(off(5)), dk(0.12), 1);
+      const d = 5.51 * parseFloat(cuff[1]);
+      // The hem's two ends, and the way each edge of the leg runs up from them.
+      const a0 = [401.7, 231], b0 = [337.1, 312.7];
+      const a1 = [a0[0] - 0.838 * d, a0[1] - 0.547 * d], b1 = [b0[0] - 0.937 * d, b0[1] - 0.349 * d];
+      const band = new Path2D();
+      band.moveTo(a1[0], a1[1]); band.lineTo(a0[0] + 6, a0[1] + 4); band.lineTo(b0[0] + 6, b0[1] + 4); band.lineTo(b1[0], b1[1]); band.closePath();
+      c.fillStyle = lt(0.03); c.fill(band);
+      const ux = (b1[0] - a1[0]) / 40, uy = (b1[1] - a1[1]) / 40;
+      const ext = [[a1[0] - ux * 2, a1[1] - uy * 2], [b1[0] + ux * 2, b1[1] + uy * 2]];
+      const off = (o) => ext.map((p) => [p[0] - 0.89 * o, p[1] - 0.45 * o]);
+      line(c, off(2.2), dk(0.2), 3);
+      line(c, ext, dk(0.62), 1.5);
+      line(c, off(-1.5), lt(0.16), 0.9);
     }
-    line(g, T([[L[0] + 1, L[1]], [H1[0], H1[1]]]), dk(0.3), 1.2);
+    // Onto the picture, with the soft shadow of cloth lying on the floor.
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 12 * s * RES; g.shadowOffsetY = 5 * s * RES;
+    g.drawImage(pc, x, y, PANTS_W * s, PANTS_PH * s);
+    g.restore();
     return true;
   }
 
@@ -1829,17 +1804,11 @@
           // Three-piece: vest on the left, pants a little smaller on the right.
           ok = drawVest(g, v, 160, VBH + 24, 0.92, true);
           if (ok) {
-            g.save(); g.translate(290, VBH + 40); g.scale(0.85, 0.85); g.translate(-134, 0);
-            ok = drawPants(g, v, 0);
-            g.restore();
+            ok = drawPants(g, v, 306, VBH + 52, 0.75);
           }
-        } else if (lay.jacket) ok = drawPants(g, v, VBH + 10);
-        else {
-          // Pants on their own: bigger, centred.
-          g.save(); g.translate(400, 30); g.scale(1.3, 1.3); g.translate(-400, 0);
-          ok = drawPants(g, v, 0);
-          g.restore();
-        }
+        } else if (lay.jacket) ok = drawPants(g, v, 118, VBH + 22, 0.89);
+        // Pants on their own: bigger, centred.
+        else ok = drawPants(g, v, 20, 58, 1.2);
       }
       if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 40, 2.3);
     } catch (e) {
@@ -1887,6 +1856,7 @@
     CW = Math.round(VBW * RES); CH = Math.round(VBH * RES);
     tileCache = {};
     layerCache.length = 0;
+    pieceCache.length = 0;
     scratch = null;
     draw();
   }
