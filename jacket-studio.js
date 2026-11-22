@@ -559,7 +559,9 @@
     g.save();
     if (opts.grad) {
       const gr = g.createLinearGradient(0, opts.grad[0], 0, opts.grad[1]);
-      gr.addColorStop(0, "rgba(255,255,255,0.025)");
+      // Black only: a white to black blend passes through grey, which showed
+      // every pocket as a lighter block on dark cloth.
+      gr.addColorStop(0, "rgba(0,0,0,0)");
       gr.addColorStop(1, "rgba(0,0,0,0.2)");
       g.fillStyle = gr;
       g.fill(p);
@@ -992,6 +994,22 @@
           if (lp.ticket === "flap") flap(g, layer, T[0], ty, T[1], wv / 2.3 * 0.85, tilt);
           else besom(g, layer, T[0], ty + 6, T[1], tilt, lp.ticket === "db");
         }
+      }
+      // Daniel 2026-11-22: "they should not be visible edge to edge from the
+      // front". Toward the side the pocket turns away with the body: it
+      // darkens into the side's shadow, so it reads as coming from the back.
+      if (lp.main !== "none") {
+        g.globalCompositeOperation = "source-atop";
+        const TURN = 34;
+        for (let y = 540; y < 800; y += 4) {
+          [[lerpRows(sides, y + 2, 1), 1], [lerpRows(sides, y + 2, 2), -1]].forEach((q) => {
+            const gr = g.createLinearGradient(q[0], 0, q[0] + q[1] * TURN, 0);
+            gr.addColorStop(0, "rgba(0,0,0,0.42)"); gr.addColorStop(0.45, "rgba(0,0,0,0.16)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+            g.fillStyle = gr;
+            g.fillRect(Math.min(q[0], q[0] + q[1] * TURN), y, TURN, 4.2);
+          });
+        }
+        g.globalCompositeOperation = "source-over";
       }
       g.restore();
     });
