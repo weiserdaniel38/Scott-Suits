@@ -356,7 +356,7 @@
     return "#" + seg.map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0")).join("");
   }
   const tieCache = [];
-  function tiePhoto(photo, url, hex) {
+  function tiePhoto(photo, url, hex, box) {
     const key = url + "|" + hex;
     const hit = tieCache.find((e) => e.key === key);
     if (hit) return hit.canvas;
@@ -366,7 +366,8 @@
     cg.drawImage(photo, 0, 0, c.width, c.height);
     try {
       // The tie sits in this box on every photo.
-      const X0 = Math.round(330 * pk), Y0 = Math.round(60 * pk), W = Math.round(150 * pk), H = Math.round(400 * pk);
+      const bx = box || [330, 60, 150, 400];
+      const X0 = Math.round(bx[0] * pk), Y0 = Math.round(bx[1] * pk), W = Math.round(bx[2] * pk), H = Math.round(bx[3] * pk);
       const d = cg.getImageData(X0, Y0, W, H), px = d.data;
       const wOf = (i) => Math.max(0, Math.min(1, (px[i] - Math.max(px[i + 1], px[i + 2]) - 8) / 14));
       // The tie's average brightness, so its mid tone becomes the fabric color.
@@ -1508,160 +1509,142 @@
     return true;
   }
 
-  // The back photo's outline has a few leftovers from the mockup (Daniel
-  // 2026-11-22: "these make no sense"): wisps under both sleeve ends, a
-  // square step in the middle of the hem and a flat, boxy neck. Everything
-  // the back and inside views draw is kept inside this outline instead.
-  const BACK_TRIM = "M0,851 L140,851 L141,893 Q175,912 210,918 Q400,930 590,918 Q625,912 659,896 L659,856 L800,856 L800,1000 L0,1000 Z";
-  const NECK_TRIM = "M300,-10 H500 V40 L480,48 Q400,30 320,48 L300,40 Z";
-  function keepClip(g, neck) {
-    g.clip(new Path2D("M-10,-10 H810 V1010 H-10 Z " + BACK_TRIM + (neck ? " " + NECK_TRIM : "")), "evenodd");
+  // ---- BACK VIEW ---------------------------------------------------------------
+  // Built from Daniel's back reference (2026-11-22, "use as back reference
+  // photo"; scripts/make_jacket_photo_back.py): the photo keeps the shirt
+  // collar and cuffs, its luminance lights the chosen cloth. Its sleeve
+  // buttons are painted out ("remove buttons if needed") and drawn from the
+  // customer's picks; it has two shadings, with the photo's side vents and
+  // with them painted out (no vent, or a centre vent drawn here).
+  const PHOTO_BACK = "./assets/jacket-photo-back.webp?v=1";
+  const SHADE_BACK_VENTS = "./assets/jacket-photo-shade-back-vents.webp?v=1";
+  const SHADE_BACK_PLAIN = "./assets/jacket-photo-shade-back-plain.webp?v=1";
+  // Where the photo's sleeve buttons were (bottom button; picture pixels).
+  const BACK_CUFF = { lx: 101, rx: 697, y: 816 };
+  function drawBackCuffs(g, v, look, holes) {
+    const c = cuffLayout(v);
+    const step = c.overlap ? 12.5 : 16;
+    const n = c.holes;
+    for (let i = 0; i < n; i++) {
+      const y = BACK_CUFF.y - i * step;
+      const dx = c.ventSlant ? (n - 1 - i) * 2.6 : 0;
+      const a = c.holeTilt ? -0.61 : 0;
+      [[BACK_CUFF.lx + dx, -1], [BACK_CUFF.rx - dx, 1]].forEach((b) => {
+        const x = b[0], s = b[1];
+        // The buttonhole runs from each button toward the back of the sleeve.
+        const hx = x + s * (c.count ? 8 : 0);
+        hole(g, [hx, y], [hx + s * 7 * Math.cos(a), y + 7 * Math.sin(a)], i === 0 ? holes.cuff1 : holes.sleeve, 1.5);
+        if (c.count) button(g, x, y, 7.2, look, {});
+      });
+    }
+    if (c.working && c.count) {
+      line(g, [[BACK_CUFF.lx + 2, BACK_CUFF.y + 10], [BACK_CUFF.lx + 2, BACK_CUFF.y + 22]], "rgba(0,0,0,0.6)", 1.3);
+      line(g, [[BACK_CUFF.rx - 2, BACK_CUFF.y + 10], [BACK_CUFF.rx - 2, BACK_CUFF.y + 22]], "rgba(0,0,0,0.6)", 1.3);
+    }
+    if (v.monogram && /Sleeve Cuff/.test(v.monogram)) {
+      // From behind, the wearer's left sleeve is the viewer's left one.
+      if (/Left/.test(v.monogram)) monogramText(g, 122, 742, v, 8, 1.5);
+      else monogramText(g, 676, 742, v, 8, -1.5);
+    }
   }
   function drawBack(g, v, anchors) {
-    const shade = img(SHADE.back);
+    const sideVents = v.backvent === "Side Vent";
+    const shadeUrl = sideVents ? SHADE_BACK_VENTS : SHADE_BACK_PLAIN;
+    const photo = img(PHOTO_BACK), shade = img(shadeUrl);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
-    if (!shade || !fp.ready) return false;
+    if (!photo || !shade || !fp.ready) return false;
     curShade = shade;
     edgeA = edgeFor(fp.hex);
-    const layer = cachedLayer("back|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
+    const layer = cachedLayer("back|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
+    g.drawImage(photo, 0, 0, VBW, VBH);
     floorShadow(g);
-    // (No shirt collar from behind: on the plain card it only showed as a
-    // floating outline.)
-    g.save();
-    keepClip(g, true);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
-    // Seams: center back and side panels.
-    line(g, [[400, 62], [402, 300], [398, 620], [400, HEM]], "rgba(0,0,0,0.42)", 1.3);
-    line(g, [[401.6, 62], [403.6, 300], [399.6, 620], [401.6, HEM]], "rgba(255,255,255,0.06)", 1);
-    line(g, [[176, 300], [190, 520], [192, 760], [196, 924]], "rgba(0,0,0,0.3)", 1.1);
-    line(g, [[624, 300], [610, 520], [608, 760], [604, 924]], "rgba(0,0,0,0.3)", 1.1);
-    // Sleeve heads.
-    line(g, [[150, 128], [160, 190], [170, 300]], "rgba(0,0,0,0.28)", 1.1);
-    line(g, [[650, 128], [640, 190], [630, 300]], "rgba(0,0,0,0.28)", 1.1);
-    sleeveHeads(g, v, [[150, 128], [155, 160], [160, 190], [165, 245], [170, 300]]);
-    // Vents.
-    const vent = v.backvent;
-    const ventAt = (x, bend) => {
-      const top = 742;
+    // Sleeve heads (Naples / close seam), along the photo's armhole seam.
+    sleeveHeads(g, v, [[205, 148], [208, 187], [213, 227], [220, 292], [228, 364]].map((p) => [p[0] + 3, p[1]]));
+    // A centre vent on the centre back seam (side vents are in the photo).
+    if (v.backvent === "Center Vent") {
+      const top = 652;
       g.save();
-      const gr = g.createLinearGradient(x - 10, 0, x + 10, 0);
+      const gr = g.createLinearGradient(390, 0, 410, 0);
       gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(0.5, "rgba(0,0,0,0.22)"); gr.addColorStop(1, "rgba(0,0,0,0)");
-      g.fillStyle = gr; g.fillRect(x - 10, top + 40, 20, HEM - top - 40);
+      g.fillStyle = gr; g.fillRect(390, top + 40, 20, HEM - top - 44);
+      g.beginPath(); g.moveTo(400, top + 110); g.lineTo(403.5, HEM - 2); g.lineTo(396.5, HEM - 2); g.closePath();
+      g.fillStyle = "rgba(0,0,0,0.45)"; g.fill();
       g.restore();
-      // The vent opens a little toward the hem.
-      g.save(); g.beginPath(); g.moveTo(x + bend * 0.2, top + 110); g.lineTo(x + 3.5, HEM); g.lineTo(x - 3.5, HEM); g.closePath();
-      g.fillStyle = "rgba(0,0,0,0.45)"; g.fill(); g.restore();
-      line(g, [[x + bend, top], [x, HEM - 1]], "rgba(0,0,0,0.7)", 1.8);
-      line(g, [[x + bend + 2.5, top], [x + 2.5, HEM - 1]], "rgba(255,255,255,0.16)", 1.2);
-      line(g, [[x + bend - 9, top + 6], [x + bend + 9, top - 4]], "rgba(0,0,0,0.45)", 1.2);
-    };
-    if (vent === "Center Vent") ventAt(400, 0);
-    else if (vent === "Side Vent") { ventAt(194, 3); ventAt(606, -3); }
-    // Collar.
-    // The collar follows the rounded neck and runs into the shoulder seams.
-    clothPiece(g, layer, "M320,48 Q400,30 480,48 L500,66 Q400,74 300,66 Z", { shadow: 0.4, blur: 4, drop: 2, stitch: "M323,52 Q400,35 477,52" });
-    if (v.monogram === "Monogram On Middle Under Collar") monogramText(g, 400, 58, v, 9, 0);
-    const look = buttonLook(v, fp.hex);
-    drawCuffs(g, v, look, buttonholeHexes(v, fp.hex), true);
-    g.restore();
+      line(g, [[400, top], [400, HEM - 2]], "rgba(0,0,0,0.7)", 1.8);
+      line(g, [[402.5, top], [402.5, HEM - 2]], "rgba(255,255,255,0.16)", 1.2);
+      line(g, [[391, top + 6], [409, top - 4]], "rgba(0,0,0,0.45)", 1.2);
+    }
+    if (v.monogram === "Monogram On Middle Under Collar") monogramText(g, 400, 40, v, 8, 0);
+    drawBackCuffs(g, v, buttonLook(v, fp.hex), buttonholeHexes(v, fp.hex));
     anchors.vent = [400, 820];
     return true;
   }
 
-  // ---- INSIDE VIEW (the jacket opened up) --------------------------------------
-  // The inside of the back between the two opened fronts: lining in the
-  // middle, the fronts' facings (cloth) along each side.
-  const IN_LINING = "M196,120 C240,96 290,72 330,66 Q400,74 470,66 C510,72 560,96 604,120 C614,200 616,300 610,420 C606,560 606,740 604,880 L196,880 C194,740 194,560 190,420 C184,300 186,200 196,120 Z";
-  function facingPath(style, side) {
-    // Viewer's left facing; mirrored for the right.
-    const round = "M196,120 C240,96 290,72 330,66 C318,110 284,170 268,236 C312,244 330,282 326,320 C322,356 300,380 266,386 C264,560 262,740 262,880 L196,880 C194,740 194,560 190,420 C184,300 186,200 196,120 Z";
-    const straight = "M196,120 C240,96 290,72 330,66 C318,110 284,170 268,236 C266,400 262,640 262,880 L196,880 C194,740 194,560 190,420 C184,300 186,200 196,120 Z";
-    const d = style === "Round Shape Facing" ? round : straight;
-    return side < 0 ? d : d.replace(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g, (m, x, y) => (VBW - parseFloat(x)).toFixed(1) + "," + y);
-  }
+  // ---- INSIDE VIEW (the jacket held open) ----------------------------------------
+  // Built from Daniel's inside reference (2026-11-22;
+  // scripts/make_jacket_photo_inside.py): shirt and tie in the photo (the tie
+  // takes the fabric color like on the front), the jacket, lining and pants
+  // lit from its shading. The chosen lining fills INSIDE_LINING; its welt
+  // pockets are in the photo; the monogram is written on the lining.
+  const PHOTO_INSIDE = "./assets/jacket-photo-inside.webp?v=1";
+  const SHADE_INSIDE = "./assets/jacket-photo-shade-inside.webp?v=1";
+  const INSIDE_LINING = "M293.2,161.4 L260.5,213.8 L221.2,279.3 L191.7,344.8 L180.6,423.4 L178.6,521.6 L179.9,619.9 L183.2,718.1 L189.7,816.4 L201.5,896.3 L235.6,901.5 L239.5,809.8 L239.5,718.1 L242.1,626.4 L248.7,554.4 L263.8,456.1 L270.3,357.9 L273.6,259.6 L280.1,194.1 Z " +
+    "M515.9,149.6 L561.8,161.4 L601.1,226.9 L620.7,292.4 L624,390.6 L624,488.9 L620.7,619.9 L614.2,750.9 L604.4,849.1 L594.5,900.2 L568.3,901.5 L567,809.8 L565.7,718.1 L563.1,626.4 L548.7,554.4 L532.3,456.1 L527.1,357.9 L525.8,259.6 L521.2,194.1 Z";
+  // Half lining: across the chest only.
+  const INSIDE_HALF = "M293.2,161.4 L260.5,213.8 L221.2,279.3 L191.7,344.8 L180.6,423.4 L179.5,470 L262,470 L263.8,456.1 L270.3,357.9 L273.6,259.6 L280.1,194.1 Z " +
+    "M515.9,149.6 L561.8,161.4 L601.1,226.9 L620.7,292.4 L624,390.6 L624,470 L534.5,470 L532.3,456.1 L527.1,357.9 L525.8,259.6 L521.2,194.1 Z";
   function drawInside(g, v, anchors) {
-    const shade = img(SHADE.back);
+    const photo = img(PHOTO_INSIDE), shade = img(SHADE_INSIDE);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
     const lp = liningPaint(v, fp);
-    if (!shade || !fp.ready || !lp.ready) return false;
+    if (!photo || !shade || !fp.ready || !lp.ready) return false;
     curShade = shade;
     edgeA = edgeFor(fp.hex);
     const facing = v.facing;
     const lined = facing !== "No Lining Construction";
     const half = facing === "Half Lining W/ Fabric Facing";
-    // Half lining: lining across the shoulders only.
-    const HALF = "M196,120 C240,96 290,72 330,66 Q400,74 470,66 C510,72 560,96 604,120 C614,200 616,300 612,400 C540,446 470,460 400,462 C330,460 260,446 188,400 C184,300 186,200 196,120 Z";
+    const linPath = half ? INSIDE_HALF : INSIDE_LINING;
     const regions = [{ path: null, paint: fp }];
-    if (lined) regions.push({ path: half ? HALF : IN_LINING, paint: lp, highlight: 0.8 });
-    regions.push({ path: facingPath(facing, -1), paint: fp }, { path: facingPath(facing, 1), paint: fp });
+    if (lined) regions.push({ path: linPath, paint: lp, highlight: 0.9 });
     const layer = cachedLayer("inside|" + fp.key + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
+    g.drawImage(tiePhoto(photo, PHOTO_INSIDE, tieHex(fp.hex), [350, 80, 96, 585]), 0, 0, VBW, VBH);
     floorShadow(g);
-    g.save();
-    keepClip(g, false);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
-    const pipe = lined ? mix(lp.hex, "#ffffff", 0.18) : mix(fp.hex, "#ffffff", 0.25);
-    // Satin sheen on the lining.
-    if (lined) {
-      g.save();
-      g.clip(new Path2D(half ? HALF : IN_LINING));
-      const gr = g.createLinearGradient(196, 0, 604, 0);
-      gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(0.35, "rgba(255,255,255,0.09)");
-      gr.addColorStop(0.5, "rgba(255,255,255,0)"); gr.addColorStop(0.7, "rgba(255,255,255,0.06)"); gr.addColorStop(1, "rgba(255,255,255,0)");
-      g.fillStyle = gr; g.fillRect(180, 60, 440, 840);
-      g.restore();
-      if (!half) {
-        line(g, [[400, 74], [400, 880]], "rgba(0,0,0,0.25)", 1.3);
-        line(g, [[403, 74], [403, 880]], "rgba(255,255,255,0.1)", 1);
-      }
+    if (half && lined) {
+      // Where the half lining stops, a piped edge.
+      const pipe = mix(lp.hex, "#ffffff", 0.18);
+      line(g, [[180, 470], [262, 470]], pipe, 1.4);
+      line(g, [[534.5, 470], [624, 470]], pipe, 1.4);
     }
-    // Facing edges (piped).
-    [-1, 1].forEach((s) => { g.save(); g.strokeStyle = pipe; g.lineWidth = 1.6; g.stroke(new Path2D(facingPath(facing, s))); g.restore(); });
-    if (half || !lined) {
-      line(g, [[400, half ? 462 : 74], [400, 880]], pipe, 1.6);
-      if (half) { g.save(); g.strokeStyle = pipe; g.lineWidth = 1.6; g.stroke(new Path2D(HALF)); g.restore(); }
-    }
-    // Hem of the lining.
-    line(g, [[196, 880], [604, 880]], "rgba(0,0,0,0.35)", 1.2);
-    // Inside pockets: one on each side at the chest, on the facing seam.
+    // Inside pockets: the photo's two chest welts are the standard ones.
+    // "Extra Lower Pocket" adds one lower on the viewer's left, "Extra Pen
+    // Pockets" a pen pocket on the right; "No Inside Pockets" covers the
+    // welts with the lining just above them.
     const ip = String(v.insidepocket || "");
-    besom(g, layer, 270, 318, 78, 0, true);
-    besom(g, layer, 530, 318, 78, 0, true);
-    // A small pointed tab with a button closes the viewer's left one.
-    clothPiece(g, layer, "M263,321 L277,321 L277,335 L270,343 L263,335 Z", { shadow: 0.4, blur: 3, drop: 1.5, stitch: "M265,323 L275,323 L275,334 L270,340 L265,334 Z" });
-    button(g, 270, 334, 3.6, buttonLook(v, fp.hex));
-    // The pen pocket on the facing a hand's width below: a short welt or a
-    // teardrop.
-    if (/Water Drop|Combination/.test(ip)) {
-      clothPiece(g, layer, "M570,404 C579,416 582,426 582,432 C582,440 576,445 570,445 C564,445 558,440 558,432 C558,426 561,416 570,404 Z", { shadow: 0.35, blur: 3, drop: 1.5, stitch: "M570,409 C577,419 579,427 579,432 C579,438 575,442 570,442 C565,442 561,438 561,432 C561,427 563,419 570,409 Z" });
-      line(g, [[562, 418], [578, 418]], "rgba(0,0,0,0.55)", 1.2);
-    } else besom(g, layer, 570, 424, 40, 0, false);
-    // A short slanted cigarette pocket on the other facing at the waist.
-    if (/Cigarette/.test(ip)) besom(g, layer, 230, 524, 44, -20, true);
-    // Felt under collar at the back of the neck.
-    g.save();
-    g.beginPath(); g.moveTo(320, 60); g.quadraticCurveTo(400, 34, 480, 60); g.lineTo(482, 78); g.quadraticCurveTo(400, 56, 318, 78); g.closePath();
-    g.fillStyle = feltHex(v, fp.hex); g.fill(); g.strokeStyle = "rgba(0,0,0,0.4)"; g.lineWidth = 1; g.stroke();
-    g.restore();
-    // Brand label.
-    g.save();
-    g.shadowColor = "rgba(0,0,0,0.25)"; g.shadowBlur = 2 * RES;
-    g.fillStyle = "#efe8dc"; g.fillRect(366, 104, 68, 26);
-    g.shadowColor = "transparent";
-    g.strokeStyle = "rgba(176,141,87,0.6)"; g.strokeRect(369, 107, 62, 20);
-    g.font = "600 8.5px Inter, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#6b5a3f";
-    g.fillText("SCOTT SUITS", 400, 117.5);
-    g.restore();
+    if (/^No Inner/.test(ip)) {
+      [[233, 352], [567, 352]].forEach((c) => {
+        const x0 = (c[0] - 44) * RES, y0 = (c[1] - 9) * RES, w = 88 * RES, h = 18 * RES;
+        g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+        g.drawImage(layer, x0, y0 - 20 * RES, w, h, x0, y0, w, h);
+        g.restore();
+      });
+    }
+    if (/^Fashion/.test(ip)) besom(g, layer, 212, 610, 40, 0, true);
+    if (/^Combination/.test(ip)) {
+      clothPiece(g, layer, "M582,402 C591,414 594,424 594,430 C594,438 588,443 582,443 C576,443 570,438 570,430 C570,424 573,414 582,402 Z", { shadow: 0.35, blur: 3, drop: 1.5, stitch: "M582,407 C589,417 591,425 591,430 C591,436 587,440 582,440 C577,440 573,436 573,430 C573,425 575,417 582,407 Z" });
+      line(g, [[574, 416], [590, 416]], "rgba(0,0,0,0.55)", 1.2);
+    }
     const mg = v.monogram;
-    if (mg === "On Left Inside Pocket") monogramText(g, 530, 344, v, 12, 0);
-    else if (mg === "On Right Inside Pocket") monogramText(g, 270, 344, v, 12, 0);
+    if (mg === "On Left Inside Pocket") monogramText(g, 567, 322, v, 12, 0);
+    else if (mg === "On Right Inside Pocket") monogramText(g, 233, 322, v, 12, 0);
     else if (mg === "On Right Inside Pocket, Monogram On Satin") {
-      g.save(); g.fillStyle = "#f1ece2"; g.fillRect(498, 334, 64, 20); g.restore();
-      monogramText(g, 530, 344, v, 12, 0);
-    } else if (mg === "Monogram On Middle Under Collar") monogramText(g, 400, 66, v, 9, 0);
-    g.restore();
-    anchors.monogram = mg === "On Right Inside Pocket" ? [270, 372] : [530, 372];
+      g.save(); g.fillStyle = "#f1ece2"; g.fillRect(535, 312, 64, 20); g.restore();
+      monogramText(g, 567, 322, v, 12, 0);
+    }
+    anchors.monogram = mg === "On Right Inside Pocket" ? [233, 340] : [567, 340];
     return true;
   }
 
