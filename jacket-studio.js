@@ -310,10 +310,12 @@
       tg.globalCompositeOperation = "lighter";
       tg.globalAlpha = s.b * (rg.highlight == null ? 1 : rg.highlight);
       tg.drawImage(scratch, 0, 0);
+      // Cut to the cloth with the region's clip lifted: under the clip its
+      // soft edge would be left behind as a faint line where there is no cloth.
+      tg.restore();
       tg.globalAlpha = 1;
       tg.globalCompositeOperation = "destination-in";
       tg.drawImage(shade, 0, 0, VBW * sk, VBH * sk, 0, 0, CW, CH);
-      tg.restore();
       og.drawImage(t, 0, 0);
     });
     return out;
@@ -368,20 +370,52 @@
       // The tie sits in this box on every photo.
       const bx = box || [330, 60, 150, 400];
       const X0 = Math.round(bx[0] * pk), Y0 = Math.round(bx[1] * pk), W = Math.round(bx[2] * pk), H = Math.round(bx[3] * pk);
-      const d = cg.getImageData(X0, Y0, W, H), px = d.data;
-      const wOf = (i) => Math.max(0, Math.min(1, (px[i] - Math.max(px[i + 1], px[i + 2]) - 8) / 14));
-      // The tie's average brightness, so its mid tone becomes the fabric color.
-      let sum = 0, n = 0;
+      const d = cg.getImageData(X0, Y0, W, H), px = d.data, N = W * H;
+      // The tie's own red and its average brightness, from the pixels that
+      // are clearly tie, so its mid tone becomes the new color.
+      let sr = 0, sg = 0, sb = 0, n = 0;
       for (let i = 0; i < px.length; i += 4) {
-        if (wOf(i) >= 1) { sum += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]; n++; }
+        if (px[i] - Math.max(px[i + 1], px[i + 2]) >= 22) { sr += px[i]; sg += px[i + 1]; sb += px[i + 2]; n++; }
       }
       if (n) {
-        const mean = sum / n, t = hexRgb(hex);
-        for (let i = 0; i < px.length; i += 4) {
-          const w = wOf(i);
-          if (!w) continue;
-          const k = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) / mean;
-          for (let ch = 0; ch < 3; ch++) px[i + ch] = Math.round(px[i + ch] * (1 - w) + Math.min(255, t[ch] * k) * w);
+        const dg = sg / sr, db = sb / sr, den = 1 - (dg + db) / 2;
+        const lumK = 0.299 + 0.587 * dg + 0.114 * db;
+        const meanR = sr / n, mean = meanR * lumK, t = hexRgb(hex);
+        // The tie, plus the few pixels around it where tie and shirt mix.
+        const rad = Math.max(2, Math.round(3 * pk));
+        const tie = new Uint8Array(N), rows = new Uint8Array(N), near = new Uint8Array(N);
+        for (let j = 0, i = 0; j < N; j++, i += 4) {
+          const r = px[i] - (px[i + 1] + px[i + 2]) / 2;
+          if (r > 6 && r > 0.45 * px[i]) tie[j] = 1;
+        }
+        const spread = (src, dst, len, count, step, stride) => {
+          for (let a = 0; a < count; a++) {
+            const o = a * stride;
+            let last = -1e9;
+            for (let b = 0; b < len; b++) { if (src[o + b * step]) last = b; if (b - last <= rad) dst[o + b * step] = 1; }
+            last = 1e9;
+            for (let b = len - 1; b >= 0; b--) { if (src[o + b * step]) last = b; if (last - b <= rad) dst[o + b * step] = 1; }
+          }
+        };
+        spread(tie, rows, W, H, 1, W);
+        spread(rows, near, H, W, W, 1);
+        // Each pixel is some tie red plus what is left (white shirt, shadow,
+        // shine). Only the tie part changes color, so an edge pixel that is
+        // mostly shirt stays mostly shirt: no pale or red rim around the tie.
+        for (let j = 0, i = 0; j < N; j++, i += 4) {
+          if (!near[j]) continue;
+          const R = px[i], G = px[i + 1], B = px[i + 2];
+          let q = (R - (G + B) / 2) / den;
+          if (q <= 0) continue;
+          if (q > R) q = R;
+          let r0 = R - q, g0 = Math.max(0, G - q * dg), b0 = Math.max(0, B - q * db);
+          // Well inside the tie what is left is plain light, not color.
+          const m = Math.min(r0, g0, b0), wn = Math.min(1, q / (0.4 * meanR));
+          r0 += (m - r0) * wn; g0 += (m - g0) * wn; b0 += (m - b0) * wn;
+          const k = q * lumK / mean;
+          px[i] = Math.min(255, Math.round(r0 + t[0] * k));
+          px[i + 1] = Math.min(255, Math.round(g0 + t[1] * k));
+          px[i + 2] = Math.min(255, Math.round(b0 + t[2] * k));
         }
         cg.putImageData(d, X0, Y0);
       }
@@ -1606,13 +1640,13 @@
   // takes the fabric color like on the front), the jacket, lining and pants
   // lit from its shading. The chosen lining fills INSIDE_LINING; its welt
   // pockets are in the photo; the monogram is written on the lining.
-  const PHOTO_INSIDE = "./assets/jacket-photo-inside.webp?v=1";
-  const SHADE_INSIDE = "./assets/jacket-photo-shade-inside.webp?v=1";
-  const INSIDE_LINING = "M293.2,161.4 L260.5,213.8 L221.2,279.3 L191.7,344.8 L180.6,423.4 L178.6,521.6 L179.9,619.9 L183.2,718.1 L189.7,816.4 L201.5,896.3 L235.6,901.5 L239.5,809.8 L239.5,718.1 L242.1,626.4 L248.7,554.4 L263.8,456.1 L270.3,357.9 L273.6,259.6 L280.1,194.1 Z " +
-    "M515.9,149.6 L561.8,161.4 L601.1,226.9 L620.7,292.4 L624,390.6 L624,488.9 L620.7,619.9 L614.2,750.9 L604.4,849.1 L594.5,900.2 L568.3,901.5 L567,809.8 L565.7,718.1 L563.1,626.4 L548.7,554.4 L532.3,456.1 L527.1,357.9 L525.8,259.6 L521.2,194.1 Z";
+  const PHOTO_INSIDE = "./assets/jacket-photo-inside.webp?v=2";
+  const SHADE_INSIDE = "./assets/jacket-photo-shade-inside.webp?v=2";
+  const INSIDE_LINING = "M299.8,160.1 L295.2,167.9 L273.6,200.7 L255.9,226.9 L236.2,261.6 L214.6,298.9 L193,327.1 L186.5,346.7 L183.8,369 L179.3,423.4 L176.6,488.9 L176.6,554.4 L178.6,587.1 L181.2,619.9 L181.2,652.6 L178.6,685.4 L176.6,718.1 L173.4,750.9 L168.8,783.6 L162.2,807.9 L155.7,832.8 L149.8,857 L146.5,881.9 L147.2,895 L155.7,906.1 L170.1,911.4 L195,909.4 L212,903.5 L215.9,865.5 L221.2,826.2 L223.8,803.3 L225.8,760.7 L230.4,719.4 L235.6,685.4 L240.8,659.2 L244.8,630.4 L261.8,626.4 L267,587.1 L276.9,521.6 L283.4,456.1 L288,357.9 L291.9,259.6 L298.5,194.1 Z " +
+    "M498.2,161.4 L504.8,166 L537.5,218.4 L568.3,261.6 L594.5,292.4 L609.6,323.2 L618.8,346.7 L622,379.5 L622.7,423.4 L622.7,554.4 L620.7,587.1 L618.8,619.9 L618.1,652.6 L620.7,685.4 L624,718.1 L628.6,750.9 L633.8,783.6 L640.4,807.9 L646.9,832.8 L651.5,857 L654.8,881.9 L653.5,896.3 L646.9,905.5 L630.6,910.7 L607.6,908.1 L589.3,902.2 L587.3,883.2 L582.7,842.6 L578.8,809.8 L577.5,800 L572.9,760.7 L568.3,719.4 L563.1,685.4 L560.5,659.2 L557.2,630.4 L542.1,626.4 L530.3,587.1 L525.8,521.6 L519.2,456.1 L510.7,357.9 L502.8,259.6 L496.3,194.1 Z";
   // Half lining: across the chest only.
-  const INSIDE_HALF = "M293.2,161.4 L260.5,213.8 L221.2,279.3 L191.7,344.8 L180.6,423.4 L179.5,470 L262,470 L263.8,456.1 L270.3,357.9 L273.6,259.6 L280.1,194.1 Z " +
-    "M515.9,149.6 L561.8,161.4 L601.1,226.9 L620.7,292.4 L624,390.6 L624,470 L534.5,470 L532.3,456.1 L527.1,357.9 L525.8,259.6 L521.2,194.1 Z";
+  const INSIDE_HALF = "M299.8,160.1 L295.2,167.9 L273.6,200.7 L255.9,226.9 L236.2,261.6 L214.6,298.9 L193,327.1 L186.5,346.7 L183.8,369 L179.3,423.4 L177.4,470 L282,470 L283.4,456.1 L288,357.9 L291.9,259.6 L298.5,194.1 Z " +
+    "M498.2,161.4 L504.8,166 L537.5,218.4 L568.3,261.6 L594.5,292.4 L609.6,323.2 L618.8,346.7 L622,379.5 L622.7,423.4 L622.7,470 L520.6,470 L519.2,456.1 L510.7,357.9 L502.8,259.6 L496.3,194.1 Z";
   function drawInside(g, v, anchors) {
     const photo = img(PHOTO_INSIDE), shade = img(SHADE_INSIDE);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
@@ -1628,14 +1662,14 @@
     const regions = [{ path: null, paint: fp }];
     if (lined) regions.push({ path: linPath, paint: lp, highlight: 0.9 });
     const layer = cachedLayer("inside|" + fp.key + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
-    g.drawImage(tiePhoto(photo, PHOTO_INSIDE, tieHex(fp.hex), [350, 80, 96, 585]), 0, 0, VBW, VBH);
+    g.drawImage(tiePhoto(photo, PHOTO_INSIDE, tieHex(fp.hex), [340, 70, 116, 600]), 0, 0, VBW, VBH);
     floorShadow(g);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
     if (half && lined) {
       // Where the half lining stops, a piped edge.
       const pipe = mix(lp.hex, "#ffffff", 0.18);
-      line(g, [[180, 470], [262, 470]], pipe, 1.4);
-      line(g, [[534.5, 470], [624, 470]], pipe, 1.4);
+      line(g, [[177.5, 470], [262.5, 470]], pipe, 1.4);
+      line(g, [[532.5, 470], [622.5, 470]], pipe, 1.4);
     }
     // Inside pockets: the photo's two chest welts are the standard ones.
     // "Extra Lower Pocket" adds one lower on the viewer's left, "Extra Pen
