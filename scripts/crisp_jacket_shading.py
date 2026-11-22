@@ -145,8 +145,10 @@ def save(name, r, alpha):
     big = lambda a: np.asarray(F(a).resize((2 * W, 2 * H), Image.LANCZOS))
     R = big(r)
     R = R + 0.6 * (R - gauss(R, 2.2))          # light unsharp on folds / edges
-    A = np.clip(big(alpha), 0, 1)
-    A = np.clip((A - 0.30) / 0.40, 0, 1); A = A * A * (3 - 2 * A)
+    # The outline: rounded off first (the 800 px mask is ragged along the
+    # shirt and shoulders), then tightened.
+    A = gauss(np.clip(big(alpha), 0, 1), 1.6)
+    A = np.clip((A - 0.28) / 0.44, 0, 1); A = A * A * (3 - 2 * A)
     R = np.clip(R, 0.02, 2)
     M1 = np.clip(R, 0, 1) * 255; M2 = np.clip(R - 1, 0, 1) * 255; AA = A * 255
     top = np.dstack([M1, M1, M1, AA]); bot = np.dstack([M2, M2, M2, AA])

@@ -43,20 +43,20 @@
   const MODE_KEY = "scottSuitsDesignMode";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const PHOTO = "./assets/jacket-photo-front.webp?v=17";
-  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=16", back: "./assets/jacket-photo-shade-back.webp?v=15" };
+  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=17", back: "./assets/jacket-photo-shade-back.webp?v=16" };
   // The photo has notch lapels; the other styles have their own front shading
   // with the lapels redrawn (scripts/make_jacket_photo.py).
   const SHADE_LAPEL = {
-    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=13",
-    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=13",
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=13",
-    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=13",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=13",
+    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=14",
+    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=14",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=14",
+    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=14",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=14",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
   const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=15";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=16";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=17";
   // The lining seen in the Arc photo's opening below the second button (in
   // picture space; scripts/make_jacket_photo_arc.py LINING, mapped).
   // The same opening on the main photo (traced from its shading).
@@ -81,11 +81,11 @@
     sb: [[220, 642], [300, 634], [380, 620]],
     arc: [[220, 610], [300, 601], [380, 593]],
   };
-  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=11";
+  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=12";
   const SHADE_DB_LAPEL = {
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=11",
-    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=11",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=11",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=12",
+    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=12",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=12",
   };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
@@ -1569,8 +1569,8 @@
   // customer's picks; it has two shadings, with the photo's side vents and
   // with them painted out (no vent, or a centre vent drawn here).
   const PHOTO_BACK = "./assets/jacket-photo-back.webp?v=1";
-  const SHADE_BACK_VENTS = "./assets/jacket-photo-shade-back-vents.webp?v=1";
-  const SHADE_BACK_PLAIN = "./assets/jacket-photo-shade-back-plain.webp?v=1";
+  const SHADE_BACK_VENTS = "./assets/jacket-photo-shade-back-vents.webp?v=2";
+  const SHADE_BACK_PLAIN = "./assets/jacket-photo-shade-back-plain.webp?v=2";
   // Where the photo's sleeve buttons were (bottom button; picture pixels).
   const BACK_CUFF = { lx: 101, rx: 697, y: 816 };
   function drawBackCuffs(g, v, look, holes) {
@@ -1640,8 +1640,8 @@
   // takes the fabric color like on the front), the jacket, lining and pants
   // lit from its shading. The chosen lining fills INSIDE_LINING; its welt
   // pockets are in the photo; the monogram is written on the lining.
-  const PHOTO_INSIDE = "./assets/jacket-photo-inside.webp?v=2";
-  const SHADE_INSIDE = "./assets/jacket-photo-shade-inside.webp?v=2";
+  const PHOTO_INSIDE = "./assets/jacket-photo-inside.webp?v=3";
+  const SHADE_INSIDE = "./assets/jacket-photo-shade-inside.webp?v=3";
   const INSIDE_LINING = "M299.8,160.1 L295.2,167.9 L273.6,200.7 L255.9,226.9 L236.2,261.6 L214.6,298.9 L193,327.1 L186.5,346.7 L183.8,369 L179.3,423.4 L176.6,488.9 L176.6,554.4 L178.6,587.1 L181.2,619.9 L181.2,652.6 L178.6,685.4 L176.6,718.1 L173.4,750.9 L168.8,783.6 L162.2,807.9 L155.7,832.8 L149.8,857 L146.5,881.9 L147.2,895 L155.7,906.1 L170.1,911.4 L195,909.4 L212,903.5 L215.9,865.5 L221.2,826.2 L223.8,803.3 L225.8,760.7 L230.4,719.4 L235.6,685.4 L240.8,659.2 L244.8,630.4 L261.8,626.4 L267,587.1 L276.9,521.6 L283.4,456.1 L288,357.9 L291.9,259.6 L298.5,194.1 Z " +
     "M498.2,161.4 L504.8,166 L537.5,218.4 L568.3,261.6 L594.5,292.4 L609.6,323.2 L618.8,346.7 L622,379.5 L622.7,423.4 L622.7,554.4 L620.7,587.1 L618.8,619.9 L618.1,652.6 L620.7,685.4 L624,718.1 L628.6,750.9 L633.8,783.6 L640.4,807.9 L646.9,832.8 L651.5,857 L654.8,881.9 L653.5,896.3 L646.9,905.5 L630.6,910.7 L607.6,908.1 L589.3,902.2 L587.3,883.2 L582.7,842.6 L578.8,809.8 L577.5,800 L572.9,760.7 L568.3,719.4 L563.1,685.4 L560.5,659.2 L557.2,630.4 L542.1,626.4 L530.3,587.1 L525.8,521.6 L519.2,456.1 L510.7,357.9 L502.8,259.6 L496.3,194.1 Z";
   // Half lining: across the chest only.
