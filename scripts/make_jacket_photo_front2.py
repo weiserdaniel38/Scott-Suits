@@ -24,6 +24,7 @@ Run: python3 scripts/make_jacket_photo_front2.py [check-folder] [name ...]
 """
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
+import json
 import os
 import sys
 
@@ -31,7 +32,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 ARGS = sys.argv[1:]
 CHECK = ARGS[0] if ARGS and os.path.isdir(ARGS[0]) else None
-ONLY = [a for a in ARGS if not os.path.isdir(a)]
+TRACE = '--trace' in ARGS                         # only the traced lines (fast), into the check folder
+ONLY = [a for a in ARGS if not os.path.isdir(a) and a != '--trace']
 PAGE = np.array([236, 228, 221], np.float32)      # #ECE4DD
 K = 1.5                                           # output px per unit
 VBW, VBH = 800, 952
@@ -101,6 +103,54 @@ PHOTOS = {
                    'V apex': (563, 497), 'lapel hole a': (737, 264), 'lapel hole b': (775, 249), 'sleeve end': (0, 1220), 'sleeve buttons bottom': (0, 1136), 'sleeve buttons top': (0, 1057), 'hem': (0, 1345)},
     ),
 }
+
+# ---- Daniel's 14 clean photos (2026-11-22, Scott_Suits_Lapel_Options.pdf):
+# the same jacket once per lapel, no pockets, buttons or buttonholes, so
+# nothing is painted out. They share the first photos' framing; the V, the
+# lapels' edges and the front edge are traced by the script. Per photo: the
+# lapel tips (photo px), and waypoints where an edge curves.
+SB_CLEAN = dict(
+    S=0.681, CX=556.3, OY=19.0,
+    gaps=[(186, 520, 300, 1238), (812, 520, 926, 1238)],
+    neck=[(446, 62), (458, 36), (480, 26), (560, 22), (640, 27), (658, 40), (672, 62), (700, 480), (420, 480)],
+    floor_y=1180, hem_y=1300, tie_top=125,
+    v_cols=(400, 720), v_rows=(70, 480), v_auto=True,
+    cuffs=[(30, 215), (910, 1095)], cuff_rows=(1239, 1285),
+    opening_seed=(558, 1200), keep_edges=True,
+)
+
+
+def clean(base, lapel, **kw):
+    kind = 'sb' if base is SB_CLEAN else 'db'
+    return dict(base, src='reference/jacket-front-%s-%s.webp' % (kind, lapel), out='front-%s-%s' % (kind, lapel), **kw)
+
+
+PHOTOS.update({
+    'sb-notch-clean': clean(SB_CLEAN, 'notch', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(781, 218)]),
+        dict(name='L', side='L', dp=True, edge=[(331, 218)])]),
+    'sb-peak-clean': clean(SB_CLEAN, 'peak', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(816, 167)]),
+        dict(name='L', side='L', dp=True, edge=[(296, 167)])]),
+    'sb-semi-notch-clean': clean(SB_CLEAN, 'semi-notch', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(777, 195)]),
+        dict(name='L', side='L', dp=True, edge=[(347, 196)])]),
+    'sb-semi-peak-clean': clean(SB_CLEAN, 'semi-peak', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(799, 182)]),
+        dict(name='L', side='L', dp=True, edge=[(318, 184)])]),
+    # Diamond: one collar from the neck out to a point, then in.
+    'sb-diamond-clean': clean(SB_CLEAN, 'diamond', lapels=[
+        dict(name='R', side='R', dp=True, edge=[(740, 135), (793, 219)]),
+        dict(name='L', side='L', dp=True, edge=[(375, 140), (325.5, 222)])]),
+    # Shawl and Arc: the collar's outer edge curves all the way, so it is
+    # guided by hand points down to its end.
+    'sb-shawl-clean': clean(SB_CLEAN, 'shawl', lapels=[
+        dict(name='R', side='R', dp=True, end=True, half=12, edge=[(760, 127), (763, 193), (764, 260), (755, 327), (737, 393), (705, 460), (693, 500), (680, 540), (660, 580), (635, 620), (607, 660), (576, 700), (550, 730)]),
+        dict(name='L', side='L', dp=True, end=True, half=12, edge=[(360, 127), (359, 260), (373, 327), (390, 393), (412, 460), (430, 500), (451, 540), (472, 580), (492, 620), (513, 660), (536, 700), (545, 715)])]),
+    'sb-arc-clean': clean(SB_CLEAN, 'arc', lapels=[
+        dict(name='R', side='R', dp=True, end=True, half=14, edge=[(757, 125), (757, 227), (757, 340), (752, 407), (741, 473), (712, 540), (702, 590), (693, 633), (682, 673), (667, 707), (647, 730), (620, 748), (593, 760), (567, 770), (547, 780)]),
+        dict(name='L', side='L', dp=True, end=True, half=14, edge=[(361, 125), (361, 227), (361, 340), (367, 407), (377, 473), (403, 540), (413, 600), (427, 650), (443, 690), (460, 717), (480, 737), (500, 748), (520, 757), (537, 761)])]),
+})
 
 
 def u8(a): return Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8)).copy()
@@ -200,6 +250,32 @@ def shade_map(L, alpha, ref, detail=1.25, grain=2.6, fine=0.9, keep=None):
     return np.where(r < 1, 1 - (1 - r) * 0.95, r)
 
 
+def dp_line(cost, guide_y, guide_x, half, start=3, end=5, bend=0.35):
+    """The cheapest line through `cost`, one x per row, kept within `half`
+    px of the guide (rows guide_y, columns guide_x) and bending gently
+    against it. Returns {y: x}."""
+    n = len(guide_y); w = 2 * half + 1
+    C = np.empty((n, w), np.float32)
+    off = np.abs(np.arange(w) - half)
+    for i, (y, gx) in enumerate(zip(guide_y, guide_x)):
+        x0 = int(round(gx)) - half
+        C[i] = cost[int(y), x0:x0 + w] + 0.01 * off * off
+    acc = C[0] + np.where(off <= start, 0, 1e6); back = np.zeros((n, w), np.int8)
+    for i in range(1, n):
+        best = acc.copy(); bk = np.zeros(w, np.int8)
+        for d in (-1, 1):
+            sh = np.roll(acc, d) + bend
+            sh[0 if d > 0 else -1] = 1e9
+            better = sh < best; best = np.where(better, sh, best); bk = np.where(better, -d, bk)
+        acc = best + C[i]; back[i] = bk
+    j = int(np.argmin(acc + np.where(off <= end, 0, 1e6)))
+    out = {}
+    for i in range(n - 1, -1, -1):
+        out[int(guide_y[i])] = float(int(round(guide_x[i])) - half + j)
+        j += int(back[i][j])
+    return out
+
+
 def build(name, c):
     S, CX, OY = c['S'], c['CX'], c['OY']
     U = lambda x, y: (round((x - CX) * S + 400, 1), round(y * S + OY, 1))
@@ -238,8 +314,37 @@ def build(name, c):
     c0, c1 = c['v_cols']
     for y in range(*c['v_rows']):
         xs = np.where(shirt[y, c0:c1])[0]
-        if len(xs) > 20: rollL[y] = c0 + xs[0]; rollR[y] = c0 + xs[-1]
-    V_LEFT, V_RIGHT = c['v_left'], c['v_right']
+        if len(xs) > (5 if c.get('v_auto') else 20): rollL[y] = c0 + xs[0]; rollR[y] = c0 + xs[-1]
+    if c.get('v_auto'):
+        # Clean photos: the shirt shows as a sliver either side of the tie
+        # down to auto_to; below it the V's sides are the tie's own edges
+        # (cloth, a dark crease, then the tie on the viewer's left; the tie,
+        # then the bright roll of the lapel on the right), followed row by
+        # row down to where they meet.
+        G = blur(L, 1.2)
+        tcx = float(np.median(np.where((Ls[250, c0:c1] < 92) & (np.arange(c0, c1) > rollL[250]) & (np.arange(c0, c1) < rollR[250]))[0])) + c0
+        both = [y for y in sorted(rollL) if y > 250 and (shirt[y, int(rollL[y]):int(tcx)].sum() >= 2) and (shirt[y, int(tcx):int(rollR[y]) + 1].sum() >= 2)]
+        auto_to = max(q for q in both if all(k in both for k in range(q - 5, q))) - 2
+        gl = G[:, 3:] - G[:, :-3]                     # brightness change over 3 px, at x + 1.5
+        costL = np.pad(gl, ((0, 0), (1, 2)), mode='edge')            # a drop (cloth to crease)
+        costR = np.pad(-gl, ((0, 0), (1, 2)), mode='edge')           # a rise (tie to lapel roll)
+        y = auto_to; xl, xr = float(rollL[y]), float(rollR[y]); vl, vr = [], []
+        lim = c.get('v_limit', 760)
+        while y < lim:
+            y += 1
+            cand = np.arange(int(round(xl)) - 1, int(round(xl)) + 4); xl = float(cand[np.argmin(costL[y, cand])])
+            cand = np.arange(int(round(xr)) - 3, int(round(xr)) + 2); xr = float(cand[np.argmin(costR[y, cand])])
+            if xr - xl < c.get('v_close', 7): break
+            vl.append((xl, y)); vr.append((xr, y))
+        med = lambda pts: [(float(np.median([p[0] for p in pts[max(0, i - 4):i + 5]])), p[1]) for i, p in enumerate(pts)]
+        vl, vr = med(vl), med(vr)
+        APEX = (round((vl[-1][0] + vr[-1][0]) / 2, 1), vl[-1][1] + 2)
+        V_LEFT = vl[5::8] + [APEX]; V_RIGHT = vr[5::8] + [APEX]
+        c = dict(c, auto_to=auto_to)
+        print('  V found: shirt to row %d, apex %s' % (auto_to, APEX))
+    else:
+        V_LEFT, V_RIGHT = c['v_left'], c['v_right']
+        APEX = V_LEFT[-1]
     ys = sorted(y for y in rollL if y <= c['auto_to'])
     vee = [(rollL[y] - 0.5, y) for y in ys] + V_LEFT + V_RIGHT[::-1] + [(rollR[y] + 1.5, y) for y in reversed(ys)]
     VEE = poly(vee, L.shape)
@@ -249,10 +354,44 @@ def build(name, c):
     # burgundy. (Dark and joined up; the shirt's shadow beside the knot is
     # lighter than any part of the tie.)
     tie_core = (Ls < 92) & (VEE > 0.5) & (yy > TOP)
-    tie_near = f32(u8(tie_core.astype(np.float32)).filter(ImageFilter.MaxFilter(3)))
-    tie_t = np.maximum(tie_core, tie_near * np.clip((190 - L) / 100, 0, 1)) * (VEE > 0.02) * (yy > TOP)
-    tie_mean = float(L[tie_t > 0.95].mean())
-    tie_col = TIE_RGB[None, None, :] * (np.clip(L, 8, 96) / tie_mean)[..., None]
+    shirt_fix = None
+    if c.get('v_auto'):
+        mx = lambda m, n: np.asarray(u8(m.astype(np.float32)).filter(ImageFilter.MaxFilter(n))) > 127
+        mn = lambda m, n: np.asarray(u8(m.astype(np.float32)).filter(ImageFilter.MinFilter(n))) > 127
+        # Only the tie itself: the dark shadow under each collar point hangs
+        # on to the knot by a thread, and recoloured it shows as a dot.
+        knot = yy < TOP + 140
+        tie_core = np.where(knot, mx(mn(tie_core, 5), 5) & tie_core, tie_core)
+        ty = TOP + 200
+        f = u8(tie_core.astype(np.float32))
+        ImageDraw.floodfill(f, (int(np.median(np.nonzero(tie_core[ty])[0])), ty), 128)
+        f = u8((np.asarray(f) == 128).astype(np.float32))
+        ImageDraw.floodfill(f, (0, 0), 128)                     # the outside; what is left is the tie, sheen included
+        tie_full = np.asarray(f) != 128
+        tie_in = mn(tie_full, 3)
+        # An edge pixel is part tie, part shirt. How much of each comes from
+        # the tie's shade just inside and the shirt's shade just past the
+        # photo's bright fringe; left as they are, the mixed pixels and the
+        # fringe show as an outline around a recoloured tie.
+        wt = blur(tie_in.astype(np.float32), 2.0)
+        tie_L = blur(L * tie_in, 2.0) / np.maximum(wt, 1e-3)
+        far = ~mx(tie_full, 9) & (VEE > 0.5)
+        wf = blur(far.astype(np.float32), 3.0)
+        shirt = np.dstack([blur(A[..., ch] * far, 3.0) / np.maximum(wf, 1e-3) for ch in range(3)])
+        have = (wf > 0.02) & (wt > 0.02)
+        band = mx(tie_full, 5) & ~tie_in
+        t_mix = np.clip((shirt.mean(2) - L) / np.maximum(shirt.mean(2) - tie_L, 20), 0, 1)
+        t_old = np.clip((190 - L) / 100, 0, 1) * mx(tie_full, 3)
+        tie_t = np.where(tie_in, 1.0, np.where(band, np.where(have, t_mix, t_old), 0.0)) * (VEE > 0.02) * (yy > TOP)
+        tie_mean = float(L[tie_in].mean())
+        tie_col = TIE_RGB[None, None, :] * (np.clip(np.where(tie_in, L, tie_L), 8, 96) / tie_mean)[..., None]
+        w = np.clip(blur(mx(tie_full, 7).astype(np.float32), 1.0) * 1.6, 0, 1) * have * (VEE > 0.5)
+        shirt_fix = (shirt, w[..., None])
+    else:
+        tie_near = f32(u8(tie_core.astype(np.float32)).filter(ImageFilter.MaxFilter(3)))
+        tie_t = np.maximum(tie_core, tie_near * np.clip((190 - L) / 100, 0, 1)) * (VEE > 0.02) * (yy > TOP)
+        tie_mean = float(L[tie_t > 0.95].mean())
+        tie_col = TIE_RGB[None, None, :] * (np.clip(L, 8, 96) / tie_mean)[..., None]
 
     # ---- Cloth: dark, outside the V, not the shadow under the shirt cuffs.
     # (Under the hem the floor's contact shadow is nearly as dark as the
@@ -286,8 +425,65 @@ def build(name, c):
             for q in range(int(fpts[0][1]), int(fpts[-1][1]) + 1): roll[lp['side']][q] = float(np.interp(q, [p[1] for p in fpts], [p[0] for p in fpts]))
             folds[lp['name']] = lp['side']
     edges = {}
+    ridge = Lb - blur(L, 5.0)                         # negative on a thin dark line
+    # The fold below the V and the top front's edge under it (the buttons sit
+    # beside it): the dark line followed down from where the V closes.
+    front = {}
+    if c.get('v_auto'):
+        x = float(APEX[0])
+        for q in range(int(APEX[1]), min(H - 40, int(APEX[1]) + c.get('front_rows', 300))):
+            cand = np.arange(int(round(x)) - 2, int(round(x)) + 3)
+            x = float(cand[np.argmin(ridge[q, cand])]); front[q] = x
+        fy = sorted(front); fx = np.polyval(np.polyfit(fy, [front[q] for q in fy], 4), fy)
+        front = dict(zip(fy, [float(v) for v in fx]))
+
+    def smooth(curve, n=7):
+        qs = sorted(curve); xs = np.array([curve[q] for q in qs], np.float32)
+        xs = np.convolve(np.pad(xs, n, mode='edge'), np.ones(2 * n + 1) / (2 * n + 1), 'valid')
+        return dict(zip(qs, [float(v) for v in xs]))
+
+    def trace(lp):
+        """A lapel's outer edge: the thin shadow under it, followed as one
+        line from the tip (through any waypoints). Without end=True the edge
+        is taken to run straight on to where it meets the fold (viewer's
+        right lapel) or goes under the other front (viewer's left)."""
+        e = list(lp['edge']); side = lp['side']; half = lp.get('half', 16)
+        if not lp.get('end'):
+            tip = e[0]; ystop = int(APEX[1]) - 120
+            tgt = (APEX[0] + (10 if side == 'R' else -10), APEX[1] + 40)
+            ey = np.arange(tip[1], ystop + 1)
+            gx = np.interp(ey, [p[1] for p in e + [tgt]], [p[0] for p in e + [tgt]])
+            first = dp_line(ridge, ey, gx, half, end=half)
+            qs = sorted(first)[-100:]; a, b = np.polyfit(qs, [first[q] for q in qs], 1)
+            end = None
+            if side == 'R':
+                for q in sorted(front):
+                    if a * q + b <= front[q] + 1: end = (front[q], q); break
+                if end is None: end = (a * (APEX[1] + 90) + b, APEX[1] + 90)
+            else:
+                for q in range(ystop, int(APEX[1])):
+                    if q in roll['L'] and a * q + b >= roll['L'][q] - 1: end = (roll['L'][q], q); break
+                if end is None:
+                    for q in sorted(front):
+                        if a * q + b >= front[q] - 1: end = (front[q], q); break
+                if end is None: end = (APEX[0], int(APEX[1]))
+            e = [(first[q], q) for q in sorted(first)[::20]] + [(float(end[0]), int(end[1]))]
+            half = 6
+        ey = np.arange(int(e[0][1]), int(e[-1][1]) + 1)
+        gx = np.interp(ey, [p[1] for p in e], [p[0] for p in e])
+        lp['edge'] = [(round(float(x), 1), int(y)) for x, y in e]
+        return smooth(dp_line(ridge, ey, gx, half))
+
     for lp in c['lapels']:
-        side = lp['side']; e = lp['edge']
+        side = lp['side']
+        if lp.get('dp'):
+            edges[lp['name']] = trace(lp)
+            if front:
+                # Below the V the lapel's roll line is the fold, down to where the edge meets it.
+                for q in range(int(APEX[1]), int(lp['edge'][-1][1]) + 1):
+                    if q in front: roll[side][q] = front[q]
+            continue
+        e = lp['edge']
         ey = np.arange(e[0][1], e[-1][1] + 1)
         if lp.get('fit'):
             ex = np.polyval(np.polyfit([p[1] for p in e], [p[0] for p in e], lp['fit']), ey)
@@ -301,6 +497,25 @@ def build(name, c):
                     cc = int(round(x0)); seg = Lb[int(y), cc - 7:cc + 8]; fx.append(cc - 7 + int(np.argmin(seg)))
                 ex = np.polyval(np.polyfit(ey, fx, 5), ey)
         edges[lp['name']] = dict(zip(ey.tolist(), ex.tolist()))
+
+    if CHECK and c.get('v_auto'):
+        # The traced lines over the photo, to check by eye.
+        bx = c.get('trace_box', (240, 60, 900, 780)); Z = 1.5
+        im = src.crop(bx).resize((int((bx[2] - bx[0]) * Z), int((bx[3] - bx[1]) * Z)), Image.LANCZOS)
+        d = ImageDraw.Draw(im)
+        P = lambda x, y: ((x - bx[0]) * Z, (y - bx[1]) * Z)
+        d.line([P(x, y) for x, y in vee] + [P(*vee[0])], fill=(0, 255, 0), width=1)
+        for nm, curve in edges.items():
+            d.line([P(curve[q], q) for q in sorted(curve)], fill=(255, 40, 40), width=1)
+        if front: d.line([P(front[q], q) for q in sorted(front)], fill=(255, 220, 0), width=1)
+        for lp in c['lapels']:
+            for x, y in lp['edge']: d.ellipse([P(x, y)[0] - 3, P(x, y)[1] - 3, P(x, y)[0] + 3, P(x, y)[1] + 3], outline=(0, 200, 255))
+        for gx in range(bx[0] // 50 * 50 + 50, bx[2], 50):
+            d.line([P(gx, bx[1]), P(gx, bx[1] + 8)], fill=(255, 255, 0)); d.text((P(gx, 0)[0] + 2, 2), str(gx), fill=(255, 255, 0))
+        for gy in range(bx[1] // 50 * 50 + 50, bx[3], 50):
+            d.line([P(bx[0], gy), P(bx[0] + 8, gy)], fill=(0, 255, 255)); d.text((10, P(0, gy)[1] - 5), str(gy), fill=(0, 255, 255))
+        im.save(os.path.join(CHECK, '%s-trace.png' % c['out']))
+    if TRACE: return
 
     # ---- Painted out: the photo's own buttons, buttonholes and pockets.
     hole = np.zeros(L.shape, bool)
@@ -376,6 +591,8 @@ def build(name, c):
     # cloth, whatever is beside it (so the cloth's soft edge blends into the
     # right thing).
     base = A.copy()
+    if shirt_fix:
+        base = base * (1 - shirt_fix[1]) + shirt_fix[0] * shirt_fix[1]
     base = base * (1 - tie_t[..., None]) + tie_col * tie_t[..., None]
     # (The thin rim between the cloth and the backdrop, a mix of the two with
     # the photo's bright fringe, goes with the backdrop: left as it is, it
@@ -410,6 +627,7 @@ def build(name, c):
     print('  landmarks', {k: U(*v) for k, v in c.get('landmarks', {}).items()})
 
     # ---- Measurements for jacket-studio.js (picture units) -----------------
+    M = {'profiles': {}}
     for lp in c['lapels']:
         side = lp['side']; e = lp['edge']; edge = edges[lp['name']]
         # Under the other lapel's fold the roll line is that fold.
@@ -430,9 +648,11 @@ def build(name, c):
             # (Single breasted: the edge runs on down to where it meets the front edge.)
             rows[-1][2] = U(float(np.polyval(np.polyfit([p[1] for p in e], [p[0] for p in e], lp['fit']), V_RIGHT[-1][1])), 0)[0]
             rows.append([U(0, e[-1][1])[1], U(e[-1][0], 0)[0], U(e[-1][0], 0)[0]])
-        print('  LAPEL_PROFILE %s' % lp['name'], str([[round(r[0]), round(r[1]), round(r[2])] for r in rows]).replace(' ', ''))
+        M['profiles'][lp['name']] = [[round(r[0]), round(r[1]), round(r[2])] for r in rows]
+        print('  LAPEL_PROFILE %s' % lp['name'], str(M['profiles'][lp['name']]).replace(' ', ''))
     yq = min(300, ys[-1])
-    print('  lapel mirror x (sum of the two roll lines at y %d px): %.1f' % (yq, U(rollL[yq], 0)[0] + U(rollR[yq], 0)[0]))
+    M['mirror'] = round(U(rollL[yq], 0)[0] + U(rollR[yq], 0)[0], 1)
+    print('  lapel mirror x (sum of the two roll lines at y %d px): %.1f' % (yq, M['mirror']))
 
     def runs_at(yu):
         r = Af[int(yu * K)] > 0.5
@@ -448,25 +668,76 @@ def build(name, c):
         if len(r) == 3:
             body.append([yu, float(round(r[1][0], 1)), float(round(r[1][1], 1))]); sleeve.append([yu, float(round(r[0][1], 1)), float(round(r[2][0], 1))])
         else: print('  (row %d: body and sleeves not apart: %s)' % (yu, [(round(a), round(b)) for a, b in r]))
+    M['sides'] = body; M['sleeves'] = sleeve
     print('  BODY_SIDES', str(body).replace(' ', '')); print('  SLEEVE_SIDES', str(sleeve).replace(' ', ''))
     r = runs_at(800); print('  sleeve outer edges at y 800: %.1f %.1f' % (r[0][0], r[-1][1]))
+    # Where the viewer's left sleeve ends (down its middle), and the cuffs'
+    # place for the page from it: [scale, x shift, y shift].
+    mid = int((r[0][0] + r[0][1]) / 2 * K); col = Af[int(800 * K):, mid] > 0.5
+    send = 800 + (int(np.argmin(col)) if not col.all() else len(col)) / K
+    sc = (r[-1][1] - r[0][0]) / 738.14
+    M['cuffs'] = [round(sc, 3), round(r[0][0] - sc * 31.16, 2)]; M['sleeveEnd'] = round(send, 1)
+    print('  sleeve end y %.1f  CUFFS [%.3f, %.2f, y shift = this sleeve end - the first photo\'s + its shift]' % (send, sc, r[0][0] - sc * 31.16))
+    if front:
+        M['frontEdge'] = [[U(0, q)[1], U(front[q], 0)[0]] for q in sorted(front)[::15]]
+        M['apex'] = list(U(*APEX)); M['ends'] = {lp['name']: list(U(*lp['edge'][-1])) for lp in c['lapels']}; M['tips'] = {lp['name']: list(U(*lp['edge'][0])) for lp in c['lapels']}
+        print('  FRONT_EDGE', str(M['frontEdge'][::2]).replace(' ', ''))
+        print('  APEX', U(*APEX), ' lapel ends', {lp['name']: U(*lp['edge'][-1]) for lp in c['lapels']}, ' tips', {lp['name']: U(*lp['edge'][0]) for lp in c['lapels']})
 
     if c.get('opening_seed'):
         # The opening below the bottom button (the jacket's inside shows):
         # the dark region between the fronts.
         Rf_s = blur(Rf, 1.5)
-        dark = u8(((Rf_s < 0.74) & (Af > 0.9)).astype(np.float32))
         sd = U(*c['opening_seed']); seed = (int(sd[0] * K), int(sd[1] * K))
-        ImageDraw.floodfill(dark, seed, 128)
-        op = np.asarray(dark) == 128
+        if c.get('v_auto'):
+            # Row by row from the seed: the dark run between the fronts, up
+            # to where it closes (a thin crease above it is not the opening).
+            thr = min(0.84, (float(np.median(Rf_s[seed[1] - 6:seed[1] + 7, seed[0] - 6:seed[0] + 7])) + 1.0) / 2)
+            dk = (Rf_s < thr) & (Af > 0.9)
+            op = np.zeros(dk.shape, bool)
+            for step in (-1, 1):
+                cx = seed[0]; y = seed[1]
+                while 0 < y < dk.shape[0] - 1:
+                    if not dk[y, cx]:
+                        near = np.where(dk[y, max(0, cx - 12):cx + 13])[0]
+                        if not len(near): break
+                        cx = max(0, cx - 12) + int(near[np.argmin(np.abs(near - 12))])
+                    x0 = cx
+                    while x0 > 0 and dk[y, x0 - 1]: x0 -= 1
+                    x1 = cx
+                    while x1 < dk.shape[1] - 1 and dk[y, x1 + 1]: x1 += 1
+                    if x1 - x0 < 10: break
+                    op[y, x0:x1 + 1] = True; cx = (x0 + x1) // 2; y += step
+        else:
+            dark = u8(((Rf_s < 0.74) & (Af > 0.9)).astype(np.float32))
+            ImageDraw.floodfill(dark, seed, 128)
+            op = np.asarray(dark) == 128
         oy = np.where(op.any(1))[0]
         left, right = [], []
         for yu in range(int(oy[0] / K) + 2, int(oy[-1] / K), 14):
             xs = np.where(op[int(yu * K)])[0]
             if len(xs): left.append((round(xs[0] / K, 1), yu)); right.append((round((xs[-1] + 1) / K, 1), yu))
+        if c.get('v_auto'):
+            # (The opening only widens toward the hem: a paler patch of the
+            # inside must not dent its sides.)
+            def undent(side, sign):
+                xs = [q[0] * sign for q in side]; good = [0]
+                for i in range(1, len(xs)):
+                    if xs[i] <= min(xs[:i]): good.append(i)
+                fx = np.interp(range(len(xs)), good, [xs[i] for i in good])
+                return [(round(float(v) * sign, 1), q[1]) for v, q in zip(fx, side)]
+            left, right = undent(left, 1), undent(right, -1)
         pts = [(round((left[0][0] + right[0][0]) / 2, 1), round(oy[0] / K, 1))] + right + [(right[-1][0], round(oy[-1] / K, 1)), (left[-1][0], round(oy[-1] / K, 1))] + left[::-1]
-        print('  SB_OPENING', 'M' + ' L'.join('%g,%g' % p for p in pts) + ' Z')
-        print('  opening box', round(min(p[0] for p in pts)), round(oy[0] / K), round(max(p[0] for p in pts)), round(oy[-1] / K))
+        M['opening'] = 'M' + ' L'.join('%g,%g' % p for p in pts) + ' Z'
+        M['openingBox'] = [round(min(p[0] for p in pts)) - 6, round(oy[0] / K) - 6, round(max(p[0] for p in pts)) + 6, round(oy[-1] / K) + 4]
+        print('  SB_OPENING', M['opening'])
+        print('  opening box', M['openingBox'])
+        if CHECK:
+            v = Image.open(os.path.join(CHECK, '%s-check.png' % c['out'])).convert('RGB'); d = ImageDraw.Draw(v)
+            d.line([(x * K, y * K) for x, y in pts] + [(pts[0][0] * K, pts[0][1] * K)], fill=(255, 0, 0), width=2)
+            v.save(os.path.join(CHECK, '%s-check.png' % c['out']))
+    if CHECK:
+        json.dump(M, open(os.path.join(CHECK, '%s.json' % c['out']), 'w'))
 
 
 if __name__ == '__main__':
