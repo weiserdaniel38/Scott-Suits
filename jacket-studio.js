@@ -311,6 +311,38 @@
   // The shading maps and photos are stored larger than the picture's units
   // (scripts/crisp_jacket_shading.py); k = their pixels per unit.
   const unitK = (im) => (im.naturalWidth || im.width) / VBW;
+  // A swatch photo is rarely lit evenly, and repeated on a big plain panel
+  // its darker side (or a fold in a plain satin) shows as blocks. This levels
+  // the tile's light over an n x n grid and leaves the finer pattern alone.
+  function evenTile(t, n) {
+    try {
+      const w = t.width, h = t.height;
+      const tg = t.getContext("2d");
+      const d = tg.getImageData(0, 0, w, h), a = d.data;
+      const sum = new Float32Array(n * n), cnt = new Float32Array(n * n);
+      let all = 0;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4, l = a[i] * 0.3 + a[i + 1] * 0.59 + a[i + 2] * 0.11;
+        const ci = Math.min(n - 1, (y * n / h) | 0) * n + Math.min(n - 1, (x * n / w) | 0);
+        sum[ci] += l; cnt[ci]++; all += l;
+      }
+      const mean = all / (w * h);
+      if (mean < 1) return;
+      for (let i = 0; i < n * n; i++) sum[i] = sum[i] / Math.max(1, cnt[i]);
+      const at = (cx, cy) => sum[Math.max(0, Math.min(n - 1, cy)) * n + Math.max(0, Math.min(n - 1, cx))];
+      for (let y = 0; y < h; y++) {
+        const fy = (y + 0.5) * n / h - 0.5, y0 = Math.floor(fy), ty = fy - y0;
+        for (let x = 0; x < w; x++) {
+          const fx = (x + 0.5) * n / w - 0.5, x0 = Math.floor(fx), tx = fx - x0;
+          const lo = (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
+          const gain = Math.max(0.75, Math.min(1.35, mean / Math.max(1, lo)));
+          const i = (y * w + x) * 4;
+          a[i] = Math.min(255, a[i] * gain); a[i + 1] = Math.min(255, a[i + 1] * gain); a[i + 2] = Math.min(255, a[i + 2] * gain);
+        }
+      }
+      tg.putImageData(d, 0, 0);
+    } catch (e) { /* a photo the browser will not let us read: leave it */ }
+  }
   function paintStyle(g, p) {
     if (!p.img || !p.size) return p.hex;
     const k = p.key + "@" + p.size;
@@ -322,6 +354,7 @@
       const iw = p.img.naturalWidth, ih = p.img.naturalHeight;
       const c = p.crop || 0;
       tg.drawImage(p.img, iw * c, ih * c, iw * (1 - 2 * c), ih * (1 - 2 * c), 0, 0, px, px);
+      if (p.even) evenTile(t, p.even);
       tileCache[k] = t;
     }
     return g.createPattern(t, "repeat");
@@ -1485,7 +1518,8 @@
   // A three-piece's vest is always the photo's (only the fabric changes);
   // Vest Only follows the picks: the photo while the shape matches it, the
   // drawn vest for any other front, neck or bottom.
-  function drawVest(g, v, cx, oy, s, fixed) {
+  function drawVest(g, v, cx, oy, s, fixed, back) {
+    if (back) return drawVestBack(g, v, cx, oy, s);
     const va = vestAnswers(v, fixed);
     const fb = String(va.frontbutton || "");
     const asPhoto = fixed || (!/^Double/.test(fb) && /5/.test(fb) && String(va.bottom) === "Pointed" && String(va.collar) === "V-Neck");
@@ -1534,6 +1568,110 @@
       const lt = "rgba(255,255,255," + (0.35 * st.b).toFixed(3) + ")";
       line(c, [[74.9, 10.7], [110, 119], [110, 286]], lt, 0.9, [1.6, 3]);
       line(c, [[155.2, 11.4], [119.6, 119]], lt, 0.9, [1.6, 3]);
+    }
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 12 * s * RES; g.shadowOffsetY = 5 * s * RES;
+    g.drawImage(pc, cx - 114 * s, oy - 9.5 * s, VEST_W * s, VEST_PH * s);
+    g.restore();
+    return true;
+  }
+  // The vest's back, from Daniel's back photo (2026-11-22: plain satin, a
+  // centre seam and two darts, no strap), in the front's piece space. It is
+  // made of the lining: the vest's own lining pick, the jacket's when the
+  // vest follows it, else a satin a shade off the cloth. The adjuster strap
+  // and its buckle are drawn when picked.
+  const VEST_BACK_SHADE = "./assets/suit-vest-back-shade.webp?v=1";
+  const VEST_BUCKLES = {
+    "Silver Buckle": { metal: "#c3c7cd", light: "#f6f7f9", dark: "#7b8088" },
+    "Gunmetal Buckle": { metal: "#4b4e54", light: "#9a9ea6", dark: "#1d1f22" },
+    "Pointed Black Buckle": { metal: "#1c1c1f", light: "#6a6d73", dark: "#000000", pointed: true },
+  };
+  // Shown from the back on the small card while the customer is on the
+  // strap or buckle question (set where the vest's picks are watched).
+  let vestBackHint = false;
+  // Plain satins (no print or weave motif).
+  let plainLinings = null;
+  function plainLining(name) {
+    if (!plainLinings) {
+      plainLinings = {};
+      if (typeof LINING_PATTERN_TYPES !== "undefined") LINING_PATTERN_TYPES.forEach((pt) => {
+        if (/solid/i.test(pt.name)) pt.colorFamilies.forEach((f) => f.options.forEach((o) => { plainLinings[o.name] = true; }));
+      });
+    }
+    return !!plainLinings[name];
+  }
+  function drawVestBack(g, v, cx, oy, s) {
+    const va = vestAnswers(v, false);
+    const VD = typeof vestDesigner !== "undefined" ? vestDesigner : null;
+    const raw = VD && VD.rawSelections ? withHover(VD, VD.rawSelections()) : {};
+    const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
+    const fp = fabricPaint(fab);
+    const shade = img(VEST_BACK_SHADE);
+    const own = raw.lining && !/^__same_as__/.test(raw.lining);
+    let lp = liningPaint(own ? { _raw: { lining: raw.lining } } : pictureLayout().jacket ? v : { _raw: {} }, fp);
+    if (!fp.ready || !shade || !lp.ready) return false;
+    // (The lining's pattern at the vest's own scale: the folded vest is drawn
+    // at about 0.4 of the jacket's size per unit.)
+    // A plain satin is one smooth colour on a panel this size (its swatch
+    // photo, repeated, shows every fold); a print keeps its pattern.
+    if (lp.size && plainLining(own ? raw.lining : v._raw && v._raw.lining)) lp = Object.assign({}, lp, { img: null, size: 0, key: lp.key + ":flat" });
+    else if (lp.size) lp = Object.assign({}, lp, { size: lp.size * 0.4 * s, even: 4, key: lp.key + ":even" });
+    const k = s * RES;
+    const W = Math.round(VEST_W * k), H = Math.round(VEST_PH * k);
+    const pc = mk(W, H);
+    const c = pc.getContext("2d");
+    c.drawImage(litPiece(shade, lp, W, H), 0, 0);
+    const strap = String(raw.backstyle || "Adjuster Strap") !== "No Adjuster";
+    if (strap) {
+      const look = VEST_BUCKLES[raw.buckle] || VEST_BUCKLES["Silver Buckle"];
+      // Across the waist, side to side, the two ends meeting in the buckle.
+      const Y = 186, HT = 6.4, BX = 114;
+      c.save();
+      c.scale(k, k);
+      c.globalCompositeOperation = "source-atop";
+      // Its shadow on the back.
+      c.save();
+      c.filter = "blur(" + (1.6 * k).toFixed(1) + "px)";
+      c.fillStyle = "rgba(0,0,0,0.42)";
+      c.fillRect(20, Y - HT / 2 + 1.6, 190, HT + 0.6);
+      c.restore();
+      // The strap, in the same lining, a little lighter along its top.
+      const band = (x0, x1) => {
+        c.save();
+        c.beginPath(); c.rect(x0, Y - HT / 2, x1 - x0, HT); c.clip();
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.drawImage(litPiece(shade, lp, W, H), 0, -Math.round(2 * k));
+        c.restore();
+        const gr = c.createLinearGradient(0, Y - HT / 2, 0, Y + HT / 2);
+        gr.addColorStop(0, "rgba(255,255,255,0.16)"); gr.addColorStop(0.45, "rgba(255,255,255,0)"); gr.addColorStop(1, "rgba(0,0,0,0.26)");
+        c.fillStyle = gr; c.fillRect(x0, Y - HT / 2, x1 - x0, HT);
+        c.strokeStyle = "rgba(0,0,0,0.5)"; c.lineWidth = 0.5;
+        c.strokeRect(x0, Y - HT / 2, x1 - x0, HT);
+      };
+      band(20, BX + 2);
+      band(BX - 2, 210);
+      // The loose end past the buckle, lying on the other half.
+      c.fillStyle = "rgba(0,0,0,0.3)"; c.fillRect(BX + 19.6, Y - HT / 2, 1.1, HT);
+      line(c, [[BX + 19, Y - HT / 2 + 0.4], [BX + 19, Y + HT / 2 - 0.4]], "rgba(0,0,0,0.6)", 0.6);
+      // The buckle: a frame with a centre bar.
+      const bw = 12.5, bh = HT + 4.6, x0 = BX - bw / 2, y0 = Y - bh / 2;
+      const frame = new Path2D();
+      if (look.pointed) {
+        frame.moveTo(x0, y0 + 1.6); frame.lineTo(BX, y0 - 1.4); frame.lineTo(x0 + bw, y0 + 1.6);
+        frame.lineTo(x0 + bw, y0 + bh - 1.6); frame.lineTo(BX, y0 + bh + 1.4); frame.lineTo(x0, y0 + bh - 1.6); frame.closePath();
+      } else frame.roundRect(x0, y0, bw, bh, 1.6);
+      c.save();
+      c.shadowColor = "rgba(0,0,0,0.5)"; c.shadowBlur = 1.6 * k; c.shadowOffsetY = 0.8 * k;
+      c.strokeStyle = look.metal; c.lineWidth = 2; c.lineJoin = "round";
+      c.stroke(frame);
+      c.restore();
+      c.strokeStyle = look.light; c.lineWidth = 0.6;
+      c.save(); c.translate(-0.45, -0.45); c.stroke(frame); c.restore();
+      c.strokeStyle = look.dark; c.lineWidth = 0.4;
+      c.save(); c.translate(0.6, 0.6); c.stroke(frame); c.restore();
+      line(c, [[BX, y0 + 0.4], [BX, y0 + bh - 0.4]], look.metal, 1.5);
+      line(c, [[BX - 0.4, y0 + 0.8], [BX - 0.4, y0 + bh - 0.8]], look.light, 0.4);
+      c.restore();
     }
     g.save();
     g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 12 * s * RES; g.shadowOffsetY = 5 * s * RES;
@@ -1932,7 +2070,7 @@
       if (ok && lay.pants) {
         if (lay.jacket && lay.vest) {
           // Three-piece: vest on the left, pants a little smaller on the right.
-          ok = drawVest(g, v, 160, VBH + 24, 0.92, true);
+          ok = drawVest(g, v, 160, VBH + 24, 0.92, true, view === "back" || vestBackHint);
           if (ok) {
             ok = drawPants(g, v, 306, VBH + 52, 0.75);
           }
@@ -1940,7 +2078,7 @@
         // Pants on their own: bigger, centred.
         else ok = drawPants(g, v, 20, 58, 1.2);
       }
-      if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 40, 2.3);
+      if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 40, 2.3, false, view === "back" || vestBackHint);
     } catch (e) {
       ok = false;
       if (window.console) console.error(e);
@@ -2275,7 +2413,9 @@
     const lay = pictureLayout();
     const suit = lay.jacket && (lay.pants || lay.vest);
     const word = suit ? "suit" : lay.jacket ? "jacket" : lay.vest ? "vest" : "pants";
-    shell.querySelector(".studio-views").style.display = lay.jacket ? "" : "none";
+    // A vest on its own has a front and a back; pants alone have one view.
+    shell.querySelector(".studio-views").style.display = lay.jacket || lay.vest ? "" : "none";
+    shell.querySelector('.studio-views [data-view="inside"]').style.display = lay.jacket ? "" : "none";
     PEEK_CROP.h = picH - 40;
     // As many pixels as the card shows on this screen (never stretched).
     const pw = Math.max(240, Math.min(720, Math.round(120 * (window.devicePixelRatio || 1))));
@@ -2346,6 +2486,7 @@
   function openBig() {
     if (bigOpen || !context) return;
     bigOpen = true;
+    vestBackHint = false;
     big.hidden = false;
     document.documentElement.classList.add("suit-peek-open");
     document.body.classList.add("suit-peek-open");
@@ -2419,7 +2560,21 @@
   // jacket straight away.
   let lastFabric = D.rawSelections().fabric;
   if (typeof pantsDesigner !== "undefined" && pantsDesigner.onChange) pantsDesigner.onChange(() => { if (context) scheduleDraw(); });
-  if (typeof vestDesigner !== "undefined" && vestDesigner.onChange) vestDesigner.onChange(() => { if (context) scheduleDraw(); });
+  // The lining, strap and buckle are on the vest's back: while one of them is the
+  // latest vest pick (or under the mouse), the small card shows the back.
+  const VEST_BACK_KEYS = { backstyle: 1, buckle: 1, lining: 1 };
+  let lastVestRaw = typeof vestDesigner !== "undefined" && vestDesigner.rawSelections ? vestDesigner.rawSelections() : {};
+  if (typeof vestDesigner !== "undefined" && vestDesigner.onChange) vestDesigner.onChange(() => {
+    const now = vestDesigner.rawSelections ? vestDesigner.rawSelections() : {};
+    const changed = Object.keys(Object.assign({}, lastVestRaw, now)).filter((k) => lastVestRaw[k] !== now[k]);
+    lastVestRaw = now;
+    if (changed.length && !bigOpen) vestBackHint = changed.every((k) => VEST_BACK_KEYS[k]);
+    if (context) scheduleDraw();
+  });
+  if (typeof vestDesigner !== "undefined" && vestDesigner.onHover) vestDesigner.onHover(() => {
+    const hv = vestDesigner.hoverSelection ? vestDesigner.hoverSelection() : null;
+    if (hv && !bigOpen) vestBackHint = !!VEST_BACK_KEYS[hv.key];
+  });
   // Desktop hover preview (Daniel 2026-11-22): resting the mouse on an option
   // shows it in the picture; leaving puts the real pick back.
   [D, typeof pantsDesigner !== "undefined" ? pantsDesigner : null, typeof vestDesigner !== "undefined" ? vestDesigner : null].forEach((d) => {
