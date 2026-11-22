@@ -826,13 +826,18 @@
       g.beginPath(); g.arc(0, 0, r * 0.74, 0, Math.PI * 2);
       g.strokeStyle = rgba(mix(look.hex, "#000000", 0.5), 0.8); g.lineWidth = 0.9; g.stroke();
     }
-    // Light from the upper left.
-    const gr = g.createRadialGradient(-r * 0.35, -r * 0.4, 0, 0, 0, r * 1.05);
-    gr.addColorStop(0, "rgba(255,255,255,0.32)");
-    gr.addColorStop(0.45, "rgba(255,255,255,0.04)");
-    gr.addColorStop(1, "rgba(0,0,0,0.38)");
+    // A flat face that only darkens toward its rim (Daniel 2026-11-22:
+    // "Remove the bubble in all buttons", the glossy highlight is gone).
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, r * 1.05);
+    gr.addColorStop(0, "rgba(0,0,0,0)");
+    gr.addColorStop(0.62, "rgba(0,0,0,0.03)");
+    gr.addColorStop(1, "rgba(0,0,0,0.3)");
     g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2);
     g.fillStyle = gr; g.fill();
+    // A thin light on the rim's upper left, so a dark button still shows on
+    // dark cloth.
+    g.beginPath(); g.arc(0, 0, r - 0.6, Math.PI * 0.95, Math.PI * 1.6);
+    g.strokeStyle = "rgba(255,255,255,0.17)"; g.lineWidth = Math.max(0.8, r * 0.07); g.lineCap = "round"; g.stroke();
     if (opts.thread && sx > 0.6) {
       const h = r * 0.26;
       g.strokeStyle = opts.thread; g.lineWidth = Math.max(0.9, r * 0.13); g.lineCap = "round";
