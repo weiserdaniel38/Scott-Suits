@@ -551,6 +551,8 @@
   }
 
   // ---- Layout of the parts drawn on top -------------------------------------
+  // The front closure buttons' radius, in picture pixels.
+  const FRONT_BUTTON_R = 15.5;
   // Picture pixels. The photo's own buttons sat at (409,525) and (387,649).
   function frontLayout(name, rows, sb) {
     const n = String(name || "");
@@ -563,7 +565,7 @@
       // above the opening.)
       const two = Math.min(124, 664 - sb.y1), three = Math.min(82, (Math.min(690, sb.openTop - 16) - sb.y1) / 2);
       const ys = /^Single Breasted One/.test(n) ? [0] : /^Single Breasted Three/.test(n) ? [0, three, three * 2] : [0, two];
-      return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i ? -6 : 12), y: sb.y1 + d, fast: !i })) };
+      return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i ? -(FRONT_BUTTON_R - 5.5) : FRONT_BUTTON_R + 1), y: sb.y1 + d, fast: !i })) };
     }
     // One button at the waist (where the lapels end); three buttons with the
     // lapels rolling to the top one.
@@ -1184,11 +1186,13 @@
     // Buttonhole Only); the rest use holes.front.
     let firstHole = true;
     const holeHexNext = () => { const h = firstHole ? holes.frontTop : holes.front; firstHole = false; return h; };
+    // Daniel 2026-11-22: the front buttons bigger on every preview.
+    const BR = FRONT_BUTTON_R;
     lay.buttons.forEach((b) => {
-      if (lay.db) { if (b.holed) hole(g, [b.x + 14, b.y + 1], [b.x + 31, b.y + 1], holeHexNext(), 2.4); }
-      else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + 13, b.y], holeHexNext(), 2.4);
+      if (lay.db) { if (b.holed) hole(g, [b.x + BR + 2.5, b.y + 1], [b.x + BR + 19.5, b.y + 1], holeHexNext(), 2.4); }
+      else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + BR + 2.5, b.y], holeHexNext(), 2.4);
       else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHexNext(), 2.4);
-      button(g, b.x, b.y, 11.5, look, { thread: threadV, nail: v.buttonNail });
+      button(g, b.x, b.y, BR, look, { thread: threadV, nail: v.buttonNail });
     });
     const top = lay.buttons.find((b) => b.fast) || lay.buttons[0];
     anchors.topButton = [top.x, top.y];
