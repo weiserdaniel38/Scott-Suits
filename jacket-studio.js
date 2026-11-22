@@ -326,8 +326,28 @@
   // The tie (Daniel 2026-11-22: "Have the tie automatically match the suit
   // fabric color"). Every front photo has the mockup's burgundy tie; its
   // pixels are found by their redness (nothing else in the photos is red)
-  // and repainted in the fabric's color, keeping the tie's own light and
+  // and repainted in tieHex(fabric), keeping the tie's own light and
   // shadow. One recolored photo per photo + color, cached.
+  // Later the same day: "can contrast but should still match the palette".
+  // So the tie is a tonal partner of the cloth, not the same shade: the
+  // fabric's hue turned a little (analogous), richer, and lighter on dark
+  // cloth / deeper on light cloth so it stands out from the jacket.
+  function tieHex(hex) {
+    const [r, g, b] = hexRgb(hex).map((v) => v / 255);
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, s = 0;
+    if (d) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    const H = (h + 14 + 360) % 360;
+    const S = Math.min(0.45, s < 0.08 ? s + 0.08 : s * 1.05 + 0.04);
+    const L = l < 0.32 ? Math.min(0.36, l + 0.07 + (0.32 - l) * 0.15) : Math.max(0.12, l - 0.18);
+    const C = (1 - Math.abs(2 * L - 1)) * S, X = C * (1 - Math.abs(((H / 60) % 2) - 1)), m = L - C / 2;
+    const seg = [[C, X, 0], [X, C, 0], [0, C, X], [0, X, C], [X, 0, C], [C, 0, X]][Math.floor(H / 60) % 6];
+    return "#" + seg.map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0")).join("");
+  }
   const tieCache = [];
   function tiePhoto(photo, url, hex) {
     const key = url + "|" + hex;
@@ -795,7 +815,7 @@
     let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     const fabricHex = fp.hex;
     const photoUrl = arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO;
-    g.drawImage(tiePhoto(photo, photoUrl, fabricHex), 0, 0, VBW, VBH);
+    g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex)), 0, 0, VBW, VBH);
     floorShadow(g);
     // Arc: once a lining is picked it shows in the opening under the second
     // button, in place of the reference photo's grey damask (Daniel
