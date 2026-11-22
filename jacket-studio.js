@@ -43,20 +43,20 @@
   const MODE_KEY = "scottSuitsDesignMode";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const PHOTO = "./assets/jacket-photo-front.webp?v=17";
-  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=17", back: "./assets/jacket-photo-shade-back.webp?v=16" };
+  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=18", back: "./assets/jacket-photo-shade-back.webp?v=16" };
   // The photo has notch lapels; the other styles have their own front shading
   // with the lapels redrawn (scripts/make_jacket_photo.py).
   const SHADE_LAPEL = {
-    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=14",
-    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=14",
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=14",
-    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=14",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=14",
+    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=15",
+    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=15",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=15",
+    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=15",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=15",
   };
   // Double breasted fronts use their own photo (peak lapels, the front
   // crossing over; scripts/make_jacket_photo_db.py).
   const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=15";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=17";
+  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=18";
   // The lining seen in the Arc photo's opening below the second button (in
   // picture space; scripts/make_jacket_photo_arc.py LINING, mapped).
   // The same opening on the main photo (traced from its shading).
@@ -76,16 +76,24 @@
     sb: [[520, 200, 603], [560, 196, 607], [600, 188, 613], [640, 181, 621], [680, 175, 629], [720, 170, 632], [760, 165, 638], [800, 161, 642]],
     arc: [[520, 217, 580], [560, 211, 586], [600, 204, 593], [640, 198, 598], [680, 193, 602], [720, 190, 607], [760, 187, 611], [800, 184, 615]],
   };
+  // The sleeve's inner edge on the same rows. The sliver between the body and
+  // the sleeve is cloth in shadow (scripts/patch_front_shading.py), so the
+  // pockets run on across it and stop under the sleeve.
+  const SLEEVE_SIDES = {
+    sb: [[520, 177, 626.5], [560, 171.5, 631.5], [600, 167, 636.5], [640, 163.5, 640.5], [680, 160, 644.5], [720, 157, 647.5], [760, 155, 650.5], [800, 154, 651.5]],
+    db: [[520, 178, 625.5], [560, 173, 629.5], [600, 168, 634.5], [640, 163, 638.5], [680, 160, 641.5], [720, 158, 644.5], [760, 156, 647.5], [800, 155, 648.5]],
+    arc: [[520, 195.5, 602.5], [560, 194, 604.5], [600, 192, 605.5], [640, 190, 606.5], [680, 189, 607.5], [720, 189, 608], [760, 187, 611], [800, 184, 615]],
+  };
   // Where the chest meets the sleeve on the viewer's right: [y, x].
   const CHEST_SIDE = {
     sb: [[220, 642], [300, 634], [380, 620]],
     arc: [[220, 610], [300, 601], [380, 593]],
   };
-  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=12";
+  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=13";
   const SHADE_DB_LAPEL = {
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=12",
-    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=12",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=12",
+    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=13",
+    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=13",
+    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=13",
   };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
@@ -898,12 +906,8 @@
     // chosen lining shows there the same way, on top of the cloth shading.
     if (!db && !arc && showLining) openingLining(SB_OPENING, 330, 690, 470, 912);
 
-    // The lapel's outer edge where the mockup's labels were painted out
-    // (diamond and shawl lapels have their own edge in their shading).
-    if (!db && v.collar !== "Diamond Lapel" && v.collar !== "Shawl" && v.collar !== "Arc Lapel") {
-      line(g, [[541, 196], [482, 338]], "rgba(0,0,0,0.32)", 1.3);
-      line(g, [[539.5, 196], [480.5, 338]], "rgba(255,255,255,0.07)", 0.9);
-    }
+    // The lapel's outer edge beside the chest pocket is in the shading itself
+    // (scripts/patch_front_shading.py); no line is drawn over it.
 
     // Lapel width.
     const lapF = lapelFactor(v), lapS = lapelSides(v, db, arc);
@@ -975,8 +979,11 @@
     // front. Each one runs from the front out past the side of the body and
     // is cut off where the body turns away under the sleeve.
     const sides = BODY_SIDES[arcFront ? "arc" : "sb"];
-    let bodyD = "M" + sides.map((r) => r[1] + "," + r[0]).join(" L");
-    bodyD += " L" + sides.slice().reverse().map((r) => r[2] + "," + r[0]).join(" L") + " Z";
+    // Daniel 2026-11-22: "this got cut". The pocket no longer stops at the
+    // body's side: it carries on under the sleeve.
+    const sleeves = SLEEVE_SIDES[arcFront ? "arc" : db ? "db" : "sb"];
+    let bodyD = "M" + sleeves.map((r) => r[1] + "," + r[0]).join(" L");
+    bodyD += " L" + sleeves.slice().reverse().map((r) => r[2] + "," + r[0]).join(" L") + " Z";
     onCloth(g, (g) => {
       g.save();
       g.clip(new Path2D(bodyD));
@@ -1036,11 +1043,16 @@
         g.globalCompositeOperation = "source-atop";
         const TURN = 34;
         for (let y = 540; y < 800; y += 4) {
-          [[lerpRows(sides, y + 2, 1), 1], [lerpRows(sides, y + 2, 2), -1]].forEach((q) => {
-            const gr = g.createLinearGradient(q[0], 0, q[0] + q[1] * TURN, 0);
-            gr.addColorStop(0, "rgba(0,0,0,0.42)"); gr.addColorStop(0.45, "rgba(0,0,0,0.16)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+          // From under the sleeve, across the side of the body, fading out
+          // toward the front.
+          [[lerpRows(sleeves, y + 2, 1), lerpRows(sides, y + 2, 1), 1], [lerpRows(sleeves, y + 2, 2), lerpRows(sides, y + 2, 2), -1]].forEach((q) => {
+            const from = q[0] - q[2] * 2, to = q[1] + q[2] * TURN, len = Math.abs(to - from);
+            const tb = Math.min(0.9, Math.abs(q[1] - from) / len);
+            const gr = g.createLinearGradient(from, 0, to, 0);
+            gr.addColorStop(0, "rgba(0,0,0,0.42)"); gr.addColorStop(tb, "rgba(0,0,0,0.42)");
+            gr.addColorStop(tb + (1 - tb) * 0.45, "rgba(0,0,0,0.16)"); gr.addColorStop(1, "rgba(0,0,0,0)");
             g.fillStyle = gr;
-            g.fillRect(Math.min(q[0], q[0] + q[1] * TURN), y, TURN, 4.2);
+            g.fillRect(Math.min(from, to), y, len, 4.2);
           });
         }
         g.globalCompositeOperation = "source-over";
