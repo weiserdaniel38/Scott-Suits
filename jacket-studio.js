@@ -565,7 +565,7 @@
       // above the opening.)
       const two = Math.min(124, 664 - sb.y1), three = Math.min(82, (Math.min(690, sb.openTop - 16) - sb.y1) / 2);
       const ys = /^Single Breasted One/.test(n) ? [0] : /^Single Breasted Three/.test(n) ? [0, three, three * 2] : [0, two];
-      return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i ? -(FRONT_BUTTON_R - 5.5) : FRONT_BUTTON_R + 1), y: sb.y1 + d, fast: !i })) };
+      return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i ? -(FRONT_BUTTON_R - 8) : FRONT_BUTTON_R + 1), y: sb.y1 + d, fast: !i })) };
     }
     // One button at the waist (where the lapels end); three buttons with the
     // lapels rolling to the top one.
@@ -1197,6 +1197,27 @@
       if (lay.db) { if (b.holed) hole(g, [b.x + BR + 2.5, b.y + 1], [b.x + BR + 19.5, b.y + 1], holeHexNext(), 2.4); }
       else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + BR + 2.5, b.y], holeHexNext(), 2.4);
       else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHexNext(), 2.4);
+      if (!lay.db && !b.fast && f2 && f2.edge) {
+        // An undone button sits on the under front and tucks under the top
+        // front's edge (Daniel 2026-11-22: "slightly covered by the jacket,
+        // not fully exposed"): cut at the edge, with the edge's shadow on it.
+        const ex = (y) => lerpRows(f2.edge, y, 1);
+        const cut = new Path2D();
+        cut.moveTo(b.x - BR - 10, b.y - BR - 10);
+        for (let y = b.y - BR - 10; y <= b.y + BR + 10; y += 2) cut.lineTo(ex(y), y);
+        cut.lineTo(b.x - BR - 10, b.y + BR + 10);
+        cut.closePath();
+        g.save();
+        g.clip(cut);
+        button(g, b.x, b.y, BR, look, { thread: threadV, nail: v.buttonNail });
+        g.beginPath(); g.arc(b.x, b.y, BR, 0, Math.PI * 2); g.clip();
+        const e0 = ex(b.y);
+        const sh = g.createLinearGradient(e0 - 7, 0, e0 + 1, 0);
+        sh.addColorStop(0, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,0.5)");
+        g.fillStyle = sh; g.fillRect(e0 - 8, b.y - BR - 2, 12, 2 * BR + 4);
+        g.restore();
+        return;
+      }
       button(g, b.x, b.y, BR, look, { thread: threadV, nail: v.buttonNail });
     });
     const top = lay.buttons.find((b) => b.fast) || lay.buttons[0];
