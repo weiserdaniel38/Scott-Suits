@@ -176,7 +176,7 @@ PHOTOS.update({
         dict(name='L', side='L', dp=True, fixed=True, edge=[(321, 179), (350, 270), (400, 355), (440, 450)], aim=(525, 587))]),
     'db-semi-peak-clean': clean(DB_CLEAN, 'semi-peak', lapels=[
         dict(name='R', side='R', dp=True, edge=[(810, 185)], aim=(452, 765)),
-        dict(name='L', side='L', dp=True, edge=[(324, 185)], aim=(540, 543))]),
+        dict(name='L', side='L', dp=True, fixed=True, edge=[(324, 185), (433, 425), (465, 485)], aim=(514, 556))]),
     'db-diamond-clean': clean(DB_CLEAN, 'diamond', lapels=[
         dict(name='R', side='R', dp=True, edge=[(800, 220)], aim=(452, 765)),
         dict(name='L', side='L', dp=True, fixed=True, edge=[(328, 220), (422, 420)], aim=(517, 620))]),

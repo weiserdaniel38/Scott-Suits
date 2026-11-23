@@ -24,7 +24,7 @@ the same way, hung from the lapel's edge: assets/jacket-pocket-chest-<style>.web
 (shadow on top, light under it) and the CHEST_PHOTOS numbers
 (<check folder>/pocket_chest_meta.json). --chest makes only those.
 
-    python3 scripts/make_jacket_pockets.py [check folder] [--chest]
+    python3 scripts/make_jacket_pockets.py [check folder] [--chest] [photo number ...]
 
 Needs Pillow and numpy.
 """
@@ -156,6 +156,7 @@ def shape_of(Fs):
     ok=np.abs(top-(a+k*ds))<2.5
     k,a=np.polyfit(ds[ok],top[ok],1)
     T=a+k*dd                                     # the top edge: a straight line
+    TL=T.copy()
     for d,t in zip(ds,top):
         if abs(t-(a+k*d))<10: T[int(d)+D0]=t
     # columns where only the top edge was found do not count for the bottom
@@ -168,7 +169,7 @@ def shape_of(Fs):
     c1=int(dv.min())+D0
     b0=np.median(B[c1:c1+8])
     B[:c1]=b0+kb*(np.arange(c1)-c1-3.5)
-    return dict(T=T,B=B,dend=int(dend),k=float(k),kb=float(kb))
+    return dict(T=T,TL=TL,B=B,dend=int(dend),k=float(k),kb=float(kb))
 
 def zone_mask(shape,sh,mt,mb,mi):
     H,D=shape; m=np.zeros(shape,bool)
@@ -267,6 +268,17 @@ def lower(n,side,R,al,thr=0.045,zone=None,holes=(),split=None,body=None):
         Mz=zone_mask(Ss.shape,sh,9,17,15)
         wM=np.clip(blur(Mz.astype(np.float32),2.5)*1.25-0.125,0,1)
         Ps=1+(Pall-1)*wM
+        # The thin lines along the top edge (the jetting, a patch's turned
+        # hem) run its whole length; the grain filter leaves them in dashes,
+        # so that band is evened out along the edge.
+        Hs,Ds=Ps.shape; rr=np.arange(Hs,dtype=float); jj=np.arange(-12,17); cend=min(Ds,sh['dend']+D0+1)
+        Q=np.stack([np.interp(sh['TL'][c]+jj,rr,Ps[:,c]) for c in range(cend)],1)
+        Qs=blur1(Q,6,1)
+        wj=np.clip(np.minimum(jj+12,16-jj)/5.0,0,1)[:,None]*np.clip((cend-1-np.arange(cend))/14.0,0,1)[None,:]
+        Q2=Q+(Qs-Q)*wj
+        for c in range(cend):
+            y=sh['TL'][c]+jj; i0=int(np.ceil(y[0])); i1=int(np.floor(y[-1]))
+            if i0>=0 and i1<Hs: Ps[i0:i1+1,c]=np.interp(np.arange(i0,i1+1),y,Q2[:,c])
         As=zone_mask(Ss.shape,sh,0,0,0).astype(np.float32)
         # the last px to the outline and past it: as it is RIM px inside, along the top edge
         # Beside the outline only the pocket's own dark lines count (the
@@ -456,13 +468,15 @@ def chest_main(check, crows, chem):
 
 
 def main():
-    check = next((a for a in _args if not a.startswith('--')), None)
+    check = next((a for a in _args if os.path.isdir(a)), None)
+    only = [a for a in _args if not a.startswith('--') and not os.path.isdir(a)]      # photo numbers, e.g. 01 03
     clean = np.asarray(Image.open(CLEAN).convert('L')).astype(np.float32)
     crows, chem = body_rows(clean)
     chest_main(check, crows, chem)
     if '--chest' in _args: return
     meta = {}
     for n in sorted(SLUG):
+        if only and n[:2] not in only: continue
         L = np.asarray(Image.open(SRC + n + '.webp').convert('L')).astype(np.float32)
         sx, bx, by = register(L, crows, chem); K = S * sx
         al = np.clip((150 - blur(L, 1.0)) / 50, 0, 1)
@@ -483,7 +497,7 @@ def main():
             sides[side] = dict(P=P, box=(X0, Y0, X1, Y1), edge=mainp['edge'], ymid=mainp['ymid'], dend=max(p['dend'] for p in ps))
         cw = max(s['P'].shape[1] for s in sides.values()); ch = max(s['P'].shape[0] for s in sides.values())
         im = np.zeros((2 * ch, 2 * cw, 4), np.uint8); im[ch:, :, :3] = 255
-        m = {'src': './assets/jacket-pocket-lower-%s.webp?v=1' % SLUG[n], 'cw': cw, 'ch': ch, 'k': round(K, 4)}
+        m = {'src': './assets/jacket-pocket-lower-%s.webp?v=2' % SLUG[n], 'cw': cw, 'ch': ch, 'k': round(K, 4)}
         for i, side in enumerate('LR'):
             s = sides[side]; P = s['P']; h, w = P.shape; X0, Y0, X1, Y1 = s['box']
             D = 1 - np.minimum(P, 1); hi = np.maximum(P - 1, 0); U = 0.6 * (1 - np.exp(-hi / 0.6))
