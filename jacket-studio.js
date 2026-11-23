@@ -2906,7 +2906,10 @@
     const sec = onPantsPage ? pantsSec : onVestPage ? vestSec : onJacketPage ? jacketSec : null;
     const stageOn = !!(sec && !sec.classList.contains("stage-off"));
     setStage(stageOn ? sec : null);
-    peek.hidden = !next || stageOn;
+    // The small card is gone (Daniel 2026-11-23: "No more preview when
+    // selecting a fabric"): the Fabric step shows no picture, every other
+    // step has the stage.
+    peek.hidden = true;
     if (next === context) { positionPeek(); syncStageView(); return; }
     closePanel();
     if (!next) closeBig();
