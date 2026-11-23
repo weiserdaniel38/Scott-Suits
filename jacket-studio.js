@@ -853,37 +853,95 @@
   }
   // Stretch (f > 1) or squeeze each lapel between its roll line and its edge,
   // moving the cloth beyond the edge along with it (out to MARGIN past it).
+  // Done on the pixels themselves, row by row: every pixel is taken from
+  // where it was before, so no browser can leave a gap or a see-through
+  // pixel along the joins (Daniel 2026-11-22, on an iPhone: "lapel edges are
+  // jagged and random lines streaking thru"; Safari left dots along the
+  // joins of the drawn strips this used to be made of).
   function lapelWarp(g, sides, f) {
     if (f === 1) return;
     const cv = g.canvas, T = g.getTransform();
-    const tmp = mk(cv.width, cv.height);
-    tmp.getContext("2d").drawImage(cv, 0, 0);
-    const X = (x) => T.a * x + T.e;
     const MARGIN = 70;
-    g.save();
-    g.setTransform(1, 0, 0, 1, 0, 0);
+    // One block of pixels holding both lapels.
+    let lo = Infinity, hi = -Infinity, yLo = Infinity, yHi = -Infinity;
+    sides.forEach((rows) => {
+      rows.forEach((r) => {
+        const sg = Math.sign(r[2] - r[1]) || 1;
+        [r[1], r[2] + sg * MARGIN, r[1] + f * (r[2] - r[1])].forEach((x) => { lo = Math.min(lo, x); hi = Math.max(hi, x); });
+      });
+      yLo = Math.min(yLo, rows[0][0]); yHi = Math.max(yHi, rows[rows.length - 1][0]);
+    });
+    const X0 = Math.max(0, Math.floor(T.a * lo + T.e) - 2), X1 = Math.min(cv.width, Math.ceil(T.a * hi + T.e) + 2);
+    const Y0 = Math.max(0, Math.floor(T.d * yLo + T.f)), Y1 = Math.min(cv.height, Math.ceil(T.d * yHi + T.f));
+    const W = X1 - X0, H = Y1 - Y0;
+    if (W <= 0 || H <= 0) return;
+    let src;
+    try { src = g.getImageData(X0, Y0, W, H); } catch (e) { sides.forEach((rows) => lapelWarpDrawn(g, rows, f, MARGIN)); return; }
+    const S = src.data, O = new Uint8ClampedArray(S);
     sides.forEach((rows) => {
       // A lapel that runs on under the other front still has its width at
       // its last row: ease back to the photo there, or a step shows.
       const end = rows[rows.length - 1], ease = Math.abs(end[2] - end[1]) > 4;
-      for (let y = rows[0][0]; y < end[0]; y++) {
-        const roll = lerpRows(rows, y + 0.5, 1), edge = lerpRows(rows, y + 0.5, 2);
-        const w = edge - roll;
+      const yA = rows[0][0], yZ = end[0];
+      for (let Y = 0; Y < H; Y++) {
+        const y = (Y0 + Y + 0.5 - T.f) / T.d;
+        if (y < yA || y >= yZ) continue;
+        const roll = lerpRows(rows, y, 1), edge = lerpRows(rows, y, 2), w = edge - roll;
         if (Math.abs(w) < 1) continue;
-        const fy = ease ? 1 + (f - 1) * Math.min(1, (end[0] - y) / 40) : f;
-        const sg = Math.sign(w), ne = roll + fy * w, B = edge + sg * MARGIN;
-        const Y0 = Math.floor(T.d * y + T.f), Y1 = Math.floor(T.d * (y + 1) + T.f), h = Math.max(1, Y1 - Y0);
-        const seg = (s0, s1, d0, d1) => {
-          const sx = X(Math.min(s0, s1)), sw = Math.abs(X(s1) - X(s0));
-          const dx = X(Math.min(d0, d1)), dw = Math.abs(X(d1) - X(d0));
-          if (sw < 0.5 || dw < 0.5) return;
-          g.clearRect(dx - 0.25, Y0, dw + 0.5, h);
-          g.drawImage(tmp, sx, Y0, sw, h, dx - 0.25, Y0, dw + 0.5, h);
-        };
-        seg(roll, edge, roll, ne);
-        seg(edge, B, ne, B);
+        const fy = ease ? 1 + (f - 1) * Math.min(1, (yZ - y) / 40) : f;
+        const sg = Math.sign(w);
+        // Roll, old edge, new edge and the far end, in this block's pixels.
+        const pr = T.a * roll + T.e - X0, pe = T.a * edge + T.e - X0, pn = T.a * (roll + fy * w) + T.e - X0, pb = T.a * (edge + sg * MARGIN) + T.e - X0;
+        const xa = Math.max(0, Math.ceil(Math.min(pr, pb) - 0.5)), xb = Math.min(W - 1, Math.floor(Math.max(pr, pb) - 0.5));
+        const row = Y * W * 4;
+        for (let X = xa; X <= xb; X++) {
+          // Where this pixel's cloth was before.
+          const d = X + 0.5, t1 = (d - pr) / (pn - pr);
+          let s;
+          if (t1 <= 1) s = pr + t1 * (pe - pr);
+          else s = pe + (d - pn) / (pb - pn) * (pb - pe);
+          const sx = s - 0.5, i0 = Math.floor(sx), fr = sx - i0;
+          const p = row + Math.max(0, Math.min(W - 1, i0)) * 4, q = row + Math.max(0, Math.min(W - 1, i0 + 1)) * 4, o = row + X * 4;
+          const a0 = S[p + 3] * (1 - fr), a1 = S[q + 3] * fr, al = a0 + a1;
+          if (al <= 0) { O[o] = O[o + 1] = O[o + 2] = O[o + 3] = 0; continue; }
+          O[o] = (S[p] * a0 + S[q] * a1) / al;
+          O[o + 1] = (S[p + 1] * a0 + S[q + 1] * a1) / al;
+          O[o + 2] = (S[p + 2] * a0 + S[q + 2] * a1) / al;
+          O[o + 3] = al;
+        }
       }
     });
+    src.data.set(O);
+    g.putImageData(src, X0, Y0);
+  }
+  // The same with drawn strips, for a canvas whose pixels cannot be read (a
+  // lining photo from another site): every strip starts and ends on a whole
+  // pixel, so neighbours meet without a gap.
+  function lapelWarpDrawn(g, rows, f, MARGIN) {
+    const cv = g.canvas, T = g.getTransform();
+    const tmp = mk(cv.width, cv.height);
+    tmp.getContext("2d").drawImage(cv, 0, 0);
+    const X = (x) => T.a * x + T.e;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const end = rows[rows.length - 1], ease = Math.abs(end[2] - end[1]) > 4;
+    const Ya = Math.floor(T.d * rows[0][0] + T.f), Yz = Math.floor(T.d * end[0] + T.f);
+    for (let Y = Ya; Y < Yz; Y++) {
+      const y = (Y + 0.5 - T.f) / T.d;
+      const roll = lerpRows(rows, y, 1), edge = lerpRows(rows, y, 2), w = edge - roll;
+      if (Math.abs(w) < 1) continue;
+      const fy = ease ? 1 + (f - 1) * Math.min(1, (end[0] - y) / 40) : f;
+      const sg = Math.sign(w), ne = roll + fy * w, B = edge + sg * MARGIN;
+      const seg = (s0, s1, d0, d1) => {
+        const sx = X(Math.min(s0, s1)), sw = Math.abs(X(s1) - X(s0));
+        const dx = Math.round(X(Math.min(d0, d1))), dw = Math.round(X(Math.max(d0, d1))) - dx;
+        if (sw < 0.5 || dw < 1) return;
+        g.clearRect(dx, Y, dw, 1);
+        g.drawImage(tmp, sx, Y, sw, 1, dx, Y, dw, 1);
+      };
+      seg(roll, edge, roll, ne);
+      seg(edge, B, ne, B);
+    }
     g.restore();
   }
   function drawFront(g, v, anchors) {
@@ -1108,15 +1166,19 @@
   }
   // Sleeve heads (pts: the viewer's left armhole seam from the shoulder down;
   // mirrored for the right). Naples: small gathers at the top of the sleeve;
-  // close seam: a line of topstitching beside the seam.
+  // close seam: a soft line of topstitching beside the seam.
   function sleeveHeads(g, v, pts, mirror) {
     const sc = v.sleevecrown;
     if (sc !== "Naples Sleeve" && sc !== "Close Seam Sleeve") return;
     [1, -1].forEach((s) => {
       const P = pts.map((p) => [s > 0 ? p[0] : (mirror || MIRROR_X) - p[0], p[1]]);
       if (sc === "Close Seam Sleeve") {
-        line(g, P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1]]), "rgba(255,255,255,0.32)", 0.9, [2.2, 2]);
-        line(g, P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1] + 0.8]), "rgba(0,0,0,0.3)", 0.7, [2.2, 2]);
+        // Tone on tone: a soft groove with fine stitches in it, never a
+        // bright dashed line across the cloth (Daniel 2026-11-22: "random
+        // lines streaking thru").
+        const Q = P.slice(0, 4).map((p) => [p[0] - 3.2 * s, p[1]]);
+        line(g, Q, "rgba(0,0,0,0.17)", 1.1);
+        line(g, Q, "rgba(255,255,255,0.09)", 0.6, [1.5, 1.6]);
       } else {
         // Puckers fanning out from the seam onto the sleeve.
         for (let i = 0; i < 6; i++) {
