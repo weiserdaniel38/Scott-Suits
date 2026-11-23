@@ -17,9 +17,10 @@ map with the cloth outline as alpha, bottom half: highlights):
   when the customer picks something else; the page then draws that pick, or
   shows the photo's own inside the boxes printed below.
 
-The vest photo dresses the three-piece's vest as it is. Its three welts are
-also lifted out on their own (suit-vest-welts.webp) for the Vest Only
-picture, which is built on a second, plain vest photo (last section).
+The vest photo dresses the three-piece's vest as it is. The Vest Only
+picture is built on the same photo with its buttons, buttonholes and welts
+painted out (last section); the three welts are lifted out on their own
+(suit-vest-welts.webp) and put back when the customer picks a welt.
 
 The vest's back (Daniel 2026-11-22, assets/vest-back-reference-photo.png: a
 plain satin back with a centre seam and two darts, no strap) gets one map in
@@ -191,8 +192,9 @@ VEST_MAP = dict(grain=2.0, calm_light=True)
 save('suit-vest-shade.webp', shade_map(L, alpha, ref, **VEST_MAP), alpha, BOX, OUT)
 Lp = L.copy()
 for r in [CHEST] + LOWER: Lp = inpaint_rect(Lp, r)
+vest_src, vest_Lp, vest_alpha, VEST_BOX = src, Lp, alpha, BOX
 # The photo's three welts on their own, for the Vest Only picture (which is
-# built on the blank vest): the photo's light over the same cloth with the
+# built on this photo without them): the photo's light over the same cloth with the
 # welt painted out. One cell per welt (chest, viewer's left lower, right
 # lower), the shadow in the left column (black by alpha), the light in the
 # right one (white by alpha at 3x).
@@ -249,29 +251,63 @@ side = lambda y: (round(P(int(np.argmax(alpha[y] > 0.5)), y)[0], 1), round(P(int
 print('VEST BACK box', BOX, 'scale %.4f' % S, 'Lref %.1f' % ref, 'centre x', P(CXB, 0)[0], 'top y', P(0, TOP)[1], 'bottom y', P(0, BOT)[1])
 print('VEST BACK sides [y, left x, right x]', [[round(P(0, y)[1], 1)] + list(side(y)) for y in range(TOP + 200, BOT - 40, 100)])
 
-# ---- Vest front, blank (Vest Only) --------------------------------------------
-# Daniel 2026-11-22: a plain vest front (assets/reference/vest-front-blank.jpg:
-# V-neck, pointed bottom, no buttons or pockets, the viewer's right front
-# lapped over the left). Vest Only is built on it: the page draws the picked
-# buttons, pockets, lapels, neck and bottom on this cloth. Three maps, all in
-# the vest's piece space (230 x 320, centre x 114, top y 9.5), as tall as the
-# back:
-# - suit-vest-blank-shade.webp: the photo (cloth and the lining in the neck),
-# - suit-vest-blank-cloth.webp: the cloth's light carried smoothly across
-#   everything that is not plain front cloth (the neck, the closing line, the
-#   gap between the points, the backdrop), for cloth the page adds,
-# - suit-vest-blank-lining.webp: the same for the lining in the neck.
-src = Image.open(os.path.join(ROOT, 'assets', 'reference', 'vest-front-blank.jpg')).convert('RGB')
-L = np.asarray(src).astype(np.float32).mean(2)
+# ---- Vest front, plain (Vest Only) --------------------------------------------
+# Daniel 2026-11-22: "I don't like the way you did the vest at all ... no weird
+# shapes, each line is straight". Vest Only is built on the first vest photo
+# (the three-piece's), not on the second, blank one (its front edge was wavy):
+# the photo with its buttons, buttonholes and welts painted out. The page
+# draws the picked buttons, pockets, lapels, neck and bottom on this cloth.
+# Three maps, all in the vest's piece space:
+# - suit-vest-plain-shade.webp: the photo (cloth and the lining in the neck),
+# - suit-vest-plain-cloth.webp: the cloth's light carried smoothly across
+#   everything that is not plain front cloth (the neck, the front edge, the
+#   darts, the gap between the points, the backdrop), for cloth the page adds,
+# - suit-vest-plain-lining.webp: the same for the lining in the neck.
+src, L, alpha, BOX, S, OUT = vest_src, vest_Lp.copy(), vest_alpha, VEST_BOX, 0.25, (690, 960)
 PH, PW = L.shape
-alpha = cloth_alpha(L)
-rows = np.where((alpha > 0.5).sum(1) > 50)[0]
-TOP, BOT = int(rows[0]), int(rows[-1])
-xs = np.where(alpha[TOP + 400] > 0.5)[0]
-CXF = (xs[0] + xs[-1]) / 2
-S = 301.25 / (BOT - TOP)
-BOX = (int(round(CXF - 114 / S)), int(round(TOP - 9.5 / S)), int(round(CXF + 116 / S)), int(round(TOP + 310.5 / S)))
-OUT = (690, 960)
+BUTTONS = [664, 782, 903, 1024, 1143]          # photo y of the five buttons (x 520)
+for yc in BUTTONS: L = inpaint_rect(L, (501, yc - 25, 566, yc + 25))
+# The two front darts run on behind the lower welts: with the welts painted
+# out they are drawn through (the dart's own dark line from just below).
+DARTS = [[(298, 690), (294, 950), (297, 996), (289, 1090), (273, 1240)], [(733, 690), (737, 950), (748, 996), (760, 1180), (764, 1245)]]
+dart_x = lambda d, y: np.interp(y, [q[1] for q in d], [q[0] for q in d])
+Dl = blur(L, 1.2) - blur(L, 7)
+for d in DARTS:
+    prof = np.mean([Dl[y, int(round(dart_x(d, y))) - 6:int(round(dart_x(d, y))) + 7] for y in range(1010, 1110)], 0)
+    prof = np.minimum(prof - np.median(prof), 0) * np.hanning(15)[1:-1] ** 0.5
+    for y in range(946, 1000):
+        x = int(round(dart_x(d, y)))
+        L[y, x - 6:x + 7] += prof * min(1, (y - 945) / 4.0, (1000 - y) / 4.0)
+# Each dart is evened along its length (a faint line that comes and goes
+# reads as dashes on pale cloth), both to the same depth.
+def dart_line(d):
+    ys = np.arange(d[0][1], d[-1][1])
+    xs = []
+    for y in ys:
+        c = int(round(dart_x(d, y))); seg = Dl2[y, c - 6:c + 7]
+        xs.append(c - 6 + int(np.argmin(seg)) if seg.min() < -2.5 else c)
+    xs = np.array(xs, np.float32)
+    xs = np.array([np.median(xs[max(0, i - 30):i + 31]) for i in range(len(xs))])
+    return ys, np.convolve(np.pad(xs, 20, mode='edge'), np.ones(41) / 41, mode='valid')
+
+
+Dl2 = blur(L, 1.2) - blur(L, 7)
+ky = np.exp(-0.5 * (np.arange(-60, 61) / 25.0) ** 2); ky /= ky.sum()
+lines = []
+for d in DARTS:
+    ys, xs = dart_line(d)
+    band = np.stack([Dl2[y, int(round(x)) - 7:int(round(x)) + 8] for y, x in zip(ys, xs)])
+    even = np.stack([np.convolve(np.pad(band[:, j], 60, mode='edge'), ky, mode='valid') for j in range(band.shape[1])], 1)
+    lines.append((ys, xs, band, even))
+depth = np.mean([-e.min(1).mean() for _, _, _, e in lines])
+for ys, xs, band, even in lines:
+    even = np.minimum(even - np.median(even, 1, keepdims=True), 0) * (depth / max(-even.min(1).mean(), 1e-3))
+    ends = np.clip(np.minimum(np.arange(len(ys)), np.arange(len(ys))[::-1]) / 40.0, 0, 1)[:, None]
+    win = np.hanning(17)[1:-1][None, :] ** 0.35
+    for i, (y, x) in enumerate(zip(ys, xs)):
+        x = int(round(x))
+        L[y, x - 7:x + 8] += ((even[i] * ends[i] - band[i]) * win[0])
+CXF = 515.5
 P = local(BOX, S)
 Ls = blur(L, 1.2)
 gx = np.zeros_like(Ls); gx[:, 1:-1] = Ls[:, 2:] - Ls[:, :-2]
@@ -291,19 +327,64 @@ def trace(y0, y1, prior, sign, win=14):
     return ys, np.convolve(np.pad(med, 8, mode='edge'), np.ones(17) / 17, mode='valid')
 
 
-# The neck: the back's cloth band along the top, its seam, the two V edges
-# down to where the right front laps over the left.
-SEAM = lambda x: 106 - 8.5 * ((x - CXF) / 128.0) ** 2            # the band's seam (photo y)
-YV0, YV1 = 112, 606
-ysL, VL = trace(YV0, YV1, lambda y: 436 + (y - 112) * 0.238, -1)
-ysR, VR = trace(YV0, YV1, lambda y: 694 - (y - 112) * 0.2545, +1)
-# The closing line (the top front's edge) from the V's bottom to the gap.
+# The neck: the thin binding along the back of the neck (its lower edge is the
+# lining's top) and the two V edges. The top front's edge (viewer's right)
+# runs on past the bottom of the V, turns down and is one vertical line to
+# its corner, then follows its hem to the top of the gap.
+SEAM = lambda x: 180 - 17 * ((x - 513) / 142.0) ** 2           # the binding's lower edge (photo y)
+YV0 = 172
+pL = lambda y: 371 + (y - 158) * 0.3226
+pR = lambda y: 655 - (y - 158) * 0.3213
+def smooth_edge(ys, xs, deg=2):
+    """A traced edge as one smooth curve: a low polynomial through it, the
+    rows where the trace caught something else left out."""
+    keep = np.ones(len(ys), bool)
+    for _ in range(4):
+        c = np.polyfit(ys[keep], xs[keep], deg)
+        keep = np.abs(xs - np.polyval(c, ys)) < 2.0
+    return np.polyval(c, ys).astype(np.float32)
+
+
+def cross(y0, y1, prior, sign, thr=52.0, win=14):
+    """Per row, where the cloth (bright) gives way to the lining (dark),
+    coming from the cloth's side (the lining's own shadow beside the edge
+    is then never taken for it)."""
+    ys = np.arange(y0, y1)
+    out = []
+    for y in ys:
+        c = int(round(prior(y)))
+        xs_ = np.arange(c - sign * win, c + sign * win + sign, sign)
+        row = Ls[y, xs_]
+        j = int(np.argmax(row < thr)) if (row < thr).any() else win
+        f = (row[j - 1] - thr) / max(row[j - 1] - row[j], 1e-3) if j > 0 else 0
+        out.append(xs_[j] - sign * (1 - f))
+    out = np.array(out, np.float32)
+    med = np.array([np.median(out[max(0, i - 6):i + 7]) for i in range(len(out))])
+    return ys, np.convolve(np.pad(med, 8, mode='edge'), np.ones(17) / 17, mode='valid')
+
+
+ysL, VL = cross(YV0, 600, pL, +1)
+ysR, VR = cross(YV0, 600, pR, -1)
+fit = ysL < 575
+VLs, VRs = smooth_edge(ysL[fit], VL[fit]), smooth_edge(ysR[fit], VR[fit])
+print('plain: V edges, trace off the smooth curve (px, median): left %.2f right %.2f' % (np.median(np.abs(VL[fit] - VLs)), np.median(np.abs(VR[fit] - VRs))))
+VL[:len(VLs)] = VLs; VR[:len(VRs)] = VRs
+# The bottom of the V: where the left edge runs in under the top front.
+gap = VR - VL
+iv = int(np.argmax(gap < 2.5)) if (gap < 2.5).any() else len(gap) - 1
+YV1 = int(ysL[iv]); XVB = float((VL[iv] + VR[iv]) / 2)
+ysL, VL, ysR, VR = ysL[:iv + 1], VL[:iv + 1], ysR[:iv + 1], VR[:iv + 1]
 cols = np.arange(int(CXF) - 40, int(CXF) + 40)
 bottom = np.array([np.max(np.where(alpha[:, x] > 0.5)[0]) for x in cols])
 APEX = (int(cols[np.argmin(bottom)]), int(bottom.min()))
-prior_pts = [(606, 566), (640, 554), (690, 541), (800, 528), (900, 531), (1000, 536), (1100, 546), (1200, 557), (APEX[1], APEX[0])]
+prior_pts = [(YV1, XVB), (640, 497), (680, 491), (720, 490), (1200, 490), (1225, 495), (APEX[1], APEX[0])]
 prior = lambda y: np.interp(y, [p[0] for p in prior_pts], [p[1] for p in prior_pts])
-ysC, CL = trace(YV1, APEX[1] - 2, prior, +1, win=9)
+ysC, CLt = trace(YV1 + 1, APEX[1] - 2, prior, +1, win=9)
+# Its long middle is one vertical line (the median of the trace).
+EDGE_X = float(np.median(CLt[(ysC > 720) & (ysC < 1180)]))
+print('plain: front edge x %.1f, off it (px): %.2f' % (EDGE_X, np.abs(CLt[(ysC > 720) & (ysC < 1180)] - EDGE_X).max()))
+i0 = int(np.argmax(np.abs(CLt - EDGE_X) < 0.75)); i1 = len(CLt) - 1 - int(np.argmax(np.abs(CLt[::-1] - EDGE_X) < 0.75))
+CLs = CLt.copy(); CLs[i0:i1 + 1] = EDGE_X
 # The hem: side corners, points, the gap's top.
 hem = np.array([np.max(np.where(alpha[:, x] > 0.5)[0]) if (alpha[:, x] > 0.5).any() else 0 for x in range(PW)])
 xl = int(np.argmax(hem[:int(CXF)])); xr = int(CXF) + int(np.argmax(hem[int(CXF):]))
@@ -312,18 +393,23 @@ side = lambda y: (int(np.argmax(alpha[y] > 0.5)), int(PW - 1 - np.argmax(alpha[y
 # The side's bottom corner: where the outline turns from the side into the hem.
 corner = []
 for sgn in (0, 1):
-    pts = [(side(y)[sgn], y) for y in range(APEX[1] - 60, PTL[1])]
+    pts = [(side(y)[sgn], y) for y in range(1000, PTL[1])]
     xs_ = np.array([p[0] for p in pts]); best = xs_.min() if sgn == 0 else xs_.max()
     ys_ = [p[1] for p in pts if p[0] == best]
-    corner.append((int(best), int(ys_[-1])))
-print('blank: TOP', TOP, 'BOT', BOT, 'CX', CXF, 'S %.4f' % S, 'BOX', BOX, 'apex', APEX, 'points', PTL, PTR, 'corners', corner)
+    corner.append((int(best), int(round(np.mean(ys_)))))
+# The sides just above the corners (for a longer side, other bottoms), and
+# the shoulders' top line.
+sides = [[side(y)[0], side(y)[1], y] for y in range(880, corner[0][1] - 8, 40)]
+sh = [np.argmax(alpha[:, x] > 0.5) for x in (260, 340, 700, 780)]
+print('plain: BOX', BOX, 'apex', APEX, 'points', PTL, PTR, 'corners', corner, 'V bottom (%.1f, %d)' % (XVB, YV1))
 
-# Lining region (photo pixels): under the seam, between the V edges.
-poly = [(float(VL[0]), YV0)] + [(float(x), int(y)) for y, x in zip(ysL, VL)][::25] + [(float(CL[0]), YV1 + 4)] + [(float(x), int(y)) for y, x in zip(ysR, VR)][::-25] + [(float(VR[0]), YV0)]
-top = [(x, SEAM(x)) for x in np.linspace(VR[0] + 3, VL[0] - 3, 9)]
+# Lining region (photo pixels): under the binding, between the V edges.
+poly = [(float(VL[0]) - 2, 150), (float(VL[0]), YV0)] + [(float(x), int(y)) for y, x in zip(ysL, VL)][::20] + [(XVB, YV1 + 3)] + [(float(x), int(y)) for y, x in zip(ysR, VR)][::-20] + [(float(VR[0]), YV0), (float(VR[0]) + 2, 150)]
 m = Image.new('L', (PW * 2, PH * 2), 0)
-ImageDraw.Draw(m).polygon([(x * 2, y * 2) for x, y in poly + top], fill=255)
+ImageDraw.Draw(m).polygon([(x * 2, y * 2) for x, y in poly], fill=255)
 lin = f32(m.resize((PW, PH), Image.BOX))
+yy, xx = np.mgrid[0:PH, 0:PW]
+lin = lin * np.clip(yy - SEAM(xx) + 0.5, 0, 1)
 ref_c = float(np.median(L[(alpha > 0.99) & (lin < 0.01)]))
 ref_l = float(np.median(L[(alpha > 0.99) & (lin > 0.99)]))
 ref = ref_c * (1 - lin) + ref_l * lin
@@ -351,38 +437,46 @@ R = shade_map(L, alpha, ref, **VEST_MAP)
 # Along the outline the photo's last pixels are speckled (the backdrop's light
 # and the cloth's shadow mixed): there the map is the cloth just inside,
 # carried out to the edge and eased a little darker toward it.
-rim = (alpha > 0.02) & grow(alpha < 0.99, 13)
+rim = (alpha > 0.02) & grow(alpha < 0.99, 13) & (lin < 0.01)
 near = np.clip((1 - blur((alpha > 0.5).astype(np.float32), 6.0)) / 0.5, 0, 1)
-R = np.where(rim, carry(R, ~grow(alpha < 0.99, 14)) * (1 - 0.14 * near), R)
-save('suit-vest-blank-shade.webp', R, alpha, BOX, OUT)
+R = np.where(rim, carry(R, ~(grow(alpha < 0.99, 14) | grow(lin > 0.01, 6))) * (1 - 0.14 * near), R)
+save('suit-vest-plain-shade.webp', R, alpha, BOX, OUT)
 
-
-yy, xx = np.mgrid[0:PH, 0:PW]
 closing = np.zeros(L.shape, bool)
-for y, x in zip(ysC, CL): closing[int(y), int(x) - 46:int(x) + 22] = True
-closing[YV1 - 30:YV1 + 6][:, int(CL[0]) - 44:int(CL[0]) + 28] = True
+for y, x in zip(ysC, CLs): closing[int(y), int(x) - 46:int(x) + 22] = True
+closing[YV1 - 30:YV1 + 10][:, int(XVB) - 50:int(XVB) + 28] = True
 closing[APEX[1] - 16:APEX[1] + 4][:, APEX[0] - 26:APEX[0] + 26] = True
-band = (yy < SEAM(xx) + 3) & (xx > VL[0] - 30) & (xx < VR[0] + 30)
-not_cloth = grow(alpha < 0.99, 14) | grow(lin > 0.01, 12) | closing | grow(band, 6)
+darts = np.zeros(L.shape, bool)
+for d in DARTS:
+    for y in range(d[0][1] - 20, min(PH, d[-1][1] + 40)):
+        x = int(round(dart_x(d, min(max(y, d[0][1]), d[-1][1])))); darts[y, x - 9:x + 10] = True
+not_cloth = grow(alpha < 0.99, 14) | grow(lin > 0.01, 12) | closing | darts | (yy < SEAM(xx) + 8) & (xx > VL[0] - 20) & (xx < VR[0] + 20)
 FIELD = carry(R, ~not_cloth)
 ones = np.ones(L.shape, np.float32)
-save('suit-vest-blank-cloth.webp', FIELD, ones, BOX, OUT)
+save('suit-vest-plain-cloth.webp', FIELD, ones, BOX, OUT)
 not_lin = ~((lin > 0.99) & ~grow(lin < 0.99, 12))
 FLIN = carry(R, ~not_lin)
-save('suit-vest-blank-lining.webp', FLIN, ones, BOX, (345, 480))
+save('suit-vest-plain-lining.webp', FLIN, ones, BOX, (345, 480))
 
 pt = lambda p: [P(p[0], p[1])[0], P(p[0], p[1])[1]]
+r2 = lambda v: round(float(v), 2)
+crow = [pt((XVB, YV1))] + [pt((CLs[i], y)) for i, y in enumerate(ysC) if (i % 10 == 0 and (i < i0 or i > i1)) or i in (i0, i1)] + [pt(APEX)]
+seam = [[P(x, 0)[0], P(0, SEAM(x))[1]] for x in np.linspace(VL[0], VR[0], 9)]
 vrows = [[P(0, y)[1], P(VL[i], 0)[0], P(VR[i], 0)[0]] for i, y in enumerate(ysL) if i % 40 == 0 or i == len(ysL) - 1]
-crow = [[P(CL[i], 0)[0], P(0, y)[1]] for i, y in enumerate(ysC) if i % 40 == 0 or i == len(ysC) - 1]
-seam = [[P(x, 0)[0], P(0, SEAM(x))[1]] for x in np.linspace(VL[0], VR[0], 7)]
-print('const VEST_BLANK = ' + __import__('json').dumps({
-    'cx': P(CXF, 0)[0], 'v': vrows, 'vb': pt((CL[0], YV1 + 4)), 'seam': seam, 'close': crow, 'apex': pt(APEX),
+print('const VEST_PLAIN = ' + __import__('json').dumps({
+    'cx': P(CXF, 0)[0],
+    'v': vrows, 'vb': pt((XVB, YV1)),
+    'seam': seam, 'edgeX': r2((EDGE_X - BOX[0]) * S), 'close': crow, 'apex': pt(APEX),
     'points': [pt(PTL), pt(PTR)], 'corners': [pt(corner[0]), pt(corner[1])],
-    'lining': 'M' + ' L'.join('%g,%g' % P(x, y) for x, y in poly + top) + ' Z'}) + ';')
-print('blank: Lref cloth %.1f lining %.1f' % (ref_c, ref_l))
+    'sides': [[r2((a - BOX[0]) * S), r2((b - BOX[0]) * S), r2((y - BOX[1]) * S)] for a, b, y in sides],
+    'shoulders': [[r2((x - BOX[0]) * S), r2((int(y) - BOX[1]) * S)] for x, y in zip((260, 340, 700, 780), sh)],
+    'buttons': [[r2((520 - BOX[0]) * S), r2((y - BOX[1]) * S)] for y in BUTTONS],
+    'lining': 'M' + ' L'.join('%g,%g' % P(x, y) for x, y in [q for q in poly if q[1] > 151] + [(x, SEAM(x)) for x in np.linspace(VR[0], VL[0], 9)]) + ' Z'}) + ';')
+print('plain: Lref cloth %.1f lining %.1f' % (ref_c, ref_l))
 if CHECK:
     ov = src.copy(); d = ImageDraw.Draw(ov)
     d.line([(float(x), int(y)) for y, x in zip(ysL, VL)], fill=(255, 60, 60)); d.line([(float(x), int(y)) for y, x in zip(ysR, VR)], fill=(255, 60, 60))
-    d.line([(float(x), int(y)) for y, x in zip(ysC, CL)], fill=(60, 255, 60)); d.line(top, fill=(60, 160, 255))
+    d.line([(float(x), int(y)) for y, x in zip(ysC, CLs)], fill=(60, 255, 60)); d.line([(x, SEAM(x)) for x in range(372, 655, 6)], fill=(60, 160, 255))
     for p in (APEX, PTL, PTR, corner[0], corner[1]): d.ellipse((p[0] - 4, p[1] - 4, p[0] + 4, p[1] + 4), outline=(255, 255, 0))
-    ov.save(os.path.join(CHECK, 'vest-blank-trace.png'))
+    ov.save(os.path.join(CHECK, 'vest-plain-trace.png'))
+    Image.fromarray(np.clip(L, 0, 255).astype(np.uint8)).save(os.path.join(CHECK, 'vest-plain-L.png'))
