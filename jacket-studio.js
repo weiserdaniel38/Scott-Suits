@@ -16,9 +16,10 @@
 // the same catalog (catalog.js), the same prices and the same order data, and
 // a fabric or style added to the catalog shows up here by itself.
 //
-// The picture is drawn on a canvas from a photo (made from Daniel's mockup by
-// scripts/make_jacket_photo.py):
-//   assets/jacket-photo-front.webp        the photo, pockets/buttons painted out
+// The picture is drawn on a canvas from Daniel's reference photos (one clean
+// photo per lapel, single and double breasted; the back; the inside; made
+// by scripts/make_jacket_photo_front2.py, _back.py and _inside.py):
+//   assets/jacket-photo-front-*.webp      the photo (shirt, tie, floor shadow)
 //   assets/jacket-photo-shade-*.webp      the cloth's light and shadow
 // The chosen fabric (assets/jacket-tex-*.webp, seamless tiles made by
 // scripts/make_jacket_textures.py) is laid over the cloth and lit with that
@@ -29,7 +30,6 @@
 // ============================================================
 (function () {
   if (typeof jacketDesigner === "undefined" || typeof JACKET_CATALOG === "undefined") return;
-  const homeHost = document.getElementById("studioHomeHost");
   const designerHost = document.getElementById("studioDesignerHost");
   const designerModeBar = document.getElementById("designerModeBar");
   const homeModeBar = document.getElementById("homeModeBar");
@@ -40,55 +40,14 @@
   // Picture coordinates: the photo crop is 800 x 952.
   const VBW = 800;
   const VBH = 952;
-  const MODE_KEY = "scottSuitsDesignMode";
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const PHOTO = "./assets/jacket-photo-front.webp?v=17";
-  const SHADE = { front: "./assets/jacket-photo-shade-front.webp?v=18", back: "./assets/jacket-photo-shade-back.webp?v=16" };
-  // The photo has notch lapels; the other styles have their own front shading
-  // with the lapels redrawn (scripts/make_jacket_photo.py).
-  const SHADE_LAPEL = {
-    "Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=15",
-    "Semi-Peak Lapel": "./assets/jacket-photo-shade-front-peak.webp?v=15",
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-diamond.webp?v=15",
-    "Shawl": "./assets/jacket-photo-shade-front-shawl.webp?v=15",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-shawl.webp?v=15",
-  };
-  // Double breasted fronts use their own photo (peak lapels, the front
-  // crossing over; scripts/make_jacket_photo_db.py).
-  const PHOTO_ARC = "./assets/jacket-photo-front-arc.webp?v=15";
-  const SHADE_ARC = "./assets/jacket-photo-shade-front-arc-photo.webp?v=18";
-  // The lining seen in the Arc photo's opening below the second button (in
-  // picture space; scripts/make_jacket_photo_arc.py LINING, mapped).
-  // The same opening on the main photo (traced from its shading).
-  const SB_OPENING = "M400,697 L403,705 L412,740 L420,770 L430,800 L441,830 L450,860 L458,885 L463,907 L337,907 L347,880 L358,850 L372,820 L383,790 L390,760 L396,720 Z";
-  const ARC_OPENING = "M398.8,679 L403.1,700 L412.4,749.5 L427.9,799 L444,842.4 L448.3,856 L343.7,856 L351.2,842.4 L363.5,823.8 L375.3,792.8 L384.6,749.5 L393.9,700 Z";
-  const PHOTO_DB = "./assets/jacket-photo-front-db.webp?v=11";
   // Lapel widths (Daniel 2026-11-20: "lapel widths reflected accurately, on
   // all lapels"). Each photo shows the Standard width. Per picture row:
-  // [y, roll line x, lapel edge x] for the viewer's right lapel (measured
-  // from the shading; the left one is mirrored, DB has both). The band from
-  // the roll line to the edge is stretched or squeezed to the chosen width.
-  const LAPEL_PROFILES = {"notch":[[136,468,468],[150,468,561],[162,466,558],[174,464,554],[186,462,550],[198,460,545],[210,458,541],[222,456,536],[234,452,531],[246,451,525],[258,449,518],[270,447,513],[282,444,511],[294,442,503],[306,439,498],[318,437,493],[330,434,491],[342,432,485],[354,429,480],[366,426,474],[378,424,468],[390,421,462],[402,418,456],[414,414,450],[426,411,443],[438,408,436],[450,404,428],[462,402,421],[474,402,413],[486,402,406],[500,402,402]],"peak":[[106,472,472],[120,472,570],[132,469,565],[144,468,561],[156,467,557],[168,465,556],[180,463,552],[192,461,548],[204,459,543],[216,457,538],[228,454,534],[240,452,528],[252,450,523],[264,448,516],[276,446,510],[288,443,505],[300,441,503],[312,438,495],[324,435,494],[336,433,488],[348,430,482],[360,428,477],[372,425,471],[384,422,465],[396,419,459],[408,416,453],[420,412,446],[432,409,439],[444,406,432],[456,402,425],[468,402,417],[480,402,409],[494,402,402]],"shawl":[[66,477,477],[80,477,522],[92,476,531],[104,474,537],[116,472,540],[128,470,542],[140,469,544],[152,467,544],[164,465,544],[176,464,543],[188,462,541],[200,460,539],[212,458,536],[224,456,533],[236,452,530],[248,451,526],[260,449,523],[272,446,518],[284,444,513],[296,441,509],[308,439,503],[320,436,498],[332,434,492],[344,432,486],[356,429,480],[368,426,474],[380,423,467],[392,420,461],[404,417,454],[416,414,447],[428,411,441],[440,407,434],[452,402,427],[464,402,419],[476,402,414],[488,402,402]],"diamond":[[66,477,477],[80,477,517],[92,476,520],[104,474,523],[116,472,527],[128,470,530],[140,469,534],[152,467,537],[164,465,540],[176,464,544],[188,462,547],[200,460,551],[212,458,548],[224,456,542],[236,452,535],[248,451,529],[260,449,522],[272,446,516],[284,444,509],[296,441,503],[308,439,496],[320,436,490],[332,434,483],[344,432,477],[356,429,470],[368,426,464],[380,423,457],[392,420,451],[404,417,444],[416,414,438],[428,411,431],[440,407,425],[452,402,418],[464,402,412],[476,402,405],[488,402,402]],"arc":[[86,468,468],[100,468,524],[112,467,527],[124,465,528],[136,463,530],[148,461,533],[160,459,536],[172,457,534],[184,455,533],[196,453,531],[208,450,530],[220,433,529],[232,433,526],[244,433,524],[256,433,522],[268,434,520],[280,434,518],[292,433,515],[304,432,512],[316,430,510],[328,428,507],[340,425,505],[352,423,502],[364,420,499],[376,418,497],[388,415,494],[400,413,490],[412,409,487],[440,404,470],[470,401,450],[490,400,425],[500,400,402]],"dbR":[[50,480,480],[80,476,520],[160,462,570],[250,443,540],[350,400,480],[430,368,410],[515,335,335]],"dbL":[[50,325,325],[80,328,280],[155,340,222],[270,362,260],[350,400,310],[380,400,345],[400,400,400]]};
+  // [y, roll line x, lapel edge x] for each lapel (measured from the
+  // shading, filled in below with each photo's numbers). The band from the
+  // roll line to the edge is stretched or squeezed to the chosen width.
+  const LAPEL_PROFILES = {};
   const LAPEL_STD = { "Semi-Notch Lapel": 8.3, "Semi-Peak Lapel": 8.3, "Peak Lapel": 8.9, "Shawl": 8.9, "Arc Lapel": 8.9, "Diamond Lapel": 8 };
-  // Where the body meets the sleeve (the gap between them), per picture row,
-  // for the lower pockets to run back under the sleeve: [y, left x, right x].
-  const BODY_SIDES = {
-    sb: [[520, 200, 603], [560, 196, 607], [600, 188, 613], [640, 181, 621], [680, 175, 629], [720, 170, 632], [760, 165, 638], [800, 161, 642]],
-    arc: [[520, 217, 580], [560, 211, 586], [600, 204, 593], [640, 198, 598], [680, 193, 602], [720, 190, 607], [760, 187, 611], [800, 184, 615]],
-  };
-  // The sleeve's inner edge on the same rows. The sliver between the body and
-  // the sleeve is cloth in shadow (scripts/patch_front_shading.py), so the
-  // pockets run on across it and stop under the sleeve.
-  const SLEEVE_SIDES = {
-    sb: [[520, 177, 626.5], [560, 171.5, 631.5], [600, 167, 636.5], [640, 163.5, 640.5], [680, 160, 644.5], [720, 157, 647.5], [760, 155, 650.5], [800, 154, 651.5]],
-    db: [[520, 178, 625.5], [560, 173, 629.5], [600, 168, 634.5], [640, 163, 638.5], [680, 160, 641.5], [720, 158, 644.5], [760, 156, 647.5], [800, 155, 648.5]],
-    arc: [[520, 195.5, 602.5], [560, 194, 604.5], [600, 192, 605.5], [640, 190, 606.5], [680, 189, 607.5], [720, 189, 608], [760, 187, 611], [800, 184, 615]],
-  };
-  // Where the chest meets the sleeve on the viewer's right: [y, x].
-  const CHEST_SIDE = {
-    sb: [[220, 642], [300, 634], [380, 620]],
-    arc: [[220, 610], [300, 601], [380, 593]],
-  };
   // Single breasted fronts from Daniel's clean photos (2026-11-22,
   // Scott_Suits_Lapel_Options.pdf: the same jacket once per lapel, no pockets
   // or buttons; scripts/make_jacket_photo_front2.py prints these numbers).
@@ -174,12 +133,6 @@
   };
   // Every lapel, single and double breasted, has its own photo.
   const front2For = (v) => (isDB(v) ? FRONT_DB[v.collar] || FRONT_DB["Peak Lapel"] : FRONT_SB[v.collar] || FRONT_SB["Notch Lapel"]);
-  const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=13";
-  const SHADE_DB_LAPEL = {
-    "Diamond Lapel": "./assets/jacket-photo-shade-front-db-diamond.webp?v=13",
-    "Shawl": "./assets/jacket-photo-shade-front-db-shawl.webp?v=13",
-    "Arc Lapel": "./assets/jacket-photo-shade-front-db-shawl.webp?v=13",
-  };
   const isDB = (v) => /^Double/.test(String(v.frontbutton || ""));
   // One fabric tile (two swatches, ~16 cm of cloth) in picture pixels.
   const TILE = 176;
@@ -354,8 +307,8 @@
   let RES = BASE_RES;
   let CW = Math.round(VBW * RES), CH = Math.round(VBH * RES);
   let tileCache = {};
-  // The shading maps and photos are stored larger than the picture's units
-  // (scripts/crisp_jacket_shading.py); k = their pixels per unit.
+  // The shading maps and photos are stored larger than the picture's units;
+  // k = their pixels per unit.
   const unitK = (im) => (im.naturalWidth || im.width) / VBW;
   // A swatch photo is rarely lit evenly, and repeated on a big plain panel
   // its darker side (or a fold in a plain satin) shows as blocks. This levels
@@ -572,13 +525,6 @@
       cuff1: place === "Top Front Buttonhole" ? plain : color,
     };
   }
-  function feltHex(v, fabricHex) {
-    if (v.feltundercollar === "Customer-Appointed Felt") {
-      const o = opt("feltColor", v._raw.feltColor);
-      if (o && o.hex) return o.hex;
-    }
-    return mix(fabricHex, "#000000", 0.18);
-  }
   function buttonLook(v, fabricHex) {
     const o = opt("buttoncolor", v._raw.buttoncolor);
     if (o && o.img && !o.matchesFabric) return { img: img(o.img), hex: o.hex || "#2a221d" };
@@ -609,16 +555,10 @@
       const nFast = ys.length === 3 ? 2 : 1;
       return { db: false, buttons: ys.map((d, i) => ({ x: lerpRows(sb.edge, sb.y1 + d, 1) + (i >= nFast ? -(FRONT_BUTTON_R - 8) : FRONT_BUTTON_R + 1), y: sb.y1 + d, fast: i < nFast })) };
     }
-    // One button at the waist (where the lapels end); three buttons with the
-    // lapels rolling to the top one.
-    if (/^Single Breasted One/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }] };
-    if (/^Single Breasted Three/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }, { x: 395, y: 607, fast: false }, { x: 381, y: 689, fast: false }] };
-    if (/^Single Breasted/.test(n)) return { db: false, buttons: [{ x: 409, y: 525, fast: true }, { x: 387, y: 649, fast: false }] };
-    // Double breasted (drawn on the double breasted photo, whose lapels roll
-    // to the fastening row at y 537): rows of [y, left x, right x]; the
-    // fastening button is the left one in the row marked true.
-    // rows: the same rows measured on another photo (FRONT2_DB.rows).
-    const q = rows || { R1: [422, 293, 515], R2: [537, 342, 478], R3: [652, 342, 478], B3: [[612, 342, 478], [687, 342, 478]], A1: [[405, 285, 523], [471, 312, 500]] };
+    // Double breasted: rows of [y, left x, right x] measured on that
+    // lapel's photo (FRONT_DB.rows); the fastening button is the left one
+    // in the row marked true.
+    const q = rows;
     const R1 = q.R1, R2 = q.R2, R3 = q.R3;
     const DB = {
       "Double Breasted 6X2": { rows: [R1, R2.concat(true), R3] },
@@ -636,7 +576,7 @@
     // fastening row down the left buttons come through the top front, so
     // they sit fully on it, clear of its edge (the rows were measured 11.3
     // from the edge, for a smaller button); the right ones move in to match.
-    const inset = rows ? Math.max(0, FRONT_BUTTON_R + 1.5 - 11.3) : 0;
+    const inset = Math.max(0, FRONT_BUTTON_R + 1.5 - 11.3);
     d.rows.forEach((r) => { if (r[3]) fastY = r[0]; });
     d.rows.forEach((r) => {
       const dx = r[0] >= fastY ? inset : 0;
@@ -767,20 +707,6 @@
     }
     g.restore();
   }
-  // Draws fn's pieces, then keeps only what lands on the jacket's cloth, so a
-  // pocket never pokes out past the jacket's side.
-  function onCloth(g, fn) {
-    if (!curShade) { fn(g); return; }
-    const t = mk(g.canvas.width, g.canvas.height);
-    const tg = t.getContext("2d");
-    tg.setTransform(g.getTransform());
-    fn(tg);
-    tg.setTransform(1, 0, 0, 1, 0, 0);
-    tg.globalCompositeOperation = "destination-in";
-    const sk = unitK(curShade);
-    tg.drawImage(curShade, 0, 0, VBW * sk, VBH * sk, 0, 0, t.width, t.height);
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(t, 0, 0); g.restore();
-  }
   function rotPath(pts, cx, cy, deg) {
     const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
     return pts.map((p) => [cx + p[0] * c - p[1] * s, cy + p[0] * s + p[1] * c]);
@@ -805,33 +731,6 @@
     g.lineWidth = 1.3;
     g.beginPath(); g.moveTo(a[0][0], a[0][1]); g.lineTo(a[1][0], a[1][1]); g.stroke();
     g.restore();
-  }
-  // Pocket shapes follow Daniel's option drawings (assets/jacket-lowerpocket-new-*
-  // and jacket-pockettype-new-*), compared side by side 2026-11-20.
-  // A path from points in the pocket's own space (x along the mouth, y down
-  // from the mouth), turned by deg around (cx, top).
-  function pocketPath(cmds, cx, top, deg) {
-    return cmds.map((c) => c[0] + rotPath(c.slice(1), cx, top, deg).map(PT).join(" ")).join(" ") + " Z";
-  }
-  // Patch pocket: taller than wide, bottom corners rounded, stitched all
-  // round. high: the top edge sweeps up to the back (side seam) corner.
-  function patchPocket(g, layer, cx, top, w, h, deg, outward, high) {
-    const hw = w / 2, r = 15, o = outward;
-    const shape = (i) => {
-      const a = hw - i, b = h - i, k = Math.max(4, r - i);
-      const cmds = [["M", [-o * a, i]]];
-      if (high) cmds.push(["Q", [o * a * 0.35, i + 2], [o * a, i - w * 0.5]]);
-      else cmds.push(["L", [o * a, i]]);
-      cmds.push(["L", [o * a, b - k]], ["Q", [o * a, b], [o * (a - k), b]], ["L", [-o * (a - k), b]], ["Q", [-o * a, b], [-o * a, b - k]]);
-      return pocketPath(cmds, cx, top, deg);
-    };
-    clothPiece(g, layer, shape(0), { shadow: 0.5, blur: 5, drop: 2, grad: [top, top + h], stitch: shape(4.5) });
-    // The turned-down hem across a straight top.
-    if (!high) {
-      const hem = rotPath([[-hw + 4, 10], [hw - 4, 10]], cx, top, deg);
-      line(g, hem, "rgba(255,255,255,0.09)", 0.7, [1.6, 1.7]);
-      line(g, hem.map((q) => [q[0], q[1] + 0.9]), edge(0.35), 0.7, [1.6, 1.7]);
-    }
   }
   // A button seen face on (front) or edge on (sleeves: squashed).
   function button(g, x, y, r, look, opts) {
@@ -916,22 +815,19 @@
     g.restore();
   }
 
-  // Lapel buttonholes are placed for the wearer's left lapel (viewer's right)
-  // and mirrored across x = 401.5 for the other side.
+  // The back view's sleeve heads are mirrored across x = 401.5.
   const MIRROR_X = 803;
-  const mirrorPts = (pts) => pts.map((p) => [MIRROR_X - p[0], p[1]]);
   function lapelHoleSpots(v) {
     // Wearer's left lapel = viewer's right. Each hole runs across the lapel.
     const h = lapelHolesFor(v);
-    const shawl = v.collar === "Shawl" || v.collar === "Arc Lapel" || v.collar === "Diamond Lapel";
-    // On the double breasted photo the holes sit where its own one was.
+    // The holes sit where the photo's own one was.
     const f2 = front2For(v);
-    const base = f2 ? f2.lapelHole : isDB(v) ? (shawl ? [[512, 196], [533, 189]] : [[525, 188], [547, 181]]) : shawl ? [[506, 176], [526, 183]] : [[515, 156], [536, 164]];
+    const base = f2.lapelHole;
     const st = isDB(v) ? [-6, 10] : [-4.2, 10.5];
     const at = (i) => [[base[0][0] + st[0] * i, base[0][1] + st[1] * i], [base[1][0] + st[0] * i, base[1][1] + st[1] * i]];
     const out = [];
     for (let i = 0; i < h.left; i++) out.push(at(i));
-    for (let i = 0; i < h.right; i++) out.push(f2 ? at(i).map((q) => [f2.mirror - q[0], q[1]]) : mirrorPts(at(i)));
+    for (let i = 0; i < h.right; i++) out.push(at(i).map((q) => [f2.mirror - q[0], q[1]]));
     return out;
   }
 
@@ -944,14 +840,9 @@
     }
     return rows[rows.length - 1][i];
   };
-  function lapelSides(v, db, arc) {
+  function lapelSides(v) {
     const f2 = front2For(v);
-    if (f2) return [LAPEL_PROFILES[f2.profiles[0]], LAPEL_PROFILES[f2.profiles[1]]];
-    if (db) return [LAPEL_PROFILES.dbR, LAPEL_PROFILES.dbL];
-    const c = v.collar;
-    const k = arc ? "arc" : /Peak/.test(c) ? "peak" : c === "Diamond Lapel" ? "diamond" : c === "Shawl" ? "shawl" : "notch";
-    const R = LAPEL_PROFILES[k], m = arc ? 797 : MIRROR_X;
-    return [R, R.map((r) => [r[0], m - r[1], m - r[2]])];
+    return [LAPEL_PROFILES[f2.profiles[0]], LAPEL_PROFILES[f2.profiles[1]]];
   }
   function lapelFactor(v) {
     // No width picked yet: the lapel's standard width, as in its photo.
@@ -997,12 +888,8 @@
   }
   function drawFront(g, v, anchors) {
     const db = isDB(v);
-    // Single breasted Arc: its own photo, built from the generator's approved
-    // Arc reference (scripts/make_jacket_photo_arc.py), so it looks like it.
     const f2 = front2For(v);
-    const arc = !db && !f2 && v.collar === "Arc Lapel";
-    const shadeUrl = f2 ? f2.shade : arc ? SHADE_ARC : db ? SHADE_DB_LAPEL[v.collar] || SHADE_DB : SHADE_LAPEL[v.collar] || SHADE.front;
-    const photoUrl = f2 ? f2.photo : arc ? PHOTO_ARC : db ? PHOTO_DB : PHOTO;
+    const shadeUrl = f2.shade, photoUrl = f2.photo;
     const photo = img(photoUrl), shade = img(shadeUrl);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
@@ -1011,12 +898,10 @@
     edgeA = edgeFor(fp.hex);
     let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
     const fabricHex = fp.hex;
-    g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex), f2 && f2.tieBox), 0, 0, VBW, VBH);
-    // (The new photo keeps its own soft shadow on the floor.)
-    if (!f2) floorShadow(g);
-    // Arc: once a lining is picked it shows in the opening under the second
-    // button, in place of the reference photo's grey damask (Daniel
-    // 2026-11-20). Unlined jackets show the cloth's back there.
+    g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex), f2.tieBox), 0, 0, VBW, VBH);
+    // (The photo keeps its own soft shadow on the floor.)
+    // Once a lining is picked it shows in the opening under the bottom
+    // button (Daniel 2026-11-20). Unlined jackets show the cloth's back there.
     const showLining = v._raw.lining || v.facing === "No Lining Construction";
     const openingLining = (d, x0, y0, x1, y1) => {
       const lpaint = v.facing === "No Lining Construction" ? fp : liningPaint(v, fp);
@@ -1040,19 +925,17 @@
       }
       g.restore();
     };
-    if (arc && showLining) openingLining(ARC_OPENING, 330, 670, 460, 870);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
-    // Every other single breasted front (Daniel 2026-11-20: "didn't catch my
-    // lining"): the photo's fronts open below the bottom button too, so the
-    // chosen lining shows there the same way, on top of the cloth shading.
-    if (f2 && f2.opening && showLining) openingLining(f2.opening, f2.openingBox[0], f2.openingBox[1], f2.openingBox[2], f2.openingBox[3]);
-    else if (!f2 && !db && !arc && showLining) openingLining(SB_OPENING, 330, 690, 470, 912);
+    // Single breasted (Daniel 2026-11-20: "didn't catch my lining"): the
+    // photo's fronts open below the bottom button, so the chosen lining
+    // shows there, on top of the cloth shading.
+    if (f2.opening && showLining) openingLining(f2.opening, f2.openingBox[0], f2.openingBox[1], f2.openingBox[2], f2.openingBox[3]);
 
-    // The lapel's outer edge beside the chest pocket is in the shading itself
-    // (scripts/patch_front_shading.py); no line is drawn over it.
+    // The lapel's outer edge beside the chest pocket is in the shading
+    // itself; no line is drawn over it.
 
     // Lapel width.
-    const lapF = lapelFactor(v), lapS = lapelSides(v, db, arc);
+    const lapF = lapelFactor(v), lapS = lapelSides(v);
     lapelWarp(g, lapS, lapF);
     // Pockets and other cloth pieces take their cloth from the layer, so it
     // gets the same lapel width (else the old lapel edge shows through).
@@ -1170,10 +1053,10 @@
     const handHole = !!v.lapelButtonholeStyle && v.lapelButtonholeStyle !== "Machine Sewn";
     spots.forEach((s) => hole(g, s[1], s[0], lapelHoleHex, handHole ? 3.4 : 2.4));
     anchors.lapelHole = spots.length ? [spots[0][0][0] + 4, spots[0][0][1] - 22] : [520, 134];
-    if (v.monogram === "Monogram Placement On Left Button") monogramText(g, f2 ? 517 : 520, f2 ? 229 : 214, v, 10, -1.17);
+    if (v.monogram === "Monogram Placement On Left Button") monogramText(g, 517, 229, v, 10, -1.17);
 
     // Front buttons and their buttonholes.
-    const lay = frontLayout(v.frontbutton, f2 && f2.rows, f2 && f2.edge ? f2 : null);
+    const lay = frontLayout(v.frontbutton, f2.rows, f2.edge ? f2 : null);
     const look = buttonLook(v, fabricHex);
     const threadV = threadHex("threadColor", v, fabricHex);
     const holes = buttonholeHexes(v, fabricHex);
@@ -1186,13 +1069,13 @@
     lay.buttons.forEach((b) => {
       if (lay.db) { if (b.holed) hole(g, [b.x + BR + 2.5, b.y + 1], [b.x + BR + 19.5, b.y + 1], holeHexNext(), 2.4); }
       else if (b.fast) hole(g, [b.x - 2, b.y], [b.x + BR + 2.5, b.y], holeHexNext(), 2.4);
-      else if (f2 && f2.edge) {
+      else {
         // An undone button's buttonhole: on the top front, in line with the
         // fastened ones.
         const e0 = lerpRows(f2.edge, b.y, 1);
         hole(g, [e0 + BR - 1, b.y], [e0 + 2 * BR + 3.5, b.y], holeHexNext(), 2.4);
-      } else if (!b.rolled) hole(g, [b.x + 41, b.y], [b.x + 57, b.y], holeHexNext(), 2.4);
-      if (!lay.db && !b.fast && f2 && f2.edge) {
+      }
+      if (!lay.db && !b.fast) {
         // An undone button sits on the under front and tucks under the top
         // front's edge (Daniel 2026-11-22: "slightly covered by the jacket,
         // not fully exposed"): cut at the edge, with the edge's shadow on it.
@@ -1219,11 +1102,8 @@
     anchors.topButton = [top.x, top.y];
 
     // Sleeve buttons: seen edge on at the back of each cuff.
-    if (f2) {
-      g.save(); g.transform(f2.cuffs[0], 0, 0, 1, f2.cuffs[1], f2.cuffs[2]); drawCuffs(g, v, look, holes, false); g.restore();
-      sleeveHeads(g, v, f2.seam, f2.seamMirror);
-      return true;
-    }
+    g.save(); g.transform(f2.cuffs[0], 0, 0, 1, f2.cuffs[1], f2.cuffs[2]); drawCuffs(g, v, look, holes, false); g.restore();
+    sleeveHeads(g, v, f2.seam, f2.seamMirror);
     return true;
   }
   // Sleeve heads (pts: the viewer's left armhole seam from the shoulder down;
@@ -1304,11 +1184,6 @@
   // on the right, the leg folded back under on the left).
   const PANTS_H = 350;
   const PANTS_DEFAULTS = { beltLoops: "Belt Loops", backPocket: "Double Besom Pocket", bottomStyle: "Turn Up Bottom" };
-  function pantsInOrder() {
-    try {
-      return typeof hasPantsStep === "function" && typeof hasJacketStep === "function" && hasPantsStep() && hasJacketStep();
-    } catch (e) { return false; }
-  }
   // Which pieces the picture shows, and its height.
   function pictureLayout() {
     let jacket = true, pants = false, vest = false;
