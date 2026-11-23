@@ -136,6 +136,33 @@
     "Shawl": Object.assign({}, FRONT_DB_BASE, {"photo":"./assets/jacket-photo-front-db-shawl.webp?v=20","shade":"./assets/jacket-photo-shade-front-db-shawl.webp?v=20","mirror":795.2,"profiles":["db-shawl-R","db-shawl-L"],"sides":[[520,198.7,594.0],[560,199.3,594.7],[600,193.3,601.3],[640,185.3,610.7],[680,177.3,618.0],[720,170.7,624.7],[760,165.3,630.0],[800,161.3,634.0]],"lapelHole":[[498.2,196.0],[520.2,189.0]],"cuffs":[0.952,17.0,16.9],"pockets":{"top":634,"inL":272.7,"inR":511},"rows":{"R1":[489.7,262.0,525.0],"R2":[606.7,300.0,488.0],"R3":[719.7,300.0,488.0],"B3":[[681.7,300.0,488.0],[756.7,300.0,488.0]],"A1":[[473.7,258.0,533.0],[539.7,270.5,510.0]]}}),
     "Arc Lapel": Object.assign({}, FRONT_DB_BASE, {"photo":"./assets/jacket-photo-front-db-arc.webp?v=20","shade":"./assets/jacket-photo-shade-front-db-arc.webp?v=20","mirror":800.7,"profiles":["db-arc-R","db-arc-L"],"sides":[[520,202.0,599.3],[560,202.0,600.0],[600,196.0,605.3],[640,188.7,612.0],[680,183.3,618.7],[720,178.0,625.3],[760,172.7,630.7],[800,167.3,635.3]],"lapelHole":[[486.8,196.0],[508.8,189.0]],"cuffs":[0.959,16.78,4.9],"pockets":{"top":634,"inL":293.0,"inR":511},"rows":{"R1":[448.8,281.5,520.5],"R2":[565.8,334.0,483.5],"R3":[678.8,333.0,483.5],"B3":[[640.8,333.3,483.5],[715.8,332.6,483.5]],"A1":[[432.8,277.5,528.5],[498.8,304.5,505.5]]}}),
   };
+  // Lower pockets from Daniel's pocket photos (2026-11-22,
+  // Scott_Suits_Pocket_Options.pdf: the same jacket once per pocket option;
+  // "Keep exactly as is"). scripts/make_jacket_pockets.py lifts each pocket's
+  // own light and shadow off its photo: per option one picture with the
+  // viewer's left pocket (and ticket pocket) beside the right one, shadow on
+  // top (black, by alpha), light under it (white, by alpha). cw, ch: one
+  // cell; k: picture units per pixel; per side w, h, x (from the body's side
+  // at height ay; the right pocket's right end), y, in (how far in from the
+  // side the pocket reaches), btn (the flap's button).
+  const POCKET_PHOTOS = {
+    "Double Besom Pocket": {"src":"./assets/jacket-pocket-lower-slit.webp?v=1","cw":210,"ch":69,"k":0.6805,"L":{"w":200,"h":69,"x":-13.6,"y":629.4,"ay":652.5,"in":116.4},"R":{"w":210,"h":59,"x":13.5,"y":630.8,"ay":650.5,"in":119.1}},
+    "Double Besom Pocket + Double Besom Ticket Pocket": {"src":"./assets/jacket-pocket-lower-slit-ticketslit.webp?v=1","cw":214,"ch":140,"k":0.6823,"L":{"w":214,"h":140,"x":-13.8,"y":573.3,"ay":645.6,"in":121.4},"R":{"w":209,"h":57,"x":14.4,"y":627.2,"ay":646.3,"in":122.1}},
+    "Flat Welt Pocket": {"src":"./assets/jacket-pocket-lower-welt.webp?v=1","cw":234,"ch":74,"k":0.6788,"L":{"w":234,"h":74,"x":-14.3,"y":630.9,"ay":656.0,"in":137.1},"R":{"w":234,"h":73,"x":14.1,"y":631.6,"ay":656.0,"in":135.8}},
+    "Double Besom Slant Pocket": {"src":"./assets/jacket-pocket-lower-slantslit.webp?v=1","cw":207,"ch":120,"k":0.6817,"L":{"w":207,"h":120,"x":-17.7,"y":577.1,"ay":618.0,"in":107.7},"R":{"w":201,"h":120,"x":18.8,"y":580.5,"ay":621.4,"in":109.7}},
+    "Double Besom W/ Flap": {"src":"./assets/jacket-pocket-lower-flap.webp?v=1","cw":247,"ch":135,"k":0.6839,"L":{"w":247,"h":124,"x":-14.5,"y":625.8,"ay":668.2,"in":135.4},"R":{"w":227,"h":135,"x":13.6,"y":625.8,"ay":671.6,"in":128.6}},
+    "Double Besom W/ Flap And Double Besom Ticket Pocket": {"src":"./assets/jacket-pocket-lower-flap-ticketslit.webp?v=1","cw":260,"ch":207,"k":0.6768,"L":{"w":260,"h":207,"x":-12.5,"y":593.3,"ay":681.2,"in":150.9},"R":{"w":255,"h":158,"x":12.8,"y":628.4,"ay":681.9,"in":148.2}},
+    "Double Besom W/ Flap And Ticket Pocket W/ Flap": {"src":"./assets/jacket-pocket-lower-flap-ticketflap.webp?v=1","cw":265,"ch":221,"k":0.6825,"L":{"w":253,"h":221,"x":-13.3,"y":564.3,"ay":664.7,"in":148.8},"R":{"w":265,"h":140,"x":14.7,"y":619.6,"ay":667.4,"in":148.1}},
+    "Slant Pocket Flap": {"src":"./assets/jacket-pocket-lower-slantflap.webp?v=1","cw":254,"ch":205,"k":0.6799,"L":{"w":254,"h":205,"x":-19.4,"y":569.2,"ay":638.5,"in":136.7},"R":{"w":253,"h":200,"x":19.9,"y":571.2,"ay":639.2,"in":136.7}},
+    "Slant Pocket Flap + Double Besom Ticket Pocket": {"src":"./assets/jacket-pocket-lower-slantflap-ticketslit.webp?v=1","cw":253,"ch":224,"k":0.6782,"L":{"w":253,"h":224,"x":-19.0,"y":559.3,"ay":643.4,"in":136.3},"R":{"w":253,"h":194,"x":19.5,"y":576.2,"ay":642.0,"in":137.0}},
+    "Slant Pocket Flap + Double Besom W/ Flat Ticket Pocket": {"src":"./assets/jacket-pocket-lower-slantflap-ticketflap.webp?v=1","cw":262,"ch":240,"k":0.6775,"L":{"w":255,"h":240,"x":-18.1,"y":552.2,"ay":651.1,"in":138.9},"R":{"w":262,"h":182,"x":18.3,"y":588.8,"ay":650.5,"in":140.2}},
+    "Diamond Flap": {"src":"./assets/jacket-pocket-lower-pointflap.webp?v=1","cw":265,"ch":175,"k":0.678,"L":{"w":265,"h":175,"x":-15.9,"y":596.0,"ay":655.0,"in":146.5},"R":{"w":257,"h":173,"x":15.5,"y":593.9,"ay":652.3,"in":145.1}},
+    "Diamond Flap With Buttons": {"src":"./assets/jacket-pocket-lower-pointflap-button.webp?v=1","cw":280,"ch":174,"k":0.6787,"L":{"w":280,"h":174,"x":-15.7,"y":590.2,"ay":649.2,"in":150.7,"btn":[67.8,663.5]},"R":{"w":269,"h":167,"x":14.9,"y":594.9,"ay":651.3,"in":148.0,"btn":[-72.0,664.2]}},
+    "Patch Pocket": {"src":"./assets/jacket-pocket-lower-patch.webp?v=1","cw":257,"ch":353,"k":0.6766,"L":{"w":257,"h":353,"x":-21.2,"y":625.8,"ay":744.9,"in":134.6},"R":{"w":249,"h":352,"x":22.4,"y":627.8,"ay":746.9,"in":123.8}},
+    "Patch Pocket + Double Besom Ticket Pocket": {"src":"./assets/jacket-pocket-lower-patch-ticketslit.webp?v=1","cw":276,"ch":383,"k":0.6794,"L":{"w":264,"h":383,"x":-20.6,"y":596.7,"ay":740.0,"in":139.9},"R":{"w":276,"h":348,"x":22.8,"y":624.5,"ay":742.7,"in":145.4}},
+    "Patch Pocket With Highly Back": {"src":"./assets/jacket-pocket-lower-slopedpatch.webp?v=1","cw":270,"ch":356,"k":0.6745,"L":{"w":268,"h":346,"x":-19.1,"y":620.7,"ay":737.4,"in":147.1},"R":{"w":270,"h":356,"x":21.6,"y":618.0,"ay":738.1,"in":149.7}},
+    "Patch Pocket With Highly Back + Double Besom Ticket": {"src":"./assets/jacket-pocket-lower-slopedpatch-ticketslit.webp?v=1","cw":265,"ch":400,"k":0.6782,"L":{"w":254,"h":400,"x":-20.3,"y":590.5,"ay":741.7,"in":138.3},"R":{"w":265,"h":356,"x":21.4,"y":623.7,"ay":744.4,"in":140.4}},
+  };
   // Every lapel, single and double breasted, has its own photo.
   const front2For = (v) => (isDB(v) ? FRONT_DB[v.collar] || FRONT_DB["Peak Lapel"] : FRONT_SB[v.collar] || FRONT_SB["Notch Lapel"]);
   const SHADE_DB = "./assets/jacket-photo-shade-front-db.webp?v=13";
@@ -777,25 +804,6 @@
   function pocketPath(cmds, cx, top, deg) {
     return cmds.map((c) => c[0] + rotPath(c.slice(1), cx, top, deg).map(PT).join(" ")).join(" ") + " Z";
   }
-  function flap(g, layer, cx, top, w, h, deg) {
-    // The jetting above the flap, then the flap hanging from it: about 2.3
-    // times as wide as tall, bottom corners rounded.
-    besom(g, layer, cx, top, w + 2, deg, false);
-    const r = 8;
-    clothPiece(g, layer, boxPath(cx, top + 2, w, h, deg, r), { grad: [top, top + h], stitch: boxPath(cx, top + 5, w - 7, h - 7, deg, r - 2) });
-  }
-  // Pointed ("diamond") flap: straight sides a third of the width tall, then
-  // down to a point in the middle; optionally a button in the middle.
-  function pointFlap(g, layer, cx, top, w, wv, deg, mid, look) {
-    besom(g, layer, cx, top, w + 2, deg, false);
-    const hw = w / 2, sh = wv * 0.3, ph = wv * 0.5;
-    const shape = (i) => pocketPath([["M", [-hw + i, 2 + i]], ["L", [hw - i, 2 + i]], ["L", [hw - i, sh - i * 0.4]], ["L", [mid, ph - i * 1.3]], ["L", [-hw + i, sh - i * 0.4]]], cx, top, deg);
-    clothPiece(g, layer, shape(0), { grad: [top, top + ph], stitch: shape(3.5) });
-    if (look) {
-      const c = rotPath([[mid, wv * 0.25]], cx, top, deg)[0];
-      button(g, c[0], c[1], Math.max(5, wv * 0.075), look, {});
-    }
-  }
   // Patch pocket: taller than wide, bottom corners rounded, stitched all
   // round. high: the top edge sweeps up to the back (side seam) corner.
   function patchPocket(g, layer, cx, top, w, h, deg, outward, high) {
@@ -1093,95 +1101,69 @@
     else if (ck === "sb" || ck === "db") besom(g, layer, CX, CY, CW, CA, ck === "db");
     g.restore();
 
-    // Lower pockets (and the ticket pocket on the wearer's right).
+    // Lower pockets (and the ticket pocket on the wearer's right): the
+    // chosen option's own pockets off Daniel's pocket photos, exactly as
+    // they are there (POCKET_PHOTOS). Each is laid over the lit cloth as
+    // its shadow (darker) and its light (brighter), hung from the body's
+    // side at its own height, and cut to the cloth, so it ends at the
+    // jacket's side as in his photos.
     const lp = parseLowerPocket(v.lowerpocket);
-    // Daniel 2026-11-20: the pockets start at the back and wrap toward the
-    // front. Each one runs from the front out past the side of the body and
-    // is cut off where the body turns away under the sleeve.
-    const sides = f2 ? f2.sides : BODY_SIDES[arcFront ? "arc" : "sb"];
-    // Daniel 2026-11-22: "this got cut". The pocket no longer stops at the
-    // body's side: it carries on under the sleeve.
-    // (On the new photo there is open air between the body and the sleeve:
-    // the pocket stops at the body's own edge.)
-    const sleeves = f2 ? f2.sides : SLEEVE_SIDES[arcFront ? "arc" : db ? "db" : "sb"];
-    let bodyD = "M" + sleeves.map((r) => r[1] + "," + r[0]).join(" L");
-    bodyD += " L" + sleeves.slice().reverse().map((r) => r[2] + "," + r[0]).join(" L") + " Z";
-    onCloth(g, (g) => {
-      g.save();
-      g.clip(new Path2D(bodyD));
-      // From the drawings: level pockets dip a little toward the front
-      // buttons (about 5 degrees); slanted ones do the opposite, high at the
-      // front and dropping toward the side seam (about 15 degrees), like an
-      // upside-down V.
-      const tilt = lp.slant ? -15 : 5;
-      // Daniel 2026-11-20: every lower pocket starts at the back and wraps
-      // around to the front: it runs on past the side of the body and is cut
-      // off where the body turns away under the sleeve (no outer end shows).
-      const WRAP = 26;
-      const span = (y, inner, s) => {
-        const outer = s < 0 ? lerpRows(sides, y, 1) - WRAP : lerpRows(sides, y, 2) + WRAP;
-        return [(outer + inner) / 2, Math.abs(inner - outer)];
+    const pp = POCKET_PHOTOS[v.lowerpocket];
+    const pim = pp ? img(pp.src) : null;
+    if (pp && pim) {
+      const sides = f2.sides, last = sides[sides.length - 1], prev = sides[sides.length - 2];
+      // The body between the sleeves, carried on down to the hem.
+      const dn = (i) => last[i] + (last[i] - prev[i]) * (940 - last[0]) / (last[0] - prev[0]);
+      const rowsB = sides.concat([[940, dn(1), dn(2)]]);
+      let bodyD = "M" + rowsB.map((r) => (r[1] - 2) + "," + r[0]).join(" L");
+      bodyD += " L" + rowsB.slice().reverse().map((r) => (r[2] + 2) + "," + r[0]).join(" L") + " Z";
+      // Double breasted: the top front lies across the viewer's left, so
+      // both pockets sit that much further out (they stay a pair).
+      // (Clear of the top front's edge on the left and of the right
+      // column of buttons on the right.)
+      const reach = lerpRows(sides, pp.L.ay, 1) + pp.L.in, reachR = lerpRows(sides, pp.R.ay, 2) - pp.R.in;
+      const out = db && f2.rows ? Math.max(0, reach - (f2.rows.R2[1] - 11.3 - 10), f2.rows.R2[2] + FRONT_BUTTON_R + 8 - reachR) : 0;
+      const place = (sd) => {
+        const q = pp[sd], w = q.w * pp.k, h = q.h * pp.k;
+        const side = lerpRows(sides, q.ay, sd === "L" ? 1 : 2);
+        return { q: q, sx: sd === "L" ? 0 : pp.cw, x: sd === "L" ? side + q.x - out : side + q.x + out - w, y: q.y, w: w, h: h, side: side + (sd === "L" ? -out : out) };
       };
-      if (lp.main !== "none") {
-        // Classic placement (2026-11-20, tailoring references): the hip
-        // pockets sit level with the bottom button of a two button front,
-        // start near the front dart and run to the side.
-        const K = 0.845, TOP = f2 ? f2.pockets.top : 628;
-        const inL = f2 ? f2.pockets.inL : AX(db ? 290 : 306, K), inR = f2 ? f2.pockets.inR : AX(db ? 513 : 497, K);
-        const A = span(TOP + 8, inL, -1), B = span(TOP + 8, inR, 1);
-        const wv = A[1] - WRAP;
-        const isPatch = /patch/.test(lp.main);
-        const plook = lp.main === "pointbtn" ? buttonLook(v, fabricHex) : null;
-        [[A, -1, tilt, inL], [B, 1, -tilt, inR]].forEach((q) => {
-          const P = q[0], o = q[1], deg = q[2], inner = q[3];
-          if (lp.main === "flap") flap(g, layer, P[0], TOP, P[1], wv / 2.3, deg);
-          else if (lp.main === "point" || lp.main === "pointbtn") {
-            // The point sits in the middle of the part in view.
-            const mid = (inner + o * wv / 2) - P[0];
-            pointFlap(g, layer, P[0], TOP, P[1], wv, deg, mid, plook);
-          } else if (lp.main === "db" || lp.main === "sb") besom(g, layer, P[0], TOP + 6, P[1], deg, lp.main === "db");
-          else if (lp.main === "welt") clothPiece(g, layer, boxPath(P[0], TOP - 4, P[1], wv / 3.6, deg, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [TOP - 4, TOP + 22], stitch: boxPath(P[0], TOP - 1, P[1] - 6, wv / 3.6 - 6, deg, 0) });
-          else if (isPatch) {
-            // Patch pockets wrap around the side too; the part in view sets the height.
-            const edgeX = o < 0 ? lerpRows(sides, TOP + 60, 1) : lerpRows(sides, TOP + 60, 2);
-            const side = edgeX + o * WRAP;
-            const inn = inner + o * 6, pw = Math.abs(inn - side);
-            patchPocket(g, layer, (side + inn) / 2, TOP - 10, pw, Math.abs(inn - edgeX) * 1.4, deg * 0.6, o, lp.main === "highpatch");
-          }
-        });
-        if (lp.ticket) {
-          // Ticket pocket: same width as the pocket below it, parallel to it.
-          const gap = lp.ticket === "flap" ? wv * 0.6 : isPatch ? wv * 0.48 : wv * 0.5;
-          const ty = TOP - gap;
-          const T = span(ty + 8, inL, -1);
-          if (lp.ticket === "flap") flap(g, layer, T[0], ty, T[1], wv / 2.3 * 0.85, tilt);
-          else besom(g, layer, T[0], ty + 6, T[1], tilt, lp.ticket === "db");
-        }
-      }
-      // Daniel 2026-11-22: "they should not be visible edge to edge from the
-      // front". Toward the side the pocket turns away with the body: it
-      // darkens into the side's shadow, so it reads as coming from the back.
-      if (lp.main !== "none") {
-        g.globalCompositeOperation = "source-atop";
-        const TURN = 34;
-        for (let y = 540; y < 800; y += 4) {
-          // From under the sleeve, across the side of the body, fading out
-          // toward the front.
-          [[lerpRows(sleeves, y + 2, 1), lerpRows(sides, y + 2, 1), 1], [lerpRows(sleeves, y + 2, 2), lerpRows(sides, y + 2, 2), -1]].forEach((q) => {
-            const from = q[0] - q[2] * 2, to = q[1] + q[2] * TURN, len = Math.abs(to - from);
-            const tb = Math.min(0.9, Math.abs(q[1] - from) / len);
-            const gr = g.createLinearGradient(from, 0, to, 0);
-            gr.addColorStop(0, "rgba(0,0,0,0.42)"); gr.addColorStop(tb, "rgba(0,0,0,0.42)");
-            gr.addColorStop(tb + (1 - tb) * 0.45, "rgba(0,0,0,0.16)"); gr.addColorStop(1, "rgba(0,0,0,0)");
-            g.fillStyle = gr;
-            // (Rows meet exactly: any overlap shows as lines on a light fabric.)
-            g.fillRect(Math.min(from, to), y, len, 4);
-          });
-        }
-        g.globalCompositeOperation = "source-over";
-      }
+      const both = [place("L"), place("R")];
+      const sk = unitK(curShade);
+      const t = mk(g.canvas.width, g.canvas.height), tg = t.getContext("2d"), gT = g.getTransform();
+      const pass = (row, lit) => {
+        tg.setTransform(1, 0, 0, 1, 0, 0);
+        tg.globalCompositeOperation = "source-over";
+        tg.clearRect(0, 0, t.width, t.height);
+        tg.setTransform(gT);
+        tg.save();
+        tg.clip(new Path2D(bodyD));
+        both.forEach((o) => tg.drawImage(pim, o.sx, row * pp.ch, o.q.w, o.q.h, o.x, o.y, o.w, o.h));
+        tg.restore();
+        tg.setTransform(1, 0, 0, 1, 0, 0);
+        if (lit) { tg.globalCompositeOperation = "source-in"; tg.drawImage(layer, 0, 0); }
+        tg.globalCompositeOperation = "destination-in";
+        tg.drawImage(curShade, 0, 0, VBW * sk, VBH * sk, 0, 0, t.width, t.height);
+      };
+      const st = fp.strength;
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      pass(0, false);
+      g.globalAlpha = st.a;
+      g.drawImage(t, 0, 0);
+      // The light: the cloth again where the pocket catches it (the picture
+      // holds it at three times its strength).
+      pass(1, true);
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = Math.min(1, st.b / 3);
+      g.drawImage(t, 0, 0);
       g.restore();
-    });
+      // The pointed flap's button, in the customer's own button.
+      if (both[0].q.btn) {
+        const plook = buttonLook(v, fabricHex);
+        both.forEach((o) => button(g, o.side + o.q.btn[0], o.q.btn[1], 9.6, plook));
+      }
+    }
     anchors.pocket = /patch/.test(lp.main) ? [244, 640] : [229, 636];
 
     // Lapel buttonholes.
