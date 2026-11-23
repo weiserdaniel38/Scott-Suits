@@ -3800,8 +3800,8 @@ html .designer.stage-on .designer-grid .options h3{font-size:14px !important;lin
   .designer.stage-on .designer-grid .opt-grid{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;}
   .designer.stage-on .designer-grid .opt-grid::-webkit-scrollbar{display:none;}
   .designer.stage-on .designer-grid .opt-grid:not(:has(> .opt-card:nth-of-type(13))){align-items:flex-start;}
-  .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 84px;scroll-snap-align:start;}
-  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:8.5px !important;letter-spacing:0.6px !important;line-height:1.3;padding:4px 3px 6px;}
+  .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 100px;scroll-snap-align:start;}
+  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:11px !important;letter-spacing:0.4px !important;line-height:1.25;padding:4px 4px 7px;font-weight:500;color:var(--ivory);}
   .designer.stage-on .designer-grid .opt-card .opt-swatch{aspect-ratio:auto;height:54px;width:100%;object-fit:contain;padding:4px 0 0;}
   /* A group name inside the row (Single / Double Breasted) stands upright
      between its cards. */
@@ -3817,5 +3817,6 @@ html .designer.stage-on .designer-grid .options h3{font-size:14px !important;lin
   .designer.stage-on .designer-grid .opt-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
   .designer.stage-on .designer-grid .opt-grid.compact-cards{grid-template-columns:repeat(4,minmax(0,1fr));}
   .designer.stage-on .designer-grid .opt-card .opt-swatch{aspect-ratio:auto;height:72px;width:100%;object-fit:contain;padding:6px 0 0;}
-  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:9px !important;letter-spacing:1px !important;padding:5px 4px 7px;}
+  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:11px !important;letter-spacing:0.6px !important;line-height:1.25;padding:5px 5px 8px;font-weight:500;color:var(--ivory);}
 }
+html .designer.stage-on .designer-grid .opt-card.selected .opt-name{color:var(--brass);}
