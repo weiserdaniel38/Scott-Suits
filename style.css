@@ -1068,7 +1068,8 @@ a.admin-track-num[href]{text-decoration:underline;}
 
 .wiz-head{padding:6px 2px 12px;}
 .wiz-progress{display:flex;gap:3px;}
-.wiz-seg{flex:1;height:4px;padding:0;border:none;border-radius:2px;background:rgba(var(--ivory-rgb),0.14);cursor:pointer;position:relative;}
+.wiz-seg{flex:1;height:4px;padding:0;border:none;border-radius:2px;background:rgba(var(--ivory-rgb),0.14);cursor:pointer;position:relative;font-size:0;color:transparent;overflow:hidden;}
+.wiz-seg-review{display:none;}
 .wiz-seg::after{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;} /* bigger tap target */
 .wiz-seg.done{background:rgba(var(--brass-rgb),0.55);}
 .wiz-seg.current{background:var(--ivory);}
@@ -3789,13 +3790,35 @@ html .designer.stage-on .designer-grid .options h3{font-size:14px !important;lin
 .designer.stage-on .designer-grid .opt-card.selected{border:1px solid var(--brass);background:rgba(var(--surface-rgb),0.45);box-shadow:0 0 0 3px rgba(var(--brass-rgb),0.14);}
 .designer.stage-on .designer-grid .opt-card.selected .opt-name{color:var(--brass);}
 .designer.stage-on .wiz-status{display:none;}
+/* Named steps (Daniel 2026-11-23, from the competitor study: Suitsupply and
+   Proper Cloth name their steps, nobody counts them). One swipe line of step
+   names replaces "Step 3 of 23" and the dashes: done steps ticked, the
+   current one filled, locked ones faint, Review as the last chip. */
+.designer.stage-on .wiz-meta{display:none;}
+.designer.stage-on .wiz-progress{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px 0 8px;}
+.designer.stage-on .wiz-progress::-webkit-scrollbar{display:none;}
+.designer.stage-on .wiz-seg{flex:0 0 auto;height:auto;overflow:visible;font-family:inherit;font-size:10px;line-height:1;font-weight:500;letter-spacing:1.4px;text-transform:uppercase;color:var(--ivory-dim);padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(var(--surface-rgb),0.35);white-space:nowrap;}
+.designer.stage-on .wiz-seg::after{content:none;}
+.designer.stage-on .wiz-seg.done{color:var(--ivory);border-color:transparent;background:rgba(var(--brass-rgb),0.14);}
+.designer.stage-on .wiz-seg.done::before{content:"\2713\00a0";color:var(--brass);}
+.designer.stage-on .wiz-seg.current{color:#fff;background:var(--brass);border-color:var(--brass);}
+.designer.stage-on .wiz-seg.locked{opacity:0.5;}
+html[data-brand="sw"] .designer.stage-on .wiz-seg.current{color:#15110E;}
+.designer.stage-on .wiz-seg-review{display:inline-block;color:var(--ivory);border-color:rgba(var(--ivory-rgb),0.4);background:transparent;}
+/* The answer beside the question. */
+html .designer.stage-on .designer-grid .options h3{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+.designer.stage-on .designer-grid .options h3 .wiz-answer{flex:0 1 auto;min-width:0;font-size:12px;letter-spacing:0.03em;text-transform:none;font-weight:400;color:var(--brass);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .designer.stage-on .designer-head{display:none;}
 @media (max-width:899px){
   .designer.stage-on .suit-stage{position:-webkit-sticky;position:sticky;top:var(--stage-top,96px);z-index:30;background:var(--ink);padding:8px 0 4px;-webkit-transform:translateZ(0);transform:translateZ(0);}
   /* As big as the screen allows while the question, one row of choices
      and the Back / Next bar still fit under it (short phones included). */
   .designer.stage-on .suit-stage-pic{height:clamp(220px,min(54vh,100vh - 380px),560px);height:clamp(220px,min(54svh,100svh - 380px),560px);}
-  .designer.stage-on .wiz-head{padding:10px 0 6px;}
+  .designer.stage-on .wiz-head{padding:8px 0 4px;}
+  .designer.stage-on .wiz-progress{margin:0 -16px;padding:2px 16px 8px;scroll-padding-inline:16px;}
+  /* The named steps take over from the Jacket / Pants / Preview bar on
+     phones while a Stage step is showing; the picture gets that room. */
+  body:has(> .designer.stage-on.active) > .process{display:none;}
   /* One row of choices, swiped sideways. */
   .designer.stage-on .designer-grid .opt-grid{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;}
   .designer.stage-on .designer-grid .opt-grid::-webkit-scrollbar{display:none;}

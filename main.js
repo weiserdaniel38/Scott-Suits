@@ -7841,6 +7841,22 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     else openReview();
   }
 
+  // The answer beside the question ("Lapel Style · Peak Lapel") on Stage
+  // steps, so it stays in view when the chosen card has swiped off screen.
+  // Also re-applied whenever the question is re-rendered (the fade swap
+  // rebuilds the heading after renderWizard has run).
+  function syncStageAnswer() {
+    const sec = designerGridEl.closest(".designer");
+    const qh = sec && !sec.classList.contains("stage-off") ? optionsEl.querySelector("h3") : null;
+    if (!qh) return;
+    const ans = order[activeTab] && !textMissing(activeTab) ? displayValue(activeTab) || "" : "";
+    let ansEl = qh.querySelector(".wiz-answer");
+    if (!ansEl && ans) { ansEl = document.createElement("span"); ansEl.className = "wiz-answer"; qh.appendChild(ansEl); }
+    if (ansEl && ansEl.textContent !== ans) ansEl.textContent = ans;
+    if (ansEl) ansEl.hidden = !ans;
+  }
+  if (window.MutationObserver) new MutationObserver(syncStageAnswer).observe(optionsEl, { childList: true });
+
   function renderWizard() {
     const list = wizList();
     const idx = Math.max(list.indexOf(activeTab), 0);
@@ -7891,14 +7907,26 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       '<div class="wiz-progress">' +
       list.map((k, i) =>
         '<button type="button" class="wiz-seg' + (i === idx ? " current" : "") + (order[k] ? " done" : "") + (i > reachIdx ? " locked" : "") +
-        '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '"></button>'
+        '" data-k="' + k + '" aria-label="' + wizEsc(catalog[k].label) + '">' + wizEsc(catalog[k].label) + '</button>'
       ).join("") +
+      // The Stage shows the segments as named chips (CSS); Review is the
+      // last chip there. Hidden in the plain layout, where wiz-meta has it.
+      '<button type="button" class="wiz-seg wiz-seg-review">Review</button>' +
       '</div>' +
       '<div class="wiz-status"><div class="wiz-cheer"></div><button type="button" class="wiz-pct" data-stage="design" title="Go to what\u2019s left"></button></div>';
     wizHead.querySelectorAll(".wiz-seg").forEach((b) => {
       b.onclick = () => { const k = b.getAttribute("data-k"); if (k !== activeTab && wizCanReach(k)) switchTab(k); };
     });
     wizHead.querySelector(".wiz-review-link").onclick = openReview;
+    wizHead.querySelector(".wiz-seg-review").onclick = openReview;
+    // Named steps (2026-11-23, from the competitor study): keep the current
+    // chip in view in the swipe line; no effect while the line isn't scrollable.
+    const chipRow = wizHead.querySelector(".wiz-progress");
+    const curChip = chipRow.querySelector(".wiz-seg.current");
+    if (curChip && chipRow.scrollWidth > chipRow.clientWidth) {
+      chipRow.scrollLeft = Math.max(0, curChip.offsetLeft - chipRow.offsetLeft - Math.round((chipRow.clientWidth - curChip.offsetWidth) / 2));
+    }
+    syncStageAnswer();
     refreshOrderProgress();
 
     const showBack = !atFirst || (isPantsDesigner && hasJacketStep()) || (ids.continueBtn === "continueVestBtn" && !isVestOnlyType(currentSuitType));
