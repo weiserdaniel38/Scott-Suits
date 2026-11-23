@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The jacket's lower pockets, lifted off Daniel's pocket photos.
+"""The jacket's lower and chest pockets, lifted off Daniel's pocket photos.
 
 Daniel 2026-11-22 (Scott_Suits_Pocket_Options.pdf): the same jacket once per
 lower pocket option, and "Keep exactly as is": the pockets in the Your Suit
@@ -19,7 +19,12 @@ white by alpha, the light at three times its strength) and the
 POCKET_PHOTOS numbers for jacket-studio.js, printed and written to
 <check folder>/pocket_meta.json.
 
-    python3 scripts/make_jacket_pockets.py [check folder]
+The chest pockets (welt, curved welt, slit, patch) come off the same photos
+the same way, hung from the lapel's edge: assets/jacket-pocket-chest-<style>.webp
+(shadow on top, light under it) and the CHEST_PHOTOS numbers
+(<check folder>/pocket_chest_meta.json). --chest makes only those.
+
+    python3 scripts/make_jacket_pockets.py [check folder] [--chest]
 
 Needs Pillow and numpy.
 """
@@ -313,10 +318,149 @@ def register(a, clean_rows, clean_hem):
     return float(sx), float(bx), float(clean_hem - sx * hem)
 
 
+# ---- Chest pockets ---------------------------------------------------------
+# One photo per chest pocket style, and the same jacket without a chest
+# pocket (PLAIN): the pocket is the photo against that one, in a picture
+# straightened along the lapel's edge, with what is left of the difference
+# between the two photos smoothed out across the pocket.
+CHEST = {'welt': ('00-flap-flapticket-chestwelt', (690, 370, 880, 450)), 'boat': ('04-jetted-slitticket-chestboat', (690, 360, 890, 460)),
+         'slit': ('05-singlewelt-chestslit', (690, 375, 880, 430)), 'patch': ('03-jetted-chestpatch', (690, 370, 880, 590))}
+PLAIN = '07-slantedflap'
+CY0, CY1 = 300, 660; DA = 40; DB = 300; RIMC = 10
+COUT = os.path.join(ROOT, 'assets', 'jacket-pocket-chest-')
+
+
+def lapel_edge(R, y0=330, y1=640, xa=600, xb=830):
+    """The lapel's edge beside the chest pocket: x per row (a smooth curve)."""
+    Hx = R / blur1(R, 5, 1) - 1
+    ys = np.arange(y0, y1); xs = np.array([xa + int(np.argmin(Hx[y, xa:xb])) for y in ys], float)
+    best = None; rng = np.random.RandomState(2)
+    for _ in range(3000):
+        i, j = rng.choice(len(ys), 2, replace=False)
+        if abs(ys[i] - ys[j]) < 60: continue
+        k = (xs[j] - xs[i]) / (ys[j] - ys[i]); sc = (np.abs(xs - (xs[i] + k * (ys - ys[i]))) < 6).sum()
+        if best is None or sc > best[0]: best = (sc, k, xs[i] - k * ys[i])
+    _, k, b = best; ok = np.abs(xs - (k * ys + b)) < 6
+    c = np.polyfit(ys[ok], xs[ok], 2); ok = np.abs(xs - np.polyval(c, ys)) < 3
+    return np.polyfit(ys[ok], xs[ok], 2)
+
+
+def seam_line(R):
+    """The armhole seam on the pocket's other side."""
+    Hx = R / blur1(R, 4, 1) - 1; ys = np.arange(330, 640); xs = []
+    for y in ys:
+        p = int(round(906 - 0.157 * (y - 340))); xs.append(p - 12 + int(np.argmin(Hx[y, p - 12:p + 13])))
+    xs = np.array(xs, float); c = np.polyfit(ys, xs, 2)
+    for _ in range(3):
+        ok = np.abs(xs - np.polyval(c, ys)) < 3; c = np.polyfit(ys[ok], xs[ok], 2)
+    return c
+
+
+def cstraight(img, edge):
+    xs = np.arange(img.shape[1]); dd = np.arange(-DA, DB)
+    return np.stack([np.interp(edge[i] + dd, xs, img[i]) for i in range(img.shape[0])]).astype(np.float32)
+
+
+def cunstraight(Sx, edge, W):
+    xs = np.arange(W); dd = np.arange(-DA, DB)
+    return np.stack([np.interp(xs - edge[i], dd, Sx[i]) for i in range(Sx.shape[0])]).astype(np.float32)
+
+
+def colfill(Ss, plain):
+    out = Ss.copy(); r = np.arange(Ss.shape[0])
+    for q in range(Ss.shape[1]):
+        p = plain[:, q]
+        if p.sum() > 3: out[:, q] = np.where(p, Ss[:, q], np.interp(r, r[p], Ss[p, q]))
+    return out
+
+
+def chest_prep(R):
+    f, resp, _ = dart_line(R, 'R'); R = no_dart(R, f, resp, 470, 720)
+    ys = np.arange(CY0, CY1)
+    return R[CY0:CY1], np.polyval(lapel_edge(R), ys).astype(np.float32), np.polyval(seam_line(R), ys).astype(np.float32)
+
+
+def chest(kind, R, al, Rp, thr=0.03):
+    n, (bx0, by0, bx1, by1) = CHEST[kind]
+    Rw, edge, seam = chest_prep(R); Pw, pedge, _ = chest_prep(Rp)
+    aw = al[CY0:CY1]; H, W = Rw.shape
+    xs = np.arange(W); dist = xs[None, :] - edge[:, None]
+    Z = np.zeros(Rw.shape, bool); Z[by0 - CY0:by1 - CY0, bx0:bx1] = True
+    hp = Rw / np.maximum(blur(Rw, 3), 1e-3)
+    F = (np.abs(hp - 1) > thr) & (dist >= 10) & Z & (xs[None, :] < seam[:, None] - 16)      # the pocket's own thin lines
+    F &= mx(blur(F.astype(np.float32), 3) > 0.10, 5)
+    keep = np.zeros(F.shape, bool)
+    for cc in comps(mx(F, 7)):
+        if (cc & F).sum() > 80: keep |= cc
+    F &= keep
+    Fs = cstraight(F.astype(np.float32), edge) > 0.5
+    D = Fs.shape[1]; cols = np.where(Fs.sum(0) >= 2)[0]
+    top = np.array([np.argmax(Fs[:, q]) for q in cols], float); bot = np.array([H - 1 - np.argmax(Fs[::-1, q]) for q in cols], float)
+    full = np.arange(cols.min(), cols.max() + 1)
+    T = np.full(D, np.nan); B = np.full(D, np.nan)
+    T[full] = np.interp(full, cols, medfilt(top, 7)); B[full] = np.interp(full, cols, medfilt(bot, 7))
+    c1 = int(cols.min()); m = slice(c1, c1 + 40)
+    kt = theil(np.arange(c1, c1 + 40), T[m]); kb = theil(np.arange(c1, c1 + 40), B[m])
+    if kind == 'patch': kb = kt
+    i = np.arange(c1); T[:c1] = np.median(T[c1:c1 + 6]) + kt * (i - c1 - 2.5); B[:c1] = np.median(B[c1:c1 + 6]) + kb * (i - c1 - 2.5)
+    c2 = int(cols.max()); T[c2 + 1:] = T[c2]; B[c2 + 1:] = B[c2]
+
+    def zone(mt, mb, mo):
+        z = np.zeros((H, D), bool)
+        for q in range(0, min(D, c2 + mo + 1)):
+            z[max(0, int(round(T[q] - mt))):min(H, int(round(B[q] + mb)) + 1), q] = True
+        return z
+    Ss = cstraight(Rw, edge) / np.maximum(cstraight(Pw, pedge), 1e-3)
+    sol = cstraight((aw > 0.97).astype(np.float32), edge) > 0.99
+    dd = np.arange(D) - DA
+    lf = cstraight((xs[None, :] < seam[:, None] - 5).astype(np.float32), edge) > 0.99
+    lf2 = cstraight((xs[None, :] < seam[:, None] - 9).astype(np.float32), edge) > 0.99
+    plain = sol & ~zone(11, 11, 12) & (dd[None, :] >= RIMC - 2) & lf2
+    pp = inpaint(Ss, ~plain, plain); cf = colfill(Ss, plain)
+    wb = np.clip((dd - 20) / 30.0, 0, 1)[None, :]
+    base = blur(cf + (pp - cf) * wb, 3)
+    wM = np.clip(blur((zone(8, 8, 9) & lf).astype(np.float32), 2.5) * 1.25 - 0.125, 0, 1)
+    Ps = 1 + (Ss / np.maximum(base, 1e-3) - 1) * wM
+    c0 = RIMC + DA
+    if kind == 'patch':                    # the patch ends at the lapel's edge
+        Ps = 1 + (Ps - 1) * np.clip((dd - 4) / 6.0, 0, 1)[None, :]
+    else:                                  # the others run on under the lapel, along their own top edge
+        r = np.arange(H, dtype=float)
+        for q in range(0, c0): Ps[:, q] = np.interp(r + kt * (c0 - q), r, Ps[:, c0])
+    P = cunstraight(Ps, edge, W)
+    P[(dist > DB - 2) | (dist < -DA + 1)] = 1
+    yy, xx = np.where(np.abs(P - 1) > 0.015); box = (xx.min() - 3, yy.min() - 3, xx.max() + 4, yy.max() + 4)
+    ym = (box[1] + box[3]) // 2
+    return dict(P=P[box[1]:box[3], box[0]:box[2]], box=(int(box[0]), int(box[1] + CY0), int(box[2]), int(box[3] + CY0)), edge=float(edge[ym]), ymid=int(ym + CY0))
+
+
+def chest_main(check, crows, chem):
+    def load(n):
+        L = np.asarray(Image.open(SRC + n + '.webp').convert('L')).astype(np.float32)
+        al = np.clip((150 - blur(L, 1.0)) / 50, 0, 1)
+        return L, al, shade_map(L, al, float(np.median(L[al > 0.99]))).astype(np.float32)
+    Rp = load(PLAIN)[2]; meta = {}
+    for kind in CHEST:
+        L, al, R = load(CHEST[kind][0])
+        sx, bx, by = register(L, crows, chem); K = S * sx
+        r = chest(kind, R, al, Rp); P = r['P']; h, w = P.shape; X0, Y0, X1, Y1 = r['box']
+        im = np.zeros((2 * h, w, 4), np.uint8); im[h:, :, :3] = 255
+        D = 1 - np.minimum(P, 1); U = 0.6 * (1 - np.exp(-np.maximum(P - 1, 0) / 0.6))
+        im[:h, :, 3] = np.clip(D * 255 + 0.5, 0, 255).astype(np.uint8); im[h:, :, 3] = np.clip(U * 3 * 255 + 0.5, 0, 255).astype(np.uint8)
+        Image.fromarray(im, 'RGBA').save(COUT + kind + '.webp', lossless=True, quality=100, method=6, exact=True)
+        meta[kind] = {'src': './assets/jacket-pocket-chest-%s.webp?v=1' % kind, 'w': w, 'h': h, 'k': round(K, 4), 'x': round((X0 - r['edge']) * K, 1),
+                      'y': round((sx * Y0 + by) * S + OY, 1), 'ay': round((sx * r['ymid'] + by) * S + OY, 1)}
+        print('chest', kind, json.dumps(meta[kind], separators=(',', ':')), 'edge at ay (picture x):', round((sx * r['edge'] + bx - 556.3) * S + 400, 1), flush=True)
+        if check: Image.fromarray((np.clip((P - 0.4) / 1.0, 0, 1) * 255).astype(np.uint8)).save(os.path.join(check, 'pocket-chest-%s.png' % kind))
+    if check: json.dump(meta, open(os.path.join(check, 'pocket_chest_meta.json'), 'w'))
+
+
 def main():
-    check = _args[0] if _args else None
+    check = next((a for a in _args if not a.startswith('--')), None)
     clean = np.asarray(Image.open(CLEAN).convert('L')).astype(np.float32)
     crows, chem = body_rows(clean)
+    chest_main(check, crows, chem)
+    if '--chest' in _args: return
     meta = {}
     for n in sorted(SLUG):
         L = np.asarray(Image.open(SRC + n + '.webp').convert('L')).astype(np.float32)
