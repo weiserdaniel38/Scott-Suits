@@ -1484,108 +1484,46 @@
     return true;
   }
 
-  // ---- VEST ON ITS OWN (Daniel 2026-11-22: a picture for Vest Only too) -------
-  // A vest laid flat, front view, in its own local space: x -130..130,
-  // y 0..310, drawn at (cx, oy) scaled by s. Suits never show the vest
-  // (Daniel 2026-11-22: "when designing a suit do not have the vest there").
-  const VEST_DEFAULTS = { frontbutton: "5 Buttons", bottom: "Pointed", collar: "V-Neck", chestpocket: "Left Welt", lowerpocket: "Welt", pickStitch: "No Stitching" };
+  // ---- VEST -------------------------------------------------------------------
+  // A vest laid flat, in its own piece space (VEST_W x VEST_PH, centre x 114,
+  // top y 9.5), drawn at (cx, oy) scaled by s. A two-piece suit never shows a
+  // vest (Daniel 2026-11-22: "when designing a suit do not have the vest
+  // there"); a three-piece shows the classic photo vest, Vest Only the
+  // customer's own.
+  const VEST_DEFAULTS = { frontbutton: "5 Buttons", bottom: "Pointed", collar: "V-Neck", lapelbuttonhole: "No Lapel Buttonhole", chestpocket: "Left Welt", lowerpocket: "Welt", pickStitch: "No Stitching" };
   function vestAnswers(v, fixed) {
     const VD = typeof vestDesigner !== "undefined" ? vestDesigner : null;
     const raw = VD && VD.rawSelections ? withHover(VD, VD.rawSelections()) : {};
     const out = {};
     Object.keys(VEST_DEFAULTS).forEach((k) => {
-      out[k] = !fixed && raw[k] && (!VD.isShown || VD.isShown(k) || (VD.isAutoSet && VD.isAutoSet(k))) ? raw[k] : VEST_DEFAULTS[k];
+      out[k] = !fixed && raw[k] && !/^__same_as__/.test(raw[k]) && (!VD.isShown || VD.isShown(k) || (VD.isAutoSet && VD.isAutoSet(k))) ? raw[k] : VEST_DEFAULTS[k];
     });
     const f = raw.fabric;
     out.fabric = f && !/^__same_as__/.test(f) && opt("fabric", f) ? f : v.fabric;
     return out;
   }
-  // The vest's pockets, drawn in the drawn vest's space (centre x 0, top y 0):
-  // lower pockets on both sides, chest pocket on the wearer's left (viewer's
-  // right) or both.
-  function vestPockets(g, va, st, db, vDepth, chest, lower) {
-    const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
-    const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
-    const welt = (x0, y0, len, slant, kind) => {
-      const a = slant ? -0.17 : 0;
-      g.save(); g.translate(x0, y0); g.rotate(a);
-      if (kind === "patch") {
-        g.save(); g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetY = 1 * RES;
-        g.strokeStyle = dk(0.45); g.lineWidth = 1.1; g.strokeRect(0, 0, len, len * 0.62); g.restore();
-        g.save(); g.setLineDash([2, 2]); g.strokeStyle = dk(0.4); g.lineWidth = 0.8; g.strokeRect(2.5, 2.5, len - 5, len * 0.62 - 5); g.restore();
-      } else if (kind === "flap") {
-        g.fillStyle = dk(0.12); g.fillRect(0, 0, len, 13);
-        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, 0, len, 13);
-        g.fillStyle = lt(0.08); g.fillRect(0, 0, len, 2);
-      } else if (kind === "besom") {
-        g.fillStyle = "rgba(0,0,0,0.65)"; g.fillRect(0, -0.8, len, 1.6);
-        g.strokeStyle = dk(0.35); g.lineWidth = 0.8; g.strokeRect(0, -3.5, len, 7);
-      } else {
-        const h = kind === "narrow" ? 6 : 10;
-        g.fillStyle = lt(0.04); g.fillRect(0, -h, len, h);
-        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.strokeRect(0, -h, len, h);
-        g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, -h - 0.6, len, 1.2);
-      }
-      g.restore();
-    };
-    const kindOf = (name) => /Patch/.test(name) ? "patch" : /Flap/.test(name) ? "flap" : /Besom/.test(name) ? "besom" : /Narrow/.test(name) ? "narrow" : "welt";
-    const lp = String(va.lowerpocket || "");
-    if (lower && lp && !/^No /.test(lp)) {
-      const sl = /Slant/.test(lp), k = kindOf(lp);
-      welt(-96, 212, 58, sl, k);
-      welt(38 + (db ? 6 : 0), 212 + (sl ? 10 : 0), 58, sl, k);
-      if (sl) { /* the right one leans the same way */ }
-    }
-    const cp = String(va.chestpocket || "");
-    if (chest && cp && !/^No /.test(cp)) {
-      const k = kindOf(cp);
-      const y = Math.max(vDepth * 0.55, 70) + 34;
-      welt(54, y, 40, false, k);
-      if (/^Both/.test(cp)) welt(-94, y, 40, false, k);
-    }
-  }
-  // The vest is built from Daniel's reference photo (2026-11-22: five
+  const VEST_W = 230, VEST_PH = 320;
+  // The three-piece's vest, from Daniel's first vest photo (2026-11-22: five
   // buttons, V-neck, pointed bottom, a chest welt and two lower welts, the
   // back lining in the neck), like the folded pants: the photo's light and
   // shadow filled with the chosen fabric (scripts/make_folded_pieces.py).
-  // Piece space VEST_W x VEST_PH; the vest's centre is x 114, its top y 9.5.
-  const VEST_W = 230, VEST_PH = 320;
+  // Only the fabric changes.
   const VEST_SHADE = "./assets/suit-vest-shade.webp?v=1";
-  // The same with the three pockets painted out, for other pocket picks.
-  const VEST_SHADE_PLAIN = "./assets/suit-vest-shade-plain.webp?v=1";
   const VEST_LINING = "M77.8,7.5 L148.8,7.5 L148.8,9.2 L112.8,118 L77.8,9.8 Z";
-  const VEST_CHEST_BOX = [152, 101.5, 42, 15], VEST_LOWER_BOXES = [[27.8, 206.5, 57.4, 13.5], [144.2, 206.5, 56.8, 13.5]];
-  // A three-piece's vest is always the photo's (only the fabric changes);
-  // Vest Only follows the picks: the photo while the shape matches it, the
-  // drawn vest for any other front, neck or bottom.
   function drawVest(g, v, cx, oy, s, fixed, back) {
     if (back) return drawVestBack(g, v, cx, oy, s);
-    const va = vestAnswers(v, fixed);
-    const fb = String(va.frontbutton || "");
-    const asPhoto = fixed || (!/^Double/.test(fb) && /5/.test(fb) && String(va.bottom) === "Pointed" && String(va.collar) === "V-Neck");
-    if (!asPhoto) return drawVestDrawn(g, v, cx, oy, s, fixed);
+    if (!fixed) return drawVestOnly(g, v, cx, oy, s);
+    const va = vestAnswers(v, true);
     const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
-    const classic = img(VEST_SHADE), plain = img(VEST_SHADE_PLAIN);
-    if (!fp.ready || !classic || !plain) return false;
-    const hex = fp.hex, st = fp.strength;
+    const classic = img(VEST_SHADE);
+    if (!fp.ready || !classic) return false;
+    const hex = fp.hex;
     const k = s * RES;
     const W = Math.round(VEST_W * k), H = Math.round(VEST_PH * k);
     const pc = mk(W, H);
     const c = pc.getContext("2d");
-    const chestPhoto = String(va.chestpocket) === "Left Welt", lowerPhoto = String(va.lowerpocket) === "Welt";
-    if (chestPhoto && lowerPhoto) c.drawImage(litPiece(classic, fp, W, H), 0, 0);
-    else {
-      c.drawImage(litPiece(plain, fp, W, H), 0, 0);
-      const full = litPiece(classic, fp, W, H);
-      const keep = (b) => {
-        const x0 = Math.round(b[0] * k), y0 = Math.round(b[1] * k), w = Math.round(b[2] * k), h = Math.round(b[3] * k);
-        c.clearRect(x0, y0, w, h);
-        c.drawImage(full, x0, y0, w, h, x0, y0, w, h);
-      };
-      if (chestPhoto) keep(VEST_CHEST_BOX);
-      if (lowerPhoto) VEST_LOWER_BOXES.forEach(keep);
-    }
+    c.drawImage(litPiece(classic, fp, W, H), 0, 0);
     // The back lining seen in the neck: a satin a shade off the cloth.
     const linHex = mix(lum(hex) < 70 ? mix(hex, "#ffffff", 0.08) : mix(hex, "#000000", 0.25), "#000000", 0.18);
     const lin = litPiece(classic, { key: "vl:" + linHex, hex: linHex, strength: { a: 0.75, b: 0.4 }, size: 0 }, W, H);
@@ -1594,26 +1532,24 @@
     c.globalCompositeOperation = "source-atop";
     c.drawImage(lin, 0, 0);
     c.restore();
-    // Other pocket picks, drawn on the cloth where the photo's were.
-    c.scale(k, k);
-    c.globalCompositeOperation = "source-atop";
-    if (!chestPhoto || !lowerPhoto) {
-      c.save();
-      c.translate(114, 9.5); c.scale(0.85, 1);
-      vestPockets(c, va, st, false, 114, !chestPhoto, !lowerPhoto);
-      c.restore();
-    }
-    // Pick stitching along the neck and the front edge.
-    if (/^Pick/.test(String(va.pickStitch || ""))) {
-      const lt = "rgba(255,255,255," + (0.35 * st.b).toFixed(3) + ")";
-      line(c, [[74.9, 10.7], [110, 119], [110, 286]], lt, 0.9, [1.6, 3]);
-      line(c, [[155.2, 11.4], [119.6, 119]], lt, 0.9, [1.6, 3]);
-    }
     g.save();
     g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 12 * s * RES; g.shadowOffsetY = 5 * s * RES;
     g.drawImage(pc, cx - 114 * s, oy - 9.5 * s, VEST_W * s, VEST_PH * s);
     g.restore();
     return true;
+  }
+  // The vest's lining: its own pick, the jacket's when the vest follows it,
+  // else a satin a shade off the cloth.
+  function vestLining(v, raw, fp, s) {
+    const own = raw.lining && !/^__same_as__/.test(raw.lining);
+    let lp = liningPaint(own ? { _raw: { lining: raw.lining } } : pictureLayout().jacket ? v : { _raw: {} }, fp);
+    // (The lining's pattern at the vest's own scale: the folded vest is drawn
+    // at about 0.4 of the jacket's size per unit.)
+    // A plain satin is one smooth colour on a panel this size (its swatch
+    // photo, repeated, shows every fold); a print keeps its pattern.
+    if (lp.size && plainLining(own ? raw.lining : v._raw && v._raw.lining)) lp = Object.assign({}, lp, { img: null, size: 0, key: lp.key + ":flat" });
+    else if (lp.size) lp = Object.assign({}, lp, { size: lp.size * 0.4 * s, even: 4, key: lp.key + ":even" });
+    return lp;
   }
   // The vest's back, from Daniel's back photo (2026-11-22: plain satin, a
   // centre seam and two darts, no strap), in the front's piece space. It is
@@ -1647,15 +1583,8 @@
     const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
     const shade = img(VEST_BACK_SHADE);
-    const own = raw.lining && !/^__same_as__/.test(raw.lining);
-    let lp = liningPaint(own ? { _raw: { lining: raw.lining } } : pictureLayout().jacket ? v : { _raw: {} }, fp);
+    const lp = vestLining(v, raw, fp, s);
     if (!fp.ready || !shade || !lp.ready) return false;
-    // (The lining's pattern at the vest's own scale: the folded vest is drawn
-    // at about 0.4 of the jacket's size per unit.)
-    // A plain satin is one smooth colour on a panel this size (its swatch
-    // photo, repeated, shows every fold); a print keeps its pattern.
-    if (lp.size && plainLining(own ? raw.lining : v._raw && v._raw.lining)) lp = Object.assign({}, lp, { img: null, size: 0, key: lp.key + ":flat" });
-    else if (lp.size) lp = Object.assign({}, lp, { size: lp.size * 0.4 * s, even: 4, key: lp.key + ":even" });
     const k = s * RES;
     const W = Math.round(VEST_W * k), H = Math.round(VEST_PH * k);
     const pc = mk(W, H);
@@ -1719,139 +1648,444 @@
     g.restore();
     return true;
   }
-  function drawVestDrawn(g, v, cx, oy, s, fixed) {
-    const va = vestAnswers(v, fixed);
+  // ---- Vest Only, on Daniel's blank vest photo ----------------------------------
+  // Daniel 2026-11-22 sent a plain vest front (V-neck, pointed bottom, no
+  // buttons or pockets; the viewer's right front lapped over the left) and
+  // asked for the Vest Only picture to be redone. Every pick is built on that
+  // photo (scripts/make_folded_pieces.py):
+  // - the photo's cloth and the lining in its neck (VEST_BLANK_SHADE),
+  // - the cloth's light carried across the neck, the closing line and the gap
+  //   between the points (VEST_BLANK_CLOTH), for cloth that is added: a
+  //   double breasted top front, a straighter bottom, a collar band,
+  // - the lining's light carried sideways (VEST_BLANK_LINING), for a U neck,
+  // - the first vest photo's welts on their own (VEST_WELTS).
+  // The numbers are the photo's, in piece units: v = the neck's edges
+  // [y, left x, right x], vb = where they meet, seam = the back neck band's
+  // seam, close = the top front's edge below the neck [x, y], apex = the top
+  // of the gap between the points, corners = where the sides end.
+  const VEST_BLANK_SHADE = "./assets/suit-vest-blank-shade.webp?v=1";
+  const VEST_BLANK_CLOTH = "./assets/suit-vest-blank-cloth.webp?v=1";
+  const VEST_BLANK_LINING = "./assets/suit-vest-blank-lining.webp?v=1";
+  const VEST_WELTS = "./assets/suit-vest-welts.webp?v=1";
+  // [x, y, w, h, the welt's centre x, y] in the sheet (shadow; the light is
+  // 244 px to the right); 0.185 piece units per pixel.
+  const VEST_WELT_CELLS = [[0, 0, 180, 72, 90, 36], [0, 72, 242, 66, 121, 33], [0, 144, 239, 66, 119.5, 33]];
+  const VEST_BLANK = {
+    cx: 114.0,
+    v: [[18.3,85.1,143.0],[27.5,86.5,141.8],[36.8,88.2,140.2],[46.0,90.0,138.4],[55.3,92.0,136.5],[64.5,94.1,134.4],[73.8,96.3,132.3],[83.0,98.6,130.0],[92.2,101.0,127.6],[101.5,103.5,125.1],[110.7,106.2,122.3],[120.0,109.1,119.4],[129.2,112.0,116.4],[132.2,112.7,115.7]],
+    vb: [115.0,133.4],
+    seam: [[85.1,15.0],[94.8,16.0],[104.4,16.7],[114.1,16.9],[123.7,16.7],[133.4,16.0],[143.0,15.0]],
+    close: [[115.0,132.5],[112.6,141.7],[110.1,151.0],[108.2,160.2],[107.2,169.5],[106.9,178.7],[107.0,188.0],[107.5,197.2],[107.9,206.5],[108.4,215.7],[109.0,225.0],[109.8,234.2],[110.6,243.5],[111.6,252.7],[112.7,261.9],[113.7,271.2],[114.2,277.4]],
+    apex: [114.0,278.1],
+    points: [[85.8,312.1],[140.8,312.1]],
+    corners: [[29.6,277.4],[198.1,277.9]],
+    lining: "M85.1,18.3 L85.1,18.3 L85.9,24 L86.9,29.8 L88,35.6 L89,41.4 L90.3,47.2 L91.5,52.9 L92.8,58.7 L94.1,64.5 L95.4,70.3 L96.8,76.1 L98.3,81.8 L99.8,87.6 L101.3,93.4 L102.9,99.2 L104.5,105 L106.2,110.7 L108,116.5 L109.8,122.3 L111.6,128.1 L115,133.4 L115.7,132.2 L117.3,126.5 L119.2,120.7 L121,114.9 L122.8,109.1 L124.5,103.3 L126.2,97.6 L127.7,91.8 L129.3,86 L130.7,80.2 L132.2,74.4 L133.5,68.7 L134.8,62.9 L136.1,57.1 L137.3,51.3 L138.5,45.5 L139.6,39.8 L140.6,34 L141.7,28.2 L142.5,22.4 L143,18.3 L143.7,14.9 L136.3,15.8 L128.9,16.4 L121.5,16.8 L114.1,16.9 L106.7,16.8 L99.3,16.4 L91.8,15.8 L84.4,14.9 Z",
+  };
+  function drawVestOnly(g, v, cx, oy, s) {
+    const B = VEST_BLANK;
+    const va = vestAnswers(v, false);
+    const VD = typeof vestDesigner !== "undefined" ? vestDesigner : null;
+    const raw = VD && VD.rawSelections ? withHover(VD, VD.rawSelections()) : {};
     const fab = opt("fabric", va.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
     const fp = fabricPaint(fab);
-    if (!fp.ready) return false;
+    const base = img(VEST_BLANK_SHADE), cloth = img(VEST_BLANK_CLOTH), linMap = img(VEST_BLANK_LINING), welts = img(VEST_WELTS);
+    const lp = vestLining(v, raw, fp, s);
+    if (!fp.ready || !base || !cloth || !linMap || !welts || !lp.ready) return false;
     const hex = fp.hex, st = fp.strength;
-    const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
-    const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
+    // The photo welts keep their depth on pale cloth, as the jacket's pockets
+    // do (SW); drawn shadows and lines are eased off there, where a hard dark
+    // line reads as an outline (SA).
+    const pale = Math.max(0, Math.min(1, (1 - st.a) / 0.42));
+    const SW = st.a + (1 - st.a) * 0.85, SA = 1 - 0.55 * pale, SB = st.b + (1 - st.b) * 0.6;
+    const dk = (a) => "rgba(0,0,0," + (a * SA).toFixed(3) + ")";
+    const lt = (a) => "rgba(255,255,255," + (a * SB).toFixed(3) + ")";
+    const own = (key) => (raw[key] && !/^__same_as__/.test(raw[key]) ? raw[key] : null);
+    const jv = pictureLayout().jacket ? v : { _raw: {} };
+    const look = buttonLook(own("buttoncolor") ? { _raw: { buttoncolor: own("buttoncolor") } } : jv, hex);
+    const thread = threadHex("threadColor", own("threadColor") ? { _raw: { threadColor: own("threadColor") } } : jv, hex);
+    const nail = own("buttonNail") || jv.buttonNail;
     const fb = String(va.frontbutton || "");
     const db = /^Double/.test(fb);
     const nBtn = parseInt((/(\d)/.exec(fb) || [0, 5])[1], 10);
-    const rows = db ? nBtn / 2 : nBtn;
     const collar = String(va.collar || "V-Neck");
-    // Depth of the V: fewer buttons, deeper opening.
-    const vDepth = db ? (fb.indexOf("Low") !== -1 ? 170 : 130) : ({ 3: 150, 4: 132, 5: 114, 6: 98 }[nBtn] || 114);
-    const edgeX = db ? 34 : 0; // where the top front's edge runs (viewer's right of centre)
+    const uNeck = collar === "U-Neck";
+    const lapel = /Notch/.test(collar) ? "notch" : /Peak/.test(collar) ? "peak" : /Shawl/.test(collar) ? "shawl" : "";
+    const band = !!lapel && /Collar Band/.test(collar);
     const bottom = String(va.bottom || "Pointed");
-    g.save();
-    g.translate(cx, oy);
-    g.scale(s, s);
-    // Outline: right half (viewer's right) mirrored.
-    const half = (sx) => {
+    const k = s * RES;
+    const W = Math.round(VEST_W * k), H = Math.round(VEST_PH * k);
+    const pc = mk(W, H);
+    const c = pc.getContext("2d");
+    const lit = (map, paint) => litPiece(map, paint, W, H);
+
+    // -- Paths (piece units) --
+    const P = (pts, close, smooth) => {
       const p = new Path2D();
-      const X = (x) => x * sx;
-      p.moveTo(X(36), 0);
-      p.lineTo(X(70), 8);
-      p.bezierCurveTo(X(76), 60, X(96), 104, X(122), 116);
-      p.lineTo(X(124), 236);
-      if (bottom === "Straight") { p.lineTo(X(124), 286); p.lineTo(X(0), 286); }
-      else if (bottom === "Rounded") { p.lineTo(X(124), 262); p.bezierCurveTo(X(80), 286, X(40), 292, X(12), 290); p.quadraticCurveTo(X(2), 290, X(0), 282); }
-      else if (bottom === "Small Point") { p.lineTo(X(124), 262); p.lineTo(X(10), 296); p.lineTo(X(0), 286); }
-      else { p.lineTo(X(124), 246); p.lineTo(X(8), 306); p.lineTo(X(0), 292); }
-      p.lineTo(X(0), vDepth);
+      pts.forEach((q, i) => {
+        if (!i) p.moveTo(q[0], q[1]);
+        else if (smooth && i < pts.length - 1) p.quadraticCurveTo(q[0], q[1], (q[0] + pts[i + 1][0]) / 2, (q[1] + pts[i + 1][1]) / 2);
+        else p.lineTo(q[0], q[1]);
+      });
+      if (close) p.closePath();
+      return p;
+    };
+    // Everything but a shape (use with "evenodd").
+    const outside = (pts) => {
+      const p = new Path2D();
+      p.rect(-VEST_W, -VEST_PH, 3 * VEST_W, 3 * VEST_PH);
+      pts.forEach((q, i) => (i ? p.lineTo(q[0], q[1]) : p.moveTo(q[0], q[1])));
       p.closePath();
       return p;
     };
-    const L = half(-1), R = half(1);
-    const body = new Path2D();
-    body.addPath(L); body.addPath(R);
-    // Drop shadow and cloth.
-    g.save();
-    g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 14 * RES; g.shadowOffsetY = 6 * RES;
-    g.fillStyle = hex; g.fill(L); g.fill(R);
-    g.restore();
-    // The back lining seen in the V.
-    const vee = new Path2D();
-    if (collar === "U-Neck") { vee.moveTo(-36, 0); vee.bezierCurveTo(-36, vDepth * 0.9, 36, vDepth * 0.9, 36, 0); }
-    else { vee.moveTo(-36, 0); vee.lineTo(0, vDepth); vee.lineTo(36, 0); }
-    vee.closePath();
-    g.fillStyle = lum(hex) < 70 ? mix(hex, "#ffffff", 0.08) : mix(hex, "#000000", 0.25); g.fill(vee);
-    g.fillStyle = "rgba(0,0,0,0.18)"; g.fill(vee);
-    [L, R].forEach((P) => {
-      g.save(); g.clip(P);
-      const m = g.getTransform(); g.setTransform(1, 0, 0, 1, 0, 0);
-      g.fillStyle = paintStyle(g, fp); g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.setTransform(m);
-      const gr = g.createLinearGradient(-124, 0, 124, 300);
-      gr.addColorStop(0, lt(0.08)); gr.addColorStop(0.5, "rgba(0,0,0,0)"); gr.addColorStop(1, dk(0.18));
-      g.fillStyle = gr; g.fillRect(-140, -10, 280, 330);
-      // Armhole edge and side shading.
-      const sg = g.createLinearGradient(-124, 0, 124, 0);
-      sg.addColorStop(0, dk(0.18)); sg.addColorStop(0.18, "rgba(0,0,0,0)"); sg.addColorStop(0.82, "rgba(0,0,0,0)"); sg.addColorStop(1, dk(0.18));
-      g.fillStyle = sg; g.fillRect(-140, -10, 280, 330);
-      g.restore();
-    });
-    // U-Neck: the V opening is rounded off.
-    if (collar === "U-Neck") {
-      g.save(); g.clip(body); g.fillStyle = lum(hex) < 70 ? mix(hex, "#ffffff", 0.06) : mix(hex, "#000000", 0.3); g.fill(vee); g.restore();
-    }
-    // Front edge where the two fronts meet (the top front on the viewer's left
-    // for single breasted; double breasted laps across).
-    const frontBottom = bottom === "Straight" ? 286 : bottom === "Rounded" ? 284 : bottom === "Small Point" ? 290 : 298;
-    if (db) {
-      g.save(); g.strokeStyle = dk(0.55); g.lineWidth = 1.4;
-      g.beginPath(); g.moveTo(edgeX * 0.25, vDepth - 6); g.lineTo(edgeX, vDepth + 18); g.lineTo(edgeX, frontBottom - 12); g.stroke(); g.restore();
-    } else {
-      g.save(); g.shadowColor = "rgba(0,0,0,0.35)"; g.shadowBlur = 3 * RES; g.shadowOffsetX = 1 * RES;
-      g.strokeStyle = dk(0.6); g.lineWidth = 1.3;
-      g.beginPath(); g.moveTo(0, vDepth); g.lineTo(0, frontBottom - 6); g.stroke(); g.restore();
-    }
-    // Lapels along the V.
-    if (/Lapel/.test(collar)) {
-      const w = 15;
-      const lapel = (sx) => {
-        const p = new Path2D();
-        p.moveTo(36 * sx, 0); p.lineTo((36 + w) * sx, 2);
-        if (/Shawl/.test(collar)) p.quadraticCurveTo((30 + w) * sx, vDepth * 0.55, 0, vDepth);
-        else p.lineTo(4 * sx, vDepth - 6);
-        p.lineTo(0, vDepth);
-        p.closePath();
-        return p;
-      };
-      [-1, 1].forEach((sx) => {
-        const P = lapel(sx);
-        g.save(); g.shadowColor = "rgba(0,0,0,0.4)"; g.shadowBlur = 4 * RES; g.shadowOffsetX = sx * 1.5 * RES;
-        g.fillStyle = hex; g.fill(P); g.restore();
-        g.save(); g.clip(P); const m = g.getTransform(); g.setTransform(1, 0, 0, 1, 0, 0);
-        g.fillStyle = paintStyle(g, fp); g.fillRect(0, 0, g.canvas.width, g.canvas.height); g.setTransform(m);
-        g.fillStyle = lt(0.06); g.fill(P); g.restore();
-        g.save(); g.strokeStyle = dk(0.5); g.lineWidth = 1; g.stroke(P); g.restore();
-        // Notch or peak near the top.
-        if (!/Shawl/.test(collar)) {
-          const y = 34, x = 36 + w - 2 - y * (w + 30) / vDepth;
-          g.save(); g.strokeStyle = dk(0.7); g.lineWidth = 1.4; g.beginPath();
-          if (/Peak/.test(collar)) { g.moveTo(sx * (x + 2), y); g.lineTo(sx * (x + 10), y - 12); }
-          else { g.moveTo(sx * (x + 1), y); g.lineTo(sx * (x - 9), y + 3); }
-          g.stroke(); g.restore();
-        }
-      });
-    }
-    // Darts.
-    [-1, 1].forEach((sx) => line(g, [[sx * 64, 150], [sx * 66, 200], [sx * 64, 246]], dk(0.28), 1));
-    vestPockets(g, va, st, db, vDepth, true, true);
-    // Buttons and buttonholes.
-    const btnHex = lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6);
-    const button = (x, y) => {
-      g.save(); g.shadowColor = "rgba(0,0,0,0.45)"; g.shadowBlur = 2.5 * RES; g.shadowOffsetY = 1 * RES;
-      g.beginPath(); g.arc(x, y, 5.2, 0, Math.PI * 2); g.fillStyle = btnHex; g.fill(); g.restore();
-      g.beginPath(); g.arc(x, y, 5.2, 0, Math.PI * 2); g.strokeStyle = "rgba(255,255,255,0.16)"; g.lineWidth = 0.9; g.stroke();
-      g.fillStyle = "rgba(0,0,0,0.55)";
-      [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]].forEach((d) => { g.beginPath(); g.arc(x + d[0], y + d[1], 0.75, 0, Math.PI * 2); g.fill(); });
+    const bez = (a, b, d, e, n) => {
+      const out = [];
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, u = 1 - t;
+        out.push([u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * d[0] + t * t * t * e[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * d[1] + t * t * t * e[1]]);
+      }
+      return out;
     };
-    const y0 = vDepth + 16, y1 = frontBottom - 30;
-    for (let i = 0; i < rows; i++) {
-      const y = rows === 1 ? y0 : y0 + (y1 - y0) * i / (rows - 1);
-      if (db) { button(-edgeX + 6, y); button(edgeX - 10, y); }
-      else button(-6, y);
+    // A run moved sideways by d (to the viewer's right of its direction of
+    // travel when going down).
+    const off = (pts, d) => pts.map((p, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+      return [p[0] + d * dy / n, p[1] - d * dx / n];
+    });
+    const clipAll = (clips) => (clips || []).forEach((cp) => { if (cp) c.clip(cp[0], cp[1] || "nonzero"); });
+    // A full-size lit piece shown through clips.
+    const patch = (canvas, clips, op) => {
+      c.save();
+      clipAll(clips);
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.globalCompositeOperation = op || "source-atop";
+      c.drawImage(canvas, 0, 0);
+      c.restore();
+    };
+    // A soft shadow along an edge (darkest at the edge, gone w away), kept
+    // to one side by the clips. (No canvas filters: Safari has none.)
+    const soft = (edge, w, a, clips) => {
+      c.save();
+      clipAll(clips);
+      c.lineCap = "butt"; c.lineJoin = "round";
+      c.strokeStyle = "rgba(0,0,0," + (a * SA / 4).toFixed(3) + ")";
+      for (let i = 0; i < 5; i++) { c.lineWidth = 2 * w * (1 - i / 5.5); c.stroke(edge); }
+      c.restore();
+    };
+    const crisp = (edge, w, a, clips) => {
+      c.save();
+      clipAll(clips);
+      c.lineCap = "round"; c.lineJoin = "round";
+      c.strokeStyle = dk(a); c.lineWidth = w;
+      c.stroke(edge);
+      c.restore();
+    };
+    // The edge of a layer lying on another: its shadow on the one under it.
+    const layerEdge = (pts, under, w) => { soft(P(pts), w || 4.2, 0.42, [under]); crisp(P(pts), 0.4, 0.5); };
+
+    // -- The photo's own lines --
+    const CX = B.cx, VB = B.vb, APEX = B.apex, CL = B.corners[0], CR = B.corners[1];
+    const AL = [B.v[0][1], B.seam[0][1]], AR = [B.v[0][2], B.seam[B.seam.length - 1][1]];
+    const closeRows = B.close.map((p) => [p[1], p[0]]);
+    const closeX = (y) => lerpRows(closeRows, y, 1);
+    const neckL = [AL].concat(B.v.map((r) => [r[1], r[0]]), [VB]), neckR = [AR].concat(B.v.map((r) => [r[2], r[0]]), [VB]);
+    const HEM = (CL[1] + CR[1]) / 2;
+
+    // -- The bottom: the photo's points, or a new hem cut across them --
+    // (Straight: side to side, a little lower in the middle. Rounded: the
+    // same with the two front corners rounded off. Small Point: two short
+    // points beside the closing.)
+    const bow = (x) => { const t = (x - CL[0]) / (CR[0] - CL[0]); return CL[1] + (CR[1] - CL[1]) * t + 16 * t * (1 - t); };
+    let hem = null, hemEndY = APEX[1];
+    if (bottom === "Straight" || bottom === "Rounded") {
+      hem = [];
+      for (let i = 0; i <= 40; i++) { const x = CL[0] + (CR[0] - CL[0]) * i / 40; hem.push([x, bow(x)]); }
+      hemEndY = bow(CX);
+      if (bottom === "Rounded" && !db) {
+        const R = 13, yb = bow(CX), arcL = [], arcR = [];
+        for (let i = 0; i <= 8; i++) {
+          const a = Math.PI / 2 * i / 8;
+          arcL.push([CX - R + R * Math.sin(a), yb - R + R * Math.cos(a)]);
+          arcR.push([CX + R - R * Math.cos(a), yb - R + R * Math.sin(a)]);
+        }
+        hem = hem.filter((p) => p[0] < CX - R).concat(arcL, arcR, hem.filter((p) => p[0] > CX + R));
+        hemEndY = yb - R;
+      }
+    } else if (bottom === "Small Point") {
+      hem = [CL, [CX - 17, HEM + 12], [CX, HEM + 3], [CX + 17, HEM + 12], CR];
+      hemEndY = HEM + 3;
     }
-    // Pick stitching along the edges.
+
+    // -- Double breasted: the top front (viewer's right) reaches across to
+    // an edge left of the centre; from the neck it runs slanted to where
+    // that edge starts (YB), and at the bottom it follows the right front's
+    // hem back to the centre.
+    const EX = CX - 23;
+    const low = /Low/.test(fb);
+    const YB = nBtn === 8 ? 116 : low ? 158 : 146;
+    let edge = null, T = null;
+    if (db) {
+      let tail;
+      if (bottom === "Pointed") { const m = (B.points[1][1] - APEX[1]) / (B.points[1][0] - APEX[0]); tail = [[EX, APEX[1] - (APEX[0] - EX) * m], [APEX[0], APEX[1]]]; }
+      else if (bottom === "Small Point") tail = [[EX, HEM + 3 - (CX - EX) * 9 / 17], [CX, HEM + 3]];
+      else if (bottom === "Rounded") {
+        const r = 8, yh = bow(EX + r);
+        tail = [];
+        for (let i = 0; i <= 6; i++) { const a = Math.PI / 2 * i / 6; tail.push([EX + r - r * Math.cos(a), yh - r + r * Math.sin(a)]); }
+      } else tail = [[EX, bow(EX)]];
+      const run = uNeck ? bez(AR, [AR[0] - 1, AR[1] + 0.6 * (YB - AR[1])], [EX + 30, YB - 4], [EX, YB], 16) : [AR, [EX, YB]];
+      edge = run.concat(tail);
+      const last = edge[edge.length - 1];
+      T = edge.concat([[last[0], VEST_PH], [VEST_W, VEST_PH], [VEST_W, 0], [AR[0], 0]]);
+    }
+    const notT = T ? [outside(T), "evenodd"] : null;
+
+    // -- 1. The photo's cloth --
+    c.drawImage(lit(base, fp), 0, 0);
+    c.scale(k, k);
+    c.globalCompositeOperation = "source-atop";
+
+    // -- 2. The neck: the back lining seen inside it. A U neck is cut wider
+    // than the photo's V (its sides run down from the same corners and round
+    // into the closing), so more lining shows.
+    const D = VB[1] - AL[1];
+    const uL = bez(AL, [AL[0] + 2, AL[1] + 0.66 * D], [VB[0] - 26, VB[1]], VB, 20);
+    const uR = bez(VB, [VB[0] + 26, VB[1]], [AR[0] - 2, AR[1] + 0.66 * D], AR, 20);
+    const opening = uNeck ? P(uL.concat(uR.slice(1), B.seam.slice().reverse()), true) : new Path2D(B.lining);
+    const inNeck = [[opening], uNeck ? notT : null];
+    patch(lit(uNeck ? linMap : base, lp), inNeck);
+    c.save(); clipAll(inNeck); c.fillStyle = "rgba(0,0,0,0.2)"; c.fillRect(0, 0, VEST_W, VEST_PH); c.restore();
+    if (uNeck) {
+      const rim = P(uL.concat(uR.slice(1)));
+      soft(rim, 5, 0.5, inNeck);
+      crisp(rim, 0.45, 0.5, [notT]);
+    }
+
+    // -- 3. Cloth where the photo has none: the gap between the points, for
+    // the other bottoms; the top front, double breasted --
+    if (hem) {
+      const PL = B.points[0], PR = B.points[1];
+      patch(lit(cloth, fp), [[P([[APEX[0] - 4, APEX[1] - 4], [APEX[0] + 4, APEX[1] - 4], [PR[0] + 5, PR[1] + 3], [PL[0] - 5, PL[1] + 3]], true)]], "source-over");
+    }
+    if (db) {
+      const bound = [[0, 0], [AR[0] + 3.5, 0]].concat(B.v.map((r) => [r[2] + 3.5, r[0]]), [[VB[0] + 5.5, VB[1] + 2]], B.close.slice(1).map((p) => [p[0] + 5.5, p[1]]), [[APEX[0] + 5.5, VEST_PH], [0, VEST_PH]]);
+      patch(lit(cloth, fp), [[P(T, true)], [P(bound, true)]]);
+    }
+    if (hem) {
+      c.save();
+      c.globalCompositeOperation = "destination-out";
+      c.fill(P(hem.concat([[CR[0] + 30, CR[1]], [VEST_W, VEST_PH], [0, VEST_PH], [CL[0] - 30, CL[1]]]), true));
+      c.restore();
+      soft(P(hem), 1.2, 0.3);
+      crisp(P(hem), 0.4, 0.5);
+    }
+    // The closing line: the photo's, carried on down to a lower hem; double
+    // breasted, the top front's new edge.
+    if (hem && !db && hemEndY > APEX[1] - 4) {
+      const run = [[closeX(APEX[1] - 5), APEX[1] - 5], [APEX[0], APEX[1] - 1], [CX, hemEndY + 1]];
+      layerEdge(run, [P(run.concat([[CX - 9, hemEndY + 1], [CX - 9, APEX[1] - 5]]), true)], 1.8);
+    }
+    if (db) layerEdge(edge, notT);
+
+    // -- 4. Lapels: cloth folded back along the neck's edges, from the
+    // shoulder down to where the fronts meet; "with Collar Band" carries the
+    // collar on around the back of the neck. --
+    const stitchRuns = [];
+    if (band) {
+      const top = [[AL[0] - 14, 17.4], [AL[0] - 8, 12.6], [AL[0] - 2.5, 8.2], [AL[0] + 6, 6.9], [CX, 6.6], [AR[0] - 6, 6.9], [AR[0] + 2.5, 8.2], [AR[0] + 8, 12.6], [AR[0] + 14, 17.4]];
+      const strip = top.concat(B.seam.slice().reverse());
+      // (On the shoulders it lies on the cloth; between them it stands a
+      // little above the neck.)
+      patch(lit(cloth, fp), [[P(strip, true)]]);
+      patch(lit(cloth, fp), [[P(strip, true)], [P([[AL[0] - 9.5, 15], [AL[0] - 2, 0], [AR[0] + 2, 0], [AR[0] + 9.5, 15], [AR[0] + 9.5, 30], [AL[0] - 9.5, 30]], true)]], "source-over");
+      crisp(P(top, false, true), 0.4, 0.4);
+      soft(P(B.seam), 2.6, 0.4, [[opening]]);
+      crisp(P(B.seam), 0.36, 0.42);
+    }
+    if (lapel) {
+      const side = (dir) => {
+        const onTop = db && dir > 0;
+        const inner = onTop ? [AR, [EX, YB]] : dir < 0 ? neckL : neckR;
+        const cum = [0];
+        for (let i = 1; i < inner.length; i++) cum.push(cum[i - 1] + Math.hypot(inner[i][0] - inner[i - 1][0], inner[i][1] - inner[i - 1][1]));
+        const total = cum[cum.length - 1];
+        // The point d along the edge, moved w outward (and dy down).
+        const at = (d, w, dy) => {
+          let i = 1;
+          while (i < inner.length - 1 && cum[i] < d) i++;
+          const t = Math.max(0, Math.min(1, (d - cum[i - 1]) / (cum[i] - cum[i - 1])));
+          return [inner[i - 1][0] + (inner[i][0] - inner[i - 1][0]) * t + dir * (w || 0), inner[i - 1][1] + (inner[i][1] - inner[i - 1][1]) * t + (dy || 0)];
+        };
+        const start = at(0, 10, -9);
+        let outer, gorge = null, body, smooth = false;
+        if (lapel === "notch") {
+          const G = at(31, 7), tip = at(34.5, 18);
+          outer = [start, at(13, 11), at(27, 12.6), G, tip, at(total, 0)];
+          gorge = [G, at(21)];
+          body = [tip, at(total, 0)];
+        } else if (lapel === "peak") {
+          const G = at(28.5, 7.2), tip = at(20.5, 20);
+          outer = [start, at(12, 10), at(22.5, 10.6), G, tip, at(total, 0)];
+          gorge = [G, at(19)];
+          body = [tip, at(total, 0)];
+        } else {
+          outer = [start, at(14, 11.6), at(34, 14.5), at(58, 13.2), at(82, 9), at(104, 4), at(total, 0)];
+          body = outer;
+          smooth = true;
+        }
+        const shape = inner.concat(outer.slice().reverse());
+        const under = onTop || !db ? null : notT;
+        soft(P(outer, false, smooth), 2.8, 0.32, [[outside(shape), "evenodd"], under]);
+        c.save(); clipAll([[P(shape, true)], under]); c.fillStyle = lt(0.028); c.fillRect(0, 0, VEST_W, VEST_PH); c.restore();
+        crisp(P(outer, false, smooth), 0.36, 0.45, [under]);
+        if (gorge) crisp(P(gorge), 0.32, 0.4, [under]);
+        stitchRuns.push([off(body, dir * 1.4), under, smooth]);
+        // Lapel buttonholes: short slits below the notch, lying the way the
+        // lapel's top edge runs.
+        const lbh = String(va.lapelbuttonhole || "");
+        const n = /^Both/.test(lbh) ? 1 : dir > 0 && /Two/.test(lbh) ? 2 : dir > 0 && /^Left Lapel/.test(lbh) ? 1 : 0;
+        for (let i = 0; i < n; i++) {
+          const m = at(lapel === "peak" ? 34 + i * 6.5 : 43 + i * 6.5, lapel === "shawl" ? 8.2 : 10 - i * 0.8);
+          const a = [m[0] - dir * 2.6, m[1] - 0.8], b = [m[0] + dir * 2.6, m[1] + 0.8];
+          c.save(); clipAll([under]); line(c, [a, b], dk(0.6), 0.55); line(c, [[a[0], a[1] + 0.55], [b[0], b[1] + 0.55]], lt(0.12), 0.25); c.restore();
+        }
+      };
+      side(-1);
+      side(1);
+    }
+
+    // -- 5. Pockets. A welt is the first vest photo's own; the other kinds
+    // are drawn in the same light: lips, a flap, a patch. --
+    const tint = mix(hex, "#ffffff", 0.35);
+    const welt = (i, x, y, rot, flip, ky) => {
+      const cell = VEST_WELT_CELLS[i], q = 0.185;
+      const put = (g2, col) => g2.drawImage(welts, col * 244 + cell[0], cell[1], cell[2], cell[3], -cell[4], -cell[5], cell[2], cell[3]);
+      c.save();
+      c.translate(x, y); c.rotate(rot); c.scale((flip ? -1 : 1) * q, q * (ky || 1));
+      c.globalAlpha = SW;
+      put(c, 0);
+      // Its light, in the cloth's own colour.
+      const t = mk(cell[2], cell[3]), tg = t.getContext("2d");
+      tg.translate(cell[4], cell[5]); put(tg, 1);
+      tg.setTransform(1, 0, 0, 1, 0, 0); tg.globalCompositeOperation = "source-in"; tg.fillStyle = tint; tg.fillRect(0, 0, cell[2], cell[3]);
+      c.globalCompositeOperation = "lighter"; c.globalAlpha = Math.min(1, SB / 3);
+      c.drawImage(t, -cell[4], -cell[5]);
+      c.restore();
+    };
+    const hline = (x0, x1, y, col, w) => line(c, [[x0, y], [x1, y]], col, w);
+    // A flap or a patch lies over the front's dart: plain cloth from beside
+    // it (toward the centre) fills the shape.
+    const cover = (shape, toCentre) => {
+      c.save();
+      c.clip(shape);
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.drawImage(lit(cloth, fp), Math.round(-toCentre * 15 * k), 0);
+      c.restore();
+    };
+    // Rounded lower corners: the outline from the top left, down and around.
+    const tab = (len, h, r) => {
+      const out = [[-len / 2, 0]];
+      for (let i = 0; i <= 5; i++) { const a = Math.PI / 2 * i / 5; out.push([-len / 2 + r - r * Math.cos(a), h - r + r * Math.sin(a)]); }
+      for (let i = 0; i <= 5; i++) { const a = Math.PI / 2 * i / 5; out.push([len / 2 - r + r * Math.sin(a), h - r + r * Math.cos(a)]); }
+      out.push([len / 2, 0]);
+      return out;
+    };
+    const lips = (len) => {
+      soft(P([[-len / 2, 0], [len / 2, 0]]), 2.2, 0.24);
+      c.fillStyle = lt(0.05); c.fillRect(-len / 2, -1.25, len, 1.05);
+      hline(-len / 2, len / 2, 0, dk(0.78), 0.42);
+      c.save(); c.strokeStyle = dk(0.42); c.lineWidth = 0.3; c.strokeRect(-len / 2, -1.3, len, 2.6); c.restore();
+    };
+    const flapPocket = (len, h, toCentre) => {
+      const e = tab(len, h, 1.8);
+      soft(P(e), 2.4, 0.34, [[outside(e), "evenodd"]]);
+      cover(P(e, true), toCentre);
+      c.save(); c.clip(P(e, true)); c.fillStyle = lt(0.04); c.fillRect(-len / 2, 0, len, h); c.restore();
+      crisp(P(e), 0.36, 0.45);
+      c.save(); c.strokeStyle = dk(0.34); c.lineWidth = 0.28; c.strokeRect(-len / 2, -1.25, len, 1.25); c.restore();
+      hline(-len / 2, len / 2, 0, dk(0.66), 0.42);
+    };
+    const patchPocketV = (len, h, toCentre) => {
+      const e = tab(len, h, 3.2);
+      soft(P(e, true), 2.2, 0.28, [[outside(e), "evenodd"]]);
+      cover(P(e, true), toCentre);
+      c.save(); c.clip(P(e, true)); c.fillStyle = lt(0.035); c.fillRect(-len / 2, 0, len, h); c.restore();
+      crisp(P(e, true), 0.36, 0.45);
+      hline(-len / 2 + 0.6, len / 2 - 0.6, 2.8, dk(0.3), 0.3);
+      crisp(P(tab(len - 2.2, h - 1.1, 2.4).map((p) => [p[0], Math.max(p[1], 3.4)])), 0.25, 0.26);
+    };
+    const pocket = (name, x, y, len, sprite, rot, flip) => {
+      const nm = String(name || "");
+      if (!nm || /^No /.test(nm)) return;
+      if (/Welt/.test(nm)) { welt(sprite, x, y, rot, flip, /Narrow/.test(nm) ? 0.62 : 1); return; }
+      c.save();
+      c.translate(x, y); c.rotate(rot);
+      const toCentre = x < CX ? 1 : -1;
+      if (/Patch/.test(nm)) { c.translate(0, -3); patchPocketV(len * 0.92, len * (len > 30 ? 1.0 : 1.08), toCentre); }
+      else if (/Flap/.test(nm)) flapPocket(len, len > 30 ? 8.6 : 6.6, toCentre);
+      else lips(len);
+      c.restore();
+    };
+    const lpk = String(va.lowerpocket || ""), slant = /Slant/.test(lpk) ? 0.2 : 0, shift = db ? 4 : 0;
+    pocket(lpk, 75.5 - shift, 212, 36, 1, -slant, false);
+    pocket(lpk, 152.5 + shift, 212, 36, 2, slant, false);
+    const cpk = String(va.chestpocket || "");
+    const cx2 = uNeck ? 6 : 0;
+    pocket(cpk, 153 + cx2, 113, 26, 0, 0, false);
+    if (/^Both/.test(cpk)) pocket(cpk, 75 - cx2, 113, 26, 0, 0, true);
+
+    // -- 6. Buttons: the customer's, along the top front's edge. Double
+    // breasted: two columns, the left one fastening. --
+    const BR = 3.3;
+    const btn = (x, y, holeTo) => {
+      if (holeTo) line(c, [[x - BR - 1.6, y], [x, y]], dk(0.5), 0.5);
+      c.save();
+      c.translate(x, y); c.scale(BR / FRONT_BUTTON_R, BR / FRONT_BUTTON_R);
+      button(c, 0, 0, FRONT_BUTTON_R, look, { thread: thread, nail: nail });
+      c.restore();
+    };
+    c.save();
+    c.globalCompositeOperation = "source-over";
+    if (db) {
+      const rows = nBtn / 2, yA = YB + 11, yZ = rows === 2 ? YB + 0.6 * (HEM - YB) : 243;
+      for (let i = 0; i < rows; i++) {
+        const y = rows === 1 ? yA : yA + (yZ - yA) * i / (rows - 1);
+        btn(EX + 6.5, y, true);
+        btn(2 * CX - EX - 6.5 + (low && i === 0 ? 3 : 0), y, false);
+      }
+    } else {
+      const y0 = VB[1] + (nBtn <= 3 ? 17 : nBtn === 4 ? 13 : 10), y1 = Math.min(APEX[1], hemEndY) - 27;
+      for (let i = 0; i < nBtn; i++) {
+        const y = nBtn === 1 ? y0 : y0 + (y1 - y0) * i / (nBtn - 1);
+        btn(closeX(y) + 6.3, y, true);
+      }
+    }
+    c.restore();
+
+    // -- 7. Pick stitching: along the lapels, or the neck; and down the
+    // front edge. --
     if (/^Pick/.test(String(va.pickStitch || ""))) {
-      g.save(); g.setLineDash([1.6, 3]); g.strokeStyle = lt(0.35); g.lineWidth = 0.9;
-      g.translate(0, 0); g.scale(0.97, 0.98); g.translate(0, 3);
-      g.stroke(L); g.stroke(R); g.restore();
+      const col = lum(hex) > 140 ? dk(0.42) : lt(0.3);
+      const run = (pts, under, smooth) => {
+        c.save();
+        clipAll([under]);
+        c.strokeStyle = col; c.lineWidth = 0.36; c.lineCap = "round"; c.setLineDash([1, 1.8]);
+        c.stroke(P(pts, false, smooth));
+        c.restore();
+      };
+      const front = db ? edge : (uNeck ? uR.slice().reverse() : neckR).concat(B.close.slice(1).filter((p) => p[1] < hemEndY - 3), [[closeX(hemEndY - 2), hemEndY - 2]]);
+      if (lapel) {
+        stitchRuns.forEach((r) => run(r[0], r[1], r[2]));
+        run(off(db ? edge.slice(1) : front.slice(neckR.length), 1.5), null);
+      } else {
+        run(off(front, 1.5), null);
+        run(off(uNeck ? uL : neckL, -1.5).slice(0, -1), notT);
+      }
     }
+
+    g.save();
+    g.shadowColor = "rgba(0,0,0,0.3)"; g.shadowBlur = 12 * s * RES; g.shadowOffsetY = 5 * s * RES;
+    g.drawImage(pc, cx - 114 * s, oy - 9.5 * s, VEST_W * s, VEST_PH * s);
     g.restore();
     return true;
   }
@@ -2118,7 +2352,7 @@
         // Pants on their own: bigger, centred.
         else ok = drawPants(g, v, 20, 58, 1.2);
       }
-      if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 40, 2.3, false, view === "back" || vestBackHint);
+      if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 34, 2.45, false, view === "back" || vestBackHint);
     } catch (e) {
       ok = false;
       if (window.console) console.error(e);
