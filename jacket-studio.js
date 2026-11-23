@@ -2715,11 +2715,99 @@
   let bigOpen = false;
   let bigPushed = false;
   function copyToPeek() {
+    // (The stage is set up just below; a draw before that skips it.)
+    try { copyToStage(); } catch (e) { /* not ready yet */ }
     if (view !== "front" || canvasBox.classList.contains("loading")) return;
     peekG.clearRect(0, 0, peekCanvas.width, peekCanvas.height);
     peekG.drawImage(photoCanvas, PEEK_CROP.x * RES, PEEK_CROP.y * RES, PEEK_CROP.w * RES, PEEK_CROP.h * RES, 0, 0, peekCanvas.width, peekCanvas.height);
     peekPic.classList.remove("loading");
   }
+
+  // ---- The Stage (2026-11-23, Daniel picked "A · The Stage") --------------
+  // On every step except Fabric the suit picture is the page: big and live,
+  // above the question on a phone and beside it on a computer, with the
+  // choices as one quiet row. Fabric keeps its own swatch page and the small
+  // peek card (Daniel: "I still want the fabrics to open the way they do
+  // now"). main.js puts "stage-off" on the section for the Fabric step.
+  // Tapping the picture opens the same big Front / Back / Inside view.
+  const stage = document.createElement("div");
+  stage.className = "suit-stage";
+  stage.innerHTML = '<button type="button" class="suit-stage-pic loading" aria-label="See your suit up close">' +
+    '<canvas aria-hidden="true"></canvas><span class="suit-stage-zoom" aria-hidden="true">' + ICON_EXPAND + "</span></button>";
+  const stageBtn = stage.querySelector(".suit-stage-pic");
+  const stageCanvas = stage.querySelector("canvas");
+  const stageG = stageCanvas.getContext("2d");
+  let stageSec = null;
+  stageBtn.onclick = () => openBig();
+  function copyToStage() {
+    if (!stageSec || canvasBox.classList.contains("loading")) return;
+    const bw = stageBtn.clientWidth, bh = stageBtn.clientHeight;
+    if (!bw || !bh) return;
+    // The same crop as the small card (a little of the empty edges off),
+    // as big as fits, at the screen's own pixel density.
+    // Pants or a vest on their own fill the picture edge to edge: no crop.
+    const C = pictureLayout().jacket ? PEEK_CROP : { x: 0, y: 0, w: VBW, h: picH };
+    const k = Math.min(bw / C.w, bh / C.h);
+    const cssW = Math.round(C.w * k), cssH = Math.round(C.h * k);
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const w = Math.round(cssW * dpr), h = Math.round(cssH * dpr);
+    if (stageCanvas.width !== w || stageCanvas.height !== h) { stageCanvas.width = w; stageCanvas.height = h; }
+    stageCanvas.style.width = cssW + "px";
+    stageCanvas.style.height = cssH + "px";
+    stageG.imageSmoothingQuality = "high";
+    stageG.clearRect(0, 0, w, h);
+    stageG.drawImage(photoCanvas, C.x * RES, C.y * RES, C.w * RES, C.h * RES, 0, 0, w, h);
+    stageBtn.classList.remove("loading");
+  }
+  // The picture turns to show what the question is about: the back for the
+  // vents, the inside for the lining, inside pockets and monogram; a vest on
+  // its own shows its back for the strap, buckle and lining.
+  const STAGE_VIEWS = { backvent: "back", facing: "inside", lining: "inside", insidepocket: "inside", monogram: "inside", monogramThreadColor: "inside", monogramFont: "inside" };
+  const STAGE_VEST_BACK = { backstyle: 1, buckle: 1, lining: 1 };
+  function stageView() {
+    if (!stageSec) return "front";
+    const k = stageSec.getAttribute("data-stage-step") || "";
+    const lay = pictureLayout();
+    if (stageSec.id === "designer") return (lay.jacket && STAGE_VIEWS[k]) || "front";
+    if (stageSec.id === "vestSection" && lay.vest && lay.vest !== "fixed" && !lay.jacket) return STAGE_VEST_BACK[k] ? "back" : "front";
+    return "front";
+  }
+  function syncStageView() {
+    if (bigOpen || !context) return;
+    const v = stageView();
+    if (v !== view) setView(v);
+  }
+  // Where the sticky picture starts: just under the (sticky) top bars.
+  function positionStage() {
+    if (!stageSec) return;
+    let top = 0;
+    [document.querySelector("nav"), document.querySelector(".process")].forEach((el) => {
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.height && r.bottom > top && r.top >= -1) top = r.bottom;
+    });
+    const v = Math.round(top) + "px";
+    if (stage.style.getPropertyValue("--stage-top") !== v) stage.style.setProperty("--stage-top", v);
+  }
+  // Moves the picture into the step being shown (or takes it away).
+  function setStage(sec) {
+    if (stageSec && stageSec !== sec && stageSec.classList.contains("stage-on")) stageSec.classList.remove("stage-on");
+    if (sec) {
+      const grid = sec.querySelector(".designer-grid");
+      if (grid && stage.parentNode !== grid) grid.insertBefore(stage, grid.firstChild);
+      if (!sec.classList.contains("stage-on")) sec.classList.add("stage-on");
+    } else if (stage.parentNode) {
+      stage.parentNode.removeChild(stage);
+    }
+    const changed = stageSec !== sec;
+    stageSec = sec;
+    if (changed && sec) {
+      positionStage();
+      requestAnimationFrame(() => { positionStage(); copyToStage(); });
+    }
+  }
+  if (window.ResizeObserver) new ResizeObserver(() => copyToStage()).observe(stageBtn);
+  window.addEventListener("resize", () => { positionStage(); copyToStage(); });
   // Where the small picture sits: in the empty space to the right of the
   // questions when there is room, otherwise a small card in the corner just
   // above the Back / Next bar.
@@ -2773,7 +2861,9 @@
     document.documentElement.classList.remove("suit-peek-open");
     document.body.classList.remove("suit-peek-open");
     zoom = { s: 1, cx: VBW / 2, cy: picH / 2 };
-    if (view !== "front") setView("front");
+    // Back to what the stage shows for this question (else the front).
+    const sv = stageView();
+    if (view !== sv) setView(sv);
     else applyZoom();
   }
   peek.onclick = openBig;
@@ -2813,13 +2903,16 @@
     // (Only touch the class when it is there: a classList change fires the
     // observer below, which calls place() again.)
     if (jacketSec && jacketSec.classList.contains("studio-on")) jacketSec.classList.remove("studio-on");
-    peek.hidden = !next;
-    if (next === context) { positionPeek(); return; }
+    const sec = onPantsPage ? pantsSec : onVestPage ? vestSec : onJacketPage ? jacketSec : null;
+    const stageOn = !!(sec && !sec.classList.contains("stage-off"));
+    setStage(stageOn ? sec : null);
+    peek.hidden = !next || stageOn;
+    if (next === context) { positionPeek(); syncStageView(); return; }
     closePanel();
     if (!next) closeBig();
     context = next;
     D.setReviewRowHandler(null);
-    if (context) { applyZoom(); draw(); positionPeek(); }
+    if (context) { applyZoom(); draw(); positionPeek(); syncStageView(); }
   }
 
   // Picking a fabric closes the fabric panel so the customer sees it on the
@@ -2858,10 +2951,10 @@
     const mo = new MutationObserver(() => place());
     mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     const jacketSec = document.getElementById("designer");
-    if (jacketSec) mo.observe(jacketSec, { attributes: true, attributeFilter: ["class"] });
+    if (jacketSec) mo.observe(jacketSec, { attributes: true, attributeFilter: ["class", "data-stage-step"] });
     ["pantsSection", "vestSection"].forEach((id) => {
       const sec = document.getElementById(id);
-      if (sec) mo.observe(sec, { attributes: true, attributeFilter: ["class"] });
+      if (sec) mo.observe(sec, { attributes: true, attributeFilter: ["class", "data-stage-step"] });
     });
   }
   if (window.ResizeObserver) new ResizeObserver(() => { if (context) applyZoom(); }).observe(canvasBox);

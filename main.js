@@ -7863,6 +7863,15 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
       : (!isPantsDesigner && activeTab === "feltundercollar") ? "felt"
       : (!isPantsDesigner && activeTab === "frontbutton") ? "button" : "";
     if (wizSection) {
+      // The Stage (Daniel 2026-11-23): every step shows the big live suit
+      // picture except Fabric, which keeps its own full swatch page.
+      // jacket-studio.js reads this class. (Only touched when it changes:
+      // jacket-studio watches this section's class.)
+      const stageOff = activeTab === "fabric";
+      if (wizSection.classList.contains("stage-off") !== stageOff) wizSection.classList.toggle("stage-off", stageOff);
+      // Which question is showing: the picture turns to the back for vents
+      // and opens for the lining (jacket-studio.js).
+      if (wizSection.getAttribute("data-stage-step") !== activeTab) wizSection.setAttribute("data-stage-step", activeTab);
       wizSection.classList.toggle("fabric-step", !!bgKey);
       if (bgKey) wizSection.setAttribute("data-bg", bgKey); else wizSection.removeAttribute("data-bg");
     }
