@@ -3792,14 +3792,17 @@ html .designer.stage-on .designer-grid .options h3{font-size:14px !important;lin
 .designer.stage-on .designer-head{display:none;}
 @media (max-width:899px){
   .designer.stage-on .suit-stage{position:-webkit-sticky;position:sticky;top:var(--stage-top,96px);z-index:30;background:var(--ink);padding:8px 0 4px;-webkit-transform:translateZ(0);transform:translateZ(0);}
-  .designer.stage-on .suit-stage-pic{height:clamp(230px,41vh,430px);height:clamp(230px,41svh,430px);}
+  /* As big as the screen allows while the question, one row of choices
+     and the Back / Next bar still fit under it (short phones included). */
+  .designer.stage-on .suit-stage-pic{height:clamp(220px,min(54vh,100vh - 380px),560px);height:clamp(220px,min(54svh,100svh - 380px),560px);}
   .designer.stage-on .wiz-head{padding:10px 0 6px;}
   /* One row of choices, swiped sideways. */
   .designer.stage-on .designer-grid .opt-grid{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;}
   .designer.stage-on .designer-grid .opt-grid::-webkit-scrollbar{display:none;}
   .designer.stage-on .designer-grid .opt-grid:not(:has(> .opt-card:nth-of-type(13))){align-items:flex-start;}
-  .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 96px;scroll-snap-align:start;}
-  .designer.stage-on .designer-grid .opt-card .opt-name{letter-spacing:1.1px;padding:7px 5px 8px;}
+  .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 84px;scroll-snap-align:start;}
+  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:8.5px !important;letter-spacing:0.6px !important;line-height:1.3;padding:4px 3px 6px;}
+  .designer.stage-on .designer-grid .opt-card .opt-swatch{aspect-ratio:auto;height:54px;width:100%;object-fit:contain;padding:4px 0 0;}
   /* A group name inside the row (Single / Double Breasted) stands upright
      between its cards. */
   .designer.stage-on .designer-grid .opt-grid:not(:has(> .opt-card:nth-of-type(13))) > .opt-section-divider{flex:0 0 auto;align-self:stretch;margin:0;padding:6px 8px 6px 0;border:none;border-right:1px solid var(--line);writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;line-height:1;letter-spacing:2px;text-transform:uppercase;color:var(--ivory-dim);text-align:center;}
@@ -3808,9 +3811,11 @@ html .designer.stage-on .designer-grid .options h3{font-size:14px !important;lin
   .designer.stage-on .designer-grid .opt-grid:has(> .opt-card:nth-of-type(13)) > .opt-section-divider{grid-column:1/-1;}
 }
 @media (min-width:900px){
-  .designer.stage-on .designer-grid{max-width:1280px;position:relative;padding-left:calc(100% - 440px);min-height:calc(100svh - var(--stage-top-page,150px));}
-  .designer.stage-on .suit-stage{position:absolute;left:0;top:0;bottom:0;width:calc(100% - 440px - 56px);}
+  .designer.stage-on .designer-grid{max-width:1280px;position:relative;padding-left:calc(100% - 400px);min-height:calc(100svh - var(--stage-top-page,150px));}
+  .designer.stage-on .suit-stage{position:absolute;left:0;top:0;bottom:0;width:calc(100% - 400px - 48px);}
   .designer.stage-on .suit-stage-pic{position:-webkit-sticky;position:sticky;top:calc(var(--stage-top,150px) + 10px);height:calc(100vh - var(--stage-top,150px) - 28px);height:calc(100svh - var(--stage-top,150px) - 28px);}
-  .designer.stage-on .designer-grid .opt-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
-  .designer.stage-on .designer-grid .opt-grid.compact-cards{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .designer.stage-on .designer-grid .opt-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+  .designer.stage-on .designer-grid .opt-grid.compact-cards{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .designer.stage-on .designer-grid .opt-card .opt-swatch{aspect-ratio:auto;height:72px;width:100%;object-fit:contain;padding:6px 0 0;}
+  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:9px !important;letter-spacing:1px !important;padding:5px 4px 7px;}
 }
