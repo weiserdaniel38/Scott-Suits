@@ -145,6 +145,15 @@
   // cell; k: picture units per pixel; per side w, h, x (from the body's side
   // at height ay; the right pocket's right end), y, in (how far in from the
   // side the pocket reaches), btn (the flap's button).
+  // The chest pocket styles off the same photos (scripts/make_jacket_pockets.py):
+  // one picture each (shadow on top, light under it); x from the lapel's
+  // edge at height ay (below 0: that much runs on under the lapel).
+  const CHEST_PHOTOS = {
+    welt: {"src":"./assets/jacket-pocket-chest-welt.webp?v=1","w":222,"h":83,"k":0.6825,"x":-40.0,"y":270.2,"ay":298.2},
+    boat: {"src":"./assets/jacket-pocket-chest-boat.webp?v=1","w":235,"h":102,"k":0.6823,"x":-43.1,"y":267.0,"ay":301.8},
+    slit: {"src":"./assets/jacket-pocket-chest-slit.webp?v=1","w":215,"h":62,"k":0.6788,"x":-36.6,"y":275.9,"ay":297.0},
+    patch: {"src":"./assets/jacket-pocket-chest-patch.webp?v=1","w":182,"h":221,"k":0.6805,"x":10.6,"y":267.4,"ay":342.2},
+  };
   const POCKET_PHOTOS = {
     "Double Besom Pocket": {"src":"./assets/jacket-pocket-lower-slit.webp?v=1","cw":210,"ch":69,"k":0.6805,"L":{"w":200,"h":69,"x":-13.6,"y":629.4,"ay":652.5,"in":116.4},"R":{"w":210,"h":59,"x":13.5,"y":630.8,"ay":650.5,"in":119.1}},
     "Double Besom Pocket + Double Besom Ticket Pocket": {"src":"./assets/jacket-pocket-lower-slit-ticketslit.webp?v=1","cw":214,"ch":140,"k":0.6823,"L":{"w":214,"h":140,"x":-13.8,"y":573.3,"ay":645.6,"in":121.4},"R":{"w":209,"h":57,"x":14.4,"y":627.2,"ay":646.3,"in":122.1}},
@@ -1050,56 +1059,62 @@
       layer = wl;
     }
 
-    // Chest pocket, kept clear of the lapel's edge (further right on the
-    // double breasted photo, whose lapel is wider).
-    const ck = chestKind(v.pockettype);
-    // The Arc photo's lapel is wider: the pocket stays put and its end tucks
-    // under the lapel (Daniel 2026-11-19: "peeking out from under").
-    const arcFront = arc;
-    // The Arc photo keeps the reference's own proportions (narrower than the
-    // main photo), so the drawn pockets and cuffs move toward the middle by
-    // the same amount (ARC_K in scripts/make_jacket_photo_arc.py).
-    const AX = (x, k) => (arcFront ? 398.5 + (x - 398.5) * k : x);
-    const AW = (w, k) => (arcFront ? w * k : w);
-    const squeeze = (k, fn) => {
-      if (!arcFront) { fn(); return; }
-      g.save(); g.translate(398.5, 0); g.scale(k, 1); g.translate(-398.5, 0); fn(); g.restore();
+    // A pocket off Daniel's pocket photos (POCKET_PHOTOS, CHEST_PHOTOS), laid
+    // over the lit cloth as its shadow (darker) and its light (brighter):
+    // the cells of `im` (shadow row 0, light row 1, each `ch` high) drawn
+    // at `items`, inside `clip`, and cut to the cloth.
+    const stamp = (im, ch, items, clip) => {
+      const sk = unitK(curShade);
+      const t = mk(g.canvas.width, g.canvas.height), tg = t.getContext("2d"), gT = g.getTransform();
+      const pass = (row, lit) => {
+        tg.setTransform(1, 0, 0, 1, 0, 0);
+        tg.globalCompositeOperation = "source-over";
+        tg.clearRect(0, 0, t.width, t.height);
+        tg.setTransform(gT);
+        tg.save();
+        if (clip) tg.clip(clip[0], clip[1] || "nonzero");
+        items.forEach((o) => tg.drawImage(im, o.sx, row * ch, o.sw, o.sh, o.x, o.y, o.w, o.h));
+        tg.restore();
+        tg.setTransform(1, 0, 0, 1, 0, 0);
+        if (lit) { tg.globalCompositeOperation = "source-in"; tg.drawImage(layer, 0, 0); }
+        tg.globalCompositeOperation = "destination-in";
+        tg.drawImage(curShade, 0, 0, VBW * sk, VBH * sk, 0, 0, t.width, t.height);
+      };
+      const st = fp.strength;
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      pass(0, false);
+      g.globalAlpha = st.a;
+      g.drawImage(t, 0, 0);
+      // The light: the cloth again where the pocket catches it (the picture
+      // holds it at three times its strength).
+      pass(1, true);
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = Math.min(1, st.b / 3);
+      g.drawImage(t, 0, 0);
+      g.restore();
     };
-    // Daniel 2026-11-20: on every style the chest pocket peeks out from under
-    // the lapel: its inner end sits 16 px under the lapel's edge (at the
-    // chosen width), and the pocket keeps its full size.
-    const lapR = lapS[0];
-    const edgeAt = (y) => { const r = lerpRows(lapR, y, 1); return r + lapF * (lerpRows(lapR, y, 2) - r); };
-    // Chest pocket length (Daniel 2026-11-20: first "too small", then to the
-    // sleeve was "too far, use online references"): tailoring references give
-    // a breast welt of 4 to 4.5 in (about 10.8 cm), two thirds of a 6 to 6.5 in
-    // hip pocket, about 1 in tall. Here that is 124 px; it always stops at
-    // least 12 px short of the sleeve seam.
-    const L0 = edgeAt(310) - 20;
-    const C12 = Math.cos(12 * Math.PI / 180);
-    const R0 = Math.min(L0 + AW(124, 0.9) * C12, lerpRows(f2 ? f2.chest : CHEST_SIDE[arcFront ? "arc" : "sb"], 286, 1) - 12);
-    const CW = (R0 - L0) / C12, CX = (L0 + R0) / 2;
-    // The pocket's inner end tucks under the lapel when the lapel reaches it
-    // (Arc, wide lapels): clip away everything left of the lapel's edge.
-    {
+
+    // Chest pocket: the chosen style's own pocket off Daniel's pocket
+    // photos (CHEST_PHOTOS), exactly as it is there. It hangs from the
+    // lapel's edge at the chosen lapel and width, its inner end under the
+    // lapel as in his photos, and stops short of the armhole seam (wide
+    // lapels cover more of it).
+    const ck = chestKind(v.pockettype);
+    const cq = CHEST_PHOTOS[ck === "sb" || ck === "db" ? "slit" : ck];
+    const cim = cq ? img(cq.src) : null;
+    if (cq && cim) {
       const R = lapS[0];
+      const edgeAt = (y) => { const r = lerpRows(R, y, 1); return r + lapF * (lerpRows(R, y, 2) - r); };
+      const w = cq.w * cq.k, h = cq.h * cq.k;
+      const x = Math.min(edgeAt(cq.ay) + cq.x, lerpRows(f2.chest, cq.ay, 1) - 8 - w);
+      // Nothing of it shows on the lapel: everything left of the lapel's
+      // edge is cut away.
       let d = "M0,0 H" + VBW + " V" + VBH + " H0 Z M300," + R[0][0];
       R.forEach((r) => { d += " L" + (r[1] + lapF * (r[2] - r[1])).toFixed(1) + "," + r[0]; });
       d += " L300," + R[R.length - 1][0] + " Z";
-      g.save();
-      g.clip(new Path2D(d), "evenodd");
+      stamp(cim, cq.h, [{ sx: 0, sw: cq.w, sh: cq.h, x: x, y: cq.y, w: w, h: h }], [new Path2D(d), "evenodd"]);
     }
-    // In the drawings the chest pocket climbs toward the shoulder (about 12
-    // degrees), is about 4.6 times as long as tall, and its low end goes
-    // under the lapel.
-    const CA = -12, CY = 300, hwc = CW / 2;
-    if (ck === "patch") patchPocket(g, layer, CX, CY - 26, CW * 0.92, CW * 0.97, CA / 2, 1, false);
-    else if (ck === "boat") {
-      const boat = (i) => pocketPath([["M", [-hwc + i, -13 + i]], ["Q", [0, -5 + i], [hwc - i, -13 + i]], ["L", [hwc - i, 10 - i]], ["Q", [0, 28 - i], [-hwc + i, 10 - i]]], CX, CY, CA);
-      clothPiece(g, layer, boat(0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 18, CY + 20], stitch: boat(3) });
-    } else if (ck === "welt") clothPiece(g, layer, boxPath(CX, CY - 13, CW, 26, CA, 0), { shadow: 0.4, blur: 3, drop: 1.5, grad: [CY - 18, CY + 18], stitch: boxPath(CX, CY - 10, CW - 6, 20, CA, 0) });
-    else if (ck === "sb" || ck === "db") besom(g, layer, CX, CY, CW, CA, ck === "db");
-    g.restore();
 
     // Lower pockets (and the ticket pocket on the wearer's right): the
     // chosen option's own pockets off Daniel's pocket photos, exactly as
@@ -1129,35 +1144,7 @@
         return { q: q, sx: sd === "L" ? 0 : pp.cw, x: sd === "L" ? side + q.x - out : side + q.x + out - w, y: q.y, w: w, h: h, side: side + (sd === "L" ? -out : out) };
       };
       const both = [place("L"), place("R")];
-      const sk = unitK(curShade);
-      const t = mk(g.canvas.width, g.canvas.height), tg = t.getContext("2d"), gT = g.getTransform();
-      const pass = (row, lit) => {
-        tg.setTransform(1, 0, 0, 1, 0, 0);
-        tg.globalCompositeOperation = "source-over";
-        tg.clearRect(0, 0, t.width, t.height);
-        tg.setTransform(gT);
-        tg.save();
-        tg.clip(new Path2D(bodyD));
-        both.forEach((o) => tg.drawImage(pim, o.sx, row * pp.ch, o.q.w, o.q.h, o.x, o.y, o.w, o.h));
-        tg.restore();
-        tg.setTransform(1, 0, 0, 1, 0, 0);
-        if (lit) { tg.globalCompositeOperation = "source-in"; tg.drawImage(layer, 0, 0); }
-        tg.globalCompositeOperation = "destination-in";
-        tg.drawImage(curShade, 0, 0, VBW * sk, VBH * sk, 0, 0, t.width, t.height);
-      };
-      const st = fp.strength;
-      g.save();
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      pass(0, false);
-      g.globalAlpha = st.a;
-      g.drawImage(t, 0, 0);
-      // The light: the cloth again where the pocket catches it (the picture
-      // holds it at three times its strength).
-      pass(1, true);
-      g.globalCompositeOperation = "lighter";
-      g.globalAlpha = Math.min(1, st.b / 3);
-      g.drawImage(t, 0, 0);
-      g.restore();
+      stamp(pim, pp.ch, both.map((o) => ({ sx: o.sx, sw: o.q.w, sh: o.q.h, x: o.x, y: o.y, w: o.w, h: o.h })), [new Path2D(bodyD)]);
       // The pointed flap's button, in the customer's own button.
       if (both[0].q.btn) {
         const plook = buttonLook(v, fabricHex);
@@ -1228,8 +1215,6 @@
       sleeveHeads(g, v, f2.seam, f2.seamMirror);
       return true;
     }
-    squeeze(0.822, () => drawCuffs(g, v, look, holes, false));
-    squeeze(0.92, () => sleeveHeads(g, v, [[141, 130], [150, 180], [163, 213], [170, 243], [180, 290]]));
     return true;
   }
   // Sleeve heads (pts: the viewer's left armhole seam from the shoulder down;
