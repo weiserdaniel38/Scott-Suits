@@ -209,10 +209,11 @@
   // Light on dark cloth (Daniel 2026-11-23, "the fabric looks like an
   // overlay"): the highlight pass used the cloth's own colour, so navy showed
   // almost no light and read as a flat cut-out. The highlight paint now gets
-  // a white lift, strongest on the darkest cloth (navy ~0.32), gentle on mid
-  // tones (slate grey ~0.11) and none on light cloth. Daniel picked
-  // "stronger for dark, softer for mid" from the test renders.
-  function liftFor(hex) { const d = 1 - Math.min(1, lum(hex) / 160); return 0.5 * d * d; }
+  // a white lift: about 0.21 from the darkest cloth through the mid tones
+  // (navy and slate grey alike), fading out towards light cloth, which
+  // already shows its light. Daniel 2026-11-23: "darker fabrics get B
+  // lighting, lighter get C" (B/C from the test renders, both ~0.2 here).
+  function liftFor(hex) { const d = Math.max(0, Math.min(1, (160 - lum(hex)) / 70)); return 0.21 * d; }
   function liftHighlightPaint(g, hex, w, h) {
     const lift = liftFor(hex);
     if (lift <= 0.01) return;
