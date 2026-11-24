@@ -8233,11 +8233,27 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function cancelAutoAdvance() {
     if (autoAdvanceTimer) { window.clearTimeout(autoAdvanceTimer); autoAdvanceTimer = 0; }
   }
+  // Try before you move on (Daniel 2026-11-23: "select without it being
+  // confirmed, but only for certain ones"). On phones, where there is no
+  // hover preview, a pick on a step the suit picture actually draws stays
+  // on that step: the picture changes, the card lights up, and Next (or the
+  // next step's chip) moves on when the customer is happy. Other steps, and
+  // every step on a computer (which previews on hover), move on by themselves.
+  const TRY_KEYS = ["frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent",
+    "cuffbuttons", "buttoncolor", "lapelbuttonhole", "insidepocket", "sleevecuffstyle", "buttonNail",
+    "beltLoops", "backPocket", "bottomStyle", "bottom", "backstyle", "buckle"];
+  function stayToTry() {
+    if (TRY_KEYS.indexOf(activeTab) === -1) return false;
+    if (window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches) return false;
+    const sec = designerGridEl.closest(".designer");
+    return !!(sec && sec.classList.contains("stage-on"));
+  }
   function advanceToNextTab() {
     cancelAutoAdvance();
     // On the interactive jacket the customer stays on the part they clicked
     // and sees the jacket change; they pick the next part themselves.
     if (embedHost) return;
+    if (stayToTry()) return;
     // Skip over any category that isn't currently applicable (e.g. Monogram
     // Thread Color when Monogram Placement is "No Monogram Need") -- it has
     // no tab to land on right now.
