@@ -357,8 +357,7 @@
       tg.putImageData(d, 0, 0);
     } catch (e) { /* a photo the browser will not let us read: leave it */ }
   }
-  function paintStyle(g, p) {
-    if (!p.img || !p.size) return p.hex;
+  function tileCanvas(p) {
     const k = p.key + "@" + p.size;
     let t = tileCache[k];
     if (!t) {
@@ -371,7 +370,162 @@
       if (p.even) evenTile(t, p.even);
       tileCache[k] = t;
     }
-    return g.createPattern(t, "repeat");
+    return t;
+  }
+  function paintStyle(g, p) {
+    if (!p.img || !p.size) return p.hex;
+    return g.createPattern(tileCanvas(p), "repeat");
+  }
+
+  // ---- Grain: the pattern follows each piece --------------------------------
+  // A suit is cut from pieces, each laid on the cloth its own way, so a
+  // stripe or check never runs straight through the whole picture (Daniel
+  // 2026-11-23: "the sleeves should have new pinstripes coming from the top
+  // of the sleeve, like on a real suit, and on pants the pinstripes should
+  // follow the pants curves. This should be the case for all weaves, all
+  // patterns, all colors"). The body keeps the tile upright; every other
+  // piece is a polygon (picture units) whose cloth is read from the tile
+  // along the piece's own direction:
+  //   spine: a line down the piece, stripes follow it (sleeves);
+  //   turn:  the tile turned to a fixed angle from upright (folded legs);
+  //   fold:  the tile mirrored across a line, cloth folded back (lapels).
+  // Done pixel by pixel inside the polygon, over the plain fill, and cached
+  // with the lit cloth, so it costs nothing while picking buttons.
+  const mirrorPts = (pts, m) => pts.map((p) => [m - p[0], p[1]]);
+  function frontGrain(f2) {
+    const seam = f2.seam, M = f2.seamMirror;
+    const sleeve = [[0, 170], [100, 150]].concat(seam, [[190, 380], [196, 450], [192, 520], [184, 600], [174, 700], [162, 800], [152, 960], [0, 960]]);
+    const spine = [[130, 140], [130, 450], [118, 760], [100, 880]];
+    const pieces = [{ kind: "spine", poly: sleeve, pts: spine }, { kind: "spine", poly: mirrorPts(sleeve, M), pts: mirrorPts(spine, M) }];
+    // The lapel is the front folded back along its roll line.
+    f2.profiles.forEach((pk) => {
+      const rows = LAPEL_PROFILES[pk];
+      if (!rows || rows.length < 2) return;
+      const poly = rows.map((r) => [r[1], r[0]]).concat(rows.slice().reverse().map((r) => [r[2], r[0]]));
+      const a = rows[0], z = rows[rows.length - 1];
+      pieces.push({ kind: "fold", poly: poly, line: [[a[1], a[0]], [z[1], z[0]]] });
+    });
+    return { key: "front:" + f2.profiles.join(), units: VBW, pieces: pieces };
+  }
+  const BACK_GRAIN = (() => {
+    const sleeve = [[0, 120], [140, 112], [208, 148], [211, 187], [216, 227], [223, 292], [231, 364], [222, 450], [208, 550], [195, 640], [180, 740], [165, 870], [160, 960], [0, 960]];
+    const spine = [[180, 130], [160, 360], [138, 550], [125, 750], [125, 900]];
+    return { key: "back", units: VBW, pieces: [{ kind: "spine", poly: sleeve, pts: spine }, { kind: "spine", poly: mirrorPts(sleeve, 803), pts: mirrorPts(spine, 803) }] };
+  })();
+  const INSIDE_GRAIN = (() => {
+    const sleeve = [[0, 150], [140, 160], [190, 230], [205, 330], [200, 450], [190, 560], [180, 680], [170, 800], [165, 960], [0, 960]];
+    const spine = [[120, 170], [115, 450], [108, 700], [105, 900]];
+    return { key: "inside", units: VBW, pieces: [{ kind: "spine", poly: sleeve, pts: spine }, { kind: "spine", poly: mirrorPts(sleeve, 800), pts: mirrorPts(spine, 800) }] };
+  })();
+  // Folded pants: the waist end lies across the picture underneath; the
+  // hem end folds back over it at a slant, from the fold at the top left
+  // down to the hem.
+  const PANTS_GRAIN = { key: "pants", units: 634, pieces: [
+    { kind: "turn", poly: [[0, 0], [634, 0], [634, 326], [0, 326]], at: [400, 130], angle: 87 },
+    { kind: "turn", poly: [[0, 10], [45, 18], [408, 230], [340, 314], [18, 212], [0, 195]], at: [200, 150], angle: 67 },
+  ] };
+  const grainCache = [];
+  // Fill w x h with the paint; with a grain, each piece on its own direction.
+  function clothFill(g, p, w, h, grain) {
+    if (!p.img || !p.size || !grain) {
+      g.fillStyle = paintStyle(g, p);
+      g.fillRect(0, 0, w, h);
+      return;
+    }
+    const key = p.key + "@" + p.size + "|" + grain.key + "|" + w + "x" + h;
+    let hit = grainCache.find((e) => e.key === key);
+    if (!hit) {
+      const c = mk(w, h), cg = c.getContext("2d");
+      cg.fillStyle = paintStyle(cg, p);
+      cg.fillRect(0, 0, w, h);
+      const tile = tileCanvas(p);
+      let td = null;
+      try { td = tile.getContext("2d").getImageData(0, 0, tile.width, tile.height); } catch (e) { /* unreadable: plain fill */ }
+      if (td) grain.pieces.forEach((piece, i) => grainPiece(cg, td, piece, w / grain.units, w, h, i));
+      hit = { key: key, canvas: c };
+      grainCache.unshift(hit);
+      if (grainCache.length > 6) grainCache.pop();
+    }
+    g.drawImage(hit.canvas, 0, 0);
+  }
+  function grainPiece(g, td, piece, k, w, h, n) {
+    const xs = piece.poly.map((p) => p[0] * k), ys = piece.poly.map((p) => p[1] * k);
+    const bx0 = Math.max(0, Math.floor(Math.min.apply(null, xs))), bx1 = Math.min(w, Math.ceil(Math.max.apply(null, xs)));
+    const by0 = Math.max(0, Math.floor(Math.min.apply(null, ys))), by1 = Math.min(h, Math.ceil(Math.max.apply(null, ys)));
+    const bw = bx1 - bx0, bh = by1 - by0;
+    if (bw <= 0 || bh <= 0) return;
+    const T = td.data, tw = td.width, th = td.height;
+    // Each piece starts its pattern somewhere else, as cut cloth does.
+    const u0 = tw * (0.37 + 0.29 * n), v0 = th * 0.11 * n;
+    const out = new ImageData(bw, bh), O = out.data;
+    const map = grainMap(piece, k);
+    const uv = [0, 0];
+    for (let Y = 0; Y < bh; Y++) {
+      const y = by0 + Y + 0.5;
+      map.row(y);
+      let o = Y * bw * 4;
+      for (let X = 0; X < bw; X++, o += 4) {
+        map.at(bx0 + X + 0.5, y, uv);
+        let u = (uv[0] + u0) % tw, v = (uv[1] + v0) % th;
+        if (u < 0) u += tw;
+        if (v < 0) v += th;
+        const x0 = u | 0, y0 = v | 0, fx = u - x0, fy = v - y0;
+        const x1 = x0 + 1 === tw ? 0 : x0 + 1, y1 = y0 + 1 === th ? 0 : y0 + 1;
+        const i00 = (y0 * tw + x0) * 4, i10 = (y0 * tw + x1) * 4, i01 = (y1 * tw + x0) * 4, i11 = (y1 * tw + x1) * 4;
+        const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+        O[o] = T[i00] * w00 + T[i10] * w10 + T[i01] * w01 + T[i11] * w11;
+        O[o + 1] = T[i00 + 1] * w00 + T[i10 + 1] * w10 + T[i01 + 1] * w01 + T[i11 + 1] * w11;
+        O[o + 2] = T[i00 + 2] * w00 + T[i10 + 2] * w10 + T[i01 + 2] * w01 + T[i11 + 2] * w11;
+        O[o + 3] = 255;
+      }
+    }
+    const tmp = mk(bw, bh);
+    tmp.getContext("2d").putImageData(out, 0, 0);
+    g.save();
+    g.beginPath();
+    piece.poly.forEach((p, i) => (i ? g.lineTo(p[0] * k, p[1] * k) : g.moveTo(p[0] * k, p[1] * k)));
+    g.closePath();
+    g.clip();
+    g.drawImage(tmp, bx0, by0);
+    g.restore();
+  }
+  // Where a canvas pixel reads its cloth from in the upright tile.
+  function grainMap(piece, k) {
+    if (piece.kind === "turn") {
+      const a = piece.angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), cx = piece.at[0] * k, cy = piece.at[1] * k;
+      return { row: () => {}, at: (x, y, o) => { const dx = x - cx, dy = y - cy; o[0] = cx + dx * c - dy * s; o[1] = cy + dx * s + dy * c; } };
+    }
+    if (piece.kind === "fold") {
+      const px = piece.line[0][0] * k, py = piece.line[0][1] * k;
+      let dx = piece.line[1][0] * k - px, dy = piece.line[1][1] * k - py;
+      const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
+      return { row: () => {}, at: (x, y, o) => { const qx = x - px, qy = y - py, d = qx * dx + qy * dy; o[0] = px + 2 * d * dx - qx; o[1] = py + 2 * d * dy - qy; } };
+    }
+    // spine: along the line, u across it and v down it.
+    const P = piece.pts.map((p) => [p[0] * k, p[1] * k]);
+    const seg = [];
+    let s = 0;
+    for (let i = 0; i + 1 < P.length; i++) {
+      const dx = P[i + 1][0] - P[i][0], dy = P[i + 1][1] - P[i][1], len = Math.hypot(dx, dy) || 1;
+      seg.push({ y0: P[i][1], y1: P[i + 1][1], x0: P[i][0], s0: s, len: len, ang: Math.atan2(dx, dy), ym: (P[i][1] + P[i + 1][1]) / 2 });
+      s += len;
+    }
+    let xc = 0, sv = 0, ca = 1, sa = 0;
+    return {
+      row: (y) => {
+        let i = 0;
+        while (i + 1 < seg.length && y > seg[i].y1) i++;
+        const g = seg[i], t = (y - g.y0) / ((g.y1 - g.y0) || 1);
+        xc = g.x0 + t * (P[i + 1][0] - g.x0);
+        sv = g.s0 + t * g.len;
+        // The direction eases from one piece of the line to the next.
+        let ang = g.ang;
+        if (y < g.ym && i > 0) { const h = seg[i - 1]; ang = h.ang + (g.ang - h.ang) * (y - h.ym) / (g.ym - h.ym); }
+        else if (y > g.ym && i + 1 < seg.length) { const n = seg[i + 1]; ang = g.ang + (n.ang - g.ang) * (y - g.ym) / (n.ym - g.ym); }
+        ca = Math.cos(ang); sa = Math.sin(ang);
+      },
+      at: (x, y, o) => { const d = x - xc; o[0] = P[0][0] + d * ca; o[1] = sv + d * sa; },
+    };
   }
   // Cloth lit by the photo: each region gets its paint, multiplied by the
   // shadow map and brightened by the highlight map, all inside the cloth mask.
@@ -385,15 +539,13 @@
       const tg = t.getContext("2d");
       tg.save();
       if (rg.path) { tg.scale(RES, RES); tg.clip(new Path2D(rg.path), "evenodd"); tg.setTransform(1, 0, 0, 1, 0, 0); }
-      tg.fillStyle = paintStyle(tg, rg.paint);
-      tg.fillRect(0, 0, CW, CH);
+      clothFill(tg, rg.paint, CW, CH, rg.grain);
       // Highlights: paint x highlight map, added on.
       const hg = scratch.getContext("2d");
       hg.globalCompositeOperation = "source-over";
       hg.globalAlpha = 1;
       hg.clearRect(0, 0, CW, CH);
-      hg.fillStyle = paintStyle(hg, rg.paint);
-      hg.fillRect(0, 0, CW, CH);
+      clothFill(hg, rg.paint, CW, CH, rg.grain);
       liftHighlightPaint(hg, rg.paint.hex, CW, CH);
       hg.globalCompositeOperation = "multiply";
       const sk = unitK(shade);
@@ -970,7 +1122,7 @@
     if (!photo || !shade || !fp.ready) return false;
     curShade = shade;
     edgeA = edgeFor(fp.hex);
-    let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
+    let layer = cachedLayer("front|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp, grain: frontGrain(f2) }]));
     const fabricHex = fp.hex;
     g.drawImage(tiePhoto(photo, photoUrl, tieHex(fabricHex), f2.tieBox), 0, 0, VBW, VBH);
     // (The photo keeps its own soft shadow on the floor.)
@@ -1303,15 +1455,15 @@
   const PANTS_SLIT_BOX = [529.5, 99.6, 19.2, 129.2], PANTS_BUTTON_BOX = [503.9, 146, 25.6, 29];
   // Cloth lit by a piece's shading map, at any size (in canvas pixels).
   const pieceCache = [];
-  function litPiece(shade, paint, w, h) {
-    const key = shade.src + "|" + paint.key + "|" + w + "x" + h;
+  function litPiece(shade, paint, w, h, grain) {
+    const key = shade.src + "|" + paint.key + "|" + w + "x" + h + (grain ? "|" + grain.key : "");
     const hit = pieceCache.find((e) => e.key === key);
     if (hit) return hit.canvas;
     const sw = shade.naturalWidth, sh = shade.naturalHeight / 2;
     const t = mk(w, h), tg = t.getContext("2d");
-    tg.fillStyle = paintStyle(tg, paint); tg.fillRect(0, 0, w, h);
+    clothFill(tg, paint, w, h, grain);
     const hc = mk(w, h), hg = hc.getContext("2d");
-    hg.fillStyle = paintStyle(hg, paint); hg.fillRect(0, 0, w, h);
+    clothFill(hg, paint, w, h, grain);
     liftHighlightPaint(hg, paint.hex, w, h);
     hg.globalCompositeOperation = "multiply";
     hg.drawImage(shade, 0, sh, sw, sh, 0, 0, w, h);
@@ -1345,10 +1497,10 @@
     const loops = pa.beltLoops === "Belt Loops";
     // The photo as it is, or the plain one with the photo's own details put
     // back wherever the pick matches them.
-    if (loops && slitButton) c.drawImage(litPiece(classic, fp, W, H), 0, 0);
+    if (loops && slitButton) c.drawImage(litPiece(classic, fp, W, H, PANTS_GRAIN), 0, 0);
     else {
-      c.drawImage(litPiece(plain, fp, W, H), 0, 0);
-      const full = litPiece(classic, fp, W, H);
+      c.drawImage(litPiece(plain, fp, W, H, PANTS_GRAIN), 0, 0);
+      const full = litPiece(classic, fp, W, H, PANTS_GRAIN);
       const keep = (b) => {
         const x0 = Math.round(b[0] * k), y0 = Math.round(b[1] * k), w = Math.round(b[2] * k), h = Math.round(b[3] * k);
         c.clearRect(x0, y0, w, h);
@@ -2146,7 +2298,7 @@
     if (!photo || !shade || !fp.ready) return false;
     curShade = shade;
     edgeA = edgeFor(fp.hex);
-    const layer = cachedLayer("back|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp }]));
+    const layer = cachedLayer("back|" + shadeUrl + "|" + fp.key, () => shadedLayer(shade, [{ path: null, paint: fp, grain: BACK_GRAIN }]));
     g.drawImage(photo, 0, 0, VBW, VBH);
     floorShadow(g);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
@@ -2197,7 +2349,7 @@
     const lined = facing !== "No Lining Construction";
     const half = facing === "Half Lining W/ Fabric Facing";
     const linPath = half ? INSIDE_HALF : INSIDE_LINING;
-    const regions = [{ path: null, paint: fp }];
+    const regions = [{ path: null, paint: fp, grain: INSIDE_GRAIN }];
     if (lined) regions.push({ path: linPath, paint: lp, highlight: 0.9 });
     const layer = cachedLayer("inside|" + fp.key + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
     g.drawImage(tiePhoto(photo, PHOTO_INSIDE, tieHex(fp.hex), [340, 70, 116, 600]), 0, 0, VBW, VBH);
@@ -2408,6 +2560,7 @@
     tileCache = {};
     layerCache.length = 0;
     pieceCache.length = 0;
+    grainCache.length = 0;
     scratch = null;
     draw();
   }
