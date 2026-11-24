@@ -3823,8 +3823,11 @@ html .designer.stage-on .designer-grid .options h3{display:flex;justify-content:
   .designer.stage-on .designer-grid .opt-grid{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;}
   .designer.stage-on .designer-grid .opt-grid::-webkit-scrollbar{display:none;}
   .designer.stage-on .designer-grid .opt-grid:not(:has(> .opt-card:nth-of-type(13))){align-items:flex-start;}
-  .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 100px;scroll-snap-align:start;}
-  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:11px !important;letter-spacing:0.4px !important;line-height:1.25;padding:4px 4px 7px;font-weight:500;color:var(--ivory);}
+  .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 104px;scroll-snap-align:start;}
+  /* Badges ("Recommended") and names must fit the narrow card (Daniel
+     2026-11-23: "words that don't fit"). */
+  .designer.stage-on .designer-grid .opt-card .opt-badge{top:6px;left:6px;max-width:calc(100% - 12px);box-sizing:border-box;padding:3px 7px;font-size:8px;letter-spacing:0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  html .designer.stage-on .designer-grid .opt-card .opt-name{font-size:11px !important;letter-spacing:0.2px !important;line-height:1.25;padding:4px 3px 7px;font-weight:500;color:var(--ivory);overflow-wrap:normal;word-break:normal;hyphens:none;}
   .designer.stage-on .designer-grid .opt-card .opt-swatch{aspect-ratio:auto;height:54px;width:100%;object-fit:contain;padding:4px 0 0;}
   /* A group name inside the row (Single / Double Breasted) stands upright
      between its cards. */
