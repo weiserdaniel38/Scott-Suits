@@ -3822,7 +3822,11 @@ html .designer.stage-on .designer-grid .options h3{display:flex;justify-content:
   /* One row of choices, swiped sideways. */
   .designer.stage-on .designer-grid .opt-grid{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -16px;padding:4px 16px 10px;}
   .designer.stage-on .designer-grid .opt-grid::-webkit-scrollbar{display:none;}
-  .designer.stage-on .designer-grid .opt-grid:not(:has(> .opt-card:nth-of-type(13))){align-items:flex-start;}
+  .designer.stage-on .designer-grid .opt-grid{align-items:flex-start;}
+  /* A small arrow at the row's edge while there is more to swipe to. */
+  .designer.stage-on .options{position:relative;}
+  .designer.stage-on .options .opt-more{position:absolute;right:-8px;width:28px;height:28px;margin-top:-14px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--line);background:rgba(var(--ink-rgb),0.96);color:var(--brass);box-shadow:0 2px 8px rgba(0,0,0,0.12);cursor:pointer;z-index:2;}
+  .designer.stage-on .options .opt-more[hidden]{display:none;}
   .designer.stage-on .designer-grid .opt-grid > .opt-card{flex:0 0 104px;scroll-snap-align:start;}
   /* Badges ("Recommended") and names must fit the narrow card (Daniel
      2026-11-23: "words that don't fit"). */
@@ -3831,10 +3835,13 @@ html .designer.stage-on .designer-grid .options h3{display:flex;justify-content:
   .designer.stage-on .designer-grid .opt-card .opt-swatch{aspect-ratio:auto;height:54px;width:100%;object-fit:contain;padding:4px 0 0;}
   /* A group name inside the row (Single / Double Breasted) stands upright
      between its cards. */
-  .designer.stage-on .designer-grid .opt-grid:not(:has(> .opt-card:nth-of-type(13))) > .opt-section-divider{flex:0 0 auto;align-self:stretch;margin:0;padding:6px 8px 6px 0;border:none;border-right:1px solid var(--line);writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;line-height:1;letter-spacing:2px;text-transform:uppercase;color:var(--ivory-dim);text-align:center;}
-  /* Long lists (more than 12) stay a small grid under the picture. */
-  .designer.stage-on .designer-grid .opt-grid:has(> .opt-card:nth-of-type(13)){display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;overflow:visible;margin:0;padding:4px 0 10px;}
-  .designer.stage-on .designer-grid .opt-grid:has(> .opt-card:nth-of-type(13)) > .opt-section-divider{grid-column:1/-1;}
+  .designer.stage-on .designer-grid .options:not(.color-list) .opt-grid > .opt-section-divider,
+  .designer.stage-on .designer-grid .options.color-list .opt-grid:not(:has(> .opt-card:nth-of-type(13))) > .opt-section-divider{flex:0 0 auto;align-self:stretch;margin:0;padding:6px 8px 6px 0;border:none;border-right:1px solid var(--line);writing-mode:vertical-rl;transform:rotate(180deg);font-size:9px;line-height:1;letter-spacing:2px;text-transform:uppercase;color:var(--ivory-dim);text-align:center;}
+  /* Long color lists (more than 12 thread, button or felt colors, linings)
+     stay a small grid under the picture; every other step is one row,
+     however many cards (Daniel 2026-11-24). */
+  .designer.stage-on .designer-grid .options.color-list .opt-grid:has(> .opt-card:nth-of-type(13)){display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;overflow:visible;margin:0;padding:4px 0 10px;align-items:normal;}
+  .designer.stage-on .designer-grid .options.color-list .opt-grid:has(> .opt-card:nth-of-type(13)) > .opt-section-divider{grid-column:1/-1;}
 }
 @media (min-width:900px){
   .designer.stage-on .designer-grid{max-width:1280px;position:relative;padding-left:calc(100% - 400px);min-height:calc(100svh - var(--stage-top-page,150px));}
