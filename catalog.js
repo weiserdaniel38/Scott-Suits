@@ -3181,7 +3181,7 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26SU104.DBV5297": { sprite: "./assets/fabric-zoom-26su104-dbv5297.avif", col: 0, row: 0, tile: 1200 },
   "26SU107.DBV5298": { sprite: "./assets/fabric-zoom-26su107-dbv5298.avif", col: 0, row: 0, tile: 1200 },
   "26SU111.DBV5304": { sprite: "./assets/fabric-zoom-26su111-dbv5304.avif", col: 0, row: 0, tile: 1200 },
-  "26SU114.DBV2610": { sprite: "./assets/fabric-zoom-26su114-dbv2610.avif", col: 0, row: 0, tile: 1200 },
+  "26SU114.DBV2610": { sprite: "./assets/fabric-zoom-wide-26su114-dbv2610.avif", col: 0, row: 0, tile: 1200 },
   "26SU077.DBV404A": { sprite: "./assets/fabric-zoom-26su077-dbv404a.avif", col: 0, row: 0, tile: 1200 },
   "26SU369.DBV5955": { sprite: "./assets/fabric-zoom-wide-26su369-dbv5955.avif", col: 0, row: 0, tile: 1200 },
   "26SU094.DBV6378": { sprite: "./assets/fabric-zoom-26su094-dbv6378.avif", col: 0, row: 0, tile: 1200 },
