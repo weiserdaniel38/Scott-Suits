@@ -8351,6 +8351,16 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     card.addEventListener("mouseleave", () => clearHover());
   }
 
+  // Redraw the step's cards after a pick without losing the customer's
+  // place in them. On phones the cards are a swipe row, and a pick that
+  // stays on the step (TRY_KEYS) used to rebuild the row scrolled back to
+  // its start (Daniel 2026-11-24: picking a double breasted option "jumps
+  // all the way back the selections").
+  function renderOptionsInPlace() {
+    const before = Array.from(optionsEl.querySelectorAll(".opt-grid")).map((g) => g.scrollLeft);
+    renderOptions();
+    Array.from(optionsEl.querySelectorAll(".opt-grid")).forEach((g, i) => { if (before[i]) g.scrollLeft = before[i]; });
+  }
   function renderSwatchCard(cat, opt, container) {
     // Customer-facing label: the friendly renamed color when this category
     // has one (colorFamilies thread categories), otherwise just opt.name as
@@ -8434,7 +8444,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     const applySelection = () => {
       order[activeTab] = opt.name;
       if (!embedQuiet) markDesignStarted();
-      renderOptions();
+      renderOptionsInPlace();
       renderTabs();
       renderSummary();
       saveDraft();
@@ -8514,7 +8524,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     card.onclick = () => {
       order[activeTab] = sentinel;
       if (!embedQuiet) markDesignStarted();
-      renderOptions();
+      renderOptionsInPlace();
       renderTabs();
       renderSummary();
       saveDraft();
@@ -9248,7 +9258,7 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
           if (!embedQuiet) markDesignStarted();
           // A pick folds the section back up.
           if (!off) { inlineMoreOpen[k] = false; box.open = false; }
-          if (parentWasEmpty && !off) { renderOptions(); renderTabs(); renderSummary(); saveDraft(); return; }
+          if (parentWasEmpty && !off) { renderOptionsInPlace(); renderTabs(); renderSummary(); saveDraft(); return; }
           renderTabs();
           renderSummary();
           saveDraft();
