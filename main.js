@@ -7855,7 +7855,34 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
     if (ansEl && ansEl.textContent !== ans) ansEl.textContent = ans;
     if (ansEl) ansEl.hidden = !ans;
   }
-  if (window.MutationObserver) new MutationObserver(syncStageAnswer).observe(optionsEl, { childList: true });
+  // A small arrow at the row's edge while there is more to swipe to
+  // (Daniel 2026-11-24: "have a small icon showing that"). Tapping it
+  // swipes the row along.
+  let moreArrow = null;
+  function syncRowMore() {
+    const sec = designerGridEl.closest(".designer");
+    const grid = sec && sec.classList.contains("stage-on") ? optionsEl.querySelector(".opt-grid") : null;
+    const row = grid && getComputedStyle(grid).display === "flex" && grid.scrollWidth > grid.clientWidth + 6;
+    const more = row && grid.scrollLeft < grid.scrollWidth - grid.clientWidth - 6;
+    if (!more) { if (moreArrow) moreArrow.hidden = true; return; }
+    if (!moreArrow) {
+      moreArrow = document.createElement("button");
+      moreArrow.type = "button";
+      moreArrow.className = "opt-more";
+      moreArrow.setAttribute("aria-label", "More options");
+      moreArrow.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+      moreArrow.onclick = () => {
+        const g = optionsEl.querySelector(".opt-grid");
+        if (g) g.scrollBy({ left: Math.round(g.clientWidth * 0.8), behavior: "smooth" });
+      };
+    }
+    if (moreArrow.parentNode !== optionsEl) optionsEl.appendChild(moreArrow);
+    moreArrow.style.top = Math.round(grid.offsetTop + grid.offsetHeight / 2 - 3) + "px";
+    moreArrow.hidden = false;
+  }
+  optionsEl.addEventListener("scroll", syncRowMore, true);
+  window.addEventListener("resize", syncRowMore);
+  if (window.MutationObserver) new MutationObserver(() => { syncStageAnswer(); syncRowMore(); }).observe(optionsEl, { childList: true });
 
   function renderWizard() {
     const list = wizList();
@@ -9075,6 +9102,11 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   function renderOptions() {
     clearHover(true);
     const cat = catalog[activeTab];
+    // Color lists (thread, button and felt colors, lining, fabric) keep
+    // their small grid on phones; every other step is one swipe row
+    // (Daniel 2026-11-24: "everything besides the buttons and lining and
+    // thread color should be scrolled horizontally").
+    optionsEl.classList.toggle("color-list", !!(cat.colorFamilies || cat.patternTypes || cat.colorFirst || cat.flatColorTiles));
     const gridId = ids.tabs + "OptGrid";
     // Default to the tab strip being expanded -- only the leaf-level shade
     // grid (reached via a color family) collapses it, and it does so
