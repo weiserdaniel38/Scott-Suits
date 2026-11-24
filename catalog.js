@@ -1976,6 +1976,7 @@ const NEW_FABRICS = [
   { name: "26SU275.DZZ0021", displayName: "Fine Onyx", img: "./assets/jacket-fabric-26su275-dzz0021.jpg", hex: "#262020", pattern: "Solid", family: "Black", palette: "Jet Black", tier: 4, description: "Onyx solid in Super 110s pure wool. Year-round, from business to evening." }, // $38/m
   { name: "26SU097.DZZ0085", displayName: "Classic Charcoal Stripe", img: "./assets/jacket-fabric-26su097-dzz0085.jpg", hex: "#313332", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 4, description: "Charcoal stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
   { name: "26SU098.DZZ0086", displayName: "Midnight Navy Stripe", img: "./assets/jacket-fabric-26su098-dzz0086.jpg", hex: "#191824", pattern: "Pinstripe", family: "Navy Pattern", palette: "Navy", tier: 4, description: "Midnight Navy stripe in Super 100s pure wool. Year-round, from business to evening." }, // $38/m
+  { name: "26SU114.DBV2610", displayName: "Charcoal Cashmere Stripe", img: "./assets/jacket-fabric-26su114-dbv2610.jpg", hex: "#232427", pattern: "Pinstripe", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 1, description: "Charcoal chalk stripe flannel in wool with cashmere. Warm and soft for fall and winter." }, // $25/m
   { name: "26SU348.DEB510A", displayName: "Heritage Charcoal", img: "./assets/jacket-fabric-26su348-deb510a.jpg", hex: "#272729", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 5, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
   { name: "26SU338.DEB513A", displayName: "Charcoal Check", img: "./assets/jacket-fabric-26su338-deb513a.jpg", hex: "#2e2e31", pattern: "Plaid", family: "Charcoal Pattern", palette: "Deep Charcoal", tier: 5, description: "Charcoal check in pure wool. Year-round, from business to evening." }, // $40/m
   { name: "26SU374.DEB522A", displayName: "Royal Charcoal", img: "./assets/jacket-fabric-26su374-deb522a.jpg", hex: "#333234", pattern: "Solid", family: "Charcoal", palette: "Deep Charcoal", tier: 5, description: "Charcoal solid in pure wool. Year-round, from business to evening." }, // $40/m
@@ -3178,6 +3179,7 @@ Object.assign(FABRIC_ZOOM_MAP, {
   "26SU104.DBV5297": { sprite: "./assets/fabric-zoom-26su104-dbv5297.avif", col: 0, row: 0, tile: 1200 },
   "26SU107.DBV5298": { sprite: "./assets/fabric-zoom-26su107-dbv5298.avif", col: 0, row: 0, tile: 1200 },
   "26SU111.DBV5304": { sprite: "./assets/fabric-zoom-26su111-dbv5304.avif", col: 0, row: 0, tile: 1200 },
+  "26SU114.DBV2610": { sprite: "./assets/fabric-zoom-26su114-dbv2610.avif", col: 0, row: 0, tile: 1200 },
   "26SU369.DBV5955": { sprite: "./assets/fabric-zoom-wide-26su369-dbv5955.avif", col: 0, row: 0, tile: 1200 },
   "26SU094.DBV6378": { sprite: "./assets/fabric-zoom-26su094-dbv6378.avif", col: 0, row: 0, tile: 1200 },
   "26SU096.DZZ0013": { sprite: "./assets/fabric-zoom-wide-26su096-dzz0013.avif", col: 0, row: 0, tile: 1200 },
