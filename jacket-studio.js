@@ -206,6 +206,20 @@
     return [parseInt(s.slice(0, 2), 16) || 0, parseInt(s.slice(2, 4), 16) || 0, parseInt(s.slice(4, 6), 16) || 0];
   }
   function lum(h) { const c = hexRgb(h); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  // Light on dark cloth (Daniel 2026-11-23, "the fabric looks like an
+  // overlay"): the highlight pass used the cloth's own colour, so navy showed
+  // almost no light and read as a flat cut-out. The highlight paint now gets
+  // a white lift, strongest on the darkest cloth (navy ~0.32), gentle on mid
+  // tones (slate grey ~0.11) and none on light cloth. Daniel picked
+  // "stronger for dark, softer for mid" from the test renders.
+  function liftFor(hex) { const d = 1 - Math.min(1, lum(hex) / 160); return 0.5 * d * d; }
+  function liftHighlightPaint(g, hex, w, h) {
+    const lift = liftFor(hex);
+    if (lift <= 0.01) return;
+    g.globalCompositeOperation = "source-over";
+    g.fillStyle = "rgba(255,255,255," + lift.toFixed(3) + ")";
+    g.fillRect(0, 0, w, h);
+  }
   function mix(h, toward, amt) {
     const a = hexRgb(h), b = hexRgb(toward);
     return "#" + a.map((v, i) => Math.round(v + (b[i] - v) * amt).toString(16).padStart(2, "0")).join("");
@@ -379,6 +393,7 @@
       hg.clearRect(0, 0, CW, CH);
       hg.fillStyle = paintStyle(hg, rg.paint);
       hg.fillRect(0, 0, CW, CH);
+      liftHighlightPaint(hg, rg.paint.hex, CW, CH);
       hg.globalCompositeOperation = "multiply";
       const sk = unitK(shade);
       hg.drawImage(shade, 0, VBH * sk, VBW * sk, VBH * sk, 0, 0, CW, CH);
@@ -1296,6 +1311,7 @@
     tg.fillStyle = paintStyle(tg, paint); tg.fillRect(0, 0, w, h);
     const hc = mk(w, h), hg = hc.getContext("2d");
     hg.fillStyle = paintStyle(hg, paint); hg.fillRect(0, 0, w, h);
+    liftHighlightPaint(hg, paint.hex, w, h);
     hg.globalCompositeOperation = "multiply";
     hg.drawImage(shade, 0, sh, sw, sh, 0, 0, w, h);
     const s = paint.strength;
