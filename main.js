@@ -5069,6 +5069,7 @@ function adminShowSuitDue(el, f) {
   if (!el) return;
   const t = adminSuitDueText(f);
   el.textContent = t;
+  el.title = f && f.factory_delivery_date ? "Factory date (China time): " + f.factory_delivery_date : "";
   el.hidden = !t;
   el.classList.toggle("is-done", !!f && FACTORY_FINISHED.indexOf(f.factory_status) !== -1);
 }
