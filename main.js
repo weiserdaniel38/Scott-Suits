@@ -4544,6 +4544,81 @@ function adminTrackingBox(o, row) {
   return box;
 }
 
+// "WhatsApp update" on each order (Daniel, 2026-11-25: free updates from his
+// WhatsApp Business app). Nothing is sent from here: the panel writes the
+// update for the order's step, and the button opens WhatsApp on that
+// customer's chat with it typed in, so Daniel taps Send himself. Free, no
+// Meta API. Scott's Suits orders only (the business number is Scott's);
+// never names the factory.
+function waPhoneDigits(raw) {
+  const s = String(raw || "").trim();
+  const d = s.replace(/\D/g, "");
+  if (s.startsWith("+")) return d.length >= 8 && d.length <= 15 ? d : "";
+  if (d.length === 10) return "1" + d;
+  if (d.length === 11 && d.startsWith("1")) return d;
+  return "";
+}
+
+function waUpdateText(o, step) {
+  const first = String(o.customer_name || "").trim().split(/\s+/)[0] || "there";
+  const many = Number(o.suits) > 1;
+  const suit = many ? "suits" : "suit";
+  const is = many ? "are" : "is";
+  const it = many ? "them" : "it";
+  const pickup = o.fulfillment === "pickup";
+  const tracking = String(o.tracking_number || "").trim();
+  const url = trackingUrl(o.tracking_carrier, tracking);
+  const track = url ? " Track the package here: " + url : tracking ? " Tracking number: " + (o.tracking_carrier && o.tracking_carrier !== "Other" ? o.tracking_carrier + " " : "") + tracking : "";
+  const lines = {
+    "": "thanks for your order. We have everything we need and will keep you posted as your " + suit + " " + (many ? "are" : "is") + " made.",
+    sent_to_factory: "a quick update: your " + suit + " " + is + " now in production. We'll keep you posted along the way.",
+    cutting: "a quick update: your fabric is being cut to your measurements.",
+    sewing: "a quick update: our tailors are sewing your " + suit + " now.",
+    finishing: "a quick update: your " + suit + " " + is + " being finished, pressed and checked.",
+    factory_shipped: "your " + suit + " " + is + " finished and on " + (many ? "their" : "its") + " way to us for a final inspection.",
+    final_check: pickup
+      ? "your " + suit + " " + is + " ready for pickup. Reply here and we'll set a time."
+      : "your " + suit + " arrived with us and " + is + " getting a final inspection before we ship " + it + " to you.",
+    shipped: "your " + suit + " " + (many ? "have" : "has") + " shipped." + track,
+    out_for_delivery: "your " + suit + " " + is + " out for delivery and should arrive today." + track,
+    delivered: (pickup ? "thanks for picking up your " + suit + "." : "your " + suit + " " + (many ? "were" : "was") + " delivered.") +
+      " We hope you love " + it + ". If anything about the fit isn't right, just reply here.",
+  };
+  const body = lines[step] != null ? lines[step] : lines[""];
+  return "Hi " + first + ", " + body + "\n\nScott's Suits";
+}
+
+function adminWhatsAppPanel(o) {
+  const panel = document.createElement("div");
+  panel.className = "admin-label admin-wa";
+  const digits = waPhoneDigits(o.customer_phone);
+  const pickup = o.fulfillment === "pickup";
+  const steps = SHIPPING_STATUSES.filter((s) => !(pickup && (s[0] === "shipped" || s[0] === "out_for_delivery")));
+  panel.innerHTML =
+    '<label class="admin-wa-step">Update<select></select></label>' +
+    '<textarea class="admin-wa-text" rows="5" aria-label="WhatsApp message"></textarea>' +
+    '<div class="admin-ship-actions"><a class="btn-primary admin-wa-open" target="_blank" rel="noopener">Open in WhatsApp</a></div>' +
+    '<p class="account-section-note admin-wa-note"></p>';
+  const sel = panel.querySelector("select");
+  steps.forEach(([key, label]) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = pickup && key === "final_check" ? "Ready for pickup" : pickup && key === "delivered" ? "Picked up" : label;
+    sel.appendChild(opt);
+  });
+  sel.value = steps.some((s) => s[0] === (o.shipping_status || "")) ? o.shipping_status || "" : "";
+  const text = panel.querySelector("textarea");
+  const open = panel.querySelector(".admin-wa-open");
+  const sync = () => { open.href = "https://wa.me/" + digits + "?text=" + encodeURIComponent(text.value.trim()); };
+  const fill = () => { text.value = waUpdateText(o, sel.value); sync(); };
+  sel.addEventListener("change", fill);
+  text.addEventListener("input", sync);
+  panel.querySelector(".admin-wa-note").textContent =
+    "To " + (o.customer_phone || "") + ". Opens your WhatsApp with this message typed in. Nothing is sent until you tap Send there.";
+  fill();
+  return panel;
+}
+
 // One order in All Orders: a summary line (customer, date, suits, shipping
 // step, total) that opens to the order's details, one card per suit and the
 // whole-order controls.
@@ -4560,6 +4635,7 @@ function adminOrderRow(o) {
     '<div class="admin-order-manage"><span class="admin-order-label">Order</span><div class="admin-ship-actions">' +
     '<button type="button" class="admin-ship-factory admin-ship-send">Send to factory</button>' +
     '<button type="button" class="admin-ship-factory admin-ship-label">Shipping label</button>' +
+    '<button type="button" class="admin-ship-factory admin-ship-wa">WhatsApp update</button>' +
     '<button type="button" class="admin-ship-factory admin-ship-edit">Edit order</button>' +
     '<button type="button" class="admin-ship-delete">Delete order</button><p class="admin-ship-result" hidden></p></div></div></div>';
   // Customer-typed text goes in with textContent, never as HTML.
@@ -4624,6 +4700,24 @@ function adminOrderRow(o) {
       }
       labelPanel = adminLabelPanel(o, labelBtn);
       row.querySelector(".admin-order-manage").appendChild(labelPanel);
+    });
+  }
+  // "WhatsApp update": Scott's Suits orders only; greyed out with no usable phone.
+  const waBtn = row.querySelector(".admin-ship-wa");
+  if (o.brand && o.brand !== "scott") waBtn.remove();
+  else if (!waPhoneDigits(o.customer_phone)) {
+    waBtn.disabled = true;
+    waBtn.textContent = "WhatsApp: no phone number";
+  } else {
+    let waPanel = null;
+    waBtn.addEventListener("click", () => {
+      if (waPanel) {
+        waPanel.remove();
+        waPanel = null;
+        return;
+      }
+      waPanel = adminWhatsAppPanel(o);
+      row.querySelector(".admin-order-manage").appendChild(waPanel);
     });
   }
   const deleteBtn = row.querySelector(".admin-ship-delete");
