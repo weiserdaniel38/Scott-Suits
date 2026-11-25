@@ -5049,11 +5049,21 @@ function adminSuitDueText(f) {
   if (FACTORY_FINISHED.indexOf(f.factory_status) !== -1) return "Finished at the factory";
   const d = f.factory_delivery_date;
   if (!d) return "";
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
-  const nice = m
-    ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: +m[1] === new Date().getFullYear() ? undefined : "numeric" })
-    : d;
-  return "Factory finish date: " + nice;
+  return "Factory finish date: " + factoryDueEastern(d);
+}
+// The factory sends a date only, on China time (UTC+8, no daylight saving).
+// We read it as "done by the end of that China day" and show that moment in
+// New York time: 11 AM ET in winter (EST), noon in summer (EDT).
+function factoryDueEastern(d) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || ""));
+  if (!m) return String(d || "");
+  // Midnight at the end of the China day = 16:00 UTC on that date.
+  const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 16, 0, 0));
+  const tz = "America/New_York";
+  const thisYear = +new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric" }).format(new Date());
+  const day = t.toLocaleDateString("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", year: +m[1] === thisYear ? undefined : "numeric" });
+  const time = t.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).replace(":00", "");
+  return day + ", by " + time + " ET";
 }
 function adminShowSuitDue(el, f) {
   if (!el) return;
@@ -5067,7 +5077,7 @@ function adminFactorySuitState(suit, noDue) {
   if (!suit.factory_order_no) return suit.factory_error ? "Not saved: " + suit.factory_error : "Not sent yet";
   return (
     "Factory order " + suit.factory_order_no + " \u00b7 " + (suit.factory_status || "Draft") +
-    (suit.factory_delivery_date && !noDue ? " \u00b7 due " + suit.factory_delivery_date : "") +
+    (suit.factory_delivery_date && !noDue ? " \u00b7 due " + factoryDueEastern(suit.factory_delivery_date) : "") +
     (suit.factory_waybill ? " \u00b7 waybill " + suit.factory_waybill : "") +
     (suit.factory_error ? " \u00b7 " + suit.factory_error : "")
   );
