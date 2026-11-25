@@ -13522,7 +13522,9 @@ const shippingCountryInput = document.getElementById("shippingCountry");
 // draft always stores the nicely formatted version, not whatever was there
 // a keystroke ago.
 function formatUSPhoneNumber(raw) {
-  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  // A leading 1 (country code) is dropped: US area codes never start with 1,
+  // and keeping it cut the last digit off (Avigdor Hammer, 2026-11-25).
+  const digits = raw.replace(/\D/g, "").replace(/^1/, "").slice(0, 10);
   if (!digits) return "";
   if (digits.length < 4) return "(" + digits;
   if (digits.length < 7) return "(" + digits.slice(0, 3) + ") " + digits.slice(3);
