@@ -8268,7 +8268,9 @@ function createDesigner(catalog, ids, sameAsResolvers, groups) {
   // every step on a computer (which previews on hover), move on by themselves.
   const TRY_KEYS = ["frontbutton", "collar", "lapelwidth", "pockettype", "lowerpocket", "backvent",
     "cuffbuttons", "buttoncolor", "lapelbuttonhole", "insidepocket", "sleevecuffstyle", "buttonNail",
-    "beltLoops", "backPocket", "bottomStyle", "bottom", "backstyle", "buckle"];
+    "beltLoops", "backPocket", "bottomStyle", "bottom", "backstyle", "buckle",
+    // The front of the pants shows these since 2026-11-25.
+    "frontPleat", "waistLineHeight", "waistbandStyle", "waistbandExtension", "frontPocket", "watchPocket", "pickStitch"];
   function stayToTry() {
     if (TRY_KEYS.indexOf(activeTab) === -1) return false;
     if (window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches) return false;

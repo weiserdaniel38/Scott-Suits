@@ -1413,7 +1413,8 @@
   // band PANTS_H tall below the jacket photo (seen from the back: waistband
   // on the right, the leg folded back under on the left).
   const PANTS_H = 350;
-  const PANTS_DEFAULTS = { beltLoops: "Belt Loops", backPocket: "Double Besom Pocket", bottomStyle: "Turn Up Bottom" };
+  const PANTS_DEFAULTS = { beltLoops: "Belt Loops", backPocket: "Double Besom Pocket", bottomStyle: "Turn Up Bottom",
+    frontPleat: "No Pleat", waistLineHeight: "4.0 cm", waistbandStyle: "Normal Waistband", waistbandExtension: "Square Shape 5cm", frontPocket: "Slant Pocket", watchPocket: "No Watch Pocket", pickStitch: "No Stitching" };
   // Which pieces the picture shows, and its height.
   function pictureLayout() {
     let jacket = true, pants = false, vest = false;
@@ -1427,7 +1428,9 @@
     } catch (e) { /* main.js not ready: the jacket alone */ }
     // Pants on their own: just the folded pants, no empty room above or below
     // them (Daniel 2026-11-25, "designing just pants need to have updates").
-    const h = jacket ? VBH + (pants || vest ? PANTS_H : 0) : vest ? 800 : Math.round(PANTS_PH * 1.2) + 76;
+    // The front-of-pants view is a crop of the inside photo, its own height.
+    let h = jacket ? VBH + (pants || vest ? PANTS_H : 0) : vest ? 800 : PF_H_ALONE;
+    if (pants && view === "pantsfront") h = Math.round(pantsFrontCrop(jacket).h * PF_S);
     return { jacket: jacket, pants: pants, vest: vest, h: h };
   }
   function pantsAnswers(v) {
@@ -2339,12 +2342,16 @@
   // Half lining: across the chest only.
   const INSIDE_HALF = "M299.8,160.1 L295.2,167.9 L273.6,200.7 L255.9,226.9 L236.2,261.6 L214.6,298.9 L193,327.1 L186.5,346.7 L183.8,369 L179.3,423.4 L177.4,470 L282,470 L283.4,456.1 L288,357.9 L291.9,259.6 L298.5,194.1 Z " +
     "M498.2,161.4 L504.8,166 L537.5,218.4 L568.3,261.6 L594.5,292.4 L609.6,323.2 L618.8,346.7 L622,379.5 L622.7,423.4 L622.7,470 L520.6,470 L519.2,456.1 L510.7,357.9 L502.8,259.6 L496.3,194.1 Z";
-  function drawInside(g, v, anchors) {
+  // o.fabric: paint the whole picture in this fabric (pants on their own);
+  // o.pants: the pants in their own fabric when it differs from the jacket's.
+  function drawInside(g, v, anchors, o) {
+    o = o || {};
     const photo = img(PHOTO_INSIDE), shade = img(SHADE_INSIDE);
     const fab = opt("fabric", v.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
-    const fp = fabricPaint(fab);
+    const fp = o.fabric || fabricPaint(fab);
+    const pp = o.pants && o.pants.key !== fp.key ? o.pants : null;
     const lp = liningPaint(v, fp);
-    if (!photo || !shade || !fp.ready || !lp.ready) return false;
+    if (!photo || !shade || !fp.ready || !lp.ready || (pp && !pp.ready)) return false;
     curShade = shade;
     edgeA = edgeFor(fp.hex);
     const facing = v.facing;
@@ -2352,8 +2359,9 @@
     const half = facing === "Half Lining W/ Fabric Facing";
     const linPath = half ? INSIDE_HALF : INSIDE_LINING;
     const regions = [{ path: null, paint: fp, grain: INSIDE_GRAIN }];
+    if (pp) regions.push({ path: PANTS_FRONT_REGION, paint: pp });
     if (lined) regions.push({ path: linPath, paint: lp, highlight: 0.9 });
-    const layer = cachedLayer("inside|" + fp.key + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
+    const layer = cachedLayer("inside|" + fp.key + "|" + (pp ? pp.key : "") + "|" + lp.key + "|" + facing, () => shadedLayer(shade, regions));
     g.drawImage(tiePhoto(photo, PHOTO_INSIDE, tieHex(fp.hex), [340, 70, 116, 600]), 0, 0, VBW, VBH);
     floorShadow(g);
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(layer, 0, 0); g.restore();
@@ -2390,6 +2398,214 @@
     }
     anchors.monogram = mg === "On Right Inside Pocket" ? [233, 340] : [567, 340];
     return true;
+  }
+
+  // ---- PANTS FRONT (Daniel 2026-11-25, "The preview needs to update") ------
+  // The only photo that shows the front of the pants is the inside reference:
+  // under the open jacket sit the waistband, its two loops, the fly and the
+  // top of both legs. For the front-of-pants questions the picture is a close
+  // crop of it, the pants in the pants' own fabric, and each pick drawn on the
+  // cloth in straight lines, like the pockets on the jacket. What the jacket
+  // hides (side seams, side adjusters) cannot show.
+  const PF_X = 160, PF_W = 480, PF_S = VBW / PF_W;
+  // Pants on their own: waist to the jacket's hem, the same height as the
+  // folded pants so the box never jumps between the two views. With a jacket
+  // (the tall picture box): taller, from the tie's tip.
+  function pantsFrontCrop(jacket) { return jacket ? { x: PF_X, y: 445, w: PF_W, h: 445 } : { x: PF_X, y: 605, w: PF_W, h: 285 }; }
+  const PF_H_ALONE = Math.round(285 * PF_S);
+  // The pants in the inside photo: everything between the jacket's front
+  // edges below the shirt (the lining is painted over it afterwards).
+  const PANTS_FRONT_REGION = "M176.6,554.4 L181.2,619.9 L181.2,652.6 L178.6,685.4 L176.6,718.1 L173.4,750.9 L168.8,783.6 L162.2,807.9 L155.7,832.8 L149.8,857 L146.5,881.9 L147.2,895 L150,952 L650,952 L653.5,896.3 L654.8,881.9 L651.5,857 L646.9,832.8 L640.4,807.9 L633.8,783.6 L628.6,750.9 L624,718.1 L620.7,685.4 L618.8,652.6 L618.8,619.9 L622.7,554.4 Z";
+  // What of the pants is in view: between the lining's inner edges.
+  const PF_CLIP = "M247,626 L240.8,659.2 L235.6,685.4 L230.4,719.4 L225.8,760.7 L223.8,803.3 L221.2,826.2 L215.9,865.5 L212,903.5 L589.3,902.2 L587.3,883.2 L582.7,842.6 L578.8,809.8 L572.9,760.7 L568.3,719.4 L563.1,685.4 L560.5,659.2 L557.2,630.4 L553,626 Z";
+  // The photo's own waistband (picture units): top edge, bottom seam, the fly
+  // edge, the two belt loops (centre, left, right) and where the creases
+  // meet the seam.
+  const PF_TOP = 633, PF_SEAM = 670, PF_FLY = 398;
+  const PF_LOOPS = [[312, 306, 319], [486, 480, 493]];
+  const PF_CREASE = [311, 487];
+  function drawPantsFrontView(g, v, a, lay) {
+    const pa = pantsAnswers(v);
+    const fab = opt("fabric", pa.fabric) || opt("fabric", PREVIEW_DEFAULTS.fabric);
+    const pp = fabricPaint(fab);
+    if (!pp.ready) return false;
+    const full = mk(CW, Math.round(VBH * RES));
+    const fg = full.getContext("2d");
+    fg.scale(RES, RES);
+    if (!drawInside(fg, v, a, lay.jacket ? { pants: pp } : { fabric: pp, pants: pp })) return false;
+    const C = pantsFrontCrop(lay.jacket);
+    g.save();
+    g.scale(PF_S, PF_S);
+    g.translate(-C.x, -C.y);
+    g.imageSmoothingQuality = "high";
+    g.drawImage(full, 0, 0, full.width, full.height, 0, 0, VBW, VBH);
+    drawPantsFront(g, full, pa, pp);
+    g.restore();
+    return true;
+  }
+  // The picks, drawn in inside-picture units on the cropped picture.
+  function drawPantsFront(g, full, pa, fp) {
+    const st = fp.strength, hex = fp.hex;
+    const dk = (a) => "rgba(0,0,0," + (a * st.a).toFixed(3) + ")";
+    const lt = (a) => "rgba(255,255,255," + (a * st.b).toFixed(3) + ")";
+    const blur = (u) => u * PF_S * RES;
+    g.save();
+    g.clip(new Path2D(PF_CLIP));
+    // Cloth for a piece: the same lit picture, read dx/dy units away (plain
+    // cloth beside the photo's own detail), with the piece's shadow first.
+    const cloth = (path, dx, dy, shadow) => {
+      if (shadow) {
+        g.save();
+        g.shadowColor = "rgba(0,0,0,0.4)"; g.shadowBlur = blur(2.5); g.shadowOffsetY = blur(1);
+        g.fillStyle = hex; g.fill(path);
+        g.restore();
+      }
+      g.save(); g.clip(path);
+      g.drawImage(full, 0, 0, full.width, full.height, dx, dy, VBW, VBH);
+      g.restore();
+    };
+    const rect = (x, y, w, h) => { const p = new Path2D(); p.rect(x, y, w, h); return p; };
+    // A fold or an opening: a dark line with a lit edge beside it.
+    const crease = (a, b, side, w) => {
+      line(g, [a, b], dk(0.55), w || 1);
+      line(g, [[a[0] + side * 1.5, a[1]], [b[0] + side * 1.5, b[1]]], lt(0.2), 0.7);
+    };
+    const loops = String(pa.beltLoops || "");
+    const tall = /^5/.test(String(pa.waistLineHeight || ""));
+    // Belt loops: the photo's two, none, or crossed straps.
+    if (loops !== "Belt Loops") {
+      PF_LOOPS.forEach((L) => cloth(rect(L[1] - 4, PF_TOP, L[2] - L[1] + 8, 62), L[0] < PF_FLY ? 34 : -34, 0));
+    }
+    // A taller waistband: its seam a centimetre lower, the band's own cloth
+    // continued down over the old seam (not under the loops).
+    let seam = PF_SEAM;
+    if (tall) {
+      seam = 679;
+      const strip = new Path2D();
+      [[244, 305], [320, 479], [495, 556]].forEach((r) => strip.rect(r[0], 663, r[1] - r[0], 15));
+      cloth(strip, 0, -15);
+      line(g, [[244, 677], [400, 679], [556, 677]], dk(0.5), 1);
+      line(g, [[244, 675.5], [400, 677.5], [556, 675.5]], lt(0.22), 0.7);
+    }
+    if (loops === "X Loops") {
+      PF_LOOPS.forEach((L) => {
+        const cx = L[0], d = 6.5, y0 = PF_TOP + 3, y1 = seam + 18;
+        [[-d, d], [d, -d]].forEach((q) => {
+          const len = Math.hypot(2 * d, y1 - y0), ox = (y1 - y0) / len * 3, oy = (q[1] - q[0]) / len * 3;
+          const strap = new Path2D();
+          strap.moveTo(cx + q[0] - ox, y0 + oy); strap.lineTo(cx + q[1] - ox, y1 + oy);
+          strap.lineTo(cx + q[1] + ox, y1 - oy); strap.lineTo(cx + q[0] + ox, y0 - oy); strap.closePath();
+          cloth(strap, cx < PF_FLY ? 34 : -34, 0, true);
+          g.fillStyle = dk(0.08); g.fill(strap);
+          g.strokeStyle = dk(0.45); g.lineWidth = 0.7; g.stroke(strap);
+        });
+      });
+    }
+    // The closure: the photo's button goes, and the waistband's end is drawn
+    // the way it was picked. The overlap's tab reaches past the fly (to the
+    // viewer's left, like the factory's drawings), buttoned through near its
+    // end; "Square Waistband" has no tab at all.
+    cloth(rect(386, 648, 44, 36), -50, 0);
+    line(g, [[PF_FLY, seam], [PF_FLY, 688]], dk(0.5), 0.9);
+    const ext = String(pa.waistbandExtension || "");
+    const belt = /Arrow Shape Belt/.test(String(pa.waistbandStyle || ""));
+    const mid = (PF_TOP + seam) / 2;
+    if (/^Square Waistband/.test(ext) && !belt) {
+      line(g, [[PF_FLY, PF_TOP], [PF_FLY, seam]], dk(0.5), 0.9);
+    } else {
+      const L = belt ? 66 : /Long/.test(ext) ? 72 : 45;
+      const x1 = PF_FLY - L, r = (seam - PF_TOP) / 2;
+      const end = new Path2D();
+      if (belt || /Arrow/.test(ext)) { end.moveTo(x1 + 12, PF_TOP); end.lineTo(x1, mid); end.lineTo(x1 + 12, seam); }
+      else if (/Round/.test(ext)) { end.moveTo(x1 + r, PF_TOP); end.arc(x1 + r, mid, r, -Math.PI / 2, Math.PI / 2, true); }
+      else { end.moveTo(x1, PF_TOP); end.lineTo(x1, seam); }
+      g.save();
+      g.lineJoin = "round"; g.lineCap = "round";
+      g.strokeStyle = dk(0.16); g.lineWidth = 3.2; g.translate(-1.4, 0); g.stroke(end); g.translate(1.4, 0);
+      g.strokeStyle = dk(0.6); g.lineWidth = 1; g.stroke(end);
+      g.strokeStyle = lt(0.25); g.lineWidth = 0.7; g.translate(1.3, 0); g.stroke(end);
+      g.restore();
+      if (belt) {
+        // A small metal buckle on the belt, near the fly.
+        g.save();
+        const bx = PF_FLY - 32, bw = 11, bh = seam - PF_TOP - 8;
+        g.strokeStyle = "#8d8b85"; g.lineWidth = 2.2; g.strokeRect(bx, PF_TOP + 4, bw, bh);
+        g.strokeStyle = "rgba(255,255,255,0.45)"; g.lineWidth = 0.7; g.strokeRect(bx + 0.8, PF_TOP + 4.8, bw - 1.6, bh - 1.6);
+        g.strokeStyle = "#5e5c58"; g.lineWidth = 1.6; line(g, [[bx + bw / 2, PF_TOP + 4], [bx + bw / 2, PF_TOP + 4 + bh]], "#6b6965", 1.6);
+        g.restore();
+      } else if (!/No Button/.test(ext)) {
+        const bx = x1 + (/Arrow/.test(ext) ? 20 : 15);
+        hole(g, [bx - 7, mid], [bx + 7, mid], mix(hex, "#000000", 0.35), 1.8);
+        const look = { hex: lum(hex) > 150 ? mix(hex, "#3b2f26", 0.55) : mix(hex, "#161210", 0.6) };
+        button(g, bx, mid, 6.2, look, { thread: mix(hex, "#ffffff", 0.3), nail: pa.buttonNail });
+      }
+    }
+    // Pleats: a fold from the seam down into each leg's crease, a second one
+    // nearer the pocket for a double pleat.
+    const pleat = String(pa.frontPleat || "");
+    const fold = (x, dx, len, side) => {
+      crease([x, seam], [x + dx * 0.7, seam + len * 0.7], side, 1.1);
+      line(g, [[x + dx * 0.7, seam + len * 0.7], [x + dx, seam + len]], dk(0.28), 0.9);
+    };
+    if (/Single|Double/.test(pleat)) { fold(PF_CREASE[0], -4, 92, -1); fold(PF_CREASE[1], 4, 92, 1); }
+    if (/Double/.test(pleat)) { fold(PF_CREASE[0] - 23, -3, 72, -1); fold(PF_CREASE[1] + 23, 3, 72, 1); }
+    // Front pockets. The openings start at the seam outside the loops and
+    // run down to the side, under the jacket's edge.
+    const fpk = String(pa.frontPocket || "");
+    const pick = /^Pick/.test(String(pa.pickStitch || ""));
+    const open = [[[288, seam], [247, 770]], [[512, seam], [553, 770]]];
+    const stitch = (pts, side) => {
+      if (!pick) return;
+      line(g, pts.map((p) => [p[0] + side * 3.2, p[1] + 1]), lt(0.42), 0.6, [1.4, 1.6]);
+    };
+    if (/Slant/.test(fpk)) {
+      open.forEach((o, i) => { const side = i ? -1 : 1; crease(o[0], o[1], side, 1.1); stitch(o, side); });
+    } else if (/Double Besom/.test(fpk)) {
+      open.forEach((o, i) => {
+        const side = i ? -1 : 1;
+        const dx = o[1][0] - o[0][0], dy = o[1][1] - o[0][1], len = Math.hypot(dx, dy), nx = -dy / len * 4.5, ny = dx / len * 4.5;
+        const lip = new Path2D();
+        lip.moveTo(o[0][0] + nx, o[0][1] + ny); lip.lineTo(o[1][0] + nx, o[1][1] + ny);
+        lip.lineTo(o[1][0] - nx, o[1][1] - ny); lip.lineTo(o[0][0] - nx, o[0][1] - ny); lip.closePath();
+        cloth(lip, side * 24, 0, true);
+        g.strokeStyle = dk(0.42); g.lineWidth = 0.7; g.stroke(lip);
+        line(g, o, dk(0.7), 0.9);
+        stitch(o, side);
+      });
+    } else if (/Moon/.test(fpk)) {
+      open.forEach((o, i) => {
+        const side = i ? -1 : 1;
+        const p = new Path2D();
+        p.moveTo(o[0][0] + side * 12, o[0][1]); p.quadraticCurveTo(o[0][0] + side * 12, 745, o[1][0], o[1][1] + 12);
+        g.strokeStyle = dk(0.55); g.lineWidth = 1.1; g.lineCap = "round"; g.stroke(p);
+        g.save(); g.translate(side * 1.5, 0); g.strokeStyle = lt(0.28); g.lineWidth = 0.7; g.stroke(p); g.restore();
+        if (pick) { g.save(); g.translate(side * 3.2, 1); g.setLineDash([1.4, 1.6]); g.strokeStyle = lt(0.42); g.lineWidth = 0.6; g.stroke(p); g.restore(); }
+      });
+    }
+    // (On Seam pockets sit in the side seams, under the jacket: nothing to draw.)
+    // The watch pocket, on the wearer's right (the viewer's left) between the
+    // loop and the fly.
+    const wp = String(pa.watchPocket || "");
+    if (/Sewn Up/.test(wp)) {
+      const p = rect(331, seam + 3, 32, 7);
+      cloth(p, 0, 13, true);
+      g.strokeStyle = dk(0.42); g.lineWidth = 0.7; g.stroke(p);
+      line(g, [[332, seam + 3.5], [362, seam + 3.5]], dk(0.65), 0.9);
+      if (pick) line(g, [[332, seam + 12.5], [362, seam + 12.5]], lt(0.42), 0.6, [1.4, 1.6]);
+    } else if (/Top Of/.test(wp)) {
+      line(g, [[332, seam], [362, seam]], dk(0.85), 1.4);
+      line(g, [[332, seam - 2.5], [332, seam + 2.5]], dk(0.7), 1.1);
+      line(g, [[362, seam - 2.5], [362, seam + 2.5]], dk(0.7), 1.1);
+    } else if (/Peach/.test(wp)) {
+      const p = new Path2D();
+      p.moveTo(331, seam + 1); p.lineTo(363, seam + 1); p.lineTo(363, seam + 12);
+      p.quadraticCurveTo(347, seam + 25, 331, seam + 12); p.closePath();
+      cloth(p, 0, 16, true);
+      g.fillStyle = dk(0.1); g.fill(p);
+      g.strokeStyle = dk(0.45); g.lineWidth = 0.7; g.stroke(p);
+      line(g, [[331, seam + 1], [363, seam + 1]], dk(0.65), 0.9);
+    }
+    g.restore();
   }
 
   // ---- Studio UI ------------------------------------------------------------------
@@ -2489,9 +2705,11 @@
     const g = next.getContext("2d");
     g.scale(RES, RES);
     try {
-      ok = lay.jacket ? (view === "back" ? drawBack(g, v, a) : view === "inside" ? drawInside(g, v, a) : drawFront(g, v, a)) : true;
+      // The front of the pants: a close crop of the inside photo, on its own.
+      const pf = view === "pantsfront" && lay.pants;
+      ok = pf ? drawPantsFrontView(g, v, a, lay) : lay.jacket ? (view === "back" ? drawBack(g, v, a) : view === "inside" ? drawInside(g, v, a) : drawFront(g, v, a)) : true;
       // The pants / vest sit on the same backdrop as the jacket photo.
-      if (ok && (lay.pants || lay.vest)) {
+      if (!pf && ok && (lay.pants || lay.vest)) {
         const y0 = lay.jacket ? VBH : 0;
         // (The back and inside views have no photo behind them: no fill, so
         // the pants sit on the same plain card as the jacket.)
@@ -2504,7 +2722,7 @@
         }
         if (bg) { g.fillStyle = bg; g.fillRect(0, y0, VBW, h - y0); }
       }
-      if (ok && lay.pants) {
+      if (!pf && ok && lay.pants) {
         if (lay.jacket && lay.vest) {
           // Three-piece: vest on the left, pants a little smaller on the right.
           ok = drawVest(g, v, 160, VBH + 24, 0.92, true, view === "back" || vestBackHint);
@@ -2513,9 +2731,9 @@
           }
         } else if (lay.jacket) ok = drawPants(g, v, 118, VBH + 22, 0.89);
         // Pants on their own: bigger, centred.
-        else ok = drawPants(g, v, 20, 34, 1.2);
+        else ok = drawPants(g, v, 20, Math.round((h - PANTS_PH * 1.2) / 2), 1.2);
       }
-      if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 34, 2.45, false, view === "back" || vestBackHint);
+      if (!pf && ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 34, 2.45, false, view === "back" || vestBackHint);
     } catch (e) {
       ok = false;
       if (window.console) console.error(e);
@@ -2923,7 +3141,7 @@
     // The same crop as the small card (a little of the empty edges off),
     // as big as fits, at the screen's own pixel density.
     // Pants or a vest on their own fill the picture edge to edge: no crop.
-    const C = pictureLayout().jacket ? PEEK_CROP : { x: 0, y: 0, w: VBW, h: picH };
+    const C = pictureLayout().jacket && view !== "pantsfront" ? PEEK_CROP : { x: 0, y: 0, w: VBW, h: picH };
     const k = Math.min(bw / C.w, bh / C.h);
     const cssW = Math.round(C.w * k), cssH = Math.round(C.h * k);
     const dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -2941,11 +3159,16 @@
   // its own shows its back for the strap, buckle and lining.
   const STAGE_VIEWS = { backvent: "back", facing: "inside", lining: "inside", insidepocket: "inside", monogram: "inside", monogramThreadColor: "inside", monogramFont: "inside" };
   const STAGE_VEST_BACK = { backstyle: 1, buckle: 1, lining: 1 };
+  // The pants questions about the front (pleats, waistband, loops, front and
+  // watch pockets, pick stitching) show the front of the pants; the rest
+  // (back pockets, the bottom, thread) the folded pants.
+  const STAGE_PANTS_FRONT = { frontPleat: 1, waistLineHeight: 1, waistbandStyle: 1, waistbandExtension: 1, beltLoops: 1, frontPocket: 1, watchPocket: 1, pickStitch: 1 };
   function stageView() {
     if (!stageSec) return "front";
     const k = stageSec.getAttribute("data-stage-step") || "";
     const lay = pictureLayout();
     if (stageSec.id === "designer") return (lay.jacket && STAGE_VIEWS[k]) || "front";
+    if (stageSec.id === "pantsSection" && lay.pants && STAGE_PANTS_FRONT[k]) return "pantsfront";
     if (stageSec.id === "vestSection" && lay.vest && lay.vest !== "fixed" && !lay.jacket) return STAGE_VEST_BACK[k] ? "back" : "front";
     return "front";
   }
@@ -3141,5 +3364,5 @@
   else window.addEventListener("resize", applyZoom);
   place();
   // For testing in the browser console.
-  window.jacketStudio = { open: openAreaPanel, close: closePanel, setView: setView, setMode: setMode, draw: draw, zoomTo: zoomTo };
+  window.jacketStudio = { open: openAreaPanel, close: closePanel, setView: setView, setMode: setMode, draw: draw, zoomTo: zoomTo, get view() { return view; } };
 })();
