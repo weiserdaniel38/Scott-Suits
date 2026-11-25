@@ -618,6 +618,7 @@ footer{padding:40px 32px;border-top:1px solid var(--line);text-align:center;colo
 .admin-wa-step select{padding:8px;font-size:16px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ivory);}
 .admin-wa-text{display:block;width:100%;box-sizing:border-box;margin-top:10px;padding:10px;font:inherit;font-size:16px;line-height:1.4;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ivory);resize:vertical;}
 .admin-wa-open{text-decoration:none;display:inline-block;}
+.admin-wa-sms{text-decoration:none;display:inline-block;}
 .admin-wa-note{margin:8px 0 0;}
 /* Admin shipment tracking: factory -> shop (DHL) and shop -> customer (2026-11-12) */
 .admin-track{padding:14px;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;gap:12px;font-size:13px;}
