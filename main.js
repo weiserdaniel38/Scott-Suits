@@ -4608,7 +4608,8 @@ function adminWhatsAppPanel(o) {
   panel.innerHTML =
     '<label class="admin-wa-step">Update<select></select></label>' +
     '<textarea class="admin-wa-text" rows="5" aria-label="WhatsApp message"></textarea>' +
-    '<div class="admin-ship-actions"><a class="btn-primary admin-wa-open" target="_blank" rel="noopener">Open in WhatsApp</a></div>' +
+    '<div class="admin-ship-actions"><a class="btn-primary admin-wa-open" target="_blank" rel="noopener">Open in WhatsApp</a>' +
+    '<a class="admin-ship-factory admin-wa-sms">Send as text message</a></div>' +
     '<p class="account-section-note admin-wa-note"></p>';
   const sel = panel.querySelector("select");
   steps.forEach(([key, label]) => {
@@ -4620,12 +4621,20 @@ function adminWhatsAppPanel(o) {
   sel.value = steps.some((s) => s[0] === (o.shipping_status || "")) ? o.shipping_status || "" : "";
   const text = panel.querySelector("textarea");
   const open = panel.querySelector(".admin-wa-open");
-  const sync = () => { open.href = "https://wa.me/" + digits + "?text=" + encodeURIComponent(text.value.trim()); };
+  // Not on WhatsApp: the site can't tell (wa.me never reports back), but
+  // WhatsApp itself says "isn't on WhatsApp", so the same text can go as a
+  // plain text message instead (Daniel, 2026-11-25).
+  const sms = panel.querySelector(".admin-wa-sms");
+  const sync = () => {
+    const body = encodeURIComponent(text.value.trim());
+    open.href = "https://wa.me/" + digits + "?text=" + body;
+    sms.href = "sms:+" + digits + (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) ? "&" : "?") + "body=" + body;
+  };
   const fill = () => { text.value = waUpdateText(o, sel.value); sync(); };
   sel.addEventListener("change", fill);
   text.addEventListener("input", sync);
   panel.querySelector(".admin-wa-note").textContent =
-    "To " + (o.customer_phone || "") + ". Opens your WhatsApp with this message typed in. Nothing is sent until you tap Send there.";
+    "To " + (o.customer_phone || "") + ". Opens your WhatsApp with this message typed in. Nothing is sent until you tap Send there. If WhatsApp says the number isn't on WhatsApp, it didn't send: tap Send as text message instead.";
   fill();
   return panel;
 }
