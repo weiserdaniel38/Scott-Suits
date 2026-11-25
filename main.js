@@ -4575,7 +4575,10 @@ function waUpdateText(o, step) {
     cutting: "a quick update: your fabric is being cut to your measurements.",
     sewing: "a quick update: our tailors are sewing your " + suit + " now.",
     finishing: "a quick update: your " + suit + " " + is + " being finished, pressed and checked.",
-    factory_shipped: "your " + suit + " " + is + " finished and on " + (many ? "their" : "its") + " way to us for a final inspection.",
+    wa_finished: "good news: your " + suit + " " + is + " finished.",
+    wa_arranging: "your " + suit + " " + is + " finished and we're arranging " + (many ? "their" : "its") + " shipment to us.",
+    factory_shipped: "your " + suit + " " + is + " on " + (many ? "their" : "its") + " way to us. Once " + (many ? "they arrive" : "it arrives") + ", we'll give " + it + " a final inspection.",
+    wa_arrived: "your " + suit + " " + (many ? "have" : "has") + " arrived with us. We'll give " + it + " a final inspection and let you know as soon as " + (many ? "they're" : "it's") + " " + (pickup ? "ready for pickup." : "on " + (many ? "their" : "its") + " way to you."),
     final_check: pickup
       ? "your " + suit + " " + is + " ready for pickup. Reply here and we'll set a time."
       : "your " + suit + " arrived with us and " + is + " getting a final inspection before we ship " + it + " to you.",
@@ -4593,7 +4596,15 @@ function adminWhatsAppPanel(o) {
   panel.className = "admin-label admin-wa";
   const digits = waPhoneDigits(o.customer_phone);
   const pickup = o.fulfillment === "pickup";
-  const steps = SHIPPING_STATUSES.filter((s) => !(pickup && (s[0] === "shipped" || s[0] === "out_for_delivery")));
+  // The order's steps, plus message-only steps between finishing and our
+  // final inspection (Daniel, 2026-11-25). Labels are for Daniel only.
+  const extra = { finishing: [["wa_finished", "Finished at the factory"], ["wa_arranging", "Arranging shipment to me"]], factory_shipped: [["wa_arrived", "Delivered to me"]] };
+  const steps = [];
+  SHIPPING_STATUSES.forEach((s) => {
+    if (pickup && (s[0] === "shipped" || s[0] === "out_for_delivery")) return;
+    steps.push(s[0] === "factory_shipped" ? [s[0], "On its way from the factory to me"] : s);
+    (extra[s[0]] || []).forEach((x) => steps.push(x));
+  });
   panel.innerHTML =
     '<label class="admin-wa-step">Update<select></select></label>' +
     '<textarea class="admin-wa-text" rows="5" aria-label="WhatsApp message"></textarea>' +
