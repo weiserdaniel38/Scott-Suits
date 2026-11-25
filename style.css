@@ -3563,6 +3563,10 @@ html[data-brand="scott"] .opt-badge{letter-spacing:0.06em;}
   html[data-brand="scott"] body.designing > :is(#designer,#pantsSection).active{display:flex;flex-direction:column;}
   html[data-brand="scott"] body.designing > :is(#designer,#pantsSection).active > .designer-grid{flex:1 0 auto;display:flex;flex-direction:column;}
   html[data-brand="scott"] body.designing > :is(#designer,#pantsSection).active > .designer-grid > .options{flex:1 0 auto;display:flex;flex-direction:column;justify-content:center;}
+  /* With the Stage picture on, the question sits right under the picture
+     and its chips, never floated to the middle of the leftover room (the
+     folded-pants picture is short, Daniel 2026-11-25). */
+  html[data-brand="scott"] body.designing > :is(#designer,#pantsSection).active.stage-on > .designer-grid > .options{justify-content:flex-start;}
   html[data-brand="scott"] body.designing > footer{padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
   /* The scroll-room spacer goes above the footer links, never below them. */
   html[data-brand="scott"] body.designing > footer{order:2;}
@@ -3814,6 +3818,8 @@ html .designer.stage-on .designer-grid .options h3{display:flex;justify-content:
   /* As big as the screen allows while the question, one row of choices
      and the Back / Next bar still fit under it (short phones included). */
   .designer.stage-on .suit-stage-pic{height:clamp(220px,min(54vh,100vh - 380px),560px);height:clamp(220px,min(54svh,100svh - 380px),560px);}
+  /* The folded pants alone: the box takes the picture's own shape. */
+  .designer.stage-on .suit-stage-pic.flat{height:auto;}
   .designer.stage-on .wiz-head{padding:8px 0 4px;}
   .designer.stage-on .wiz-progress{margin:0 -16px;padding:2px 16px 8px;scroll-padding-inline:16px;}
   /* The named steps take over from the Jacket / Pants / Preview bar on

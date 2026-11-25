@@ -1425,7 +1425,9 @@
       // follows the fabric (Daniel 2026-11-22).
       if (currentSuitType === "threePiece") vest = "fixed";
     } catch (e) { /* main.js not ready: the jacket alone */ }
-    const h = jacket ? VBH + (pants || vest ? PANTS_H : 0) : vest ? 800 : Math.round(PANTS_H * 1.3) + 60;
+    // Pants on their own: just the folded pants, no empty room above or below
+    // them (Daniel 2026-11-25, "designing just pants need to have updates").
+    const h = jacket ? VBH + (pants || vest ? PANTS_H : 0) : vest ? 800 : Math.round(PANTS_PH * 1.2) + 76;
     return { jacket: jacket, pants: pants, vest: vest, h: h };
   }
   function pantsAnswers(v) {
@@ -2511,7 +2513,7 @@
           }
         } else if (lay.jacket) ok = drawPants(g, v, 118, VBH + 22, 0.89);
         // Pants on their own: bigger, centred.
-        else ok = drawPants(g, v, 20, 58, 1.2);
+        else ok = drawPants(g, v, 20, 34, 1.2);
       }
       if (ok && lay.vest && !lay.jacket) ok = drawVest(g, v, 400, 34, 2.45, false, view === "back" || vestBackHint);
     } catch (e) {
@@ -2521,6 +2523,11 @@
     if (ok) {
       // Swap in one go so a redraw never flickers.
       if (h !== picH) setPicH(h);
+      // A wide picture (the folded pants alone) gets a box its own shape, not
+      // the tall one the jacket needs.
+      const flat = !lay.jacket && !lay.vest;
+      if (stageBtn.classList.contains("flat") !== flat) stageBtn.classList.toggle("flat", flat);
+      stageBtn.style.aspectRatio = flat ? VBW + " / " + h : "";
       if (photoCanvas.width !== next.width || photoCanvas.height !== next.height) { photoCanvas.width = next.width; photoCanvas.height = next.height; }
       pg.clearRect(0, 0, photoCanvas.width, photoCanvas.height);
       pg.drawImage(next, 0, 0);
