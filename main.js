@@ -2467,7 +2467,8 @@ async function loadOrderHistory() {
         .order("created_at", { ascending: false });
     // Try with the finished-suit-image columns first; if the migration that
     // adds them hasn't been run yet, quietly fall back to the original columns.
-    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type, fulfillment");
+    let { data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type, fulfillment, shipping_updated_at, factory_sent_at, factory_delivery_date");
+    if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type, fulfillment"));
     if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd, measure_type"));
     if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status, alteration_protection_usd"));
     if (error) ({ data, error } = await runQuery("order_id, suit_number, created_at, suit_type, item_price_usd, status, image_url, shipping_status, tracking_carrier, tracking_number, payment_status"));
@@ -2500,6 +2501,9 @@ async function loadOrderHistory() {
       // Reorder is only offered on orders that were actually paid for.
       if (row.payment_status === "paid") byOrder[key].paid = true;
       if (row.image_url) byOrder[key].images.push(row.image_url);
+      // Every suit's factory finish date, for the delivery estimate.
+      if (row.factory_delivery_date) (byOrder[key].ship.factory_dates = byOrder[key].ship.factory_dates || []).push(row.factory_delivery_date);
+      if (row.factory_sent_at && !byOrder[key].ship.factory_sent_at) byOrder[key].ship.factory_sent_at = row.factory_sent_at;
       // Ordered before measuring: still waiting on the measurements.
       if (row.measure_type === MEASUREMENTS_PENDING && row.order_id) byOrder[key].toMeasure.push({ n: Number(row.suit_number) || 1, type: row.suit_type });
     });
@@ -2855,6 +2859,60 @@ function shippingLabel(status) {
   return hit ? hit[1] : "";
 }
 
+// ============================================================
+// Estimated delivery (Daniel, 2026-11-27: "add new update to be estimated
+// delivery time"). A date range worked out from where the order is now:
+//   still at the factory: the factory's finish date (or 14 days after it
+//     went to the factory), then 5-8 days to reach us, then 3-6 days to the
+//     customer (1-3 days to be ready for pickup);
+//   on its way from the factory: 4 days after it left, then 2-5 days on;
+//   final inspection with us: 2-5 days from today;
+//   shipped to you: 2-5 days after it shipped.
+// Never earlier than today, never a Sunday. None once it's out for delivery, delivered, or
+// (pickup) at the shop. Days are New York calendar days. The same rules
+// are in supabase/functions/send-shipping-update (deliveryEstimate); keep
+// the two in step.
+// ============================================================
+const ETA_TZ = "America/New_York";
+function etaDayNumber(d) {
+  // Whole days since 1970 for a New York date ("YYYY-MM-DD" or a Date).
+  let s = typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : "";
+  if (!s) {
+    const t = d instanceof Date ? d : new Date(d);
+    if (isNaN(t)) return NaN;
+    s = new Intl.DateTimeFormat("en-CA", { timeZone: ETA_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(t);
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m ? Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000) : NaN;
+}
+function deliveryEstimate(o, now) {
+  const status = (o && o.shipping_status) || "";
+  const pickup = !!o && o.fulfillment === "pickup";
+  const today = etaDayNumber(now || new Date());
+  const updated = etaDayNumber(o.shipping_updated_at || o.created_at || new Date());
+  const keep = (a, b) => [Math.max(a, today), Math.max(b, today + (b - a))];
+  let range = null;
+  const atFactory = ["", "received", "sent_to_factory", "cutting", "sewing", "finishing"];
+  if (atFactory.indexOf(status) !== -1) {
+    const due = (o.factory_dates || []).map(etaDayNumber).filter((n) => !isNaN(n));
+    const sent = etaDayNumber(o.factory_sent_at || o.created_at || new Date());
+    const finish = Math.max(due.length ? Math.max.apply(null, due) : sent + 14, today);
+    range = pickup ? [finish + 6, finish + 11] : [finish + 8, finish + 14];
+  } else if (status === "factory_shipped") {
+    const arrive = Math.max(updated + 4, today + 1);
+    range = pickup ? [arrive + 1, arrive + 3] : [arrive + 2, arrive + 5];
+  } else if (status === "final_check") {
+    if (!pickup) range = [today + 2, today + 5];
+  } else if (status === "shipped") {
+    if (!pickup) range = keep(updated + 2, updated + 5);
+  }
+  if (!range || range.some(isNaN)) return null;
+  // No Sunday ends: carriers rarely deliver then.
+  range = range.map((n) => (new Date(n * 86400000).getUTCDay() === 0 ? n + 1 : n));
+  const day = (n) => new Date(n * 86400000).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+  return { pickup, from: day(range[0]), to: day(range[1]), text: day(range[0]) + " – " + day(range[1]), label: pickup ? "Estimated ready for pickup" : "Estimated delivery" };
+}
+
 // Under a customer's past order: "Step 4 of 10: Being sewn", a progress
 // bar, and "UPS 1Z999 · Track" once it has shipped. Nothing when the
 // shipping columns haven't been added yet (older database).
@@ -2869,6 +2927,8 @@ function shippingLineHtml(row) {
   let html =
     '<span class="past-order-step">Step ' + (i + 1) + " of " + SHIPPING_STATUSES.length + ": <b>" + escapeAttr(SHIPPING_STATUSES[i][1]) + "</b></span>" +
     '<span class="past-order-progress" role="progressbar" aria-valuemin="1" aria-valuemax="' + SHIPPING_STATUSES.length + '" aria-valuenow="' + (i + 1) + '"><span style="width:' + pct + '%"></span></span>';
+  const eta = deliveryEstimate(row);
+  if (eta) html += '<span class="past-order-step past-order-eta">' + eta.label + ": <b>" + escapeAttr(eta.text) + "</b></span>";
   if (row.tracking_number && SHIPPING_WITH_TRACKING.includes(row.shipping_status)) {
     const carrier = row.tracking_carrier && row.tracking_carrier !== "Other" ? row.tracking_carrier + " " : "";
     html += '<span class="past-order-step">' + escapeAttr(carrier + row.tracking_number);
@@ -4559,6 +4619,14 @@ function waPhoneDigits(raw) {
   return "";
 }
 
+// The admin order's delivery estimate: its suits' factory finish dates
+// come from the suit cards.
+function adminOrderEta(o) {
+  if (orderIsFinished(o) || adminOrderAwaitingMeasurements(o.order_id)) return null;
+  const dates = (o.fabrics || []).map((s) => s.factory && s.factory.factory_delivery_date).filter(Boolean);
+  return deliveryEstimate(Object.assign({}, o, { factory_dates: dates }));
+}
+
 function waUpdateText(o, step) {
   const first = String(o.customer_name || "").trim().split(/\s+/)[0] || "there";
   const many = Number(o.suits) > 1;
@@ -4569,7 +4637,11 @@ function waUpdateText(o, step) {
   const tracking = String(o.tracking_number || "").trim();
   const url = trackingUrl(o.tracking_carrier, tracking);
   const track = url ? " Track the package here: " + url : tracking ? " Tracking number: " + (o.tracking_carrier && o.tracking_carrier !== "Other" ? o.tracking_carrier + " " : "") + tracking : "";
+  const eta = adminOrderEta(o);
   const lines = {
+    wa_eta: eta
+      ? "a quick update: we expect your " + suit + " to " + (pickup ? "be ready for pickup" : "arrive") + " between " + eta.from + " and " + eta.to + ". We'll let you know as soon as " + (many ? "they're" : "it's") + (pickup ? " ready." : " on " + (many ? "their" : "its") + " way.")
+      : "",
     "": "thanks for your order. We have everything we need and will keep you posted as your " + suit + " " + (many ? "are" : "is") + " made.",
     sent_to_factory: "a quick update: your " + suit + " " + is + " now in production. We'll keep you posted along the way.",
     cutting: "a quick update: your fabric is being cut to your measurements.",
@@ -4587,7 +4659,7 @@ function waUpdateText(o, step) {
     delivered: (pickup ? "thanks for picking up your " + suit + "." : "your " + suit + " " + (many ? "were" : "was") + " delivered.") +
       " We hope you love " + it + ". If anything about the fit isn't right, just reply here.",
   };
-  const body = lines[step] != null ? lines[step] : lines[""];
+  const body = lines[step] ? lines[step] : lines[""];
   return "Hi " + first + ", " + body + "\n\nScott's Suits";
 }
 
@@ -4605,6 +4677,9 @@ function adminWhatsAppPanel(o) {
     steps.push(s[0] === "factory_shipped" ? [s[0], "On its way from the factory to me"] : s);
     (extra[s[0]] || []).forEach((x) => steps.push(x));
   });
+  // Estimated delivery date (Daniel, 2026-11-27), while there is one.
+  const eta = adminOrderEta(o);
+  if (eta) steps.unshift(["wa_eta", (pickup ? "Estimated pickup date: " : "Estimated delivery: ") + eta.text]);
   panel.innerHTML =
     '<label class="admin-wa-step">Update<select></select></label>' +
     '<textarea class="admin-wa-text" rows="5" aria-label="WhatsApp message"></textarea>' +
@@ -4668,7 +4743,8 @@ function adminOrderRow(o) {
   row.querySelector(".past-order-total").textContent = adminBrandHidesPrice(o.brand) ? "" : "$" + (Number(o.total || 0) + Number(o.protection_usd || 0)).toFixed(0);
   const info = row.querySelector(".admin-order-info");
   const protection = adminProtectionLabel(o).replace(/^Alteration Protection: /, "");
-  [["Email", o.customer_email], ["Phone", o.customer_phone], ["Payment", adminPaymentLabel(o)], ["Alteration Protection", protection]].forEach(([k, v]) => {
+  const eta = adminOrderEta(o);
+  [["Email", o.customer_email], ["Phone", o.customer_phone], ["Payment", adminPaymentLabel(o)], ["Alteration Protection", protection], [eta ? eta.label : "", eta ? eta.text : ""]].forEach(([k, v]) => {
     if (!v) return;
     const dt = document.createElement("dt");
     dt.textContent = k;
