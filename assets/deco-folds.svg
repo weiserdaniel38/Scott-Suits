@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" fill="none">
+  <!-- Soft cloth folds rising from the bottom corner, with a sweeping line. -->
+  <defs>
+    <linearGradient id="f1" x1="0" y1="1" x2="0.6" y2="0">
+      <stop offset="0" stop-color="#d6cbbb" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#d6cbbb" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 160 C90 190 150 260 230 330 C290 380 380 410 520 420 L0 420 Z" fill="url(#f1)"/>
+  <path d="M0 260 C80 270 140 320 200 370 C240 400 280 414 330 420 L0 420 Z" fill="url(#f1)"/>
+  <path d="M0 110 C110 140 200 230 290 310 C360 370 440 400 520 404" stroke="#a88b5c" stroke-width="1" stroke-opacity="0.8"/>
+</svg>
